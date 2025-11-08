@@ -77,4 +77,3 @@ window.SKILL_DATA = {
     }
   }
 };
-};
