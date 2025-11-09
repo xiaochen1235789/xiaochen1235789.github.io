@@ -190,7 +190,14 @@
             <div class="card-desc">？？？</div>
         </div>
     </div>
-
+    <!-- 新增：更新日志模块（放在宠物模块下方，不影响原有内容） -->
+    <h2 class="section-header" id="changelog">更新日志</h2>
+    <div class="pet-system" style="margin-top: 0;" id="changelogContainer">
+        <div class="changelog-loading">
+            <span>加载更新日志中...</span>
+        </div>
+    </div>
+    
     <script>
         (()=>{
             const user = localStorage.getItem('user');
@@ -209,7 +216,36 @@
         function logout(){
             localStorage.removeItem('user');
             location.reload();
-        }
+        // 新增：动态加载更新日志的脚本（不影响原有脚本）
+        (function loadChangelog() {
+            const container = document.getElementById('changelogContainer');
+            fetch('changelog.html')
+                .then(response => {
+                    if (!response.ok) throw new Error('日志文件未找到');
+                    return response.text();
+                })
+                .then(logContent => {
+                    container.innerHTML = `
+                        <div class="pet-header">
+                            <div class="pet-icon">
+                                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/8f9923349a7a45a5b45d9828d5d1216f.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?rcl=20251109162000BA185F262E9B2BE43D9F&rk3s=8e244e95&rrcfp=e9668010&x-expires=1763280000&x-signature=JZ%2F4q%2F%2F%2B7QV%2FZ%2FZJ%3D" alt="日志图标">
+                            </div>
+                            <div class="pet-title">WIKI版本更新记录</div>
+                        </div>
+                        <div class="changelog-list">
+                            ${logContent}
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    container.innerHTML = `
+                        <div class="changelog-error">
+                            <span style="color: #ff4444;">❌ 更新日志加载失败：${error.message}</span>
+                            <button class="pet-btn" style="margin-top: 8px;" onclick="loadChangelog()">重试</button>
+                        </div>
+                    `;
+                });
+        })();
     </script>
 </body>
 </html>
