@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全屏可拖动播放器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Microsoft YaHei", sans-serif; }
+        body {
+            background: transparent;
+            padding: 0; margin: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        /* 播放器容器：预留进度条空间 */
+        .player-container {
+            position: fixed;
+            bottom: 0;
+            left: 20px;
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-top: 10px; /* 为进度条留顶部空间 */
+        }
+        .player-mini-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #1e3a2f;
+            border: 1px solid #3d725f;
+            color: #81c784;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            display: none;
+        }
+        /* 播放器主体：相对定位，确保进度条对齐 */
+        .mini-music-player {
+            width: 100%;
+            max-width: 340px; /* 加宽适配进度条 */
+            height: 60px;
+            min-width: 300px;
+            background: #1e3a2f;
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 8px;
+            border: 1px solid #3d725f;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            cursor: move;
+            user-select: none;
+            -webkit-user-drag: none;
+            position: relative; /* 进度条相对此元素定位 */
+        }
+        .player-cover {
+            width: 44px;
+            height: 44px;
+            border-radius: 4px;
+            background: #2d5243;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .player-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none;
+        }
+        .player-info {
+            flex: 0 0 130px; /* 加宽文本区域，避免截断 */
+            flex-shrink: 0;
+            pointer-events: none;
+        }
+        .player-title {
+            font-size: 0.85rem;
+            color: #81c784;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .player-singer {
+            font-size: 0.7rem;
+            color: #99aabb;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .player-btn {
+            background: transparent;
+            border: none;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 0.9rem;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+        .play-main-btn {
+            background: #81c784;
+            color: #121212;
+            font-weight: bold;
+        }
+        .player-volume {
+            flex: 0 0 28px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .volume-btn {
+            background: transparent;
+            border: none;
+            color: #99aabb;
+            cursor: pointer;
+            font-size: 0.8rem;
+            z-index: 1;
+        }
+        .toggle-btn {
+            background: transparent;
+            border: none;
+            color: #99aabb;
+            cursor: pointer;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+            z-index: 1;
+        }
+        /* 进度条：完整显示+自适应高度 */
+        .player-progress {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            width: 100%;
+            padding: 4px 2%; /* 左右留边，避免超出 */
+            background: #1e3a2f;
+            border-radius: 4px 4px 0 0;
+            border-bottom: 1px solid #3d725f;
+            box-sizing: border-box;
+            min-height: 24px; /* 确保时间文字不挤压 */
+        }
+        .mini-music-player:hover .player-progress {
+            display: block;
+        }
+        .progress-bar-mini {
+            width: 100%;
+            height: 3px;
+            background: #2d5243;
+            border-radius: 2px;
+            position: relative;
+            cursor: pointer;
+        }
+        .progress-mini {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 30%;
+            background: #81c784;
+            border-radius: 2px;
+        }
+        .time-mini {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: #99aabb;
+            margin-top: 2px;
+            width: 100%;
+        }
+        @media (max-width: 768px) {
+            .mini-music-player {
+                width: 300px;
+                gap: 6px;
+            }
+            .player-info {
+                flex: 0 0 110px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="player-container" id="playerContainer">
+        <button class="player-mini-btn" id="playerMiniBtn">▶</button>
+        <div class="mini-music-player" id="draggablePlayer">
+            <div class="player-cover">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/4e9fac6fa0c64944b8e3ce67243a0029.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="专辑封面">
+            </div>
+            <div class="player-info">
+                <div class="player-title">昔涟</div>
+                <div class="player-singer">张韶涵、HOYO-MiX</div>
+            </div>
+            <div class="player-controls">
+                <button class="player-btn" id="miniPrevBtn">❮</button>
+                <button class="player-btn play-main-btn" id="miniPlayBtn">▶</button>
+                <button class="player-btn" id="miniNextBtn">❯</button>
+            </div>
+            <div class="player-volume">
+                <button class="volume-btn" id="volumeBtn">🔊</button>
+            </div>
+            <button class="toggle-btn" id="toggleBtn">【<】收起</button>
+            <div class="player-progress">
+                <div class="progress-bar-mini" id="miniProgressBar">
+                    <div class="progress-mini" id="miniProgress"></div>
+                </div>
+                <div class="time-mini">
+                    <span class="current-time-mini" id="currentTime">00:00</span>
+                    <span class="total-time-mini" id="totalTime">04:29</span>
+                </div>
+            </div>
+        </div>
+        <audio id="miniAudioPlayer" preload="auto" playsinline>
+            <source src="https://xiaochen1235789.github.io/music/昔涟.mp3" type="audio/mpeg">
+            您的浏览器不支持音频播放
+         </audio>
+    </div>
+    <script>
+        // 元素初始化
+        const playerContainer = document.getElementById('playerContainer');
+        const draggablePlayer = document.getElementById('draggablePlayer');
+        const audio = document.getElementById('miniAudioPlayer');
+        const playBtn = document.getElementById('miniPlayBtn');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const playerMiniBtn = document.getElementById('playerMiniBtn');
+        const progress = document.getElementById('miniProgress');
+        const currentTimeEl = document.getElementById('currentTime');
+        const totalTimeEl = document.getElementById('totalTime');
+        const volumeBtn = document.getElementById('volumeBtn');
+
+        // 状态变量
+        let isDragging = false;
+        let offsetX, offsetY;
+        let playState = { isExpanded: true, isPlaying: false };
+
+        // ========== 全屏拖动功能 ==========
+        draggablePlayer.addEventListener('mousedown', (e) => {
+            // 点击按钮时不触发拖动
+            if (e.target.classList.contains('player-btn') || e.target.classList.contains('volume-btn') || e.target.classList.contains('toggle-btn')) {
+                return;
+            }
+            isDragging = true;
+            const rect = playerContainer.getBoundingClientRect();
+            // 计算鼠标相对于播放器的偏移量
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            draggablePlayer.style.cursor = 'grabbing';
+            document.body.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            // 计算新位置，限制在屏幕内
+            const newLeft = e.clientX - offsetX;
+            const newTop = e.clientY - offsetY;
+            const maxLeft = window.innerWidth - playerContainer.offsetWidth;
+            const maxTop = window.innerHeight - playerContainer.offsetHeight;
+            const finalLeft = Math.max(0, Math.min(newLeft, maxLeft));
+            const finalTop = Math.max(0, Math.min(newTop, maxTop));
+            // 更新播放器位置
+            playerContainer.style.left = `${finalLeft}px`;
+            playerContainer.style.top = `${finalTop}px`;
+            playerContainer.style.bottom = 'auto';
+            playerContainer.style.right = 'auto';
+        });
+
+        // 结束拖动
+        ['mouseup', 'mouseleave', 'contextmenu'].forEach(event => {
+            document.addEventListener(event, () => {
+                if (isDragging) {
+                    isDragging = false;
+                    draggablePlayer.style.cursor = 'move';
+                    document.body.style.cursor = 'default';
+                }
+            });
+        });
+
+        // ========== 播放/暂停控制 ==========
+        playBtn.addEventListener('click', () => {
+            if (audio.paused) {
+                audio.play().then(() => {
+                    playBtn.textContent = '⏸';
+                    playState.isPlaying = true;
+                }).catch(() => {
+                    // 自动播放失败时，点击播放器重试
+                    draggablePlayer.addEventListener('click', () => {
+                        audio.play();
+                        playBtn.textContent = '⏸';
+                        playState.isPlaying = true;
+                    }, { once: true });
+                });
+            } else {
+                audio.pause();
+                playBtn.textContent = '▶';
+                playState.isPlaying = false;
+            }
+        });
+
+        // ========== 收起/展开功能 ==========
+        toggleBtn.addEventListener('click', () => {
+            const isHidden = playerMiniBtn.style.display === 'flex';
+            if (isHidden) {
+                // 展开
+                playerMiniBtn.style.display = 'none';
+                draggablePlayer.style.display = 'flex';
+                toggleBtn.textContent = '【<】收起';
+            } else {
+                // 收起
+                playerMiniBtn.style.display = 'flex';
+                draggablePlayer.style.display = 'none';
+                toggleBtn.textContent = '展开【>】';
+                playerMiniBtn.textContent = audio.paused ? '▶' : '⏸';
+            }
+        });
+
+        playerMiniBtn.addEventListener('click', () => {
+            // 点击收起按钮后展开
+            playerMiniBtn.style.display = 'none';
+            draggablePlayer.style.display = 'flex';
+            toggleBtn.textContent = '【<】收起';
+            if (!audio.paused) audio.play();
+        });
+
+        // ========== 进度条更新 ==========
+        audio.addEventListener('timeupdate', () => {
+            if (isNaN(audio.duration)) return;
+            // 更新进度条宽度
+            const percent = (audio.currentTime / audio.duration) * 100;
+            progress.style.width = `${percent}%`;
+            // 更新当前时间
+            const [cm, cs] = [Math.floor(audio.currentTime/60), Math.floor(audio.currentTime%60)];
+            currentTimeEl.textContent = `${cm.toString().padStart(2, '0')}:${cs.toString().padStart(2, '0')}`;
+            // 初始化总时长
+            if (!totalTimeEl.dataset.loaded) {
+                const [tm, ts] = [Math.floor(audio.duration/60), Math.floor(audio.duration%60)];
+                totalTimeEl.textContent = `${tm.toString().padStart(2, '0')}:${ts.toString().padStart(2, '0')}`;
+                totalTimeEl.dataset.loaded = 'true';
+            }
+        });
+
+        // ========== 进度条跳转 ==========
+        document.getElementById('miniProgressBar').addEventListener('click', (e) => {
+            const progressPercent = e.offsetX / e.target.clientWidth;
+            audio.currentTime = progressPercent * audio.duration;
+        });
+
+        // ========== 音量控制 ==========
+        volumeBtn.addEventListener('click', () => {
+            audio.volume = audio.volume > 0.5 ? 0.3 : (audio.volume > 0 ? 0 : 0.7);
+            volumeBtn.textContent = audio.volume > 0.5 ? '🔊' : (audio.volume > 0 ? '🔉' : '🔇');
+        });
+
+        // ========== 监听主页恢复播放状态 ==========
+        window.addEventListener('message', (e) => {
+            if (e.data.type === 'RESTORE_PLAY_STATE' && playState.isPlaying) {
+                audio.play().catch(() => {});
+            }
+        });
+    </script>
+</body>
+</html>
