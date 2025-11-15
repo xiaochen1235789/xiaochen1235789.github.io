@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全屏可拖动播放器</title>
+    <title>跨页无缝播放器</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Microsoft YaHei", sans-serif; }
         body {
@@ -12,7 +12,6 @@
             height: 100%;
             overflow: hidden;
         }
-        /* 播放器容器：预留进度条空间 */
         .player-container {
             position: fixed;
             bottom: 0;
@@ -21,7 +20,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            padding-top: 10px; /* 为进度条留顶部空间 */
+            padding-top: 10px;
         }
         .player-mini-btn {
             width: 40px;
@@ -38,10 +37,9 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
             display: none;
         }
-        /* 播放器主体：相对定位，确保进度条对齐 */
         .mini-music-player {
             width: 100%;
-            max-width: 340px; /* 加宽适配进度条 */
+            max-width: 340px;
             height: 60px;
             min-width: 300px;
             background: #1e3a2f;
@@ -55,7 +53,7 @@
             cursor: move;
             user-select: none;
             -webkit-user-drag: none;
-            position: relative; /* 进度条相对此元素定位 */
+            position: relative;
         }
         .player-cover {
             width: 44px;
@@ -72,7 +70,7 @@
             pointer-events: none;
         }
         .player-info {
-            flex: 0 0 130px; /* 加宽文本区域，避免截断 */
+            flex: 0 0 130px;
             flex-shrink: 0;
             pointer-events: none;
         }
@@ -137,19 +135,18 @@
             flex-shrink: 0;
             z-index: 1;
         }
-        /* 进度条：完整显示+自适应高度 */
         .player-progress {
             display: none;
             position: absolute;
             bottom: 100%;
             left: 0;
             width: 100%;
-            padding: 4px 2%; /* 左右留边，避免超出 */
+            padding: 4px 2%;
             background: #1e3a2f;
             border-radius: 4px 4px 0 0;
             border-bottom: 1px solid #3d725f;
             box-sizing: border-box;
-            min-height: 24px; /* 确保时间文字不挤压 */
+            min-height: 24px;
         }
         .mini-music-player:hover .player-progress {
             display: block;
@@ -227,31 +224,143 @@
     </div>
     <script>
         // 元素初始化
-        const playerContainer = document.getElementById('playerContainer');
-        const draggablePlayer = document.getElementById('draggablePlayer');
         const audio = document.getElementById('miniAudioPlayer');
         const playBtn = document.getElementById('miniPlayBtn');
-        const toggleBtn = document.getElementById('toggleBtn');
-        const playerMiniBtn = document.getElementById('playerMiniBtn');
         const progress = document.getElementById('miniProgress');
         const currentTimeEl = document.getElementById('currentTime');
         const totalTimeEl = document.getElementById('totalTime');
         const volumeBtn = document.getElementById('volumeBtn');
+        const playerContainer = document.getElementById('playerContainer');
+        const draggablePlayer = document.getElementById('draggablePlayer');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const playerMiniBtn = document.getElementById('playerMiniBtn');
 
-        // 状态变量
+        // ========== 跨页状态同步核心 ==========
+        const STORAGE_KEY = 'music_player_global_state'; // 全局状态键名
+        const bc = new BroadcastChannel('music_player_broadcast'); // 广播通道
+
+        // 1. 加载时恢复全局状态
+        function loadGlobalState() {
+            const savedState = localStorage.getItem(STORAGE_KEY);
+            if (savedState) {
+                const { currentTime, isPlaying, volume } = JSON.parse(savedState);
+                audio.currentTime = currentTime;
+                audio.volume = volume;
+                if (isPlaying) {
+                    audio.play().catch(() => {});
+                    playBtn.textContent = '⏸';
+                }
+            }
+        }
+
+        // 2. 保存状态到localStorage并广播
+        function saveAndBroadcastState() {
+            const state = {
+                currentTime: audio.currentTime,
+                isPlaying: !audio.paused,
+                volume: audio.volume
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            bc.postMessage({ type: 'SYNC_STATE', state });
+        }
+
+        // 3. 监听广播，同步其他页面的状态
+        bc.onmessage = (e) => {
+            if (e.data.type === 'SYNC_STATE') {
+                const { currentTime, isPlaying, volume } = e.data.state;
+                audio.currentTime = currentTime;
+                audio.volume = volume;
+                if (isPlaying !== !audio.paused) {
+                    if (isPlaying) {
+                        audio.play().catch(() => {});
+                        playBtn.textContent = '⏸';
+                    } else {
+                        audio.pause();
+                        playBtn.textContent = '▶';
+                    }
+                }
+            }
+        };
+
+        // ========== 播放器基础功能 ==========
+        // 播放/暂停
+        playBtn.addEventListener('click', () => {
+            if (audio.paused) {
+                audio.play().then(() => {
+                    playBtn.textContent = '⏸';
+                }).catch(() => {
+                    draggablePlayer.addEventListener('click', () => {
+                        audio.play();
+                        playBtn.textContent = '⏸';
+                    }, { once: true });
+                });
+            } else {
+                audio.pause();
+                playBtn.textContent = '▶';
+            }
+            saveAndBroadcastState(); // 保存+广播状态
+        });
+
+        // 进度条更新
+        audio.addEventListener('timeupdate', () => {
+            if (isNaN(audio.duration)) return;
+            const percent = (audio.currentTime / audio.duration) * 100;
+            progress.style.width = `${percent}%`;
+            const [cm, cs] = [Math.floor(audio.currentTime/60), Math.floor(audio.currentTime%60)];
+            currentTimeEl.textContent = `${cm.toString().padStart(2, '0')}:${cs.toString().padStart(2, '0')}`;
+            if (!totalTimeEl.dataset.loaded) {
+                const [tm, ts] = [Math.floor(audio.duration/60), Math.floor(audio.duration%60)];
+                totalTimeEl.textContent = `${tm.toString().padStart(2, '0')}:${ts.toString().padStart(2, '0')}`;
+                totalTimeEl.dataset.loaded = 'true';
+            }
+            saveAndBroadcastState(); // 实时保存进度
+        });
+
+        // 进度条跳转
+        document.getElementById('miniProgressBar').addEventListener('click', (e) => {
+            const progressPercent = e.offsetX / e.target.clientWidth;
+            audio.currentTime = progressPercent * audio.duration;
+            saveAndBroadcastState();
+        });
+
+        // 音量控制
+        volumeBtn.addEventListener('click', () => {
+            audio.volume = audio.volume > 0.5 ? 0.3 : (audio.volume > 0 ? 0 : 0.7);
+            volumeBtn.textContent = audio.volume > 0.5 ? '🔊' : (audio.volume > 0 ? '🔉' : '🔇');
+            saveAndBroadcastState();
+        });
+
+        // 收起/展开
+        toggleBtn.addEventListener('click', () => {
+            const isHidden = playerMiniBtn.style.display === 'flex';
+            if (isHidden) {
+                playerMiniBtn.style.display = 'none';
+                draggablePlayer.style.display = 'flex';
+                toggleBtn.textContent = '【<】收起';
+            } else {
+                playerMiniBtn.style.display = 'flex';
+                draggablePlayer.style.display = 'none';
+                toggleBtn.textContent = '展开【>】';
+                playerMiniBtn.textContent = audio.paused ? '▶' : '⏸';
+            }
+        });
+
+        playerMiniBtn.addEventListener('click', () => {
+            playerMiniBtn.style.display = 'none';
+            draggablePlayer.style.display = 'flex';
+            toggleBtn.textContent = '【<】收起';
+            if (!audio.paused) audio.play();
+        });
+
+        // 全屏拖动
         let isDragging = false;
         let offsetX, offsetY;
-        let playState = { isExpanded: true, isPlaying: false };
-
-        // ========== 全屏拖动功能 ==========
         draggablePlayer.addEventListener('mousedown', (e) => {
-            // 点击按钮时不触发拖动
             if (e.target.classList.contains('player-btn') || e.target.classList.contains('volume-btn') || e.target.classList.contains('toggle-btn')) {
                 return;
             }
             isDragging = true;
             const rect = playerContainer.getBoundingClientRect();
-            // 计算鼠标相对于播放器的偏移量
             offsetX = e.clientX - rect.left;
             offsetY = e.clientY - rect.top;
             draggablePlayer.style.cursor = 'grabbing';
@@ -261,21 +370,18 @@
 
         document.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
-            // 计算新位置，限制在屏幕内
             const newLeft = e.clientX - offsetX;
             const newTop = e.clientY - offsetY;
             const maxLeft = window.innerWidth - playerContainer.offsetWidth;
             const maxTop = window.innerHeight - playerContainer.offsetHeight;
             const finalLeft = Math.max(0, Math.min(newLeft, maxLeft));
             const finalTop = Math.max(0, Math.min(newTop, maxTop));
-            // 更新播放器位置
             playerContainer.style.left = `${finalLeft}px`;
             playerContainer.style.top = `${finalTop}px`;
             playerContainer.style.bottom = 'auto';
             playerContainer.style.right = 'auto';
         });
 
-        // 结束拖动
         ['mouseup', 'mouseleave', 'contextmenu'].forEach(event => {
             document.addEventListener(event, () => {
                 if (isDragging) {
@@ -286,87 +392,8 @@
             });
         });
 
-        // ========== 播放/暂停控制 ==========
-        playBtn.addEventListener('click', () => {
-            if (audio.paused) {
-                audio.play().then(() => {
-                    playBtn.textContent = '⏸';
-                    playState.isPlaying = true;
-                }).catch(() => {
-                    // 自动播放失败时，点击播放器重试
-                    draggablePlayer.addEventListener('click', () => {
-                        audio.play();
-                        playBtn.textContent = '⏸';
-                        playState.isPlaying = true;
-                    }, { once: true });
-                });
-            } else {
-                audio.pause();
-                playBtn.textContent = '▶';
-                playState.isPlaying = false;
-            }
-        });
-
-        // ========== 收起/展开功能 ==========
-        toggleBtn.addEventListener('click', () => {
-            const isHidden = playerMiniBtn.style.display === 'flex';
-            if (isHidden) {
-                // 展开
-                playerMiniBtn.style.display = 'none';
-                draggablePlayer.style.display = 'flex';
-                toggleBtn.textContent = '【<】收起';
-            } else {
-                // 收起
-                playerMiniBtn.style.display = 'flex';
-                draggablePlayer.style.display = 'none';
-                toggleBtn.textContent = '展开【>】';
-                playerMiniBtn.textContent = audio.paused ? '▶' : '⏸';
-            }
-        });
-
-        playerMiniBtn.addEventListener('click', () => {
-            // 点击收起按钮后展开
-            playerMiniBtn.style.display = 'none';
-            draggablePlayer.style.display = 'flex';
-            toggleBtn.textContent = '【<】收起';
-            if (!audio.paused) audio.play();
-        });
-
-        // ========== 进度条更新 ==========
-        audio.addEventListener('timeupdate', () => {
-            if (isNaN(audio.duration)) return;
-            // 更新进度条宽度
-            const percent = (audio.currentTime / audio.duration) * 100;
-            progress.style.width = `${percent}%`;
-            // 更新当前时间
-            const [cm, cs] = [Math.floor(audio.currentTime/60), Math.floor(audio.currentTime%60)];
-            currentTimeEl.textContent = `${cm.toString().padStart(2, '0')}:${cs.toString().padStart(2, '0')}`;
-            // 初始化总时长
-            if (!totalTimeEl.dataset.loaded) {
-                const [tm, ts] = [Math.floor(audio.duration/60), Math.floor(audio.duration%60)];
-                totalTimeEl.textContent = `${tm.toString().padStart(2, '0')}:${ts.toString().padStart(2, '0')}`;
-                totalTimeEl.dataset.loaded = 'true';
-            }
-        });
-
-        // ========== 进度条跳转 ==========
-        document.getElementById('miniProgressBar').addEventListener('click', (e) => {
-            const progressPercent = e.offsetX / e.target.clientWidth;
-            audio.currentTime = progressPercent * audio.duration;
-        });
-
-        // ========== 音量控制 ==========
-        volumeBtn.addEventListener('click', () => {
-            audio.volume = audio.volume > 0.5 ? 0.3 : (audio.volume > 0 ? 0 : 0.7);
-            volumeBtn.textContent = audio.volume > 0.5 ? '🔊' : (audio.volume > 0 ? '🔉' : '🔇');
-        });
-
-        // ========== 监听主页恢复播放状态 ==========
-        window.addEventListener('message', (e) => {
-            if (e.data.type === 'RESTORE_PLAY_STATE' && playState.isPlaying) {
-                audio.play().catch(() => {});
-            }
-        });
+        // ========== 初始化：加载全局状态 ==========
+        loadGlobalState();
     </script>
 </body>
 </html>
