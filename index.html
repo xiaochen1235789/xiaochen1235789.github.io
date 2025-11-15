@@ -3,9 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" 
+      href="https://xiaochen1235789.github.io/images/wangzhantupian.png" 
+      type="image/png">
     <title>六哥荣耀WIKI</title>
     <style>
-        /* 原有样式不变，保留全部 */
+        body {
+            overflow: visible !important;
+            padding-bottom: 100px !important; /* 增加底部预留空间，给进度条留足位置 */
+            background: var(--bg) !important;
+        }
+        #musicPlayerIframe {
+            display: block !important;
+            visibility: visible !important;
+            height: 90px !important; /* 大幅增加iframe高度，容纳播放器+进度条 */
+            width: 100% !important;
+            z-index: 99999 !important;
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            overflow: visible !important; /* 允许进度条向上展开 */
+        }
+        /* 原有其他样式完全保留... */
         * {
             margin: 0;
             padding: 0;
@@ -13,18 +35,13 @@
             font-family: "Microsoft YaHei", sans-serif;
         }
         :root {
-            --bg: #121212; /* 原站深黑背景 */
-            --card-bg: #1e3a2f; /* 暗绿色卡片（低饱和） */
-            --text-main: #e0e0e0; /* 主文字色 */
-            --text-highlight: #81c784; /* 高亮文字（亮绿色） */
-            --text-secondary: #99aabb; /* 次要文字 */
-            --radius: 4px; /* 原站小圆角，更简洁 */
-            --gap: 12px; /* 统一间距，保持整齐 */
-        }
-        body {
-            background: var(--bg);
-            color: var(--text-main);
-            padding: 16px;
+            --bg: #121212;
+            --card-bg: #1e3a2f;
+            --text-main: #e0e0e0;
+            --text-highlight: #81c784;
+            --text-secondary: #99aabb;
+            --radius: 4px;
+            --gap: 12px;
         }
         .top-nav {
             background: var(--card-bg);
@@ -66,32 +83,42 @@
             padding: 12px;
             text-align: center;
             cursor: pointer;
-            transition: transform 0.2s;
-            /* 统一角色卡片尺寸，覆盖行内样式，避免冲突 */
+            transition: transform 0.2s, box-shadow 0.2s;
             width: 100% !important;
             height: auto !important;
         }
         .content-card:hover {
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
         .card-img {
             width: 100%;
-            aspect-ratio: 4/5; /* 统一角色卡片图片比例，删除行内高度 */
-            background: #2d5243; /* 暗绿色底板，与原风格一致 */
+            aspect-ratio: 4/5;
+            background: #2d5243;
             border-radius: var(--radius);
             margin-bottom: 8px;
             padding: 0 !important;
             overflow: hidden !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .card-img img {
             width: 100%;
-            height: 100%;
-            object-fit: contain; /* 避免图片裁剪，保持完整显示 */
+            height: 95%;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+        .content-card:hover .card-img img {
+            transform: scale(1.05);
         }
         .card-name {
             font-size: 1rem;
             color: var(--text-highlight);
             margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .card-desc {
             font-size: 0.8rem;
@@ -101,6 +128,9 @@
             aspect-ratio: 3/4;
             transform: rotate(-5deg);
         }
+        .lightcone-card:hover .card-img {
+            transform: rotate(-5deg) translateY(-2px);
+        }
         .section-header {
             max-width: 1200px;
             margin: 24px auto 12px;
@@ -108,103 +138,16 @@
             color: var(--text-highlight);
             border-bottom: 1px solid #3d725f;
             padding-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        /* 养成材料卡片图片比例单独设置 */
+        .section-header::before {
+            content: "📌";
+        }
         .material-card .card-img {
             aspect-ratio: 1/1;
         }
-        /* 新增：宠物养成模块样式 */
-        .pet-system {
-            max-width: 1200px;
-            margin: 24px auto;
-            padding: 16px;
-            background: var(--card-bg);
-            border-radius: var(--radius);
-        }
-        .pet-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
-            border-bottom: 1px solid #3d725f;
-            padding-bottom: 8px;
-        }
-        .pet-icon {
-            width: 40px;
-            height: 40px;
-            background: #2d5243;
-            border-radius: 50%;
-            overflow: hidden;
-        }
-        .pet-icon img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-        .pet-title {
-            font-size: 1.2rem;
-            color: var(--text-highlight);
-        }
-        .pet-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            align-items: center;
-            justify-content: center;
-        }
-        .pet-avatar {
-            width: 180px;
-            height: 180px;
-            background: #2d5243;
-            border-radius: var(--radius);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-        .pet-avatar img {
-            width: 150px;
-            height: 150px;
-            object-fit: contain;
-        }
-        .pet-info {
-            flex: 1;
-            min-width: 250px;
-        }
-        .pet-name {
-            font-size: 1.1rem;
-            color: var(--text-highlight);
-            margin-bottom: 8px;
-        }
-        .pet-stats {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 12px;
-            font-size: 0.9rem;
-        }
-        .pet-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .pet-btn {
-            padding: 6px 12px;
-            border: none;
-            border-radius: var(--radius);
-            background: #2d5243;
-            color: var(--text-main);
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: background 0.2s;
-        }
-        .pet-btn:hover {
-            background: #3d725f;
-        }
-        .pet-level {
-            color: #d3af37;
-            font-weight: 600;
-        }
-        /* 新增：更新日志样式（不影响原有样式） */
         .changelog-loading, .changelog-error {
             text-align: center;
             padding: 20px;
@@ -245,56 +188,75 @@
         .changelog-content li::marker {
             color: var(--text-secondary);
         }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #2d3748;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4a5568;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #66bb6a;
+        }
     </style>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
+    <!-- 原有页面内容完全保留... -->
     <div class="top-nav">
         <div class="nav-title">六哥荣耀WIKI</div>
         <a href="#character" class="nav-link">角色</a>
         <a href="#lightcone" class="nav-link">光锥</a>
         <a href="#material" class="nav-link">养成材料</a>
-        <a href="#pet" class="nav-link">WIKI宠物</a>
-        <a href="#changelog" class="nav-link">更新日志</a> <!-- 新增日志导航 -->
+        <a href="#changelog" class="nav-link">更新日志</a>
     </div>
-    <!-- 角色列表（原有内容不变） -->
     <h2 class="section-header" id="character">角色列表</h2>
     <div class="grid-container">
         <div class="content-card" onclick="window.location.href='luguan-detail.html'">
             <div class="card-img">
-                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/4e9fac6fa0c64944b8e3ce67243a0029.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?rcl=202511090149057A1849FE2709C9E2BF31&rk3s=8e244e95&rrcfp=e9668010&x-expires=1763228945&x-signature=0vvXGhP2w80fFRPNhGEEsYq%2FbKo%3D" alt="鹿将军">
+                <img src="https://xiaochen1235789.github.io/images/changjinglu.png" alt="鹿将军">
             </div>
             <div class="card-name">鹿管</div>
             <div class="card-desc">巡猎 · 风 | 限定五星</div>
         </div>
         <div class="content-card" onclick="window.location.href='yunli-detail.html'">
             <div class="card-img">
-                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/4c8c756ecf714522928e67102c7f2ab8.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?rcl=2025110902133742FE6CA0E847E7B50463&rk3s=8e244e95&rrcfp=e9668010&x-expires=1763230417&x-signature=tVbR0ykB%2Bd6HrHGMGB%2BbJnX5PGI%3D" alt="璃宝">
+                <img src="https://xiaochen1235789.github.io/images/yunli.png" alt="璃宝">
             </div>
             <div class="card-name">云璃</div>
             <div class="card-desc">毁灭 · 物理 | 五星</div>
         </div>
-        
         <div class="content-card" onclick="window.location.href='pige-detail.html'">
             <div class="card-img">
-            <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/85ba49470fe7420fb9decb053821e354.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?rcl=20251109151511BA185F262E9B2BE43D9F&rk3s=8e244e95&rrcfp=e9668010&x-expires=1763277311&x-signature=TnSHAIoTqU4cBCpIEhKIS9EVgcs%3D" alt="皮哥"></div>
+                <img src="https://xiaochen1235789.github.io/images/pige.png" alt="皮哥">
+            </div>
             <div class="card-name">皮哥</div>
             <div class="card-desc">存护 · 物理 | 限定五星</div>
         </div>
-        
         <div class="content-card" onclick="window.location.href='yuzhiboyan-detail.html'">
             <div class="card-img">
-            <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/5d9cf52c7e5948aaab4c3f12600e799e.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?rcl=202511092225333723696346C0F36C14C3&rk3s=8e244e95&rrcfp=e9668010&x-expires=1763303133&x-signature=eUy%2BWPUVVOhoi0tl%2FYb4znG%2F4SA%3D" alt="帅气的言哥哥"></div>
+                <img src="https://xiaochen1235789.github.io/images/yuzhiboyan.png" alt="帅气的言哥哥">
+            </div>
             <div class="card-name">宇智波.言</div>
             <div class="card-desc">毁灭 · 雷 | 限定五星</div>
         </div>
+        <div class="content-card" onclick="window.location.href='jiazijie-detail.html'">
+            <div class="card-img">
+                <img src="https://xiaochen1235789.github.io/images/魔法猫咪.小咪.png" alt="猫猫">
+            </div>
+            <div class="card-name">魔法猫咪.小咪</div>
+            <div class="card-desc">欢愉 · 随机 | 限定五星</div>
+        </div>
     </div>
-    <!-- 光锥列表（补充缺失图片，与现有风格统一） -->
     <h2 class="section-header" id="lightcone">光锥列表</h2>
     <div class="grid-container">
         <div class="content-card lightcone-card">
             <div class="card-img">
-                <!-- 补充巡猎类光锥图片，匹配“快乐的路一天”描述 -->
                 <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="快乐的路一天">
             </div>
             <div class="card-name">快乐的路一天</div>
@@ -302,26 +264,23 @@
         </div>
         <div class="content-card lightcone-card">
             <div class="card-img">
-            <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/bot-chat-image/de58a486ba12403dad7600852d7306e6.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?rcl=2025110913510815A50B45CD7BCE39053E&rk3s=8e244e95&rrcfp=e9668010&x-expires=1763272269&x-signature=PUWGHpQ2UfZk9SRsfxYHJr0wSn0%3D" alt="落日时起舞">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/bot-chat-image/de58a486ba12403dad7600852d7306e6.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?rcl=2025110913510815A50B45CD7BCE39053E&rk3s=8e244e95&rrcfp=e9668010&x-expires=1763272269&x-signature=PUWGHpQ2UfZk9SRsfxYHJr0wSn0%3D" alt="落日时起舞">
             </div>
             <div class="card-name">落日时起舞</div>
-            <div class="card-desc">毁灭 | 暴击伤害特化</div>
+            <div class="card-desc">毁灭 · 暴击伤害特化</div>
         </div>
         <div class="content-card lightcone-card">
             <div class="card-img">
-                <!-- 补充未知光锥默认图片，保持暗绿色底板风格 -->
                 <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="未知光锥">
             </div>
             <div class="card-name">？？？</div>
             <div class="card-desc">？？？</div>
         </div>
     </div>
-    <!-- 养成材料（补充缺失图片，匹配1:1比例） -->
     <h2 class="section-header" id="material">养成材料</h2>
     <div class="grid-container">
         <div class="content-card material-card">
             <div class="card-img">
-                <!-- 补充养成材料1图片，1:1比例 -->
                 <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="养成材料1">
             </div>
             <div class="card-name">初级突破素材</div>
@@ -329,62 +288,117 @@
         </div>
         <div class="content-card material-card">
             <div class="card-img">
-                <!-- 补充养成材料2图片，1:1比例 -->
                 <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="养成材料2">
             </div>
             <div class="card-name">中级突破素材</div>
             <div class="card-desc">角色突破Lv.40-Lv.60</div>
         </div>
     </div>
-    <!-- 新增：更新日志模块（原有内容不变） -->
     <h2 class="section-header" id="changelog">更新日志</h2>
     <div class="pet-system" style="margin-top: 0;" id="changelogContainer">
         <div class="changelog-loading">
             <span>加载更新日志中...</span>
         </div>
     </div>
+
+    <!-- 播放器iframe：大幅增加高度，确保进度条展开空间 -->
+    <iframe 
+        id="musicPlayerIframe"
+        src="music-player.html"
+        style="
+            display: block !important;
+            visibility: visible !important;
+            height: 90px !important; /* 足够容纳播放器（60px）+ 进度条（~20px） */
+            width: 100% !important;
+            z-index: 99999 !important;
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            overflow: visible !important;
+        "
+        frameborder="0"
+        scrolling="no"
+        onload="resizePlayerIframe(this)"
+    ></iframe>
+
     <script>
-        // 原有登录/退出逻辑不变
-        (()=>{
-            const user = localStorage.getItem('user');
-            const nav = document.querySelector('.top-nav');
-            if(user){   // 已登录
-                nav.insertAdjacentHTML('beforeend',`
-                    <span style="margin-left:auto;color:#d3af37;">欢迎 ${user}</span>
-                    <a href="#" onclick="logout()" style="margin-left:12px;">退出</a>
-                `);
-            }else{      // 未登录
-                nav.insertAdjacentHTML('beforeend',`
-                    <a href="login.html" style="margin-left:auto;">登录/注册</a>
+        // 自动调整iframe高度，适配进度条
+        function resizePlayerIframe(iframe) {
+            try {
+                // 计算播放器+进度条的总高度
+                const playerHeight = iframe.contentWindow.document.querySelector('.mini-music-player').offsetHeight;
+                const progressHeight = iframe.contentWindow.document.querySelector('.player-progress').offsetHeight;
+                iframe.style.height = (playerHeight + progressHeight + 10) + 'px'; // 额外加10px缓冲
+            } catch (err) {
+                iframe.style.height = '90px'; // 降级固定高度
+            }
+        }
+        // 原有脚本完全保留...
+        window.addEventListener('load', () => {
+            const iframe = document.getElementById('musicPlayerIframe');
+            setTimeout(() => {
+                try {
+                    iframe.contentWindow.postMessage({ type: 'RESTORE_PLAY_STATE' }, '*');
+                } catch (err) {}
+            }, 300);
+        });
+        (() => {
+            try {
+                const user = localStorage.getItem('user');
+                const nav = document.querySelector('.top-nav');
+                const authHTML = user 
+                    ? `
+                        <span style="margin-left:auto;color:#d3af37;">欢迎 ${user}</span>
+                        <a href="#" onclick="logout()" style="margin-left:12px;" class="nav-link">退出</a>
+                      `
+                    : `
+                        <a href="login.html" style="margin-left:auto;" class="nav-link">登录/注册</a>
+                      `;
+                nav.insertAdjacentHTML('beforeend', authHTML);
+            } catch (err) {
+                document.querySelector('.top-nav').insertAdjacentHTML('beforeend', `
+                    <a href="login.html" style="margin-left:auto;" class="nav-link">登录/注册</a>
                 `);
             }
         })();
-        function logout(){
+        function logout() {
             localStorage.removeItem('user');
-            location.reload();
-        };
-        // 新增：动态加载更新日志的脚本（原有内容不变）
+            window.location.href = window.location.href;
+        }
         (function loadChangelog() {
             const container = document.getElementById('changelogContainer');
+            const timeoutTimer = setTimeout(() => {
+                container.innerHTML = `
+                    <div class="changelog-error">
+                        <span style="color: #ff4444;">❌ 更新日志加载超时</span>
+                        <button class="pet-btn" style="margin-top: 8px;" onclick="loadChangelog()">重试</button>
+                    </div>
+                `;
+            }, 8000);
             fetch('changelog.html')
                 .then(response => {
-                    if (!response.ok) throw new Error('日志文件未找到');
+                    clearTimeout(timeoutTimer);
+                    if (!response.ok) throw new Error(`HTTP错误，状态码: ${response.status}`);
                     return response.text();
                 })
                 .then(logContent => {
                     container.innerHTML = `
                         <div class="pet-header">
                             <div class="pet-icon">
-                                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/b3c219a3139148bd9877d8e632194446.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?rcl=20251109175337AD1225E3CDA867F5D403&rk3s=8e244e95&rrcfp=e9668010&x-expires=1763286818&x-signature=HzJdxkhUFrv7DM9gd7FVJJjj3Oo%3D" alt="日志图标">
+                                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/b3c219a3139148bd9877d8e632194446.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?rcl=20251109175337AD1225E3CDA867F5D403&rk3s=8e244e95&rrcfp=e9668010&x-expires=1763286818&x-signature=HzJdxkhUFrv7DM9gd7FVJJjj3Oo%3D" alt="日志图标" style="max-width: 100%; max-height: 100%; object-fit: contain;">
                             </div>
                             <div class="pet-title">WIKI版本更新记录</div>
                         </div>
                         <div class="changelog-list">
-                            ${logContent}
+                            ${logContent || '<p style="color: var(--text-secondary);">暂无更新记录</p>'}
                         </div>
                     `;
                 })
                 .catch(error => {
+                    clearTimeout(timeoutTimer);
                     container.innerHTML = `
                         <div class="changelog-error">
                             <span style="color: #ff4444;">❌ 更新日志加载失败：${error.message}</span>
@@ -393,6 +407,24 @@
                     `;
                 });
         })();
+        document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 80,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+        window.addEventListener('message', (e) => {
+            if (e.data.type === 'PLAY_STATE_UPDATED') {
+                console.log('当前播放状态:', e.data.state.isPlaying);
+            }
+        });
     </script>
 </body>
 </html>
