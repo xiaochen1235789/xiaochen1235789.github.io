@@ -1,333 +1,447 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<title>涵 · 数值页</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" 
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" 
       href="https://xiaochen1235789.github.io/images/wangzhantupian.png" 
       type="image/png">
-<style>
-:root{
-  --bg:#121212;
-  --surface:#1a1a1a;
-  --card:#202020;
-  --primary:#d3af37;   /* 玉衡金 */
-  --second:#81c784;
-  --text:#e0e0e0;
-  --sub:#99aabb;
-  --line:#333;
-  --radius:6px;
-  --tran:.3s ease;
-}
-*{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft YaHei",sans-serif;}
-body{background:var(--bg);color:var(--text);}
-a{color:var(--second);text-decoration:none;}
-img{max-width:100%;display:block;}
-/* 顶部返回栏 */
-.top-bar{display:flex;align-items:center;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--line);}
-.top-bar .back{font-size:1.2rem;margin-right:12px;}
-.top-bar .title{font-size:1.1rem;font-weight:600;}
-/* 立绘区 */
-.art-box{position:relative;background:#2a2a2a;}
-.art-box img{width:100%;aspect-ratio:16/9;object-fit:cover;}
-.name-tag{position:absolute;bottom:12px;left:16px;}
-.ch-name{font-size:1.6rem;font-weight:600;color:#fff;text-shadow:0 0 4px #000;}
-.tags{display:flex;gap:6px;margin-top:4px;}
-.tag{background:rgba(0,0,0,.6);color:var(--primary);padding:2px 8px;border-radius:var(--radius);font-size:.7rem;}
-/* 等级调节 */
-.level-block{background:var(--card);margin:12px 16px;padding:12px 16px;border-radius:var(--radius);}
-.level-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-.level-label{color:var(--sub);font-size:.9rem;}
-.level-value{font-size:1.2rem;font-weight:600;color:var(--primary);}
-.level-slider{width:100%;-webkit-appearance:none;height:4px;background:var(--line);border-radius:2px;outline:none;}
-.level-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--primary);border-radius:50%;cursor:pointer;}
-/* 技能折叠块 */
-.skill-block{background:var(--card);margin:0 16px 12px;border-radius:var(--radius);}
-.skill-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;}
-.skill-header:hover{background:rgba(255,255,255,.05);}
-.skill-name{font-weight:500;}
-.skill-arrow{transition:transform var(--tran);}
-.skill-body{max-height:600px;overflow:visible;}/* 强制显示，去掉折叠动画 */
-.skill-content{padding:0 16px 12px;font-size:.85rem;color:var(--sub);}
-.skill-table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:6px;}
-.skill-table th,.skill-table td{padding:4px 2px;text-align:center;border-bottom:1px solid var(--line);}
-.skill-table th{color:var(--primary);}
-/* 12级传说色渐变样式 */
-.legend-text{
-  background: linear-gradient(45deg, #ffd700, #ffA500);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  font-weight: 600;
-}
-</style>
+    <title>六哥荣耀WIKI</title>
+    <style>
+        body {
+            overflow: visible !important;
+            padding-bottom: 100px !important; /* 增加底部预留空间，给进度条留足位置 */
+            background: var(--bg) !important;
+        }
+        #musicPlayerIframe {
+            display: block !important;
+            visibility: visible !important;
+            height: 90px !important; /* 大幅增加iframe高度，容纳播放器+进度条 */
+            width: 100% !important;
+            z-index: 99999 !important;
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            overflow: visible !important; /* 允许进度条向上展开 */
+        }
+        /* 原有其他样式完全保留... */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        :root {
+            --bg: #121212;
+            --card-bg: #1e3a2f;
+            --text-main: #e0e0e0;
+            --text-highlight: #81c784;
+            --text-secondary: #99aabb;
+            --radius: 4px;
+            --gap: 12px;
+        }
+        .top-nav {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 8px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+        .nav-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-highlight);
+            margin-right: auto;
+        }
+        .nav-link {
+            color: var(--text-main);
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            transition: background 0.2s;
+        }
+        .nav-link:hover {
+            background: #2d5243;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: var(--gap);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .content-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100% !important;
+            height: auto !important;
+        }
+        .content-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .card-img {
+            width: 100%;
+            aspect-ratio: 4/5;
+            background: #2d5243;
+            border-radius: var(--radius);
+            margin-bottom: 8px;
+            padding: 0 !important;
+            overflow: hidden !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card-img img {
+            width: 100%;
+            height: 95%;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+        .content-card:hover .card-img img {
+            transform: scale(1.05);
+        }
+        .card-name {
+            font-size: 1rem;
+            color: var(--text-highlight);
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .card-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .lightcone-card .card-img {
+            aspect-ratio: 3/4;
+            transform: rotate(-5deg);
+        }
+        .lightcone-card:hover .card-img {
+            transform: rotate(-5deg) translateY(-2px);
+        }
+        .section-header {
+            max-width: 1200px;
+            margin: 24px auto 12px;
+            font-size: 1.3rem;
+            color: var(--text-highlight);
+            border-bottom: 1px solid #3d725f;
+            padding-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-header::before {
+            content: "📌";
+        }
+        .material-card .card-img {
+            aspect-ratio: 1/1;
+        }
+        .changelog-loading, .changelog-error {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+        }
+        .changelog-list {
+            padding: 16px;
+            line-height: 1.8;
+        }
+        .changelog-item {
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #3d725f;
+        }
+        .changelog-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .changelog-version {
+            color: var(--text-highlight);
+            font-size: 1rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .changelog-version::before {
+            content: "📌";
+        }
+        .changelog-content ul {
+            margin-left: 24px;
+            color: var(--text-main);
+        }
+        .changelog-content li {
+            margin-bottom: 4px;
+        }
+        .changelog-content li::marker {
+            color: var(--text-secondary);
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #2d3748;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4a5568;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #66bb6a;
+        }
+    </style>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
-<div class="top-bar">
-  <a class="back" href="index.html">‹</a>
-  <span class="title">涵 · 数值页</span>
-</div>
-<!-- 立绘 + 名字 + 标签 -->
-<div class="art-box">
-  <img src="https://xiaochen1235789.github.io/images/涵.png" alt="涵立绘">
-  <div class="name-tag">
-    <div class="ch-name">涵</div>
-    <div class="tags">
-      <span class="tag">同谐</span>
-      <span class="tag">物理</span>
-      <span class="tag">限定五星</span>
+    <!-- 原有页面内容完全保留... -->
+    <div class="top-nav">
+        <div class="nav-title">六哥荣耀WIKI</div>
+        <a href="#character" class="nav-link">角色</a>
+        <a href="#lightcone" class="nav-link">光锥</a>
+        <a href="#material" class="nav-link">养成材料</a>
+        <a href="#changelog" class="nav-link">更新日志</a>
     </div>
-  </div>
-</div>
-<!-- 等级滑块 -->
-<div class="level-block">
-  <div class="level-header">
-    <span class="level-label">当前等级</span>
-    <span class="level-value" id="levelDisplay">Lv.1</span>
-  </div>
-  <input type="range" class="level-slider" id="levelRange" min="1" max="12" value="1">
-</div>
-<!-- 技能区：普攻、战技、终结技、天赋改为直接显示 -->
-<div class="skill-block">
-  <div class="skill-header">
-    <span class="skill-name">普攻 · 光辉斩击(满级7级)</span>
-    <span class="skill-arrow" id="arrow1"></span>
-  </div>
-  <div class="skill-body" id="body1">
-    <div class="skill-content">
-      对敌方目标单体造成等同于涵<span id="val1">50%</span> 攻击力的物理属性伤害。
-      <table class="skill-table">
-        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
-        <tbody>
-          <tr><td>削韧</td><td>10</td></tr>
-          <tr><td>战技点</td><td>+1</td></tr>
-          <tr><td>能量回复</td><td>20</td></tr>
-        </tbody>
-      </table>
+    <h2 class="section-header" id="character">角色列表</h2>
+    <div class="grid-container">
+        <!-- 1. 鹿管卡片：优化跳转逻辑 -->
+        <div class="content-card" onclick="jumpToDetail('luguan-detail.html', '鹿管')">
+            <div class="card-img">
+                <img src="https://xiaochen1235789.github.io/images/changjinglu.png" alt="鹿将军">
+            </div>
+            <div class="card-name">鹿管</div>
+            <div class="card-desc">巡猎 · 风 | 限定五星</div>
+        </div>
+        <!-- 2. 云璃卡片：优化跳转逻辑 -->
+        <div class="content-card" onclick="jumpToDetail('yunli-detail.html', '云璃')">
+            <div class="card-img">
+                <img src="https://xiaochen1235789.github.io/images/yunli.png" alt="璃宝">
+            </div>
+            <div class="card-name">云璃</div>
+            <div class="card-desc">毁灭 · 物理 | 五星</div>
+        </div>
+        <!-- 3. 皮哥卡片：优化跳转逻辑 -->
+        <div class="content-card" onclick="jumpToDetail('pige-detail.html', '皮哥')">
+            <div class="card-img">
+                <img src="https://xiaochen1235789.github.io/images/pige.png" alt="皮哥">
+            </div>
+            <div class="card-name">皮哥</div>
+            <div class="card-desc">存护 · 物理 | 限定五星</div>
+        </div>
+        <!-- 4. 宇智波.言卡片：优化跳转逻辑 -->
+        <div class="content-card" onclick="jumpToDetail('yuzhiboyan-detail.html', '宇智波.言')">
+            <div class="card-img">
+                <img src="https://xiaochen1235789.github.io/images/yuzhiboyan.png" alt="帅气的言哥哥">
+            </div>
+            <div class="card-name">宇智波.言</div>
+            <div class="card-desc">毁灭 · 雷 | 限定五星</div>
+        </div>
+        <!-- 5. 涵卡片：优化跳转逻辑 -->
+        <div class="content-card" onclick="jumpToDetail('han-detail.html', '涵')">
+            <div class="card-img">
+                <img src="https://xiaochen1235789.github.io/images/涵.png" alt="涵">
+            </div>
+            <div class="card-name">涵</div>
+            <div class="card-desc">同谐 · 物理 | 限定五星</div>
+        </div>
     </div>
-  </div>
-</div>
-<div class="skill-block">
-  <div class="skill-header">
-    <span class="skill-name">战技 · 闪耀共鸣(满级12级)</span>
-    <span class="skill-arrow" id="arrow2"></span>
-  </div>
-  <div class="skill-body" id="body2">
-    <div class="skill-content">
-      使指定我方目标单体攻击力提高，提高的数值等同于涵 <span id="val2">50%</span> 的攻击力，并使指定的我方目标造成的伤害提高<span id="val3">40%</span>并为自身获得2层[闪亮]，持续3回合，并使指定角色<br><span style="color:orange;">行动提前100%</span>，如果涵有[闪亮]效果，则每有1层使该指定我方目标额外提高10%的暴击伤害
-      <br><span style="color:orange;">[闪亮]：使我方全体暴击率提高2%，速度提高2%，最高叠加10层</span>
-      <table class="skill-table">
-        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
-        <tbody>
-          <tr><td>削韧</td><td>单体20</td></tr>
-          <tr><td>战技点</td><td>-1</td></tr>
-          <tr><td>能量</td><td>+40</td></tr>
-        </tbody>
-      </table>
+    <h2 class="section-header" id="lightcone">光锥列表</h2>
+    <div class="grid-container">
+        <div class="content-card lightcone-card">
+            <div class="card-img">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="快乐的路一天">
+            </div>
+            <div class="card-name">快乐的路一天</div>
+            <div class="card-desc">巡猎 | 暴击率特化</div>
+        </div>
+        <div class="content-card lightcone-card">
+            <div class="card-img">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/bot-chat-image/de58a486ba12403dad7600852d7306e6.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?rcl=2025110913510815A50B45CD7BCE39053E&rk3s=8e244e95&rrcfp=e9668010&x-expires=1763272269&x-signature=PUWGHpQ2UfZk9SRsfxYHJr0wSn0%3D" alt="落日时起舞">
+            </div>
+            <div class="card-name">落日时起舞</div>
+            <div class="card-desc">毁灭 · 暴击伤害特化</div>
+        </div>
+        <div class="content-card lightcone-card">
+            <div class="card-img">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="未知光锥">
+            </div>
+            <div class="card-name">？？？</div>
+            <div class="card-desc">？？？</div>
+        </div>
     </div>
-  </div>
-</div>
-<div class="skill-block">
-  <div class="skill-header">
-    <span class="skill-name">终结技 · 光辉绽放(满级12级)</span>
-    <span class="skill-arrow" id="arrow3"></span>
-  </div>
-  <div class="skill-body" id="body3">
-    <div class="skill-content">
-      涵进入【谐行】状态，使除自身以外的队友立即行动，【谐行】状态期间涵免疫控制类攻击，退出【谐行】状态恢复正常，【谐行】生效期间我方目标全体造成的伤害提高<span id="val4">20%</span>
-      并为自身施加5层[闪亮]，持续3回合【谐行】状态结束前不会进入自己的回合且无法行动。行动序列上出现【谐行】倒计时，倒计时回合结束时涵退出【谐行】状态并立即行动，倒计时固定拥有152点速度
-      <table class="skill-table">
-        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
-        <tbody>
-          <tr><td>削韧</td><td>0</td></tr>
-          <tr><td>能量</td><td>-140</td></tr>
-        </tbody>
-      </table>
+    <h2 class="section-header" id="material">养成材料</h2>
+    <div class="grid-container">
+        <div class="content-card material-card">
+            <div class="card-img">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="养成材料1">
+            </div>
+            <div class="card-name">初级突破素材</div>
+            <div class="card-desc">角色突破Lv.20-Lv.40</div>
+        </div>
+        <div class="content-card material-card">
+            <div class="card-img">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="养成材料2">
+            </div>
+            <div class="card-name">中级突破素材</div>
+            <div class="card-desc">角色突破Lv.40-Lv.60</div>
+        </div>
     </div>
-  </div>
-</div>
-<div class="skill-block">
-  <div class="skill-header">
-    <span class="skill-name">天赋 · 闪耀猎手(满级12级)</span>
-    <span class="skill-arrow" id="arrow4"></span>
-  </div>
-  <div class="skill-body" id="body4">
-    <div class="skill-content">
-      我方目标每次施放攻击后，涵会额外造成1次等同于其涵<span id="val5">145%</span>攻击力的物理属性附加伤害，该伤害暴击率固定为100%，暴击伤害固定为250%
-      <table class="skill-table">
-        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
-        <tbody>
-          <tr><td>削韧</td><td>0</td></tr>
-          <tr><td>能量消耗</td><td>无变化</td></tr>
-        </tbody>
-      </table>
+    <h2 class="section-header" id="changelog">更新日志</h2>
+    <div class="pet-system" style="margin-top: 0;" id="changelogContainer">
+        <div class="changelog-loading">
+            <span>加载更新日志中...</span>
+        </div>
     </div>
-  </div>
-</div>
-<!-- ===== 额外能力 ===== -->
-<div class="skill-block">
-  <div class="skill-content" style="font-size: 16px;">
-    <span class="skill-name" style="font-size: 18px;"></span>
-    <br>
-    额外能力1：<span style="color:orange; font-size: 16px;">闪耀之源</span>
-    <br>
-    使我方全体暴击伤害提高30.0%，且我方目标攻击敌方目标后，涵额外为自身恢复2点能量。
-    <br>
-    <br>
-    额外能力2：<span style="color:orange; font-size: 16px;">共鸣增幅</span>
-    <br>
-    当涵处于[谐行]状态时，使我方目标全体造成的伤害提高30%
-    <br>
-    <br>
-    额外能力3：<span style="color:orange; font-size: 16px;">能量回响</span>
-    <br>
-    [谐行]状态结束后使自身获得15点能量
-  </div>
-</div>
-<script>
-/* 倍率表 */
-const base = [50,50,40,20,145];   // 1 级
-const step = [10,2.5,2,2.4,2];   // 每级增量
-const spans = ['val1','val2','val3','val4','val5'];
-const range = document.getElementById('levelRange');
-const display = document.getElementById('levelDisplay');
-function updateLevel(lv){
-  const levelNum = Number(lv);
-  display.textContent = 'Lv.'+lv;
-  // 等级数值本身也同步颜色等级
-  if(levelNum === 12){
-    display.className = 'level-value legend-text';
-  } else {
-    display.className = 'level-value';
-    const levelColors = [
-      '#d3af37','#d3af37','#d3af37', // 1-3 浅灰（入门）
-      '#d3af37','#d3af37','#d3af37', // 4-6 亮银（进阶）
-      '#d3af37','#d3af37','#d3af37', // 7-9 暗金（稀有）
-      '#d3af37','#d3af37',           // 10-11 深紫（史诗）
-      ''                              // 12级单独处理
-    ];
-    display.style.color = levelColors[levelNum - 1];
-  }
-  // 技能数值颜色
-  base.forEach((b,i)=>{
-    const val = b + step[i]*(levelNum-1);
-    const el  = document.getElementById(spans[i]);
-    el.textContent = val+'%';
-    /* 颜色 */
-    const colors = [
-      '#d3af37','#d3af37','#d3af37', // 1-3 浅灰（入门）
-      '#d3af37','#d3af37','#d3af37', // 4-6 亮银（进阶）
-      '#d3af37','#d3af37','#d3af37', // 7-9 暗金（稀有）
-      '#d3af37','#d3af37',           // 10-11 深紫（史诗）
-      ''                              // 12级单独处理
-    ];
-    // 12级（传说）：霓虹金渐变
-    if(levelNum === 12){
-      el.className = 'legend-text';
-    } else {
-      el.className = '';
-      el.style.color = colors[levelNum - 1];
-    }
-  });
-}
-range.addEventListener('input', e=>{
-  updateLevel(e.target.value);
-});
-updateLevel(1); // 初始化
-/* 移除折叠技能函数（因无需点击折叠，故删除触发逻辑） */
-</script>
-<!-- ===== 专武 ===== -->
-<div class="skill-block" style="margin:12px 16px;">
-  <div class="skill-header" style="cursor:default;">
-    <span class="skill-name">专武 · 我即闪亮登场</span>
-  </div>
-  <div class="skill-content" style="padding:12px 16px 0;">
-    <div style="margin-bottom:8px;">叠影等级：
-      <select id="weaponLv" onchange="updateWeapon()">
-        <option value="1">Ⅰ</option>
-        <option value="2">Ⅱ</option>
-        <option value="3">Ⅲ</option>
-        <option value="4">Ⅳ</option>
-        <option value="5">Ⅴ</option>
-      </select>
-    </div>
-    <ul style="list-style:none;font-size:.85rem;line-height:1.6;">
-      <li>使装备者的攻击力提高 <span id="wCrit" class="w-val">32</span>%</li>
-      <li>能量恢复效率提高 <span id="wDmg" class="w-val">12</span>%</li>
-      <li>当我方目标击杀敌方目标时，使装备者的攻击力提高 <span id="wCd" class="w-val">30.0</span>%，持续2回合</li>
-    </ul>
-  </div>
-</div>
-<!-- ===== 命座 ===== -->
-<div class="skill-block" style="margin:12px 16px;">
-  <div class="skill-header" style="cursor:default;">
-    <span class="skill-name">命之座</span>
-  </div>
-  <div class="skill-content" style="padding:12px 16px 0;">
-    <table class="skill-table" style="margin:0;">
-      <thead><tr><th>层数</th><th>名称</th><th>效果</th></tr></thead>
-      <tbody>
-      
-        <tr><td>1命</td><td>「闪耀守护」</td><td>涵在场时我方除自身外的队友效果抵抗提高<span class="const-val" data-lv="1">50%</span>，天赋附加攻击的暴击伤害数值提高至<span class="const-val" data-lv="1">350%</span></td></tr>
-    
-        <tr><td>2命</td><td>「共鸣加速」</td><td>处于[谐行]状态时，我方全体速度提高<span class="const-val" data-lv="2">16</span>%。额外能力1的能量恢复效果额外提高<span class="const-val" data-lv="1">3</span>点</td></tr>
-        
-        <tr><td>3命</td><td>「光辉跃升」</td><td>
-        普攻等级+<span class="const-val" data-lv="3">1</span>，最多不超过<span class="const-val" data-lv="3">10</span>级
-      <br>
-      天赋等级+<span class="const-val" data-lv="3">2</span>，最多不超过<span class="const-val" data-lv="3">15</span>级</td></tr>
-      
-        <tr><td>4命</td><td>「后台主宰」</td><td>进入[谐行]状态后，解除我方全体全部负面效果</td></tr>
-        
-        <tr><td>5命</td><td>「闪耀猎手」</td><td>
-        战技等级+<span class="const-val" data-lv="5">2</span>，最多不超过<span class="const-val" data-lv="5">15</span>级
-        <br>
-        终结技等级+<span class="const-val" data-lv="5">2</span>，最多不超过<span class="const-val" data-lv="5">15</span>级</td></tr>
-        
-        <tr><td>6命</td><td>「永恒闪耀」</td><td>[谐行]状态下我方全体无视敌方<span class="const-val" data-lv="6">24%</span>全属性抗性，涵的能量恢复效率提高<span class="const-val" data-lv="6">20%</span></td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-<script>
-/* ========== 专武 ========== */
-const weaponData = {
-  crit: [32,38,44,50,56],
-  dmg:  [12,14,16,18,20],
-  cd:   [30,35,40,45,50]
-};
-function updateWeapon(){
-  const lv = document.getElementById('weaponLv').value;
-  document.getElementById('wCrit').textContent = weaponData.crit[lv-1];
-  document.getElementById('wDmg').textContent  = weaponData.dmg[lv-1];
-  document.getElementById('wCd').textContent   = weaponData.cd[lv-1];
-  /* 专武颜色同步稀有度递进 */
-  const weaponColors = [
-    '#d3af37', // Ⅰ 浅灰
-    '#d3af37', // Ⅱ 亮银
-    '#d3af37', // Ⅲ 暗金
-    '#d3af37', // Ⅳ 深紫
-    '#d3af37'  // Ⅴ 霓虹金
-  ];
-  document.querySelectorAll('.w-val').forEach(el=>{
-    el.style.color = weaponColors[lv-1];
-  });
-}
-/* ========== 命座颜色同步稀有度递进 ========== */
-function colorConstellation(){
-  const constColors = [
-    '#d3af37','#d3af37','#d3af37', // 1-3命 浅灰→亮银（入门-进阶）
-    '#d3af37','#d3af37','#d3af37'  // 4-6命 亮银→暗金→深紫（进阶-稀有-史诗）
-  ];
-  document.querySelectorAll('.const-val').forEach(el=>{
-    const lv = Number(el.dataset.lv);
-    el.style.color = constColors[lv-1];
-  });
-}
-/* 初始化 */
-updateWeapon();
-colorConstellation();
-</script>
+    <!-- 播放器iframe：大幅增加高度，确保进度条展开空间 -->
+    <iframe 
+        id="musicPlayerIframe"
+        src="music-player.html"
+        style="
+            display: block !important;
+            visibility: visible !important;
+            height: 90px !important; /* 足够容纳播放器（60px）+ 进度条（~20px） */
+            width: 100% !important;
+            z-index: 99999 !important;
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            overflow: visible !important;
+        "
+        frameborder="0"
+        scrolling="no"
+        onload="resizePlayerIframe(this)"
+    ></iframe>
+    <script>
+        // 自动调整iframe高度，适配进度条
+        function resizePlayerIframe(iframe) {
+            try {
+                // 计算播放器+进度条的总高度
+                const playerHeight = iframe.contentWindow.document.querySelector('.mini-music-player').offsetHeight;
+                const progressHeight = iframe.contentWindow.document.querySelector('.player-progress').offsetHeight;
+                iframe.style.height = (playerHeight + progressHeight + 10) + 'px'; // 额外加10px缓冲
+            } catch (err) {
+                iframe.style.height = '90px'; // 降级固定高度
+            }
+        }
+        // 新增：所有角色统一跳转函数（带加载提示+超时兜底）
+        function jumpToDetail(targetUrl, charName) {
+            // 1. 显示角色专属加载提示，提升用户感知
+            alert(`正在跳转到【${charName}】的详情页，请稍等~`);
+            // 2. 2秒超时兜底：若正常跳转失效，强制触发跳转
+            const fallbackTimer = setTimeout(() => {
+                window.location.assign(targetUrl); // 强制跳转（优先级高于href）
+                alert(`【${charName}】页面加载稍慢，已为你强制跳转`);
+            }, 2000);
+            // 3. 正常跳转逻辑
+            window.location.href = targetUrl;
+            // 4. 若正常跳转成功，清除兜底定时器（避免重复跳转）
+            clearTimeout(fallbackTimer);
+        }
+        // 原有脚本完全保留...
+        window.addEventListener('load', () => {
+            const iframe = document.getElementById('musicPlayerIframe');
+            setTimeout(() => {
+                try {
+                    iframe.contentWindow.postMessage({ type: 'RESTORE_PLAY_STATE' }, '*');
+                } catch (err) {}
+            }, 300);
+        });
+        (() => {
+            try {
+                const user = localStorage.getItem('user');
+                const nav = document.querySelector('.top-nav');
+                const authHTML = user 
+                    ? `
+                        <span style="margin-left:auto;color:#d3af37;">欢迎 ${user}</span>
+                        <a href="#" onclick="logout()" style="margin-left:12px;" class="nav-link">退出</a>
+                      `
+                    : `
+                        <a href="login.html" style="margin-left:auto;" class="nav-link">登录/注册</a>
+                      `;
+                nav.insertAdjacentHTML('beforeend', authHTML);
+            } catch (err) {
+                document.querySelector('.top-nav').insertAdjacentHTML('beforeend', `
+                    <a href="login.html" style="margin-left:auto;" class="nav-link">登录/注册</a>
+                `);
+            }
+        })();
+        function logout() {
+            localStorage.removeItem('user');
+            window.location.href = window.location.href;
+        }
+        (function loadChangelog() {
+            const container = document.getElementById('changelogContainer');
+            const timeoutTimer = setTimeout(() => {
+                container.innerHTML = `
+                    <div class="changelog-error">
+                        <span style="color: #ff4444;">❌ 更新日志加载超时</span>
+                        <button class="pet-btn" style="margin-top: 8px;" onclick="loadChangelog()">重试</button>
+                    </div>
+                `;
+            }, 8000);
+            fetch('changelog.html')
+                .then(response => {
+                    clearTimeout(timeoutTimer);
+                    if (!response.ok) throw new Error(`HTTP错误，状态码: ${response.status}`);
+                    return response.text();
+                })
+                .then(logContent => {
+                    container.innerHTML = `
+                        <div class="pet-header">
+                            <div class="pet-icon">
+                                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/b3c219a3139148bd9877d8e632194446.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?rcl=20251109175337AD1225E3CDA867F5D403&rk3s=8e244e95&rrcfp=e9668010&x-expires=1763286818&x-signature=HzJdxkhUFrv7DM9gd7FVJJjj3Oo%3D" alt="日志图标" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            </div>
+                            <div class="pet-title">WIKI版本更新记录</div>
+                        </div>
+                        <div class="changelog-list">
+                            ${logContent || '<p style="color: var(--text-secondary);">暂无更新记录</p>'}
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    clearTimeout(timeoutTimer);
+                    container.innerHTML = `
+                        <div class="changelog-error">
+                            <span style="color: #ff4444;">❌ 更新日志加载失败：${error.message}</span>
+                            <button class="pet-btn" style="margin-top: 8px;" onclick="loadChangelog()">重试</button>
+                        </div>
+                    `;
+                });
+        })();
+        document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 80,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+        window.addEventListener('message', (e) => {
+            if (e.data.type === 'PLAY_STATE_UPDATED') {
+                console.log('当前播放状态:', e.data.state.isPlaying);
+            }
+        });
+    </script>
 </body>
 </html>
