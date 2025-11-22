@@ -21,7 +21,7 @@
   --tran:.3s ease;
 }
 *{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft YaHei",sans-serif;}
-body{background:var(--bg);color:var(--text);}
+body{background:var(--bg);color:var(--text);padding-bottom: 90px !important;}
 a{color:var(--second);text-decoration:none;}
 img{max-width:100%;display:block;}
 /* 顶部返回栏 */
@@ -42,30 +42,50 @@ img{max-width:100%;display:block;}
 .level-value{font-size:1.2rem;font-weight:600;color:var(--primary);}
 .level-slider{width:100%;-webkit-appearance:none;height:4px;background:var(--line);border-radius:2px;outline:none;}
 .level-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--primary);border-radius:50%;cursor:pointer;}
-/* 技能折叠块 */
+/* 技能折叠块（改为强制显示） */
 .skill-block{background:var(--card);margin:0 16px 12px;border-radius:var(--radius);}
-.skill-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;}
+.skill-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;}
 .skill-header:hover{background:rgba(255,255,255,.05);}
 .skill-name{font-weight:500;}
 .skill-arrow{transition:transform var(--tran);}
-.skill-body{max-height:0;overflow:hidden;transition:max-height var(--tran);}
-.skill-body.open{max-height:600px;}
+.skill-body{max-height:600px;overflow:visible;}/* 强制显示，去掉折叠动画 */
 .skill-content{padding:0 16px 12px;font-size:.85rem;color:var(--sub);}
 .skill-table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:6px;}
 .skill-table th,.skill-table td{padding:4px 2px;text-align:center;border-bottom:1px solid var(--line);}
 .skill-table th{color:var(--primary);}
+/* 12级传说色渐变样式 */
+.legend-text{
+  background: linear-gradient(45deg, #ffd700, #ffA500);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 600;
+}
+/* 播放器iframe样式 */
+#musicPlayerIframe {
+    display: block !important;
+    visibility: visible !important;
+    height: 90px !important;
+    width: 100% !important;
+    z-index: 99999 !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    overflow: visible !important;
+}
 </style>
 </head>
 <body>
-
 <div class="top-bar">
   <a class="back" href="index.html">‹</a>
   <span class="title">宇智波.言 · 数值页</span>
 </div>
-
 <!-- 立绘 + 名字 + 标签 -->
 <div class="art-box">
-  <img src="https://xiaochen1235789.github.io/images/yuzhiboyan.png" alt="鹿馆立绘">
+  <img src="https://xiaochen1235789.github.io/images/yuzhiboyan.png" alt="帅气的言哥哥立绘">
   <div class="name-tag">
     <div class="ch-name">宇智波.言</div>
     <div class="tags">
@@ -75,7 +95,6 @@ img{max-width:100%;display:block;}
     </div>
   </div>
 </div>
-
 <!-- 等级滑块 -->
 <div class="level-block">
   <div class="level-header">
@@ -84,12 +103,11 @@ img{max-width:100%;display:block;}
   </div>
   <input type="range" class="level-slider" id="levelRange" min="1" max="12" value="1">
 </div>
-
-<!-- 技能折叠区 -->
+<!-- 技能区：改为直接显示，移除折叠功能 -->
 <div class="skill-block">
-  <div class="skill-header" onclick="toggleSkill(this)">
+  <div class="skill-header">
     <span class="skill-name">普攻 · 雷鸣震击(满级7级)</span>
-    <span class="skill-arrow" id="arrow1">▼</span>
+    <span class="skill-arrow" id="arrow1"></span>
   </div>
   <div class="skill-body" id="body1">
     <div class="skill-content">
@@ -97,85 +115,74 @@ img{max-width:100%;display:block;}
       <table class="skill-table">
         <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
         <tbody>
-          <tr><td>削韧</td><td>10</td></tr>
+          <tr><td>削韧</td><td>单体10</td></tr>
           <tr><td>战技点</td><td>+1</td></tr>
-          <tr><td>能量</td><td>+20</td></tr>
+          <tr><td>能量变化</td><td>+20</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </div>
-
 <div class="skill-block">
-  <div class="skill-header" onclick="toggleSkill(this)">
+  <div class="skill-header">
     <span class="skill-name">战技 · 血祭残杀(满级12级)</span>
-    <span class="skill-arrow" id="arrow2">▼</span>
+    <span class="skill-arrow" id="arrow2"></span>
   </div>
   <div class="skill-body" id="body2">
     <div class="skill-content">
-      消耗等同于宇智波.言50%生命上限的生命值，进入[强化普攻]状态，并使自身暴击伤害提高<span id="val2">100%</span>，持续到[嗜血]状态结束
+      消耗等同于宇智波.言<span style="color:orange; font-size: 16px;">50%</span>生命上限的生命值，进入[强化普攻]状态，并使自身暴击伤害提高<span id="val2">100%</span>，持续到[嗜血]状态结束
       <table class="skill-table">
         <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
         <tbody>
           <tr><td>削韧</td><td>20</td></tr>
           <tr><td>血量变化</td><td>消耗当前50%血量</td></tr>
-          <tr><td>能量</td><td>+30</td></tr>
+          <tr><td>能量变化</td><td>+30</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </div>
-
 <div class="skill-block">
-  <div class="skill-header" onclick="toggleSkill(this)">
+  <div class="skill-header">
     <span class="skill-name">终结技 · 雷劫灭世(满级12级)</span>
-    <span class="skill-arrow" id="arrow3">▼</span>
+    <span class="skill-arrow" id="arrow3"></span>
   </div>
   <div class="skill-body" id="body3">
     <div class="skill-content">
-      获得150点[血恨值]并对敌人全体造成等同于宇智波.言<span id="val3">500%</span>累计已损失的生命值的雷属性伤害并重置累计已损失的生命，后回复等同于宇智波.言<span id="val4">20%</span>生命上限的生命值，最后使敌方全体陷入<span style="color:orange;"><h>[嘲讽]</span></h>状态，持续2回合。
-      <br><span style="color:orange;"><h>[嘲讽]：受到攻击的概率提高至100%</span></h>
+      获得<span style="color:orange; font-size: 16px;">150</span>点[血恨值]并对敌人全体造成等同于宇智波.言<span id="val3">500%</span>累计已损失的生命值的雷属性伤害并重置累计已损失的生命，后回复等同于宇智波.言<span id="val4">20%</span>生命上限的生命值，最后使敌方全体陷入<span style="color:orange;"><h>[嘲讽]</span></h>状态，持续<span style="color:orange; font-size: 16px;">2</span>回合。
       <table class="skill-table">
         <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
         <tbody>
-          <tr><td>削韧</td><td>30</td></tr>
-          <tr><td>能量</td><td>-120</td></tr>
+          <tr><td>削韧</td><td>群体30</td></tr>
+          <tr><td>血量变化</td><td>回复等同于自身根据等级变化的血量百分比</td></tr>
+          <tr><td>能量变化</td><td>-120</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </div>
-
 <div class="skill-block">
-  <div class="skill-header" onclick="toggleSkill(this)">
+  <div class="skill-header">
     <span class="skill-name">天赋 · 血恨无双(满级12级)</span>
-    <span class="skill-arrow" id="arrow4">▼</span>
+    <span class="skill-arrow" id="arrow4"></span>
   </div>
   <div class="skill-body" id="body4">
     <div class="skill-content">
-      每受到或自消耗等同于自身1%的生命值后增加1.2点[血恨值]，最多积攒300点，当[血恨值]达到100点后，进入[嗜血]状态并恢复等同于自身<span id="val5">25%</span>生命上限的生命值，并使<span style="color:orange;"><h>꯭行꯭动꯭提꯭前꯭</span></h>100%，[嗜血]状态下生命值提高，提高的数值等同于当前生命上限的<span id="val6">100%</span>，防御保持为0，自身回合时自动施放[雷电狂澜]，[血恨值]达到150点后使自身立即获得1个<span style="color:orange;"><h>꯭额꯭外꯭回꯭合꯭</span></h>自动释放[雷狱噬魂斩]
-[嗜血]状态期间，自身受到致命攻击时不会进入<span style="color:orange;"><h>꯭无꯭法꯭战꯭斗꯭状꯭态꯭</span></h>，但会清空[血恨值]并退出[嗜血]状态并回复等同于自身50%生命上限的生命值
-      <br>
-      <br><span style="color:orange;"><h>行动提前：使目标在下次行动前的等待间隔缩短</span></h>
-      <br>
-      <br><span style="color:orange;"><h>额外回合：获得1个不消耗回合数的额外回合，在此回合中无法插入施放终结技</span></h>
-      <br>
-      <br><span style="color:orange;"><h>无法战斗状态：当我方目标的当前生命值被削减至0时进入的特殊状态，处于该状态的目标无法继续战斗</span></h>
+      每受到或自消耗等同于自身<span style="color:orange; font-size: 16px;">1%</span>的生命值后增加<span style="color:orange; font-size: 16px;">1.2</span>点[血恨值]，最多积攒<span style="color:orange; font-size: 16px;">200</span>点，当[血恨值]达到<span style="color:orange; font-size: 16px;">100</span>点后，进入[嗜血]状态并恢复等同于自身<span id="val5">25%</span>生命上限的生命值，并使自身<span style="color:orange; font-size: 16px;">行动提前100%</span>，[嗜血]状态下生命值提高，提高的数值等同于当前生命上限的<span id="val6">100%</span>，防御保持为<span style="color:orange; font-size: 16px;">0</span>，自身回合时自动施放[雷电狂澜]，[血恨值]达到<span style="color:orange; font-size: 16px;">150</span>点后使自身立即获得1个<span style="color:orange; font-size: 16px;">额外回合</span>自动释放[雷狱噬魂斩]
+[嗜血]状态期间，自身受到致命攻击时不会进入<span style="color:orange; font-size: 16px;">无法战斗状态</span>，但会清空[血恨值]并退出[嗜血]状态并回复等同于自身<span style="color:orange; font-size: 16px;">50%</span>生命上限的生命值
       <table class="skill-table">
         <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
         <tbody>
-          <tr><td>削韧</td><td>0</td></tr>
-          <tr><td>能量</td><td>无变化</td></tr>
+          <tr><td>能量变化</td><td>无变化</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </div>
-
 <div class="skill-block">
-  <div class="skill-header" onclick="toggleSkill(this)">
+  <div class="skill-header">
     <span class="skill-name">强化普攻 · 雷电狂澜(满级12级)</span>
-    <span class="skill-arrow" id="arrow5">▼</span>
+    <span class="skill-arrow" id="arrow5"></span>
   </div>
   <div class="skill-body" id="body5">
     <div class="skill-content">
@@ -183,18 +190,17 @@ img{max-width:100%;display:block;}
       <table class="skill-table">
         <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
         <tbody>
-          <tr><td>削韧</td><td>15</td></tr>
-          <tr><td>能量</td><td>+20</td></tr>
+          <tr><td>削韧</td><td>单体15，两旁15</td></tr>
+          <tr><td>能量变化</td><td>+20</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </div>
-
 <div class="skill-block">
-  <div class="skill-header" onclick="toggleSkill(this)">
+  <div class="skill-header">
     <span class="skill-name">追加攻击 · 雷狱噬魂斩(满级12级)</span>
-    <span class="skill-arrow" id="arrow6">▼</span>
+    <span class="skill-arrow" id="arrow6"></span>
   </div>
   <div class="skill-body" id="body6">
     <div class="skill-content">
@@ -202,54 +208,13 @@ img{max-width:100%;display:block;}
       <table class="skill-table">
         <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
         <tbody>
-          <tr><td>削韧</td><td>15</td></tr>
-          <tr><td>能量</td><td>+10</td></tr>
+          <tr><td>削韧</td><td>群体15</td></tr>
+          <tr><td>能量变化</td><td>+10</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </div>
-
-<script>
-/* 倍率表 */
-const base = [30,100,500,20,25,100,200,100,500];   // 1 级
-const step = [5,10,50,1,1,10,37,12,30];   // 每级增量
-const spans = ['val1','val2','val3','val4','val5','val6','val7','val8','val9'];
-
-const range = document.getElementById('levelRange');
-const display = document.getElementById('levelDisplay');
-
-function updateLevel(lv){
-  display.textContent = 'Lv.'+lv;
-  base.forEach((b,i)=>{
-    const val = b + step[i]*(lv-1);
-    const el  = document.getElementById(spans[i]);
-    el.textContent = val+'%';
-
-    /* ===== 分级高亮：1-5浅金 | 6-10金 | 11-12紫金色 ===== */
-    const colors = [
-      '#d3af37','#d3af37','#d3af37','#d3af37','#d3af37', 
-      '#d3af37','#d3af37','#d3af37','#d3af37','#d3af37', // 1-12 金
-      '#d3af37','#d3af37'                                  
-    ];
-    el.style.color = colors[lv - 1];
-  });
-}
-
-range.addEventListener('input', e=>{
-  updateLevel(e.target.value);
-});
-updateLevel(1); // 初始化
-el.style.color = 'var(--primary)';
-
-/* 折叠技能 */
-function toggleSkill(header){
-  const body = header.nextElementSibling;
-  const arrow = header.querySelector('.skill-arrow');
-  body.classList.toggle('open');
-  arrow.textContent = body.classList.contains('open')?'▲':'▼';
-}
-</script>
 <!-- ===== 专武 ===== -->
 <div class="skill-block" style="margin:12px 16px;">
   <div class="skill-header" style="cursor:default;">
@@ -266,10 +231,31 @@ function toggleSkill(header){
       </select>
     </div>
     <ul style="list-style:none;font-size:.85rem;line-height:1.6;">
-      <li>战斗开始时使装备者获得【生命烈焰】，【生命烈焰】的效果为提高暴击率 <span id="wCrit" class="w-val">16</span>%</li>
-      <li>生命上限提高 <span id="wDmg" class="w-val">20</span>%，受到攻击或消耗自身生命值后，造成的伤害提高50%，该效果在装备者施放攻击后解除，同时装备者受到的治疗量提高35%</li>
-      <li>施放战技或终结技时，消耗等同于自身 <span id="wCd" class="w-val">14</span>%生命上限的生命值，若当前生命值不足，该效果最多使装备者的当前生命值降低至等同于自身的1%生命上限</li>
+      <li>战斗开始时使装备者获得<span style="color:orange; font-size: 16px;">【生命烈焰】</span>，<span style="color:orange; font-size: 16px;">【生命烈焰】</span>的效果为提高暴击率 <span id="wCrit" class="w-val">16</span>%</li>
+      <li>生命上限提高 <span id="wDmg" class="w-val">20</span>%，受到攻击或消耗自身生命值后，造成的伤害提高<span style="color:orange; font-size: 16px;">50%</span>，该效果在装备者施放攻击后解除，同时装备者受到的治疗量提高<span style="color:orange; font-size: 16px;">35%</span></li>
+      <li>施放战技或终结技时，消耗等同于自身 <span id="wCd" class="w-val">14</span>%生命上限的生命值，若当前生命值不足，该效果最多使装备者的当前生命值降低至等同于自身的<span style="color:orange; font-size: 16px;">1%</span>生命上限</li>
     </ul>
+  </div>
+</div>
+
+<!-- ===== 额外能力 ===== -->
+<div class="skill-block">
+  <div class="skill-content" style="font-size: 16px;">
+    <span class="skill-name" style="font-size: 18px;"></span>
+    <br>
+    额外能力1：<span style="color:orange; font-size: 16px;">血雷不灭</span>
+    <br>
+    [嗜血]状态下宇智波.言受到致命攻击时不会退出[嗜血]状态并回复等同于自身<span style="color:orange; font-size: 16px;">60%</span>生命上限的生命值，<span style="color:orange; font-size: 16px;">1</span>回合最多触发<span style="color:orange; font-size: 16px;">2</span>次。
+    <br>
+    <br>
+    额外能力2：<span style="color:orange; font-size: 16px;">血雷无拘</span>
+    <br>
+    [嗜血]状态下宇智波.言无视敌方目标<span style="color:orange; font-size: 16px;">[控制类技能]</span>。
+    <br>
+    <br>
+    额外能力3：<span style="color:orange; font-size: 16px;">血雷响应</span>
+    <br>
+    战斗开始时，若宇智波.言的生命上限高于<span style="color:orange; font-size: 16px;">4000</span>点，每超过100点生命值可使自身暴击率提高<span style="color:orange; font-size: 16px;">3.2%</span>，宇智波.言受到来自敌方目标伤害造成的充能效率提高<span style="color:orange; font-size: 16px;">6.0%</span>，受到治疗时的回复量提高<span style="color:orange; font-size: 16px;">2.0%</span>，超出部分最多<span style="color:orange; font-size: 16px;">2000</span>点计入的生命值。<span style="color:purple; font-size: 16px;">(改)</span>
   </div>
 </div>
 
@@ -282,9 +268,9 @@ function toggleSkill(header){
     <table class="skill-table" style="margin:0;">
       <thead><tr><th>层数</th><th>名称</th><th>效果</th></tr></thead>
       <tbody>
-        <tr><td>1命</td><td>「血誓狂澜」</td><td>当宇智波.言生命小于等于<span class="const-val" data-lv="1">25</span>%，不管天赋的效果有没有触发，自动释放一次天赋，并使此次的伤害提高<span class="const-val" data-lv="1">50</span>%，该效果1回合只能触发1次</td></tr>
+        <tr><td>1命</td><td>「血誓狂澜」</td><td>当宇智波.言生命小于等于<span class="const-val" data-lv="1">25%</span>，不论天赋的追加攻击[雷狱噬魂斩]有没有触发，自动释放一次不消耗[血恨值]的<span style="color:orange; font-size: 16px;">[雷狱噬魂斩] </span>，并使本次的伤害提高<span class="const-val" data-lv="1">50%</span>，该效果<span style="color:orange; font-size: 16px;">1</span>回合只能触发<span style="color:orange; font-size: 16px;">1</span>次。</td></tr>
         
-        <tr><td>2命</td><td>「灭世噬魂」</td><td>[嗜血]状态期间，宇智波.言造成的伤害无视敌方目标<span class="const-val" data-lv="2">24</span>%的防御力和<span class="const-val" data-lv="2">15</span>%全属性抗性，且受到治疗时会将<span class="const-val" data-lv="2">60</span>%的治疗数值转化为[血恨值]，累计转化最高不超过<span class="const-val" data-lv="2">100</span>点，只能在自身回合结束后积攒</td></tr>
+        <tr><td>2命</td><td>「灭世噬魂」</td><td>[嗜血]状态期间，宇智波.言造成的伤害无视敌方目标<span class="const-val" data-lv="2">24%</span>的防御力和<span class="const-val" data-lv="2">20%</span>全属性抗性，且受到治疗时会将<span class="const-val" data-lv="2">60%</span>的治疗数值转化为[血恨值]，累计转化最高不超过<span class="const-val" data-lv="2">100</span>点，只能在自身回合结束后积攒。</td></tr>
         
         <tr><td>3命</td><td>「怒雷焚天」</td><td>
       普攻等级+<span class="const-val" data-lv="3">1</span>，最多不超过<span class="const-val" data-lv="3">10</span>级
@@ -292,15 +278,14 @@ function toggleSkill(header){
       天赋等级+<span class="const-val" data-lv="3">2</span>，最多不超过<span class="const-val" data-lv="3">15</span>级
       <br>
       追加攻击等级+<span class="const-val" data-lv="3">2</span>，最多不超过<span class="const-val" data-lv="3">15</span>级</td></tr>
-
-        <tr><td>4命</td><td>「血祭苍穹」</td><td>[嗜血]状态下，使其自身造成的暴击伤害提高<span class="const-val" data-lv="4">50</span>%，且受到攻击后回复等同于自身<span class="const-val" data-lv="4">10</span>%的生命上限的生命值</td></tr>
+        <tr><td>4命</td><td>「血祭苍穹」</td><td>[嗜血]状态中，使其自身暴击伤害提高<span class="const-val" data-lv="4">50%</span>，且受到攻击后回复等同于自身<span class="const-val" data-lv="4">10%</span>的生命上限的生命值。</td></tr>
         
         <tr><td>5命</td><td>「血祭苍穹」</td><td>
         战技等级+<span class="const-val" data-lv="5">2</span>，最多不超过<span class="const-val" data-lv="5">15</span>级
         <br>
         终结技等级+<span class="const-val" data-lv="5">2</span>，最多不超过<span class="const-val" data-lv="5">15</span>级</td></tr>
         
-        <tr><td>6命</td><td>「天雷主宰」</td><td>进入战斗后立即进入[嗜血]状态，[雷狱噬魂斩]需求的[血恨值]降低<span class="const-val" data-lv="6">50</span>点，每次造成伤害的时候额外造成等同于此次伤害<span class="const-val" data-lv="6">24%</span>的<span style="color:orange;"><h>꯭真꯭实꯭伤꯭害꯭</span></h>
+        <tr><td>6命</td><td>「天雷主宰」</td><td>进入战斗后立即进入[嗜血]状态，[雷狱噬魂斩]需求的[血恨值]降低<span class="const-val" data-lv="6">50</span>点，每次造成伤害的时候额外造成等同于此次伤害<span class="const-val" data-lv="6">24%</span>的<span style="color:orange; font-size: 16px;">真实伤害</span>。<span style="color:purple; font-size: 16px;">(改)</span>
         <br><span style="color:orange;"><h>真实伤害：不受任何效果所影响的无属性伤害，本次攻击不视为造成了1次攻击</span></h>
         </td></tr>
         
@@ -308,7 +293,58 @@ function toggleSkill(header){
     </table>
   </div>
 </div>
-
+<script>
+/* 倍率表 */
+const base = [30,100,500,20,25,100,200,100,500];   // 1 级
+const step = [5,10,50,1,1,10,37,12,30];   // 每级增量
+const spans = ['val1','val2','val3','val4','val5','val6','val7','val8','val9'];
+const range = document.getElementById('levelRange');
+const display = document.getElementById('levelDisplay');
+function updateLevel(lv){
+  const levelNum = Number(lv);
+  display.textContent = 'Lv.'+lv;
+  // 等级数值本身也同步颜色等级
+  if(levelNum === 12){
+    display.className = 'level-value legend-text';
+  } else {
+    display.className = 'level-value';
+    const levelColors = [
+      '#d3af37','#d3af37','#d3af37', // 1-3 浅灰（入门）
+      '#d3af37','#d3af37','#d3af37', // 4-6 亮银（进阶）
+      '#d3af37','#d3af37','#d3af37', // 7-9 暗金（稀有）
+      '#d3af37','#d3af37',           // 10-11 深紫（史诗）
+      ''                              // 12级单独处理
+    ];
+    display.style.color = levelColors[levelNum - 1];
+  }
+  // 技能数值颜色
+  base.forEach((b,i)=>{
+    const val = b + step[i]*(levelNum-1);
+    const el  = document.getElementById(spans[i]);
+    el.textContent = val+'%';
+    /* 颜色 */
+    const colors = [
+      '#d3af37','#d3af37','#d3af37', // 1-3 浅灰（入门）
+      '#d3af37','#d3af37','#d3af37', // 4-6 亮银（进阶）
+      '#d3af37','#d3af37','#d3af37', // 7-9 暗金（稀有）
+      '#d3af37','#d3af37',           // 10-11 深紫（史诗）
+      ''                              // 12级单独处理
+    ];
+    // 12级（传说）：霓虹金渐变
+    if(levelNum === 12){
+      el.className = 'legend-text';
+    } else {
+      el.className = '';
+      el.style.color = colors[levelNum - 1];
+    }
+  });
+}
+range.addEventListener('input', e=>{
+  updateLevel(e.target.value);
+});
+updateLevel(1); // 初始化
+/* 移除折叠技能函数（因无需点击折叠，故删除触发逻辑） */
+</script>
 <script>
 /* ========== 专武 ========== */
 const weaponData = {
@@ -321,26 +357,92 @@ function updateWeapon(){
   document.getElementById('wCrit').textContent = weaponData.crit[lv-1];
   document.getElementById('wDmg').textContent  = weaponData.dmg[lv-1];
   document.getElementById('wCd').textContent   = weaponData.cd[lv-1];
-
-  /* 专武分级高亮 */
-  const colors = ['#d3af37','#d3af37','#d3af37','#d3af37','#d3af37'];
+  /* 专武颜色同步稀有度递进 */
+  const weaponColors = [
+    '#d3af37', // Ⅰ 浅灰
+    '#d3af37', // Ⅱ 亮银
+    '#d3af37', // Ⅲ 暗金
+    '#d3af37', // Ⅳ 深紫
+    '#d3af37'  // Ⅴ 霓虹金
+  ];
   document.querySelectorAll('.w-val').forEach(el=>{
-    el.style.color = colors[lv-1];
+    el.style.color = weaponColors[lv-1];
   });
 }
-
-/* ========== 命座分级高亮 ========== */
+/* ========== 命座颜色同步稀有度递进 ========== */
 function colorConstellation(){
-  const colors = ['#d3af37','#d3af37','#d3af37','#d3af37','#d3af37','#d3af37'];
+  const constColors = [
+    '#d3af37','#d3af37','#d3af37', // 1-3命 浅灰→亮银（入门-进阶）
+    '#d3af37','#d3af37','#d3af37'  // 4-6命 亮银→暗金→深紫（进阶-稀有-史诗）
+  ];
   document.querySelectorAll('.const-val').forEach(el=>{
     const lv = Number(el.dataset.lv);
-    el.style.color = colors[lv-1];
+    el.style.color = constColors[lv-1];
   });
 }
-
 /* 初始化 */
 updateWeapon();
 colorConstellation();
+</script>
+<!-- 播放器iframe：跨页无缝播放 -->
+<iframe 
+    id="musicPlayerIframe"
+    src="music-player.html"
+    style="
+        display: block !important;
+        visibility: visible !important;
+        height: 90px !important;
+        width: 100% !important;
+        z-index: 99999 !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        overflow: visible !important;
+    "
+    frameborder="0"
+    scrolling="no"
+    onload="resizePlayerIframe(this)"
+></iframe>
+<script>
+// 播放器高度自适应
+function resizePlayerIframe(iframe) {
+    try {
+        const playerHeight = iframe.contentWindow.document.querySelector('.mini-music-player').offsetHeight;
+        const progressHeight = iframe.contentWindow.document.querySelector('.player-progress').offsetHeight;
+        iframe.style.height = (playerHeight + progressHeight + 10) + 'px';
+    } catch (err) {
+        iframe.style.height = '90px';
+    }
+}
+// 跨页播放状态同步（广播监听）
+const bc = new BroadcastChannel('music_player_broadcast');
+bc.onmessage = (e) => {
+    if (e.data.type === 'SYNC_STATE') {
+        const iframe = document.getElementById('musicPlayerIframe');
+        if (iframe) {
+            iframe.contentWindow.postMessage({ type: 'SYNC_STATE', state: e.data.state }, '*');
+        }
+    }
+};
+// 页面加载初始化
+window.addEventListener('load', () => {
+    // 恢复播放器状态
+    const iframe = document.getElementById('musicPlayerIframe');
+    setTimeout(() => {
+        try {
+            iframe.contentWindow.postMessage({ type: 'RESTORE_PLAY_STATE' }, '*');
+        } catch (err) {}
+    }, 300);
+});
+// 监听播放器状态反馈
+window.addEventListener('message', (e) => {
+    if (e.data.type === 'PLAY_STATE_UPDATED') {
+        console.log('当前播放状态:', e.data.state.isPlaying);
+    }
+});
 </script>
 </body>
 </html>
