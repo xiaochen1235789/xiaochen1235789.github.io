@@ -42,6 +42,7 @@
             --text-secondary: #99aabb;
             --radius: 4px;
             --gap: 12px;
+            --special-color: #ffd700; /* 特殊纪念日金色 */
         }
         .top-nav {
             background: var(--card-bg);
@@ -69,6 +70,28 @@
         }
         .nav-link:hover {
             background: #2d5243;
+        }
+        /* 网站运行天数样式 */
+        .site-age-container {
+            max-width: 1200px;
+            margin: 0 auto 16px;
+            padding: 8px 12px;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            text-align: center;
+        }
+        #site-age {
+            color: var(--text-highlight);
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        #site-age.special {
+            color: var(--special-color);
+            animation: flash 1.5s infinite alternate;
+        }
+        @keyframes flash {
+            from { opacity: 1; text-shadow: 0 0 5px rgba(255,215,0,0.5); }
+            to { opacity: 0.8; text-shadow: 0 0 15px rgba(255,215,0,0.8); }
         }
         .grid-container {
             display: grid;
@@ -215,6 +238,12 @@
         <a href="#material" class="nav-link">养成材料</a>
         <a href="#changelog" class="nav-link">更新日志</a>
     </div>
+
+    <!-- 网站运行天数显示（已整合） -->
+    <div class="site-age-container">
+        <span id="site-age">加载中...</span>
+    </div>
+
     <h2 class="section-header" id="character">角色列表</h2>
     <div class="grid-container">
         <!-- 1. 鹿管卡片：优化跳转逻辑 -->
@@ -366,6 +395,38 @@
             // 4. 若正常跳转成功，清除兜底定时器（避免重复跳转）
             clearTimeout(fallbackTimer);
         }
+        // 网站运行天数功能（出生日期：2025.11.1）
+        window.addEventListener('load', function() {
+            const launchDate = new Date(2025, 10, 1); // 2025年11月对应月份为10（JS月份0开始）
+            const siteAgeElem = document.getElementById('site-age');
+
+            function updateSiteAge() {
+                const now = new Date();
+                const timeDiff = now - launchDate;
+                const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                
+                // 特殊天数文本配置
+                let text = '';
+                if (days === 30) {
+                    text = `🎉 六哥荣耀WIKI上线30天啦！感恩陪伴，福利不停 🎉`;
+                    siteAgeElem.classList.add('special');
+                } else if (days === 100) {
+                    text = `🎊 百日庆典！六哥荣耀WIKI与你同行100天 🎊`;
+                    siteAgeElem.classList.add('special');
+                } else if (days === 365) {
+                    text = `🎂 周年快乐！六哥荣耀WIKI一周年纪念 🎂`;
+                    siteAgeElem.classList.add('special');
+                } else {
+                    text = `📅 六哥荣耀WIKI已上线 ${days} 天 · 持续更新中`;
+                    siteAgeElem.classList.remove('special');
+                }
+                
+                siteAgeElem.textContent = text;
+            }
+
+            updateSiteAge();
+            setInterval(updateSiteAge, 86400000); // 每天更新一次
+        });
         // 原有脚本完全保留...
         window.addEventListener('load', () => {
             const iframe = document.getElementById('musicPlayerIframe');
@@ -418,7 +479,8 @@
                     container.innerHTML = `
                         <div class="pet-header">
                             <div class="pet-icon">
-                                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/b3c219a3139148bd9877d8e632194446.jpeg~tplv-a9rns2rl98-24:720:720.jpeg?rcl=20251109175337AD1225E3CDA867F5D403&rk3s=8e244e95&rrcfp=e9668010&x-expires=1763286818&x-signature=HzJdxkhUFrv7DM9gd7FVJJjj3Oo%3D" alt="日志图标" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                                <img src="xiaochen1235789.github.io/images/rizhitupian.png
+" alt="日志图标" style="max-width: 100%; max-height: 100%; object-fit: contain;">
                             </div>
                             <div class="pet-title">WIKI版本更新记录</div>
                         </div>
