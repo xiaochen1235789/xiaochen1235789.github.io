@@ -387,193 +387,191 @@
 </script>
     
     <!-- 音乐播放器 -->
-    <iframe 
-        id="musicPlayerIframe"
-        src="music-player.html"
-        frameborder="0"
-        scrolling="no"
-        onload="resizePlayerIframe(this)"
-        style="
-            display: block !important;
-            visibility: visible !important;
-            height: 90px !important;
-            width: 100% !important;
-            z-index: 99999 !important;
-            position: fixed !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            border: none !important;
-            background: transparent !important;
-            overflow: visible !important;
-        "
-    ></iframe>
-
-    <script>
-        // 1. 音乐播放器iframe高度调整
-        function resizePlayerIframe(iframe) {
-            try {
-                const playerHeight = iframe.contentWindow.document.querySelector('.mini-music-player').offsetHeight;
-                const progressHeight = iframe.contentWindow.document.querySelector('.player-progress').offsetHeight;
-                iframe.style.height = (playerHeight + progressHeight + 10) + 'px';
-            } catch (err) {
-                iframe.style.height = '90px';
-            }
+    <!-- 替换原页面中“音乐播放器”相关的iframe和脚本，其他代码不变 -->
+<!-- 音乐播放器 -->
+<iframe 
+    id="musicPlayerIframe"
+    src="music-player.html"
+    frameborder="0"
+    scrolling="no"
+    style="
+        display: block !important;
+        visibility: visible !important;
+        height: 70px !important; /* 固定初始高度（匹配music-player.html默认高度） */
+        width: 100% !important;
+        z-index: 99999 !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        overflow: hidden !important; /* 隐藏溢出，避免多余滚动条 */
+    "
+></iframe>
+<script>
+    // 1. 简化播放器高度适配（去掉易出错的跨页面获取高度，直接固定合理高度）
+    function resizePlayerIframe(iframe) {
+        // 优先尝试获取跨页面高度，失败则用固定值（兼容所有场景）
+        try {
+            const playerHeight = iframe.contentWindow.document.querySelector('.mini-music-player').offsetHeight;
+            iframe.style.height = (playerHeight + 10) + 'px'; // 加10px预留边距
+        } catch (err) {
+            iframe.style.height = '70px'; // 备用固定高度，适配所有情况
         }
+    }
 
-        // 2. 角色跳转函数
-        function jumpToDetail(targetUrl, charName) {
-            alert(`正在跳转到【${charName}】的详情页，请稍等~`);
-            const fallbackTimer = setTimeout(() => {
-                window.location.assign(targetUrl);
-                alert(`【${charName}】页面加载稍慢，已为你强制跳转`);
-            }, 2000);
-            window.location.href = targetUrl;
-            clearTimeout(fallbackTimer);
-        }
+    // 页面加载后初始化高度
+    window.addEventListener('load', () => {
+        const iframe = document.getElementById('musicPlayerIframe');
+        setTimeout(() => resizePlayerIframe(iframe), 500); // 延迟500ms确保播放器加载完成
+        
+        // 恢复播放状态（原逻辑保留）
+        try {
+            iframe.contentWindow.postMessage({ type: 'RESTORE_PLAY_STATE' }, '*');
+        } catch (err) {}
+    });
 
-        // 3. 网站运行天数（出生日期：2025.11.1）
-        window.addEventListener('load', function() {
-            const launchDate = new Date(2025, 10, 1);
-            const siteAgeElem = document.getElementById('site-age');
-            
-            function updateSiteAge() {
-                const now = new Date();
-                const timeDiff = now - launchDate;
-                const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-                let text = '';
+    // 2. 角色跳转函数（原逻辑保留）
+    function jumpToDetail(targetUrl, charName) {
+        alert(`正在跳转到【${charName}】的详情页，请稍等~`);
+        const fallbackTimer = setTimeout(() => {
+            window.location.assign(targetUrl);
+            alert(`【${charName}】页面加载稍慢，已为你强制跳转`);
+        }, 2000);
+        window.location.href = targetUrl;
+        clearTimeout(fallbackTimer);
+    }
 
-                if (days === 30) {
-                    text = `🎉 六哥荣耀WIKI上线30天啦！感恩陪伴 🎉`;
-                    siteAgeElem.classList.add('special');
-                } else if (days === 78) {
-                    text = `☁️?奇怪的数字？六哥荣耀WIKI与你同行78天☁️`;
-                    siteAgeElem.classList.add('special');
-                } else if (days === 91) {
-                    text = `🧊奇怪的数字？，梅开二度，六哥荣耀WIKI与你同行91天🧊 `;
-                    siteAgeElem.classList.add('special');    
-                } else if (days === 100) {
-                    text = `🎊 百日庆典！六哥荣耀WIKI与你同行100天 🎊`;
-                    siteAgeElem.classList.add('special');    
-                } else if (days === 365) {
-                    text = `🎂 周年快乐！六哥荣耀WIKI一周年纪念 🎂`;
-                    siteAgeElem.classList.add('special');
-                } else {
-                    text = `📅 六哥荣耀WIKI已上线 ${days} 天 · 持续更新中`;
-                    siteAgeElem.classList.remove('special');
-                }
-
-                siteAgeElem.textContent = text;
+    // 3. 网站运行天数（原逻辑保留）
+    window.addEventListener('load', function() {
+        const launchDate = new Date(2025, 10, 1);
+        const siteAgeElem = document.getElementById('site-age');
+        
+        function updateSiteAge() {
+            const now = new Date();
+            const timeDiff = now - launchDate;
+            const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+            let text = '';
+            if (days === 30) {
+                text = `🎉 六哥荣耀WIKI上线30天啦！感恩陪伴 🎉`;
+                siteAgeElem.classList.add('special');
+            } else if (days === 78) {
+                text = `☁️?奇怪的数字？六哥荣耀WIKI与你同行78天☁️`;
+                siteAgeElem.classList.add('special');
+            } else if (days === 91) {
+                text = `🧊奇怪的数字？，梅开二度，六哥荣耀WIKI与你同行91天🧊 `;
+                siteAgeElem.classList.add('special');    
+            } else if (days === 100) {
+                text = `🎊 百日庆典！六哥荣耀WIKI与你同行100天 🎊`;
+                siteAgeElem.classList.add('special');    
+            } else if (days === 365) {
+                text = `🎂 周年快乐！六哥荣耀WIKI一周年纪念 🎂`;
+                siteAgeElem.classList.add('special');
+            } else {
+                text = `📅 六哥荣耀WIKI已上线 ${days} 天 · 持续更新中`;
+                siteAgeElem.classList.remove('special');
             }
+            siteAgeElem.textContent = text;
+        }
+        updateSiteAge();
+        setInterval(updateSiteAge, 86400000);
+    });
 
-            updateSiteAge();
-            setInterval(updateSiteAge, 86400000);
-        });
-
-        // 4. 音乐播放器状态恢复
-        window.addEventListener('load', () => {
-            const iframe = document.getElementById('musicPlayerIframe');
-            setTimeout(() => {
-                try {
-                    iframe.contentWindow.postMessage({ type: 'RESTORE_PLAY_STATE' }, '*');
-                } catch (err) {}
-            }, 300);
-        });
-
-        // 5. 登录状态显示
-        (() => {
-            try {
-                const user = localStorage.getItem('user');
-                const nav = document.querySelector('.top-nav');
-                const authHTML = user 
-                    ? `
-                        <span style="margin-left:auto;color:#d3af37;">欢迎 ${user}</span>
-                        <a href="#" onclick="logout()" style="margin-left:12px;" class="nav-link">退出</a>
-                      `
-                    : `
-                        <a href="login.html" style="margin-left:auto;" class="nav-link">登录/注册</a>
-                      `;
-                nav.insertAdjacentHTML('beforeend', authHTML);
-            } catch (err) {
-                document.querySelector('.top-nav').insertAdjacentHTML('beforeend', `
+    // 4. 登录状态显示（原逻辑保留）
+    (() => {
+        try {
+            const user = localStorage.getItem('user');
+            const nav = document.querySelector('.top-nav');
+            const authHTML = user 
+                ? `
+                    <span style="margin-left:auto;color:#d3af37;">欢迎 ${user}</span>
+                    <a href="#" onclick="logout()" style="margin-left:12px;" class="nav-link">退出</a>
+                  `
+                : `
                     <a href="login.html" style="margin-left:auto;" class="nav-link">登录/注册</a>
-                `);
-            }
-        })();
-
-        // 6. 退出登录
-        function logout() {
-            localStorage.removeItem('user');
-            window.location.href = window.location.href;
+                  `;
+            nav.insertAdjacentHTML('beforeend', authHTML);
+        } catch (err) {
+            document.querySelector('.top-nav').insertAdjacentHTML('beforeend', `
+                <a href="login.html" style="margin-left:auto;" class="nav-link">登录/注册</a>
+            `);
         }
+    })();
 
-        // 7. 加载更新日志（带套框样式）
-        (function loadChangelog() {
-            const container = document.getElementById('changelogContainer');
-            const timeoutTimer = setTimeout(() => {
+    // 5. 退出登录（原逻辑保留）
+    function logout() {
+        localStorage.removeItem('user');
+        window.location.href = window.location.href;
+    }
+
+    // 6. 加载更新日志（原逻辑保留）
+    (function loadChangelog() {
+        const container = document.getElementById('changelogContainer');
+        const timeoutTimer = setTimeout(() => {
+            container.innerHTML = `
+                <div class="changelog-error">
+                    <span style="color: #ff4444;">❌ 更新日志加载超时</span>
+                    <button class="pet-btn" style="margin-top: 8px;" onclick="loadChangelog()">重试</button>
+                </div>
+            `;
+        }, 8000);
+        fetch('changelog.html')
+            .then(response => {
+                clearTimeout(timeoutTimer);
+                if (!response.ok) throw new Error(`HTTP错误，状态码: ${response.status}`);
+                return response.text();
+            })
+            .then(logContent => {
+                container.innerHTML = `
+                    <div class="changelog-box">
+                        <div class="pet-header">
+                            <div class="pet-icon">
+                                <img src="https://xiaochen1235789.github.io/images/rizhitupian.png" 
+                                     alt="日志图标" 
+                                     style="width: 100%; height: 100%; object-fit: contain;">
+                            </div>
+                            <div class="pet-title">WIKI版本更新记录</div>
+                        </div>
+                        <div class="changelog-list">
+                            ${logContent || '<p style="color: var(--text-secondary); text-align: center; padding: 20px 0;">暂无更新记录</p>'}
+                        </div>
+                    </div>
+                `;
+            })
+            .catch(error => {
+                clearTimeout(timeoutTimer);
                 container.innerHTML = `
                     <div class="changelog-error">
-                        <span style="color: #ff4444;">❌ 更新日志加载超时</span>
+                        <span style="color: #ff4444;">❌ 更新日志加载失败：${error.message}</span>
                         <button class="pet-btn" style="margin-top: 8px;" onclick="loadChangelog()">重试</button>
                     </div>
                 `;
-            }, 8000);
-
-            fetch('changelog.html')
-                .then(response => {
-                    clearTimeout(timeoutTimer);
-                    if (!response.ok) throw new Error(`HTTP错误，状态码: ${response.status}`);
-                    return response.text();
-                })
-                .then(logContent => {
-                    container.innerHTML = `
-                        <div class="changelog-box">
-                            <div class="pet-header">
-                                <div class="pet-icon">
-                                    <img src="https://xiaochen1235789.github.io/images/rizhitupian.png" 
-                                         alt="日志图标" 
-                                         style="width: 100%; height: 100%; object-fit: contain;">
-                                </div>
-                                <div class="pet-title">WIKI版本更新记录</div>
-                            </div>
-                            <div class="changelog-list">
-                                ${logContent || '<p style="color: var(--text-secondary); text-align: center; padding: 20px 0;">暂无更新记录</p>'}
-                            </div>
-                        </div>
-                    `;
-                })
-                .catch(error => {
-                    clearTimeout(timeoutTimer);
-                    container.innerHTML = `
-                        <div class="changelog-error">
-                            <span style="color: #ff4444;">❌ 更新日志加载失败：${error.message}</span>
-                            <button class="pet-btn" style="margin-top: 8px;" onclick="loadChangelog()">重试</button>
-                        </div>
-                    `;
-                });
-        })();
-
-        // 8. 锚点平滑滚动
-        document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const targetId = this.getAttribute('href');
-                const targetElement = document.querySelector(targetId);
-                if (targetElement) {
-                    window.scrollTo({
-                        top: targetElement.offsetTop - 80,
-                        behavior: 'smooth'
-                    });
-                }
             });
-        });
+    })();
 
-        // 9. 音乐播放状态监听
-        window.addEventListener('message', (e) => {
-            if (e.data.type === 'PLAY_STATE_UPDATED') {
-                console.log('当前播放状态:', e.data.state.isPlaying);
+    // 7. 锚点平滑滚动（原逻辑保留）
+    document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href');
+            const targetElement = document.querySelector(targetId);
+            if (targetElement) {
+                window.scrollTo({
+                    top: targetElement.offsetTop - 80,
+                    behavior: 'smooth'
+                });
             }
         });
-    </script>
+    });
+
+    // 8. 音乐播放状态监听（原逻辑保留）
+    window.addEventListener('message', (e) => {
+        if (e.data.type === 'PLAY_STATE_UPDATED') {
+            console.log('当前播放状态:', e.data.state.isPlaying);
+        }
+    });
+</script>
+
 </body>
 </html>
