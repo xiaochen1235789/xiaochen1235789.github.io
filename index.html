@@ -258,12 +258,10 @@
         <a href="#material" class="nav-link">养成材料</a>
         <a href="#changelog" class="nav-link">更新日志</a>
     </div>
-
     <!-- 网站运行天数 -->
     <div class="site-age-container">
         <span id="site-age">加载中...</span>
     </div>
-
     <!-- 角色列表 -->
     <h2 class="section-header" id="character">角色列表</h2>
     <div class="grid-container">
@@ -275,8 +273,6 @@
             <div class="card-desc">毁灭 · 物理 | 魔改五星 | 无版本</div>
         </div>
         
-        
-            
         <div class="content-card" onclick="jumpToDetail('luguan-detail.html', '鹿管')">
             <div class="card-img">
                 <img src="https://xiaochen1235789.github.io/images/changjinglu.png" alt="鹿将军">
@@ -289,7 +285,7 @@
             <div class="card-img">
                 <img src="https://xiaochen1235789.github.io/images/pige.png" alt="皮哥">
             </div>
-        <div class="card-name">皮哥</div>
+            <div class="card-name">皮哥</div>
             <div class="card-desc">存护 · 物理 | 限定五星 | 1.0下半</div>
         </div>    
         
@@ -297,7 +293,6 @@
             <div class="card-img">
                 <img src="https://xiaochen1235789.github.io/images/processed-image (1).png" alt="夹子姐">
             </div>
-            
             <div class="card-name">夹子姐</div>
             <div class="card-desc">智识 · 雷 | 限定五星 | 1.1上半</div>
         </div>
@@ -344,7 +339,6 @@
         
     </div>
     
-
     <!-- 光锥列表 -->
     <h2 class="section-header" id="lightcone">光锥列表</h2>
     <div class="grid-container">
@@ -370,7 +364,6 @@
             <div class="card-desc">？？？</div>
         </div>
     </div>
-
     <!-- 养成材料 -->
     <h2 class="section-header" id="material">养成材料</h2>
     <div class="grid-container">
@@ -389,7 +382,6 @@
             <div class="card-desc">？？？</div>
         </div>
     </div>
-
     <!-- 更新日志 -->
     <h2 class="section-header" id="changelog">更新日志</h2>
     <div class="pet-system" style="margin-top: 0;" id="changelogContainer">
@@ -401,10 +393,9 @@
 <footer style="text-align:center; padding:20px 0; font-size:14px; color:#666;">
 © <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.
 </footer>
-<script>document.getElementById('year').textContent = new Date().getFullYear();
-</script>
+<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
     
-<!-- 音乐播放器 -->
+<!-- 音乐播放器（已适配歌单展开/收起） -->
 <iframe 
     id="musicPlayerIframe"
     src="music-player.html"
@@ -413,7 +404,7 @@
     style="
         display: block !important;
         visibility: visible !important;
-        height: 380px !important; /* 固定初始高度（匹配music-player.html默认高度） */
+        height: 70px !important; /* 默认高度（匹配播放器收起状态） */
         width: 100% !important;
         z-index: 99999 !important;
         position: fixed !important;
@@ -422,33 +413,46 @@
         right: 0 !important;
         border: none !important;
         background: transparent !important;
-        overflow: hidden !important; /* 隐藏溢出，避免多余滚动条 */
+        overflow: visible !important; /* 允许歌单溢出显示 */
+        transition: height 0.3s ease !important; /* 平滑过渡 */
     "
 ></iframe>
 <script>
-    // 1. 简化播放器高度适配（去掉易出错的跨页面获取高度，直接固定合理高度）
-    function resizePlayerIframe(iframe) {
-        // 优先尝试获取跨页面高度，失败则用固定值（兼容所有场景）
-        try {
-            const playerHeight = iframe.contentWindow.document.querySelector('.mini-music-player').offsetHeight;
-            iframe.style.height = (playerHeight + 10) + 'px'; // 加10px预留边距
-        } catch (err) {
-            iframe.style.height = '70px'; // 备用固定高度，适配所有情况
-        }
-    }
-
-    // 页面加载后初始化高度
+    // 1. 播放器高度适配+歌单状态同步
     window.addEventListener('load', () => {
         const iframe = document.getElementById('musicPlayerIframe');
-        setTimeout(() => resizePlayerIframe(iframe), 500); // 延迟500ms确保播放器加载完成
         
-        // 恢复播放状态（原逻辑保留）
+        // 初始化高度（确保播放器加载完成）
+        setTimeout(() => resizePlayerIframe(iframe), 500);
+        
+        // 监听播放器歌单展开/收起事件，同步高度
+        window.addEventListener('message', (e) => {
+            if (e.data.type === 'SONG_LIST_TOGGLED') {
+                iframe.style.height = e.data.isShow ? '380px !important' : '70px !important';
+            }
+            // 保留播放状态监听
+            if (e.data.type === 'PLAY_STATE_UPDATED') {
+                console.log('当前播放状态:', e.data.state.isPlaying);
+            }
+        });
+
+        // 恢复播放状态
         try {
             iframe.contentWindow.postMessage({ type: 'RESTORE_PLAY_STATE' }, '*');
         } catch (err) {}
     });
 
-    // 2. 角色跳转函数（原逻辑保留）
+    // 2. 高度适配函数（容错处理）
+    function resizePlayerIframe(iframe) {
+        try {
+            const playerHeight = iframe.contentWindow.document.querySelector('.mini-music-player').offsetHeight;
+            iframe.style.height = (playerHeight + 10) + 'px';
+        } catch (err) {
+            iframe.style.height = '70px !important';
+        }
+    }
+
+    // 3. 角色跳转函数
     function jumpToDetail(targetUrl, charName) {
         alert(`正在跳转到【${charName}】的详情页，请稍等~`);
         const fallbackTimer = setTimeout(() => {
@@ -459,7 +463,7 @@
         clearTimeout(fallbackTimer);
     }
 
-    // 3. 网站运行天数（原逻辑保留）
+    // 4. 网站运行天数
     window.addEventListener('load', function() {
         const launchDate = new Date(2025, 10, 1);
         const siteAgeElem = document.getElementById('site-age');
@@ -473,10 +477,10 @@
                 text = `🎉 六哥荣耀WIKI上线30天啦！感恩陪伴 🎉`;
                 siteAgeElem.classList.add('special');
             } else if (days === 78) {
-                text = `☁️?奇怪的数字？六哥荣耀WIKI与你同行78天☁️`;
+                text = `☁️ 奇怪的数字？六哥荣耀WIKI与你同行78天 ☁️`;
                 siteAgeElem.classList.add('special');
             } else if (days === 91) {
-                text = `🧊奇怪的数字？，梅开二度，六哥荣耀WIKI与你同行91天🧊 `;
+                text = `🧊 奇怪的数字？梅开二度，六哥荣耀WIKI与你同行91天 🧊`;
                 siteAgeElem.classList.add('special');    
             } else if (days === 100) {
                 text = `🎊 百日庆典！六哥荣耀WIKI与你同行100天 🎊`;
@@ -494,7 +498,7 @@
         setInterval(updateSiteAge, 86400000);
     });
 
-    // 4. 登录状态显示（原逻辑保留）
+    // 5. 登录状态显示
     (() => {
         try {
             const user = localStorage.getItem('user');
@@ -515,13 +519,13 @@
         }
     })();
 
-    // 5. 退出登录（原逻辑保留）
+    // 6. 退出登录
     function logout() {
         localStorage.removeItem('user');
         window.location.href = window.location.href;
     }
 
-    // 6. 加载更新日志（原逻辑保留）
+    // 7. 加载更新日志
     (function loadChangelog() {
         const container = document.getElementById('changelogContainer');
         const timeoutTimer = setTimeout(() => {
@@ -566,7 +570,7 @@
             });
     })();
 
-    // 7. 锚点平滑滚动（原逻辑保留）
+    // 8. 锚点平滑滚动
     document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
@@ -580,14 +584,6 @@
             }
         });
     });
-
-    // 8. 音乐播放状态监听（原逻辑保留）
-    window.addEventListener('message', (e) => {
-        if (e.data.type === 'PLAY_STATE_UPDATED') {
-            console.log('当前播放状态:', e.data.state.isPlaying);
-        }
-    });
 </script>
-
 </body>
 </html>
