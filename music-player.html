@@ -470,7 +470,7 @@
                 updateLoopModeUI();
                 // 恢复音频状态
                 globalAudio.volume = playState.volume;
-                volumeBtn.textContent = playState.volume > 0.5 ? '🔊' : playState.volume > 0 ? '🔉' : '🔇';
+                volumeBtn.textContent = playState.volume > 0.8 ? '🔊' : playState.volume > 0 ? '🔉' : '🔇';
             }
         });
         // 更新循环模式UI
@@ -604,8 +604,11 @@
         });
         // 音量控制
         volumeBtn.addEventListener('click', () => {
-            globalAudio.volume = globalAudio.volume > 0.5 ? 0.3 : globalAudio.volume > 0 ? 0 : 0.7;
-            volumeBtn.textContent = globalAudio.volume > 0.5 ? '🔊' : globalAudio.volume > 0 ? '🔉' : '🔇';
+    // 循环逻辑：100% → 50% → 0% → 100%（更符合日常使用习惯）
+    globalAudio.volume = globalAudio.volume === 1.0 ? 0.5 : globalAudio.volume > 0 ? 0 : 1.0;
+    volumeBtn.textContent = globalAudio.volume > 0.8 ? '🔊' : globalAudio.volume > 0 ? '🔉' : '🔇';
+    savePlayState(); // 别忘了保留状态保存，跨页面同步音量
+});
             savePlayState();
         });
         // 进度条更新
