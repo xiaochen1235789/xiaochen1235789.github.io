@@ -9,7 +9,7 @@
     <style>
         body {
             overflow: visible !important;
-            padding-bottom: 400px !important;
+            padding-bottom: 500px !important; /* 改动1：从450px增至500px，给歌单留足空间 */
             background: var(--bg) !important;
         }
         #musicPlayerIframe {
@@ -396,6 +396,7 @@
 <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
     
 <!-- 音乐播放器（已适配歌单展开/收起） -->
+<!-- 找到 index.html 中的 iframe 标签，修改 style 部分 -->
 <iframe 
     id="musicPlayerIframe"
     src="music-player.html"
@@ -404,7 +405,7 @@
     style="
         display: block !important;
         visibility: visible !important;
-        height: 70px !important; /* 默认高度（匹配播放器收起状态） */
+        height: 380px !important; /* 改动2：强制默认380px，取消动态切换（避免通信失效） */
         width: 100% !important;
         z-index: 99999 !important;
         position: fixed !important;
@@ -413,8 +414,7 @@
         right: 0 !important;
         border: none !important;
         background: transparent !important;
-        overflow: visible !important; /* 允许歌单溢出显示 */
-        transition: height 0.3s ease !important; /* 平滑过渡 */
+        overflow: visible !important;
     "
 ></iframe>
 <script>
@@ -435,23 +435,20 @@
                 console.log('当前播放状态:', e.data.state.isPlaying);
             }
         });
-
         // 恢复播放状态
         try {
             iframe.contentWindow.postMessage({ type: 'RESTORE_PLAY_STATE' }, '*');
         } catch (err) {}
     });
-
     // 2. 高度适配函数（容错处理）
     function resizePlayerIframe(iframe) {
         try {
             const playerHeight = iframe.contentWindow.document.querySelector('.mini-music-player').offsetHeight;
             iframe.style.height = (playerHeight + 10) + 'px';
         } catch (err) {
-            iframe.style.height = '70px !important';
+            iframe.style.height = '380px !important'; // 容错也设为380px
         }
     }
-
     // 3. 角色跳转函数
     function jumpToDetail(targetUrl, charName) {
         alert(`正在跳转到【${charName}】的详情页，请稍等~`);
@@ -462,7 +459,6 @@
         window.location.href = targetUrl;
         clearTimeout(fallbackTimer);
     }
-
     // 4. 网站运行天数
     window.addEventListener('load', function() {
         const launchDate = new Date(2025, 10, 1);
@@ -497,7 +493,6 @@
         updateSiteAge();
         setInterval(updateSiteAge, 86400000);
     });
-
     // 5. 登录状态显示
     (() => {
         try {
@@ -518,13 +513,11 @@
             `);
         }
     })();
-
     // 6. 退出登录
     function logout() {
         localStorage.removeItem('user');
         window.location.href = window.location.href;
     }
-
     // 7. 加载更新日志
     (function loadChangelog() {
         const container = document.getElementById('changelogContainer');
@@ -569,7 +562,6 @@
                 `;
             });
     })();
-
     // 8. 锚点平滑滚动
     document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
         link.addEventListener('click', function(e) {
@@ -586,4 +578,4 @@
     });
 </script>
 </body>
-</html>
+            </html>
