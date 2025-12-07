@@ -338,7 +338,6 @@
         const songListContainer = document.getElementById('songListContainer');
         const songListEl = document.getElementById('songList');
         const globalAudio = document.getElementById('globalAudio'); // 全局唯一音频对象
-
         // 歌曲列表（包含音频URL，用于跨页面加载）
         const songList = [
             { 
@@ -414,19 +413,16 @@
                 defaultDuration: '03:20' 
             }
         ];
-
         // 分页配置
         const PAGE_SIZE = 6;
         let currentPage = 1;
         const totalPages = Math.ceil(songList.length / PAGE_SIZE);
-
         // 循环模式枚举：0-顺序播放，1-列表循环，2-单曲循环
         const LOOP_MODE = {
             SEQUENCE: 0,
             LIST_LOOP: 1,
             SINGLE_LOOP: 2
         };
-
         // 全局状态（从localStorage读取或初始化，新增循环模式）
         let playState = {
             currentSongIndex: 0,
@@ -436,7 +432,6 @@
             isExpanded: true,
             loopMode: LOOP_MODE.SEQUENCE // 默认顺序播放
         };
-
         // 防抖函数
         function debounce(fn, delay = 100) {
             let timer;
@@ -445,7 +440,6 @@
                 timer = setTimeout(() => fn.apply(this, args), delay);
             };
         }
-
         // 保存播放状态到localStorage（包含循环模式）
         function savePlayState() {
             playState.currentTime = globalAudio.currentTime;
@@ -457,7 +451,6 @@
                 state: { ...playState }
             }, '*');
         }
-
         // 从localStorage恢复播放状态（包含循环模式）
         function restorePlayState() {
             const savedState = localStorage.getItem('musicPlayerState');
@@ -470,7 +463,6 @@
                 }
             }
         }
-
         // 监听主页面的恢复状态消息
         window.addEventListener('message', (e) => {
             if (e.data.type === 'RESTORE_PLAY_STATE') {
@@ -481,7 +473,6 @@
                 volumeBtn.textContent = playState.volume > 0.5 ? '🔊' : playState.volume > 0 ? '🔉' : '🔇';
             }
         });
-
         // 更新循环模式UI
         function updateLoopModeUI() {
             switch(playState.loopMode) {
@@ -502,14 +493,12 @@
                     break;
             }
         }
-
         // 切换循环模式
         function toggleLoopMode() {
             playState.loopMode = (playState.loopMode + 1) % 3;
             updateLoopModeUI();
             savePlayState();
         }
-
         // 歌曲切换（核心优化：适配循环模式）
         function switchSong(newIndex) {
             // 根据循环模式处理索引
@@ -519,11 +508,9 @@
             if (newIndex >= songList.length) {
                 newIndex = playState.loopMode === LOOP_MODE.LIST_LOOP ? 0 : songList.length - 1;
             }
-
             // 更新状态
             playState.currentSongIndex = newIndex;
             const newSong = songList[newIndex];
-
             // 更新UI
             playerTitle.textContent = newSong.title;
             playerSinger.textContent = newSong.singer;
@@ -531,16 +518,13 @@
             totalTimeEl.dataset.loaded = 'false';
             progress.style.width = '0%';
             currentTimeEl.textContent = '00:00';
-
             // 切换封面
             document.querySelectorAll('.player-cover').forEach(cover => cover.style.display = 'none');
             document.getElementById(newSong.coverId).style.display = 'block';
-
             // 更新音频源并加载
             globalAudio.src = newSong.audioUrl;
             globalAudio.currentTime = 0;
             globalAudio.load();
-
             // 恢复播放状态
             if (playState.isPlaying) {
                 globalAudio.play().then(() => {
@@ -551,12 +535,10 @@
                 playBtn.textContent = '▶';
                 draggablePlayer.classList.remove('playing');
             }
-
             // 保存状态+更新歌曲列表
             savePlayState();
             debouncedRenderPage(currentPage);
         }
-
         // 分页渲染（修复重复问题）
         function renderPage(page) {
             songListEl.innerHTML = '';
@@ -576,7 +558,7 @@
                 // 创建新分页控件
                 const pageControls = document.createElement('div');
                 pageControls.className = 'page-controls';
-                page pageControls.innerHTML = `
+                pageControls.innerHTML = `
                     <button class="page-btn" ${page === 1 ? 'disabled' : ''} onclick="currentPage--;debouncedRenderPage(currentPage)">上一页</button>
                     <span class="page-info">${page}/${totalPages}</span>
                     <button class="page-btn" ${page === totalPages ? 'disabled' : ''} onclick="currentPage++;debouncedRenderPage(currentPage)">下一页</button>
@@ -585,7 +567,6 @@
             }
         }
         const debouncedRenderPage = debounce(renderPage);
-
         // 播放/暂停控制
         playBtn.addEventListener('click', () => {
             if (playState.isPlaying) {
@@ -601,14 +582,11 @@
             playState.isPlaying = !playState.isPlaying;
             savePlayState();
         });
-
         // 上/下一首
         prevBtn.addEventListener('click', () => switchSong(playState.currentSongIndex - 1));
         nextBtn.addEventListener('click', () => switchSong(playState.currentSongIndex + 1));
-
         // 循环模式切换
         loopBtn.addEventListener('click', toggleLoopMode);
-
         // 列表显示/隐藏（新增向主页面发送状态消息）
         listToggleBtn.addEventListener('click', () => {
             songListContainer.classList.toggle('show');
@@ -624,14 +602,12 @@
                 debouncedRenderPage(currentPage);
             }
         });
-
         // 音量控制
         volumeBtn.addEventListener('click', () => {
             globalAudio.volume = globalAudio.volume > 0.5 ? 0.3 : globalAudio.volume > 0 ? 0 : 0.7;
             volumeBtn.textContent = globalAudio.volume > 0.5 ? '🔊' : globalAudio.volume > 0 ? '🔉' : '🔇';
             savePlayState();
         });
-
         // 进度条更新
         function updateProgress() {
             if (isNaN(globalAudio.duration)) return;
@@ -648,7 +624,6 @@
             }
         }
         setInterval(updateProgress, 1000);
-
         // 进度条点击
         document.getElementById('miniProgressBar').addEventListener('click', (e) => {
             if (isNaN(globalAudio.duration)) return;
@@ -657,7 +632,6 @@
             globalAudio.currentTime = percent * globalAudio.duration;
             savePlayState();
         });
-
         // 拖动功能
         draggablePlayer.addEventListener('mousedown', (e) => {
             if (e.target.closest('.player-btn, .volume-btn, .toggle-btn')) return;
@@ -676,7 +650,6 @@
                 playerContainer.style.left = `${Math.max(0, Math.min(newLeft, maxLeft))}px`;
             }
         });
-
         // 音频结束处理（根据循环模式自动切换）
         globalAudio.addEventListener('ended', () => {
             switch(playState.loopMode) {
@@ -703,12 +676,10 @@
                     break;
             }
         });
-
         // 页面卸载时保存状态
         window.addEventListener('beforeunload', () => {
             savePlayState();
         });
-
         // 初始化（核心：恢复状态+加载歌曲+初始化循环模式）
         window.addEventListener('load', () => {
             // 恢复保存的状态
@@ -755,4 +726,4 @@
         });
     </script>
 </body>
-</html>
+            </html>
