@@ -451,6 +451,11 @@
             playState.currentTime = globalAudio.currentTime;
             playState.volume = globalAudio.volume;
             localStorage.setItem('musicPlayerState', JSON.stringify(playState));
+            // 向主页面发送播放状态更新消息
+            window.parent.postMessage({
+                type: 'PLAY_STATE_UPDATED',
+                state: { ...playState }
+            }, '*');
         }
 
         // 从localStorage恢复播放状态（包含循环模式）
@@ -466,6 +471,17 @@
             }
         }
 
+        // 监听主页面的恢复状态消息
+        window.addEventListener('message', (e) => {
+            if (e.data.type === 'RESTORE_PLAY_STATE') {
+                restorePlayState();
+                updateLoopModeUI();
+                // 恢复音频状态
+                globalAudio.volume = playState.volume;
+                volumeBtn.textContent = playState.volume > 0.5 ? '🔊' : playState.volume > 0 ? '🔉' : '🔇';
+            }
+        });
+
         // 更新循环模式UI
         function updateLoopModeUI() {
             switch(playState.loopMode) {
@@ -475,12 +491,12 @@
                     loopTooltip.textContent = '顺序播放（点击切换列表循环）';
                     break;
                 case LOOP_MODE.LIST_LOOP:
-                    loopBtn.textContent = '🔄';
+                    loopBtn.textContent = '🔂';
                     loopBtn.classList.add('active');
                     loopTooltip.textContent = '列表循环（点击切换单曲循环）';
                     break;
                 case LOOP_MODE.SINGLE_LOOP:
-                    loopBtn.textContent = '🔂';
+                    loopBtn.textContent = '🔄';
                     loopBtn.classList.add('active');
                     loopTooltip.textContent = '单曲循环（点击切换顺序播放）';
                     break;
@@ -560,7 +576,7 @@
                 // 创建新分页控件
                 const pageControls = document.createElement('div');
                 pageControls.className = 'page-controls';
-                pageControls.innerHTML = `
+                page pageControls.innerHTML = `
                     <button class="page-btn" ${page === 1 ? 'disabled' : ''} onclick="currentPage--;debouncedRenderPage(currentPage)">上一页</button>
                     <span class="page-info">${page}/${totalPages}</span>
                     <button class="page-btn" ${page === totalPages ? 'disabled' : ''} onclick="currentPage++;debouncedRenderPage(currentPage)">下一页</button>
@@ -593,10 +609,17 @@
         // 循环模式切换
         loopBtn.addEventListener('click', toggleLoopMode);
 
-        // 列表显示/隐藏
+        // 列表显示/隐藏（新增向主页面发送状态消息）
         listToggleBtn.addEventListener('click', () => {
             songListContainer.classList.toggle('show');
-            if (songListContainer.classList.contains('show')) {
+            const isShow = songListContainer.classList.contains('show');
+            // 向主页面发送歌单展开/收起状态
+            window.parent.postMessage({
+                type: 'SONG_LIST_TOGGLED',
+                isShow: isShow
+            }, '*');
+            
+            if (isShow) {
                 songListEl.innerHTML = '';
                 debouncedRenderPage(currentPage);
             }
@@ -732,4 +755,4 @@
         });
     </script>
 </body>
-            </html>
+</html>
