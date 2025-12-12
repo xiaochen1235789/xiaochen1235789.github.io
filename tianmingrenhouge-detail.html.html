@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>天命人.猴哥 · 数值页</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" 
+      href="https://xiaochen1235789.github.io/images/wangzhantupian.png" 
+      type="image/png">
+<style>
+:root{
+  --bg:#121212;
+  --surface:#1a1a1a;
+  --card:#202020;
+  --primary:#d3af37;   /* 玉衡金 */
+  --second:#81c784;
+  --text:#e0e0e0;
+  --sub:#99aabb;
+  --line:#333;
+  --radius:6px;
+  --tran:.3s ease;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft YaHei",sans-serif;}
+body{background:var(--bg);color:var(--text);padding-bottom: 90px !important;}
+a{color:var(--second);text-decoration:none;}
+img{max-width:100%;display:block;}
+/* 顶部返回栏 */
+.top-bar{display:flex;align-items:center;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--line);}
+.top-bar .back{font-size:1.2rem;margin-right:12px;}
+.top-bar .title{font-size:1.1rem;font-weight:600;}
+/* 立绘区 */
+.art-box{position:relative;background:#2a2a2a;}
+.art-box img{width:100%;aspect-ratio:16/9;object-fit:cover;}
+.name-tag{position:absolute;bottom:12px;left:16px;}
+.ch-name{font-size:1.6rem;font-weight:600;color:#fff;text-shadow:0 0 4px #000;}
+.tags{display:flex;gap:6px;margin-top:4px;}
+.tag{background:rgba(0,0,0,.6);color:var(--primary);padding:2px 8px;border-radius:var(--radius);font-size:.7rem;}
+/* 等级调节 */
+.level-block{background:var(--card);margin:12px 16px;padding:12px 16px;border-radius:var(--radius);}
+.level-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.level-label{color:var(--sub);font-size:.9rem;}
+.level-value{font-size:1.2rem;font-weight:600;color:var(--primary);}
+.level-slider{width:100%;-webkit-appearance:none;height:4px;background:var(--line);border-radius:2px;outline:none;}
+.level-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--primary);border-radius:50%;cursor:pointer;}
+/* 技能折叠块 */
+.skill-block{background:var(--card);margin:0 16px 12px;border-radius:var(--radius);}
+.skill-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;}
+.skill-header:hover{background:rgba(255,255,255,.05);}
+.skill-name{font-weight:500;}
+.skill-arrow{transition:transform var(--tran);}
+.skill-body{max-height:600px;overflow:visible;}/* 强制显示，去掉折叠动画 */
+.skill-content{padding:0 16px 12px;font-size:.85rem;color:var(--sub);}
+.skill-table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:6px;}
+.skill-table th,.skill-table td{padding:4px 2px;text-align:center;border-bottom:1px solid var(--line);}
+.skill-table th{color:var(--primary);}
+/* 12级传说色渐变样式 */
+.legend-text{
+  background: linear-gradient(45deg, #ffd700, #ffA500);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 600;
+}
+/* 播放器iframe样式 */
+#musicPlayerIframe {
+    display: block !important;
+    visibility: visible !important;
+    height: 400px !important;
+    width: 100% !important;
+    z-index: 99999 !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    overflow: visible !important;
+}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <a class="back" href="index.html">‹</a>
+  <span class="title">天命人.猴哥 · 数值页</span>
+</div>
+<!-- 立绘 + 名字 + 标签 -->
+<div class="art-box">
+  <img src="https://xiaochen1235789.github.io/images/zanwutupian.png" alt="天命人.猴哥立绘">
+  <div class="name-tag">
+    <div class="ch-name">天命人.猴哥</div>
+    <div class="tags">
+      <span class="tag">命途:繁育</span>
+      <span class="tag">属性:量子</span>
+      <span class="tag">定位:战技点大C</span>
+      <span class="tag">稀有度:限定五星</span>
+    </div>
+  </div>
+</div>
+<!-- 等级滑块 -->
+<div class="level-block">
+  <div class="level-header">
+    <span class="level-label">当前等级</span>
+    <span class="level-value" id="levelDisplay">Lv.1</span>
+  </div>
+  <input type="range" class="level-slider" id="levelRange" min="1" max="12" value="1">
+</div>
+<!-- 技能区：普攻、战技、终结技、天赋改为直接显示 -->
+<div class="skill-block">
+  <div class="skill-header">
+    <span class="skill-name">普攻 · 金箍·初击(满级7级)</span>
+    <span class="skill-arrow" id="arrow1"></span>
+  </div>
+  <div class="skill-body" id="body1">
+    <div class="skill-content">
+      对指定敌方目标造成等同于天命人.猴哥<span id="val1">50%</span> 攻击力的量子属性伤害。
+      <table class="skill-table">
+        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+        <tbody>
+          <tr><td>削韧</td><td>单体10点</td></tr>
+          <tr><td>战技点</td><td>+1</td></tr>
+          <tr><td>能量变化</td><td>+20</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="skill-block">
+  <div class="skill-header">
+    <span class="skill-name">强化普攻1 · 金箍·破空(满级7级)</span>
+    <span class="skill-arrow" id="arrow2"></span>
+  </div>
+  <div class="skill-body" id="body2">
+    <div class="skill-content">
+      施放2次相同倍率的攻击，对指定敌方目标单体造成等同于天命人.猴哥<span id="val2">80%</span> 攻击力的量子属性伤害。
+      <table class="skill-table">
+        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+        <tbody>
+          <tr><td>削韧</td><td>单体10*2点</td></tr>
+          <tr><td>战技点</td><td>-1</td></tr>
+          <tr><td>能量变化</td><td>+25</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="skill-block">
+  <div class="skill-header">
+    <span class="skill-name">强化普攻2 · 金箍·裂空(满级7级)</span>
+    <span class="skill-arrow" id="arrow3"></span>
+  </div>
+  <div class="skill-body" id="body3">
+    <div class="skill-content">
+      施放3次相同倍率的攻击，对指定敌方目标单体造成等同于天命人.猴哥攻击力<span id="val3">110%</span>的量子属性伤害，从第3次开始对其相邻目标造成等同于天命人.猴哥<span id="val4">55%</span>攻击力的量子属性伤害
+      <table class="skill-table">
+        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+        <tbody>
+          <tr><td>削韧</td><td>单体8*3点，两旁各10*1点</td></tr>
+          <tr><td>战技点</td><td>-2</td></tr>
+          <tr><td>能量变化</td><td>+30</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="skill-block">
+  <div class="skill-header">
+    <span class="skill-name">强化普攻3 · 筋斗·云起(满级7级)</span>
+    <span class="skill-arrow" id="arrow4"></span>
+  </div>
+  <div class="skill-body" id="body4">
+    <div class="skill-content">
+      施放3次相同倍率的攻击，对指定敌方目标单体造成等同于天命人.猴哥攻击力<span id="val5">140%</span>的量子属性伤害，从第2次开始对其相邻目标造成等同于天命人.猴哥<span id="val6">95%</span>攻击力的量子属性伤害
+        <table class="skill-table">
+        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+        <tbody>
+          <tr><td>削韧</td><td>单体10*3点，两旁各5*2</td></tr>
+          <tr><td>战技点</td><td>-3</td></tr>
+          <tr><td>能量变化</td><td>+30</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="skill-block">
+  <div class="skill-header">
+    <span class="skill-name">强化普攻4 · 齐天·镇岳(满级7级)</span>
+    <span class="skill-arrow" id="arrow5"></span>
+  </div>
+  <div class="skill-body" id="body5">
+    <div class="skill-content">
+      施放4次相同倍率的攻击，对指定敌方目标单体造成等同于天命人.猴哥攻击力<span id="val7">200%</span>的量子属性伤害，从第1次开始对其相邻目标造成等同于天命人.猴哥<span id="val8">125%</span>攻击力的量子属性伤害
+      <table class="skill-table">
+        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+        <tbody>
+          <tr><td>削韧</td><td>单体10*4点，两旁各5*4</td></tr>
+          <tr><td>战技点</td><td>-4</td></tr>
+          <tr><td>能量变化</td><td>+35</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="skill-block">
+  <div class="skill-header">
+    <span class="skill-name">强化普攻5 · 大闹·天宫(满级7级)</span>
+    <span class="skill-arrow" id="arrow6"></span>
+  </div>
+  <div class="skill-body" id="body6">
+    <div class="skill-content">
+      施放5次相同倍率的攻击，对指定敌方目标全体造成等同于天命人.猴哥攻击力<span id="val9">290%</span>的量子属性伤害
+      <table class="skill-table">
+        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+        <tbody>
+          <tr><td>削韧</td><td>群体10*5点</td></tr>
+          <tr><td>战技点</td><td>-5</td></tr>
+          <tr><td>能量变化</td><td>+40</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="skill-block">
+  <div class="skill-header">
+    <span class="skill-name">战技 · 筋斗·强化(满级12级)</span>
+    <span class="skill-arrow" id="arrow7"></span>
+  </div>
+  <div class="skill-body" id="body7">
+    <div class="skill-content">
+      使普攻的效果得到强化，最多可连续强化<span style="color:orange; font-size: 14px;">5</span>次，施放本技能不消耗战技点且不视为使用战技。
+      <br>
+强化<span style="color:orange; font-size: 14px;">1</span>次，【金箍·初击】变为<span style="color:orange; font-size: 14px;">【金箍·破锋】</span>。
+<br>
+强化<span style="color:orange; font-size: 14px;">2</span>次，【金箍·初击】变为<span style="color:orange; font-size: 14px;">【金箍·裂空】</span>。
+<br>
+强化<span style="color:orange; font-size: 14px;">3</span>次，【金箍·初击】变为<span style="color:orange; font-size: 14px;">【筋斗·云起】</span>。
+<br>
+强化<span style="color:orange; font-size: 14px;">4</span>次，【金箍·初击】变为<span style="color:orange; font-size: 14px;">【齐天·镇岳】</span>。
+<br>
+强化<span style="color:orange; font-size: 14px;">5</span>次，【金箍·初击】变为<span style="color:orange; font-size: 14px;">【大闹·天宫】</span>。
+<br>
+强化普攻视为普攻。
+<br>
+每强化1次使此次造成的伤害提高<span id="val10">10.5%</span>，伤害提高的效果最多提高<span style="color:orange; font-size: 14px;">5</span>次。暴击率提高<span style="color:orange; font-size: 14px;">3%</span>，最多提高<span style="color:orange; font-size: 14px;">15%</span>。暴击伤害提高<span style="color:orange; font-size: 14px;">10%</span>，最多提高<span style="color:orange; font-size: 14px;">50%</span>。
+      <table class="skill-table">
+        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+        <tbody>
+          <tr><td>/</td><td>/</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div class="skill-block">
+  <div class="skill-header">
+    <span class="skill-name">终结技 · 斗战无双(满级12级)</span>
+    <span class="skill-arrow" id="arrow8"></span>
+  </div>
+  <div class="skill-body" id="body8">
+    <div class="skill-content">
+      施放2段攻击对指定敌方全体造成等同于天命人.猴哥<span id="val11">365%</span>攻击力的虚数属性。并使自身获得2个【命数】，【命数】最多持有4个，可用来抵扣天命人.猴哥的战技点消耗。消耗【天命】视为消耗战技点。
+      <table class="skill-table">
+        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+        <tbody>
+          <tr><td>削韧</td><td>群体15*2</td></tr>
+          <tr><td>能量变化</td><td>-140</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div class="skill-block">
+  <div class="skill-header">
+    <span class="skill-name">天赋 · 无敌身姿(满级12级)</span>
+    <span class="skill-arrow" id="arrow9"></span>
+  </div>
+  <div class="skill-body" id="body9">
+    <div class="skill-content">
+      天命人.猴哥在场时，战技点上限提高2点，强化普攻每施放一段攻击，使天命人.猴哥造成的伤害提高<span style="color:orange; font-size: 14px;">5%</span>，暴击伤害提高<span id="val12">10.5%</span>，最多记录<span style="color:orange; font-size: 14px;">10</span>次，并在自身回合开始时恢复1个战技点。
+      <table class="skill-table">
+        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+        <tbody>
+          <tr><td>/</td><td>/</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<!-- ===== 额外能力 ===== -->
+<div class="skill-block">
+  <div class="skill-content" style="font-size: 16px;">
+    <span class="skill-name" style="font-size: 18px;"></span>
+    <br>
+    额外能力1：<span style="color:orange; font-size: 16px;">蟠桃·能量</span>
+    <br>
+    每回合开始前恢复<span style="color:orange; font-size: 14px;">15</span>点能量。
+    <br>
+    <br>
+    额外能力2：<span style="color:orange; font-size: 16px;">金甲·庇护</span>
+    <br>
+    每消耗1个[天命]，使其受到的伤害降低<span style="color:orange; font-size: 14px;">5%</span>，最多降低<span style="color:orange; font-size: 14px;">30%</span>。
+    <br>
+    <br>
+    额外能力3：<span style="color:orange; font-size: 16px;">量子·洞察</span>
+    <br>
+    对拥有[量子]弱点的敌方目标造成的伤害提高<span style="color:orange; font-size: 14px;">20%</span>。<span style="color:purple; font-size: 14px;">(改)</span>
+  </div>
+</div>
+<!-- ===== 专武 ===== -->
+<div class="skill-block" style="margin:12px 16px;">
+  <div class="skill-header" style="cursor:default;">
+    <span class="skill-name">专武 · 混沌·凶威</span>
+  </div>
+  <div class="skill-content" style="padding:12px 16px 0;">
+    <div style="margin-bottom:8px;">叠影等级：
+      <select id="weaponLv" onchange="updateWeapon()">
+        <option value="1">Ⅰ</option>
+        <option value="2">Ⅱ</option>
+        <option value="3">Ⅲ</option>
+        <option value="4">Ⅳ</option>
+        <option value="5">Ⅴ</option>
+      </select>
+    </div>
+    <ul style="list-style:none;font-size:.85rem;line-height:1.6;">
+      <li>使装备者暴击率提高 <span id="wCrit" class="w-val">16</span>%。</li>
+      <li>当装备者施放普攻时，获得1层<span style="color:orange; font-size: 14px;">【凶狠】</span>，持续2回合。每层<span style="color:orange; font-size: 14px;">【凶狠】</span>使装备者造成的伤害提高 <span id="wDmg" class="w-val">5%</span>%，
+      <li>能量恢复效率提高<span id="wCd" class="w-val">4</span>%。<span style="color:orange; font-size: 14px;">【凶狠】</span>最多叠加<span style="color:orange; font-size: 14px;">4</span>层。</li>
+    </ul>
+  </div>
+</div>
+<!-- ===== 命座 ===== -->
+<div class="skill-block" style="margin:12px 16px;">
+  <div class="skill-header" style="cursor:default;">
+    <span class="skill-name">命之座</span>
+  </div>
+  <div class="skill-content" style="padding:12px 16px 0;">
+    <table class="skill-table" style="margin:0;">
+      <thead><tr><th>层数</th><th>名称</th><th>效果</th></tr></thead>
+      <tbody>
+      
+      
+        <tr><td><br>1命</td><td><br>金箍·威能</td><td><br>
+        战技点上限提高1点，施放强化普攻时，天命人.猴哥的暴击伤害提高<span style="color:orange; font-size: 14px;">72%</span>，持续到强化普攻结束。若只攻击了1个敌方目标，则额外对该目标造成1次等同于天命人.猴哥<span style="color:orange; font-size: 14px;">300%</span>攻击力的量子属性的附加伤害。<br></td></tr>
+        
+        
+        <tr><td><br>2命</td><td><br>斗战·余辉</td><td><br>
+        被终结技命中的敌方目标强制被植入[<span style="color:purple; font-size: 14px;">量子</span>]弱点，持续2回合。施放终结技后，使下一次强化普攻的伤害提高<span style="color:orange; font-size: 14px;">30%</span>，并使自身行动提前<span style="color:orange; font-size: 14px;">100%</span>，并额外获得1个[天命]。<br></td></tr>
+        
+        
+        <tr><td><br>3命</td><td><br>七十二变·觉醒</td><td>
+        <br>普攻等级+<span class="const-val" data-lv="3">1</span>，最多不超过<span class="const-val" data-lv="3">10</span>级
+      <br>
+      天赋等级+<span class="const-val" data-lv="3">2</span>，最多不超过<span class="const-val" data-lv="3">15</span>级<br></td></tr>
+      
+      
+        <tr><td><br>4命</td><td><br>筋斗·天际</td><td><br>
+        天命人.猴哥行动中每消耗<span style="color:orange; font-size: 14px;">2</span>个战技点，使下一次施放强化普攻时量子属性抗性穿透提高<span style="color:orange; font-size: 14px;">10%</span>，该效果最多叠加<span style="color:orange; font-size: 14px;">5</span>层。<br></td></tr>
+        
+        
+        <tr><td><br>5命</td><td><br>齐天·镇世</td><td>
+        <br>战技等级+<span class="const-val" data-lv="5">2</span>，最多不超过<span class="const-val" data-lv="5">15</span>级
+        <br>
+        终结技等级+<span class="const-val" data-lv="5">2</span>，最多不超过<span class="const-val" data-lv="5">15</span>级<br></td></tr>
+        
+        
+        <tr><td><br>6命</td><td><br>蟠桃·不灭</td><td><br>
+        击杀敌人后回复等同于天命人.猴哥<span style="color:orange; font-size: 14px;">30%</span>生命上限的生命值，恢复<span style="color:orange; font-size: 14px;">20</span>点能量，并获得<span style="color:orange; font-size: 14px;">1</span>个[天命]。<br></td></tr>
+        
+      </tbody>
+    </table>
+  </div>
+</div>
+<script>
+/* 倍率表 */
+const base = [50,50,50,25,50,50,50,50,50,5,200,5];   // 1 级
+const step = [10,5,10,5,15,7.5,25,12.5,40,0.5,15,0.5];   // 每级增量
+const spans = ['val1','val2','val3','val4','val5','val6','val7','val8','val9','val10','val11','val12'];
+const range = document.getElementById('levelRange');
+const display = document.getElementById('levelDisplay');
+function updateLevel(lv){
+  const levelNum = Number(lv);
+  display.textContent = 'Lv.'+lv;
+  // 等级数值本身也同步颜色等级
+  if(levelNum === 12){
+    display.className = 'level-value legend-text';
+  } else {
+    display.className = 'level-value';
+    const levelColors = [
+      '#d3af37','#d3af37','#d3af37', // 1-3 浅灰（入门）
+      '#d3af37','#d3af37','#d3af37', // 4-6 亮银（进阶）
+      '#d3af37','#d3af37','#d3af37', // 7-9 暗金（稀有）
+      '#d3af37','#d3af37',           // 10-11 深紫（史诗）
+      ''                              // 12级单独处理
+    ];
+    display.style.color = levelColors[levelNum - 1];
+  }
+  // 技能数值颜色
+  base.forEach((b,i)=>{
+    const val = b + step[i]*(levelNum-1);
+    const el  = document.getElementById(spans[i]);
+    el.textContent = val+'%';
+    /* 颜色 */
+    const colors = [
+      '#d3af37','#d3af37','#d3af37', // 1-3 浅灰（入门）
+      '#d3af37','#d3af37','#d3af37', // 4-6 亮银（进阶）
+      '#d3af37','#d3af37','#d3af37', // 7-9 暗金（稀有）
+      '#d3af37','#d3af37',           // 10-11 深紫（史诗）
+      ''                              // 12级单独处理
+    ];
+    // 12级（传说）：霓虹金渐变
+    if(levelNum === 12){
+      el.className = 'legend-text';
+    } else {
+      el.className = '';
+      el.style.color = colors[levelNum - 1];
+    }
+  });
+}
+range.addEventListener('input', e=>{
+  updateLevel(e.target.value);
+});
+updateLevel(1); // 初始化
+/* 移除折叠技能函数（因无需点击折叠，故删除触发逻辑） */
+</script>
+<script>
+/* ========== 专武 ========== */
+const weaponData = {
+  wCrit: [16,18,20,22,24],
+  wDmg:  [5,10,15,20,25],
+  wCd:   [1.0,1.5,2.0,2.5,3.0]
+};
+function updateWeapon(){
+  const lv = document.getElementById('weaponLv').value;
+  document.getElementById('wCrit').textContent = weaponData.wCrit[lv-1];
+  document.getElementById('wDmg').textContent  = weaponData.wDmg[lv-1];
+  document.getElementById('wCd').textContent   = weaponData.wCd[lv-1];
+  /* 专武颜色同步稀有度递进 */
+  const weaponColors = [
+    '#d3af37', // Ⅰ 浅灰
+    '#d3af37', // Ⅱ 亮银
+    '#d3af37', // Ⅲ 暗金
+    '#d3af37', // Ⅳ 深紫
+    '#d3af37'  // Ⅴ 霓虹金
+  ];
+  document.querySelectorAll('.w-val').forEach(el=>{
+    el.style.color = weaponColors[lv-1];
+  });
+}
+/* ========== 命座颜色同步稀有度递进 ========== */
+function colorConstellation(){
+  const constColors = [
+    '#d3af37','#d3af37','#d3af37', // 1-3命 浅灰→亮银（入门-进阶）
+    '#d3af37','#d3af37','#d3af37'  // 4-6命 亮银→暗金→深紫（进阶-稀有-史诗）
+  ];
+  document.querySelectorAll('.const-val').forEach(el=>{
+    const lv = Number(el.dataset.lv);
+    el.style.color = constColors[lv-1];
+  });
+}
+/* 初始化 */
+updateWeapon();
+colorConstellation();
+</script>
+<!-- 播放器iframe：跨页无缝播放 -->
+<iframe 
+    id="musicPlayerIframe"
+    src="music-player.html"
+    style="
+        display: block !important;
+        visibility: visible !important;
+        height: 400px !important;
+        width: 100% !important;
+        z-index: 99999 !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        overflow: visible !important;
+    "
+    frameborder="0"
+    scrolling="no"
+    onload="resizePlayerIframe(this)"
+></iframe>
+<script>
+// 播放器高度自适应
+function resizePlayerIframe(iframe) {
+    try {
+        const playerHeight = iframe.contentWindow.document.querySelector('.mini-music-player').offsetHeight;
+        const progressHeight = iframe.contentWindow.document.querySelector('.player-progress').offsetHeight;
+        iframe.style.height = (playerHeight + progressHeight + 10) + 'px';
+    } catch (err) {
+        iframe.style.height = '90px';
+    }
+}
+// 跨页播放状态同步（广播监听）
+const bc = new BroadcastChannel('music_player_broadcast');
+bc.onmessage = (e) => {
+    if (e.data.type === 'SYNC_STATE') {
+        const iframe = document.getElementById('musicPlayerIframe');
+        if (iframe) {
+            iframe.contentWindow.postMessage({ type: 'SYNC_STATE', state: e.data.state }, '*');
+        }
+    }
+};
+// 页面加载初始化
+window.addEventListener('load', () => {
+    // 恢复播放器状态
+    const iframe = document.getElementById('musicPlayerIframe');
+    setTimeout(() => {
+        try {
+            iframe.contentWindow.postMessage({ type: 'RESTORE_PLAY_STATE' }, '*');
+        } catch (err) {}
+    }, 300);
+});
+// 监听播放器状态反馈
+window.addEventListener('message', (e) => {
+    if (e.data.type === 'PLAY_STATE_UPDATED') {
+        console.log('当前播放状态:', e.data.state.isPlaying);
+    }
+});
+</script>
+</body>
+</html>
