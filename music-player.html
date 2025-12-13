@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>标准音乐播放器（六哥荣耀WIKI专用）</title>
+    <title>跨页音乐播放器（六哥荣耀WIKI专用）</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
         body { background: transparent; padding: 0; margin: 0; height: 100%; }
@@ -302,6 +302,8 @@
         .dropdown-song-list::-webkit-scrollbar-thumb:hover {
             background: #81c784;
         }
+        /* 隐藏后台音频控件 */
+        #backgroundAudio { display: none; }
     </style>
 </head>
 <body>
@@ -309,7 +311,6 @@
     <div class="dropdown-song-list" id="dropdownSongList">
         <ul class="song-list" id="songListUl"></ul>
     </div>
-
     <div class="player-container" id="playerContainer">
         <div class="mini-music-player" id="draggablePlayer">
             <!-- 封面区域 -->
@@ -368,6 +369,7 @@
                 <button class="player-btn play-main-btn" id="miniPlayBtn" tabindex="0">▶</button>
                 <button class="player-btn" id="miniNextBtn" tabindex="0">❯</button>
                 <button class="player-btn loop-btn" id="loopBtn" title="切换循环模式" tabindex="0">🔁</button>
+                <div class="loop-mode-tooltip" id="loopTooltip">顺序播放（点击切换列表循环）</div>
             </div>
             <!-- 音量控制区 -->
             <div class="player-volume">
@@ -386,13 +388,43 @@
                 <span class="total-time-mini" id="totalTime">03:06</span>
             </div>
         </div>
-        <!-- 全局音频对象 -->
-        <audio id="globalAudio" preload="metadata" playsinline>
+        <!-- 全局音频对象（实际播放核心） -->
+        <audio id="backgroundAudio" preload="metadata" playsinline>
             <source src="" type="audio/mpeg">
         </audio>
     </div>
 <script>
-    // 元素初始化
+    // --------------- 核心配置（无需修改）---------------
+    // 歌曲列表数据
+    const songList = [
+        { audioId: 'miniAudio1', coverId: 'playerCover1', title: '昔涟', singer: '张韶涵、HOYO-MiX', audioUrl: 'http://music.163.com/song/media/outer/url?id=3316968660.mp3', duration: '03:06' },
+        { audioId: 'miniAudio2', coverId: 'playerCover2', title: '耀斑', singer: 'HOYO-MiX,YMIR', audioUrl: 'http://music.163.com/song/media/outer/url?id=2722510685.mp3', duration: '03:33' },
+        { audioId: 'miniAudio3', coverId: 'playerCover3', title: '拂晓 Proi Proi', singer: 'HOYO-MiX,NIDA', audioUrl: 'http://music.163.com/song/media/outer/url?id=2709812973.mp3', duration: '03:58' },
+        { audioId: 'miniAudio4', coverId: 'playerCover4', title: '何者', singer: '谭晶,HOYO-MiX', audioUrl: 'http://music.163.com/song/media/outer/url?id=2658660685.mp3', duration: '02:26' },
+        { audioId: 'miniAudio5', coverId: 'playerCover5', title: '睡蕉之歌', singer: 'HOYO-MiX', audioUrl: 'http://music.163.com/song/media/outer/url?id=2646986980.mp3', duration: '00:17' },
+        { audioId: 'miniAudio6', coverId: 'playerCover6', title: '不眠之夜', singer: '张杰,HOYO-MiX', audioUrl: 'http://music.163.com/song/media/outer/url?id=2122308127.mp3', duration: '02:18' },
+        { audioId: 'miniAudio7', coverId: 'playerCover7', title: 'Montagem Miau', singer: 'Pudding_PD,METAMOON', audioUrl: 'http://music.163.com/song/media/outer/url?id=3320816993.mp3', duration: '02:19' },
+        { audioId: 'miniAudio8', coverId: 'playerCover8', title: '猫的舞步', singer: 'Candy_Wind', audioUrl: 'http://music.163.com/song/media/outer/url?id=523902194.mp3', duration: '03:07' },
+        { audioId: 'miniAudio9', coverId: 'playerCover9', title: '示例歌曲9', singer: '歌手9', audioUrl: 'http://music.163.com/song/media/outer/url?id=1428234445.mp3', duration: '03:20' },
+        { audioId: 'miniAudio10', coverId: 'playerCover10', title: '反正（狮子座幻想曲）', singer: '高桥千春', audioUrl: 'http://music.163.com/song/media/outer/url?id=2045500209.mp3', duration: '03:11' },
+        { audioId: 'miniAudio11', coverId: 'playerCover11', title: 'Counting Stars', singer: 'OneRepublic', audioUrl: 'http://music.163.com/song/media/outer/url?id=28575553.mp3', duration: '04:16' },
+        { audioId: 'miniAudio12', coverId: 'playerCover12', title: 'DJ Okawari-Flower Dance', singer: 'Chopin Remix', audioUrl: 'http://music.163.com/song/media/outer/url?id=1405903472.mp3', duration: '04:07' },
+        { audioId: 'miniAudio13', coverId: 'playerCover13', title: '测试', singer: 'Chopin Remix', audioUrl: '13', duration: '00:00' }
+    ];
+    // 循环模式枚举
+    const LOOP_MODE = { SEQUENCE: 0, LIST_LOOP: 1, SINGLE_LOOP: 2 };
+    // 全局播放状态（localStorage持久化，跨页共享）
+    let playState = JSON.parse(localStorage.getItem('musicPlayerState')) || {
+        currentSongIndex: 0,
+        isPlaying: false,
+        currentTime: 0,
+        volume: 0.7,
+        loopMode: LOOP_MODE.SEQUENCE
+    };
+
+    // --------------- 元素初始化 ---------------
+    const backgroundAudio = document.getElementById('backgroundAudio');
+    const playerContainer = document.getElementById('playerContainer');
     const draggablePlayer = document.getElementById('draggablePlayer');
     const playBtn = document.getElementById('miniPlayBtn');
     const progress = document.getElementById('miniProgress');
@@ -405,164 +437,49 @@
     const nextBtn = document.getElementById('miniNextBtn');
     const loopBtn = document.getElementById('loopBtn');
     const loopTooltip = document.getElementById('loopTooltip');
-    const playerTitleText = document.getElementById('playerTitleText'); // 歌曲名称元素
+    const playerTitleText = document.getElementById('playerTitleText');
     const playerSinger = document.getElementById('playerSinger');
-    const globalAudio = document.getElementById('globalAudio');
-    const playerContainer = document.getElementById('playerContainer');
-    // 列表按钮+下拉列表元素
     const songListBtn = document.getElementById('songListBtn');
     const dropdownSongList = document.getElementById('dropdownSongList');
     const songListUl = document.getElementById('songListUl');
-    let listOpen = false; // 列表展开状态标记
+    const progressBar = document.getElementById('miniProgressBar');
+    let listOpen = false;
 
-    // 歌曲列表数据
-    const songList = [
-        { 
-            audioId: 'miniAudio1', 
-            coverId: 'playerCover1', 
-            title: '昔涟', 
-            singer: '张韶涵、HOYO-MiX', 
-            audioUrl: 'http://music.163.com/song/media/outer/url?id=3316968660.mp3',
-            duration: '03:06'
-        },
-        { 
-            audioId: 'miniAudio2', 
-            coverId: 'playerCover2', 
-            title: '耀斑', 
-            singer: 'HOYO-MiX,YMIR', 
-            audioUrl: 'http://music.163.com/song/media/outer/url?id=2722510685.mp3',
-            duration: '03:33'
-        },
-        { 
-            audioId: 'miniAudio3', 
-            coverId: 'playerCover3', 
-            title: '拂晓 Proi Proi', 
-            singer: 'HOYO-MiX,NIDA', 
-            audioUrl: 'http://music.163.com/song/media/outer/url?id=2709812973.mp3',
-            duration: '03:58'
-        },
-        { 
-            audioId: 'miniAudio4', 
-            coverId: 'playerCover4', 
-            title: '何者', 
-            singer: '谭晶,HOYO-MiX', 
-            audioUrl: 'http://music.163.com/song/media/outer/url?id=2658660685.mp3',
-            duration: '02:26'
-        },
-        { 
-            audioId: 'miniAudio5', 
-            coverId: 'playerCover5', 
-            title: '睡蕉之歌', 
-            singer: 'HOYO-MiX', 
-            audioUrl: 'http://music.163.com/song/media/outer/url?id=2646986980.mp3',
-            duration: '00:17'
-        },
-        { 
-            audioId: 'miniAudio6', 
-            coverId: 'playerCover6', 
-            title: '不眠之夜', 
-            singer: '张杰,HOYO-MiX', 
-            audioUrl: 'http://music.163.com/song/media/outer/url?id=2122308127.mp3',
-            duration: '02:18'
-        },
-        { 
-            audioId: 'miniAudio7', 
-            coverId: 'playerCover7', 
-            title: 'Montagem Miau', 
-            singer: 'Pudding_PD,METAMOON', 
-            audioUrl: 'http://music.163.com/song/media/outer/url?id=3320816993.mp3',
-            duration: '02:19'
-        },
-        { 
-            audioId: 'miniAudio8', 
-            coverId: 'playerCover8', 
-            title: '猫的舞步', 
-            singer: 'Candy_Wind', 
-            audioUrl: 'http://music.163.com/song/media/outer/url?id=523902194.mp3',
-            duration: '03:07'
-        },
-        { 
-            audioId: 'miniAudio9', 
-            coverId: 'playerCover9', 
-            title: '示例歌曲9', 
-            singer: '歌手9', 
-            audioUrl: 'http://music.163.com/song/media/outer/url?id=1428234445.mp3',
-            duration: '03:20'
-        },
-        { 
-            audioId: 'miniAudio10', 
-            coverId: 'playerCover10', 
-            title: '反正（狮子座幻想曲）', 
-            singer: '高桥千春', 
-            audioUrl: 'http://music.163.com/song/media/outer/url?id=2045500209.mp3',
-            duration: '03:11'
-        },
-        { 
-            audioId: 'miniAudio11', 
-            coverId: 'playerCover11', 
-            title: 'Counting Stars', 
-            singer: 'OneRepublic', 
-            audioUrl: 'http://music.163.com/song/media/outer/url?id=28575553.mp3',
-            duration: '04:16'
-        },
-        { 
-            audioId: 'miniAudio12', 
-            coverId: 'playerCover12', 
-            title: 'DJ Okawari-Flower Dance', 
-            singer: 'Chopin Remix', 
-            audioUrl: 'http://music.163.com/song/media/outer/url?id=1405903472.mp3',
-            duration: '04:07'
-        },
-        { 
-            audioId: 'miniAudio13', 
-            coverId: 'playerCover13', 
-            title: '测试', 
-            singer: 'Chopin Remix', 
-            audioUrl: '13',
-            duration: '00:00'
-        }
-    ];
-
-    // 循环模式枚举（常规播放器三种模式）
-    const LOOP_MODE = {
-        SEQUENCE: 0, // 顺序播放
-        LIST_LOOP: 1, // 列表循环
-        SINGLE_LOOP: 2 // 单曲循环
-    };
-
-    // 全局状态（记忆播放模式，贴合常规体验）
-    let playState = JSON.parse(localStorage.getItem('musicPlayerState')) || {
-        currentSongIndex: 0,
-        isPlaying: false,
-        currentTime: 0,
-        volume: 0.7,
-        loopMode: LOOP_MODE.SEQUENCE,
-        rotateDeg: 0
-    };
-
-    // 防抖函数
-    function debounce(fn, delay = 100) {
-        let timer;
-        return (...args) => {
-            clearTimeout(timer);
-            timer = setTimeout(() => fn.apply(this, args), delay);
-        };
+    // --------------- 工具函数 ---------------
+    // 格式化时间（00:00格式）
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
+        return `${mins}:${secs}`;
     }
-
-    // 保存播放状态（自动记忆，常规播放器必备）
+    // 获取音量图标
+    function getVolumeIcon(volume) {
+        return volume > 0.5 ? '🔊' : volume > 0 ? '🔉' : '🔇';
+    }
+    // 保存状态到localStorage（跨页共享）
     function savePlayState() {
-        playState.currentTime = globalAudio.currentTime;
-        playState.volume = globalAudio.volume;
+        playState.currentTime = backgroundAudio.currentTime;
+        playState.volume = backgroundAudio.volume;
         localStorage.setItem('musicPlayerState', JSON.stringify(playState));
-        window.parent.postMessage({
-            type: 'PLAY_STATE_UPDATED',
-            state: { ...playState }
-        }, '*');
     }
-
-    // 更新循环模式UI
-    function updateLoopModeUI() {
-        switch(playState.loopMode) {
+    // 更新播放器UI（同步状态）
+    function updatePlayerUI() {
+        const currentSong = songList[playState.currentSongIndex];
+        // 更新歌曲信息
+        playerTitleText.textContent = currentSong.title;
+        playerSinger.textContent = currentSong.singer;
+        totalTimeEl.textContent = currentSong.duration;
+        // 更新封面
+        document.querySelectorAll('.player-cover').forEach(cover => cover.style.display = 'none');
+        document.getElementById(currentSong.coverId).style.display = 'block';
+        // 更新播放按钮和旋转动画
+        playBtn.textContent = playState.isPlaying ? '⏸' : '▶';
+        draggablePlayer.classList.toggle('playing', playState.isPlaying);
+        // 更新音量
+        volumeSlider.value = playState.volume;
+        volumeBtn.textContent = getVolumeIcon(playState.volume);
+        // 更新循环模式
+        switch (playState.loopMode) {
             case LOOP_MODE.SEQUENCE:
                 loopBtn.textContent = '🔁';
                 loopBtn.classList.remove('active');
@@ -579,75 +496,93 @@
                 loopTooltip.textContent = '单曲循环（点击切换顺序播放）';
                 break;
         }
+        // 更新进度条
+        const totalSeconds = currentSong.duration.split(':').reduce((m, s) => m * 60 + parseInt(s), 0);
+        const percent = (playState.currentTime / totalSeconds) * 100;
+        progress.style.width = `${percent}%`;
+        progressThumb.style.left = `${percent}%`;
+        currentTimeEl.textContent = formatTime(playState.currentTime);
     }
 
-    // 切换循环模式
-    loopBtn.addEventListener('click', () => {
-        playState.loopMode = (playState.loopMode + 1) % 3;
-        updateLoopModeUI();
-        savePlayState();
-    });
-
-    // 获取音量图标（常规三级音量显示）
-    function getVolumeIcon(volume) {
-        return volume > 0.5 ? '🔊' : volume > 0 ? '🔉' : '🔇';
-    }
-
-    // 歌曲切换（常规逻辑：无缝衔接）
+    // --------------- 核心播放逻辑 ---------------
+    // 切换歌曲
     function switchSong(newIndex) {
-        // 处理循环逻辑
-        if (newIndex < 0) {
-            newIndex = playState.loopMode === LOOP_MODE.LIST_LOOP ? songList.length - 1 : 0;
-        }
-        if (newIndex >= songList.length) {
-            newIndex = playState.loopMode === LOOP_MODE.LIST_LOOP ? 0 : songList.length - 1;
-        }
+        // 处理循环边界
+        if (newIndex < 0) newIndex = playState.loopMode === LOOP_MODE.LIST_LOOP ? songList.length - 1 : 0;
+        if (newIndex >= songList.length) newIndex = playState.loopMode === LOOP_MODE.LIST_LOOP ? 0 : songList.length - 1;
 
         playState.currentSongIndex = newIndex;
         const newSong = songList[newIndex];
-
-        // 更新UI（常规播放器即时反馈）
-        playerTitleText.textContent = newSong.title;
-        playerSinger.textContent = newSong.singer;
-        totalTimeEl.textContent = newSong.duration;
-        totalTimeEl.dataset.loaded = 'true';
-        progress.style.width = '0%';
-        progressThumb.style.left = '0%';
-        currentTimeEl.textContent = '00:00';
-
-        // 切换封面
-        document.querySelectorAll('.player-cover').forEach(cover => cover.style.display = 'none');
-        const currentCover = document.getElementById(newSong.coverId);
-        if (currentCover) currentCover.style.display = 'block';
-
         // 更新音频源
-        globalAudio.src = newSong.audioUrl;
-        globalAudio.currentTime = 0;
-        globalAudio.load();
+        backgroundAudio.src = newSong.audioUrl;
+        backgroundAudio.currentTime = 0;
+        backgroundAudio.load();
 
         // 恢复播放状态
         if (playState.isPlaying) {
-            globalAudio.play().then(() => {
-                playBtn.textContent = '⏸';
-                draggablePlayer.classList.add('playing');
-            }).catch(() => {
-                alert('播放失败，请点击播放器重试（浏览器可能限制自动播放）');
-                playBtn.textContent = '▶';
-                draggablePlayer.classList.remove('playing');
+            backgroundAudio.play().catch(err => {
                 playState.isPlaying = false;
+                savePlayState();
+                updatePlayerUI();
+                alert('播放失败，请点击播放器重试（浏览器可能限制自动播放）');
             });
-        } else {
-            playBtn.textContent = '▶';
-            draggablePlayer.classList.remove('playing');
         }
-
         savePlayState();
-        // 切换歌曲后关闭下拉列表
+        updatePlayerUI();
+        // 关闭歌曲列表
         listOpen = false;
         dropdownSongList.classList.remove('show');
     }
+    // 播放/暂停控制
+    playBtn.addEventListener('click', () => {
+        playState.isPlaying = !playState.isPlaying;
+        if (playState.isPlaying) {
+            backgroundAudio.play().catch(err => {
+                playState.isPlaying = false;
+                alert('播放失败，请点击播放器重试');
+            });
+        } else {
+            backgroundAudio.pause();
+        }
+        savePlayState();
+        updatePlayerUI();
+    });
+    // 上/下一首
+    prevBtn.addEventListener('click', () => switchSong(playState.currentSongIndex - 1));
+    nextBtn.addEventListener('click', () => switchSong(playState.currentSongIndex + 1));
+    // 音量控制
+    volumeBtn.addEventListener('click', () => {
+        playState.volume = playState.volume === 1 ? 0 : playState.volume > 0 ? 1 : 0.7;
+        backgroundAudio.volume = playState.volume;
+        savePlayState();
+        updatePlayerUI();
+    });
+    volumeSlider.addEventListener('input', () => {
+        playState.volume = parseFloat(volumeSlider.value);
+        backgroundAudio.volume = playState.volume;
+        volumeBtn.textContent = getVolumeIcon(playState.volume);
+        savePlayState();
+    });
+    // 循环模式切换
+    loopBtn.addEventListener('click', () => {
+        playState.loopMode = (playState.loopMode + 1) % 3;
+        savePlayState();
+        updatePlayerUI();
+    });
+    // 进度条点击跳转
+    progressBar.addEventListener('click', (e) => {
+        const rect = progressBar.getBoundingClientRect();
+        const percent = (e.clientX - rect.left) / rect.width;
+        const currentSong = songList[playState.currentSongIndex];
+        const totalSeconds = currentSong.duration.split(':').reduce((m, s) => m * 60 + parseInt(s), 0);
+        const newProgress = percent * totalSeconds;
+        backgroundAudio.currentTime = newProgress;
+        playState.currentTime = newProgress;
+        savePlayState();
+        updatePlayerUI();
+    });
 
-    // 渲染下拉歌曲列表
+    // --------------- 歌曲列表逻辑 ---------------
     function renderSongList() {
         songListUl.innerHTML = '';
         songList.forEach((song, idx) => {
@@ -657,104 +592,53 @@
                 <span>${idx + 1}. ${song.title} - ${song.singer}</span>
                 <span class="song-duration">${song.duration}</span>
             `;
-            // 点击歌曲：播放 + 关闭列表
             li.addEventListener('click', () => {
+                playState.isPlaying = true;
                 switchSong(idx);
             });
             songListUl.appendChild(li);
         });
     }
-
-    // 列表按钮：点击展开/收起列表（向上展开）
     songListBtn.addEventListener('click', (e) => {
-        e.stopPropagation(); // 阻止事件冒泡到播放器拖动
+        e.stopPropagation();
         listOpen = !listOpen;
         dropdownSongList.classList.toggle('show', listOpen);
-        if (listOpen) {
-            renderSongList(); // 渲染列表
-        }
+        if (listOpen) renderSongList();
     });
-
-    // 点击页面其他区域，关闭下拉列表
+    // 点击其他区域关闭列表
     document.addEventListener('click', (e) => {
-        // 排除播放器和列表区域，点击其他地方关闭
         if (listOpen && !playerContainer.contains(e.target) && !dropdownSongList.contains(e.target)) {
             listOpen = false;
             dropdownSongList.classList.remove('show');
         }
     });
 
-    // 播放/暂停控制（常规点击逻辑）
-    playBtn.addEventListener('click', () => {
-        if (playState.isPlaying) {
-            globalAudio.pause();
-            playBtn.textContent = '▶';
-            draggablePlayer.classList.remove('playing');
-        } else {
-            globalAudio.play().then(() => {
-                playBtn.textContent = '⏸';
-                draggablePlayer.classList.add('playing');
-            }).catch(() => alert('播放失败，请点击播放器重试'));
+    // --------------- 跨页同步核心 ---------------
+    // 监听localStorage变化，同步UI（其他页面修改状态时触发）
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'musicPlayerState') {
+            playState = JSON.parse(e.newValue);
+            // 同步音频状态
+            backgroundAudio.volume = playState.volume;
+            if (backgroundAudio.src !== songList[playState.currentSongIndex].audioUrl) {
+                backgroundAudio.src = songList[playState.currentSongIndex].audioUrl;
+                backgroundAudio.load();
+            }
+            backgroundAudio.currentTime = playState.currentTime;
+            // 同步播放/暂停
+            if (playState.isPlaying && backgroundAudio.paused) {
+                backgroundAudio.play().catch(() => {});
+            } else if (!playState.isPlaying && !backgroundAudio.paused) {
+                backgroundAudio.pause();
+            }
+            // 同步UI
+            updatePlayerUI();
         }
-        playState.isPlaying = !playState.isPlaying;
-        savePlayState();
     });
 
-    // 上/下一首（常规快捷键逻辑）
-    prevBtn.addEventListener('click', () => switchSong(playState.currentSongIndex - 1));
-    nextBtn.addEventListener('click', () => switchSong(playState.currentSongIndex + 1));
-
-    // 音量控制（按钮+滑动条）
-    volumeBtn.addEventListener('click', () => {
-        globalAudio.volume = globalAudio.volume === 1.0 ? 0 : globalAudio.volume > 0 ? 1.0 : 0.7;
-        volumeSlider.value = globalAudio.volume;
-        volumeBtn.textContent = getVolumeIcon(globalAudio.volume);
-        savePlayState();
-    });
-
-    volumeSlider.addEventListener('input', () => {
-        globalAudio.volume = volumeSlider.value;
-        volumeBtn.textContent = getVolumeIcon(globalAudio.volume);
-        savePlayState();
-    });
-
-    // 进度条更新（常规实时同步）
-    function updateProgress() {
-        if (isNaN(globalAudio.duration)) return;
-        const percent = (globalAudio.currentTime / globalAudio.duration) * 100;
-        progress.style.width = `${percent}%`;
-        progressThumb.style.left = `${percent}%`;
-        // 格式化时间（常规00:00格式）
-        const currentMinutes = Math.floor(globalAudio.currentTime / 60);
-        const currentSeconds = Math.floor(globalAudio.currentTime % 60);
-        currentTimeEl.textContent = `${currentMinutes.toString().padStart(2, '0')}:${currentSeconds.toString().padStart(2, '0')}`;
-        
-        if (!totalTimeEl.dataset.loaded) {
-            const totalMinutes = Math.floor(globalAudio.duration / 60);
-            const totalSeconds = Math.floor(globalAudio.duration % 60);
-            totalTimeEl.textContent = `${totalMinutes.toString().padStart(2, '0')}:${totalSeconds.toString().padStart(2, '0')}`;
-            totalTimeEl.dataset.loaded = 'true';
-        }
-    }
-    setInterval(updateProgress, 1000);
-
-    // 进度条点击跳转（常规操作）
-    document.getElementById('miniProgressBar').addEventListener('click', (e) => {
-        if (isNaN(globalAudio.duration)) return;
-        const rect = e.target.getBoundingClientRect();
-        const percent = (e.clientX - rect.left) / rect.width;
-        globalAudio.currentTime = percent * globalAudio.duration;
-        progress.style.width = `${percent * 100}%`;
-        progressThumb.style.left = `${percent * 100}%`;
-        savePlayState();
-    });
-
-    // 拖动功能（优化：不拦截列表按钮）
+    // --------------- 播放器拖动功能 ---------------
     draggablePlayer.addEventListener('mousedown', (e) => {
-        // 精准排除可点击元素，避免拖动拦截
-        if (e.target.closest('.player-btn, .volume-btn, .song-list-btn, .volume-slider, .progress-bar-mini')) {
-            return;
-        }
+        if (e.target.closest('.player-btn, .volume-btn, .song-list-btn, .volume-slider, .progress-bar-mini')) return;
         let isDragging = true;
         const rect = playerContainer.getBoundingClientRect();
         const offsetX = e.clientX - rect.left;
@@ -771,71 +655,48 @@
         }, { once: true });
     });
 
-    // 音频结束处理（常规循环逻辑）
-    globalAudio.addEventListener('ended', () => {
-        switch(playState.loopMode) {
+    // --------------- 音频结束处理 ---------------
+    backgroundAudio.addEventListener('ended', () => {
+        switch (playState.loopMode) {
             case LOOP_MODE.SEQUENCE:
-                // 顺序播放：最后一首结束后暂停
                 if (playState.currentSongIndex === songList.length - 1) {
                     playState.isPlaying = false;
-                    playBtn.textContent = '▶';
-                    draggablePlayer.classList.remove('playing');
-                } else {
-                    switchSong(playState.currentSongIndex + 1);
-                }
+                    savePlayState();
+                    updatePlayerUI();
+                } else switchSong(playState.currentSongIndex + 1);
                 break;
             case LOOP_MODE.LIST_LOOP:
-                // 列表循环：自动下一首，循环往复
                 switchSong(playState.currentSongIndex + 1);
                 break;
             case LOOP_MODE.SINGLE_LOOP:
-                // 单曲循环：重新播放当前歌曲
-                globalAudio.currentTime = 0;
-                globalAudio.play();
+                backgroundAudio.currentTime = 0;
+                backgroundAudio.play();
                 break;
         }
-        savePlayState();
     });
 
+    // --------------- 初始化 ---------------
+    window.addEventListener('load', () => {
+        // 恢复状态
+        backgroundAudio.volume = playState.volume;
+        const currentSong = songList[playState.currentSongIndex];
+        backgroundAudio.src = currentSong.audioUrl;
+        backgroundAudio.currentTime = playState.currentTime;
+        backgroundAudio.load();
+        // 恢复播放
+        if (playState.isPlaying) {
+            backgroundAudio.play().catch(() => {
+                playState.isPlaying = false;
+                savePlayState();
+            });
+        }
+        // 更新UI
+        updatePlayerUI();
+        // 实时保存进度
+        setInterval(savePlayState, 1000);
+    });
     // 页面卸载时保存状态
     window.addEventListener('beforeunload', savePlayState);
-
-    // 初始化（常规播放器启动逻辑）
-    window.addEventListener('load', () => {
-        // 恢复保存的状态
-        globalAudio.volume = playState.volume;
-        volumeSlider.value = playState.volume;
-        volumeBtn.textContent = getVolumeIcon(playState.volume);
-        updateLoopModeUI();
-
-        // 加载当前歌曲
-        const currentSong = songList[playState.currentSongIndex];
-        globalAudio.src = currentSong.audioUrl;
-        globalAudio.currentTime = playState.currentTime;
-        globalAudio.load();
-
-        // 更新UI
-        playerTitleText.textContent = currentSong.title;
-        playerSinger.textContent = currentSong.singer;
-        totalTimeEl.textContent = currentSong.duration;
-        document.querySelectorAll('.player-cover').forEach(cover => cover.style.display = 'none');
-        document.getElementById(currentSong.coverId).style.display = 'block';
-
-        // 恢复播放状态
-        if (playState.isPlaying) {
-            globalAudio.play().then(() => {
-                playBtn.textContent = '⏸';
-                draggablePlayer.classList.add('playing');
-            }).catch(() => {
-                playBtn.textContent = '▶';
-                draggablePlayer.classList.remove('playing');
-                playState.isPlaying = false;
-            });
-        } else {
-            playBtn.textContent = '▶';
-            draggablePlayer.classList.remove('playing');
-        }
-    });
 </script>
 </body>
 </html>
