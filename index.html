@@ -2,61 +2,100 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <title>六哥荣耀WIKI</title>
     <style>
-        body {
-            overflow: visible !important;
-            padding-bottom: 500px !important; /* 改动1：从450px增至500px，给歌单留足空间 */
-            background: var(--bg) !important;
-        }
-        #musicPlayerIframe {
-            display: block !important;
-            visibility: visible !important;
-            height: 380px !important;
-            width: 100% !important;
-            z-index: 99999 !important;
-            position: fixed !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            border: none !important;
-            background: transparent !important;
-            overflow: visible !important;
+        :root {
+            --bg: #121212;
+            --card-bg: #1e3a2f;
+            --card-bg-hover: #284a3c;
+            --text-main: #e0e0e0;
+            --text-highlight: #81c784;
+            --text-secondary: #99aabb;
+            --radius: 6px;
+            --gap: 12px;
+            --special-color: #ffd700;
+            --border-color: #3d725f;
+            --shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "Microsoft YaHei", sans-serif;
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
         }
-        :root {
-            --bg: #121212;
-            --card-bg: #1e3a2f;
-            --text-main: #e0e0e0;
-            --text-highlight: #81c784;
-            --text-secondary: #99aabb;
-            --radius: 4px;
-            --gap: 12px;
-            --special-color: #ffd700;
+        body {
+            overflow-x: hidden;
+            padding-bottom: 380px !important;
+            background: var(--bg) !important;
+            color: var(--text-main);
+            line-height: 1.5;
         }
+        /* 新增：搜索框样式 */
+        .search-container {
+            max-width: 1200px;
+            margin: 0 auto 16px;
+            padding: 0 8px;
+        }
+        #search-input {
+            width: 100%;
+            padding: 10px 16px;
+            background: #2d3748;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            color: var(--text-main);
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        #search-input:focus {
+            border-color: var(--text-highlight);
+            box-shadow: 0 0 0 2px rgba(129, 199, 132, 0.2);
+        }
+        #search-input::placeholder {
+            color: var(--text-secondary);
+        }
+        /* 新增：空结果提示 */
+        .empty-result {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 30px;
+            text-align: center;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            color: var(--text-secondary);
+            display: none;
+        }
+        .empty-result i {
+            font-size: 2rem;
+            margin-bottom: 12px;
+            display: block;
+            color: var(--text-highlight);
+        }
+        /* 导航栏优化 */
         .top-nav {
             background: var(--card-bg);
             border-radius: var(--radius);
-            padding: 8px 16px;
-            margin-bottom: 16px;
+            padding: 10px 16px;
+            margin: 16px auto;
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 10px;
             align-items: center;
+            max-width: 1200px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 9999;
         }
         .nav-title {
-            font-size: 1.2rem;
-            font-weight: 600;
+            font-size: 1.25rem;
+            font-weight: 700;
             color: var(--text-highlight);
             margin-right: auto;
+            white-space: nowrap;
         }
         .nav-link {
             color: var(--text-main);
@@ -64,57 +103,103 @@
             padding: 6px 12px;
             border-radius: var(--radius);
             font-size: 0.95rem;
-            transition: background 0.2s;
+            transition: all 0.2s ease;
+            white-space: nowrap;
         }
         .nav-link:hover {
-            background: #2d5243;
+            background: var(--card-bg-hover);
+            color: var(--text-highlight);
         }
-        /* 网站运行天数样式 */
+        /* 新增：活跃导航样式 */
+        .nav-link.active {
+            background: var(--card-bg-hover);
+            color: var(--special-color);
+            font-weight: 600;
+            border: 1px solid var(--special-color);
+        }
+        /* 网站运行天数优化 */
         .site-age-container {
             max-width: 1200px;
             margin: 0 auto 16px;
-            padding: 8px 12px;
+            padding: 10px 16px;
             background: var(--card-bg);
             border-radius: var(--radius);
             text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         #site-age {
             color: var(--text-highlight);
             font-size: 0.95rem;
             font-weight: 500;
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            background: rgba(129, 199, 132, 0.1);
         }
         #site-age.special {
             color: var(--special-color);
             animation: flash 1.5s infinite alternate;
+            background: rgba(255, 215, 0, 0.1);
+            padding: 4px 12px;
+            font-weight: 600;
         }
         @keyframes flash {
             from { opacity: 1; text-shadow: 0 0 5px rgba(255,215,0,0.5); }
-            to { opacity: 0.8; text-shadow: 0 0 15px rgba(255,215,0,0.8); }
+            to { opacity: 0.9; text-shadow: 0 0 15px rgba(255,215,0,0.8); }
         }
+        /* 网格容器优化 */
         .grid-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: var(--gap);
             max-width: 1200px;
             margin: 0 auto;
+            padding: 0 8px;
+            transition: opacity 0.3s ease;
         }
+        /* 卡片优化 */
         .content-card {
             background: var(--card-bg);
             border-radius: var(--radius);
             padding: 12px;
             text-align: center;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s ease;
             width: 100% !important;
             height: auto !important;
+            border: 1px solid transparent;
+            /* 新增：卡片分类标签 */
+            position: relative;
+            overflow: hidden;
+        }
+        /* 新增：分类标签 */
+        .content-card::before {
+            content: attr(data-type);
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            padding: 2px 6px;
+            background: var(--text-highlight);
+            color: var(--bg);
+            font-size: 0.65rem;
+            border-radius: 4px;
+            font-weight: 600;
+            z-index: 1;
+        }
+        .content-card.lightcone-card::before {
+            background: #8197c7;
+        }
+        .content-card.material-card::before {
+            background: #c781a6;
         }
         .content-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow);
+            background: var(--card-bg-hover);
+            border-color: var(--text-highlight);
         }
         .card-img {
             width: 100%;
-            aspect-ratio: 4/5;
             background: #2d5243;
             border-radius: var(--radius);
             margin-bottom: 8px;
@@ -123,15 +208,39 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
         }
+        /* 图片占位优化 */
         .card-img img {
             width: 100%;
-            height: 95%;
-            object-fit: contain;
+            height: 100%;
+            object-fit: cover;
             transition: transform 0.3s ease;
         }
+        .card-img img[src=""] {
+            background: url("https://via.placeholder.com/150x200?text=暂无图片") center center no-repeat;
+            background-size: contain;
+        }
+        .card-img::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(transparent 85%, rgba(0,0,0,0.2));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
         .content-card:hover .card-img img {
-            transform: scale(1.05);
+            transform: scale(1.08);
+        }
+        .content-card:hover .card-img::after {
+            opacity: 1;
+        }
+        /* 角色卡片图片比例 */
+        .content-card:not(.lightcone-card):not(.material-card) .card-img {
+            aspect-ratio: 4/5;
         }
         .card-name {
             font-size: 1rem;
@@ -140,39 +249,71 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            padding: 0 4px;
         }
         .card-desc {
             font-size: 0.8rem;
             color: var(--text-secondary);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 36px;
         }
+        /* 光锥卡片优化 */
         .lightcone-card .card-img {
             aspect-ratio: 3/4;
             transform: rotate(-5deg);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
         .lightcone-card:hover .card-img {
-            transform: rotate(-5deg) translateY(-2px);
+            transform: rotate(-5deg) translateY(-3px) scale(1.05);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
         }
+        /* 标题优化 */
         .section-header {
             max-width: 1200px;
-            margin: 24px auto 12px;
+            margin: 32px auto 16px;
             font-size: 1.3rem;
             color: var(--text-highlight);
-            border-bottom: 1px solid #3d725f;
-            padding-bottom: 4px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 6px;
             display: flex;
             align-items: center;
             gap: 8px;
+            padding-left: 8px;
         }
         .section-header::before {
             content: "📌";
+            font-size: 1.2em;
         }
+        /* 材料卡片优化 */
         .material-card .card-img {
             aspect-ratio: 1/1;
+            border: 1px solid var(--border-color);
         }
+        /* 更新日志优化 */
         .changelog-loading, .changelog-error {
             text-align: center;
-            padding: 20px;
+            padding: 30px;
             color: var(--text-secondary);
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .changelog-error button {
+            background: var(--card-bg-hover);
+            color: var(--text-highlight);
+            border: none;
+            padding: 6px 16px;
+            border-radius: var(--radius);
+            margin-top: 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .changelog-error button:hover {
+            background: #32634e;
         }
         .changelog-list {
             padding: 16px;
@@ -181,7 +322,7 @@
         .changelog-item {
             margin-bottom: 20px;
             padding-bottom: 16px;
-            border-bottom: 1px solid #3d725f;
+            border-bottom: 1px solid var(--border-color);
         }
         .changelog-item:last-child {
             border-bottom: none;
@@ -190,7 +331,7 @@
         }
         .changelog-version {
             color: var(--text-highlight);
-            font-size: 1rem;
+            font-size: 1.1rem;
             margin-bottom: 8px;
             display: flex;
             align-items: center;
@@ -204,34 +345,42 @@
             color: var(--text-main);
         }
         .changelog-content li {
-            margin-bottom: 4px;
+            margin-bottom: 6px;
+            padding-left: 8px;
         }
         .changelog-content li::marker {
             color: var(--text-secondary);
         }
-        /* 日志区域套框样式 */
         .changelog-box {
             background: var(--card-bg);
-            border: 1px solid #3d725f;
+            border: 1px solid var(--border-color);
             border-radius: var(--radius);
-            padding: 12px;
+            padding: 20px;
             margin: 0 auto;
             max-width: 1200px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         .pet-header {
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-bottom: 16px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
         }
         .pet-icon {
             width: 60px;
             height: 60px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid var(--text-highlight);
         }
         .pet-title {
-            font-size: 1.2rem;
+            font-size: 1.25rem;
             color: var(--text-highlight);
+            font-weight: 600;
         }
+        /* 滚动条优化 */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -245,7 +394,135 @@
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #66bb6a;
+            background: var(--text-highlight);
+        }
+        /* 页脚优化 */
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            font-size: 0.9rem;
+            color: #888;
+            margin-top: 40px;
+            border-top: 1px solid var(--border-color);
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        /* 音乐播放器优化 */
+        #musicPlayerIframe {
+            display: block !important;
+            visibility: visible !important;
+            height: 335px !important;
+            width: 100% !important;
+            z-index: 99999 !important;
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            overflow: hidden !important;
+            transition: height 0.3s ease !important;
+        }
+        /* 响应式优化 */
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 10px;
+            }
+            .nav-title {
+                font-size: 1.1rem;
+            }
+            .nav-link {
+                font-size: 0.85rem;
+                padding: 5px 10px;
+            }
+            .section-header {
+                font-size: 1.2rem;
+                margin: 24px auto 12px;
+            }
+            .card-name {
+                font-size: 0.9rem;
+            }
+            .card-desc {
+                font-size: 0.75rem;
+            }
+            body {
+                padding-bottom: 380px !important;
+            }
+            /* 搜索框响应式 */
+            #search-input {
+                padding: 8px 12px;
+                font-size: 0.85rem;
+            }
+        }
+        @media (max-width: 480px) {
+            .grid-container {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+                gap: 8px;
+            }
+            .top-nav {
+                padding: 8px 12px;
+                gap: 8px;
+            }
+            .nav-link {
+                padding: 4px 8px;
+            }
+            .site-age-container {
+                padding: 8px 12px;
+            }
+            #site-age {
+                font-size: 0.85rem;
+            }
+            /* 分类标签响应式 */
+            .content-card::before {
+                font-size: 0.6rem;
+                padding: 1px 4px;
+            }
+        }
+        /* 加载动画 */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(129, 199, 132, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--text-highlight);
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        /* 新增：回到顶部按钮 */
+        .back-to-top {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: var(--card-bg-hover);
+            color: var(--text-highlight);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 9999;
+            border: 1px solid var(--text-highlight);
+        }
+        .back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .back-to-top:hover {
+            background: var(--text-highlight);
+            color: var(--bg);
         }
     </style>
 </head>
@@ -253,337 +530,491 @@
     <!-- 导航栏 -->
     <div class="top-nav">
         <div class="nav-title">六哥荣耀WIKI</div>
-        <a href="#character" class="nav-link">角色</a>
-        <a href="#lightcone" class="nav-link">光锥</a>
-        <a href="#material" class="nav-link">养成材料</a>
-        <a href="#changelog" class="nav-link">更新日志</a>
+        <a href="#character" class="nav-link" data-target="character">角色</a>
+        <a href="#lightcone" class="nav-link" data-target="lightcone">光锥</a>
+        <a href="#material" class="nav-link" data-target="material">养成材料</a>
+        <a href="#changelog" class="nav-link" data-target="changelog">更新日志</a>
     </div>
+
+    <!-- 新增：搜索框 -->
+    <div class="search-container">
+        <input type="text" id="search-input" placeholder="搜索角色/光锥/材料（支持关键词模糊匹配）">
+    </div>
+
     <!-- 网站运行天数 -->
     <div class="site-age-container">
-        <span id="site-age">加载中...</span>
+        <span id="site-age"><span class="loading-spinner"></span>加载中...</span>
     </div>
     
+    <!-- 新增：空结果提示 -->
+    <div class="empty-result">
+        <<i>🔍</</i>
+        <h3>未找到匹配结果</h3>
+        <p>试试更换关键词或检查拼写~</p>
+    </div>
+
     <!-- 角色列表 -->
     <h2 class="section-header" id="character">角色列表</h2>
-    <div class="grid-container">
-        <div class="content-card" onclick="jumpToDetail('yunli-detail.html', '云璃')">
+    <div class="grid-container" data-category="character">
+        <div class="content-card" onclick="jumpToDetail('yunli-detail.html', '云璃')" data-type="角色" data-name="云璃" data-desc="毁灭 · 物理 | 魔改五星 | 无版本">
             <div class="card-img">
-                <img src="https://xiaochen1235789.github.io/images/1764943979470.png" alt="璃宝">
+                <img src="https://xiaochen1235789.github.io/images/1764943979470.png" alt="璃宝" loading="lazy">
             </div>
             <div class="card-name">云璃</div>
             <div class="card-desc">毁灭 · 物理 | 魔改五星 | 无版本</div>
         </div>
         
-        <div class="content-card" onclick="jumpToDetail('luguan-detail.html', '鹿管')">
+        <div class="content-card" onclick="jumpToDetail('luguan-detail.html', '鹿管')" data-type="角色" data-name="鹿管" data-desc="巡猎 · 风 | 限定五星 | 1.0上半">
             <div class="card-img">
-                <img src="https://xiaochen1235789.github.io/images/changjinglu.png" alt="鹿将军">
+                <img src="https://xiaochen1235789.github.io/images/changjinglu.png" alt="鹿将军" loading="lazy">
             </div>
             <div class="card-name">鹿管</div>
             <div class="card-desc">巡猎 · 风 | 限定五星 | 1.0上半</div>
         </div>
         
-        <div class="content-card" onclick="jumpToDetail('pige-detail.html', '皮哥')">
+        <div class="content-card" onclick="jumpToDetail('pige-detail.html', '皮哥')" data-type="角色" data-name="皮哥" data-desc="存护 · 物理 | 限定五星 | 1.0下半">
             <div class="card-img">
-                <img src="https://xiaochen1235789.github.io/images/pige.png" alt="皮哥">
+                <img src="https://xiaochen1235789.github.io/images/pige.png" alt="皮哥" loading="lazy">
             </div>
             <div class="card-name">皮哥</div>
             <div class="card-desc">存护 · 物理 | 限定五星 | 1.0下半</div>
         </div>    
         
-        <div class="content-card" onclick="jumpToDetail('jiazijie-detail.html', '夹子姐')">
+        <div class="content-card" onclick="jumpToDetail('jiazijie-detail.html', '夹子姐')" data-type="角色" data-name="夹子姐" data-desc="智识 · 雷 | 限定五星 | 1.1上半">
             <div class="card-img">
-                <img src="https://xiaochen1235789.github.io/images/processed-image (1).png" alt="夹子姐">
+                <img src="https://xiaochen1235789.github.io/images/processed-image (1).png" alt="夹子姐" loading="lazy">
             </div>
             <div class="card-name">夹子姐</div>
             <div class="card-desc">智识 · 雷 | 限定五星 | 1.1上半</div>
         </div>
         
-        <div class="content-card" onclick="jumpToDetail('han-detail.html', '涵')">
+        <div class="content-card" onclick="jumpToDetail('han-detail.html', '涵')" data-type="角色" data-name="涵" data-desc="同谐 · 物理 | 限定五星 | 1.1下半">
             <div class="card-img">
-                <img src="https://xiaochen1235789.github.io/images/han.png" alt="涵">
+                <img src="https://xiaochen1235789.github.io/images/han.png" alt="涵" loading="lazy">
             </div>
             <div class="card-name">涵</div>
             <div class="card-desc">同谐 · 物理 | 限定五星 | 1.1下半</div>
         </div>
         
-        <div class="content-card" onclick="jumpToDetail('yuzhiboyan-detail.html', '宇智波.言')">
+        <div class="content-card" onclick="jumpToDetail('yuzhiboyan-detail.html', '宇智波.言')" data-type="角色" data-name="宇智波.言" data-desc="毁灭 · 雷 | 限定五星 | 1.2上半">
             <div class="card-img">
-                <img src="https://xiaochen1235789.github.io/images/yuzhiboyan.png" alt="帅气的言哥哥">
+                <img src="https://xiaochen1235789.github.io/images/yuzhiboyan.png" alt="帅气的言哥哥" loading="lazy">
             </div>
             <div class="card-name">宇智波.言</div>
             <div class="card-desc">毁灭 · 雷 | 限定五星 | 1.2上半</div>
         </div>
         
-        <div class="content-card" onclick="jumpToDetail('banxierencheng-detail.html', '半械人.成')">
+        <div class="content-card" onclick="jumpToDetail('banxierencheng-detail.html', '半械人.成')" data-type="角色" data-name="半械人.成" data-desc="毁灭 · 物理 | 限定五星 | 1.2下半">
             <div class="card-img">
-                <img src="https://xiaochen1235789.github.io/images/processed-image.png" alt="成哥">
+                <img src="https://xiaochen1235789.github.io/images/processed-image.png" alt="成哥" loading="lazy">
             </div>
             <div class="card-name">半械人.成</div>
             <div class="card-desc">毁灭 · 物理 | 限定五星 | 1.2下半</div>
         </div>
     
-        <div class="content-card" onclick="jumpToDetail('meng-detail.html', '梦')">
+        <div class="content-card" onclick="jumpToDetail('meng-detail.html', '梦')" data-type="角色" data-name="梦" data-desc="虚无 · 风 | 限定五星 | 1.3上半">
             <div class="card-img">
-                <img src="https://xiaochen1235789.github.io/images/zanwutupian.png" alt="梦">
+                <img src="https://xiaochen1235789.github.io/images/zanwutupian.png" alt="梦" loading="lazy">
             </div>
             <div class="card-name">梦</div>
             <div class="card-desc">虚无 · 风 | 限定五星 | 1.3上半</div>
         </div>
         
-        <div class="content-card" onclick="jumpToDetail('shenshengpige-detail.html', '神圣.皮哥')">
+        <div class="content-card" onclick="jumpToDetail('shenshengpige-detail.html', '神圣.皮哥')" data-type="角色" data-name="神圣.皮哥" data-desc="丰饶 · 虚数 | 限定五星 | 1.3下半">
             <div class="card-img">
-                <img src="https://xiaochen1235789.github.io/images/zanwutupian.png" alt="神圣.皮哥">
+                <img src="https://xiaochen1235789.github.io/images/zanwutupian.png" alt="神圣.皮哥" loading="lazy">
             </div>
             <div class="card-name">神圣.皮哥</div>
             <div class="card-desc">丰饶 · 虚数 | 限定五星 | 1.3下半</div>
         </div>
-        <div class="content-card" onclick="jumpToDetail('tianmingrenhouge-detail.html', '天命人.猴哥')">
+        
+        <div class="content-card" onclick="jumpToDetail('tianmingrenhouge-detail.html', '天命人.猴哥')" data-type="角色" data-name="天命人.猴哥" data-desc="繁育 · 量子 | 限定五星 | 2.0上半">
             <div class="card-img">
-                <img src="https://xiaochen1235789.github.io/images/zanwutupian.png" alt="天命人.猴哥">
+                <img src="https://xiaochen1235789.github.io/images/zanwutupian.png" alt="天命人.猴哥" loading="lazy">
             </div>
             <div class="card-name">天命人.猴哥</div>
             <div class="card-desc">繁育 · 量子 | 限定五星 | 2.0上半</div>
         </div>
-        
     </div>
     
     <!-- 光锥列表 -->
     <h2 class="section-header" id="lightcone">光锥列表</h2>
-    <div class="grid-container">
-        <div class="content-card lightcone-card">
+    <div class="grid-container" data-category="lightcone">
+        <div class="content-card lightcone-card" data-type="光锥" data-name="快乐的路一天" data-desc="？？？ | ？？？">
             <div class="card-img">
-                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="快乐的路一天">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="快乐的路一天" loading="lazy">
             </div>
-            <div class="card-name">？？？</div>
+            <div class="card-name">快乐的路一天</div>
             <div class="card-desc">？？？ | ？？？</div>
         </div>
-        <div class="content-card lightcone-card">
+        
+        <div class="content-card lightcone-card" data-type="光锥" data-name="落日时起舞" data-desc="？？？ · ？？？">
             <div class="card-img">
-                <img src="" alt="落日时起舞">
+                <img src="https://via.placeholder.com/150x200?text=落日时起舞" alt="落日时起舞" loading="lazy">
             </div>
-            <div class="card-name">？？？</div>
+            <div class="card-name">落日时起舞</div>
             <div class="card-desc">？？？ · ？？？</div>
         </div>
-        <div class="content-card lightcone-card">
+        
+        <div class="content-card lightcone-card" data-type="光锥" data-name="未知光锥" data-desc="？？？">
             <div class="card-img">
-                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="未知光锥">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="未知光锥" loading="lazy">
             </div>
-            <div class="card-name">？？？</div>
+            <div class="card-name">未知光锥</div>
             <div class="card-desc">？？？</div>
         </div>
     </div>
+    
     <!-- 养成材料 -->
     <h2 class="section-header" id="material">养成材料</h2>
-    <div class="grid-container">
-        <div class="content-card material-card">
+    <div class="grid-container" data-category="material">
+        <div class="content-card material-card" data-type="材料" data-name="养成材料1" data-desc="？？？">
             <div class="card-img">
-                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="养成材料1">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="养成材料1" loading="lazy">
             </div>
-            <div class="card-name">？？？</div>
+            <div class="card-name">养成材料1</div>
             <div class="card-desc">？？？</div>
         </div>
-        <div class="content-card material-card">
+        
+        <div class="content-card material-card" data-type="材料" data-name="养成材料2" data-desc="？？？">
             <div class="card-img">
-                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="养成材料2">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="养成材料2" loading="lazy">
             </div>
-            <div class="card-name">？？？</div>
+            <div class="card-name">养成材料2</div>
             <div class="card-desc">？？？</div>
         </div>
     </div>
+    
     <!-- 更新日志 -->
     <h2 class="section-header" id="changelog">更新日志</h2>
     <div class="pet-system" style="margin-top: 0;" id="changelogContainer">
         <div class="changelog-loading">
-            <span>加载更新日志中...</span>
+            <span><span class="loading-spinner"></span>加载更新日志中...</span>
         </div>
     </div>
     
-<footer style="text-align:center; padding:20px 0; font-size:14px; color:#666;">
-© <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.
-</footer>
-<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-    
-<!-- 音乐播放器（已适配歌单展开/收起） -->
-<!-- 找到 index.html 中的 iframe 标签，修改 style 部分 -->
-<iframe 
-    id="musicPlayerIframe"
-    src="music-player.html"
-    frameborder="0"
-    scrolling="no"
-    style="
-        display: block !important;
-        visibility: visible !important;
-        height: 380px !important; /* 改动2：强制默认380px，取消动态切换（避免通信失效） */
-        width: 100% !important;
-        z-index: 99999 !important;
-        position: fixed !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        border: none !important;
-        background: transparent !important;
-        overflow: visible !important;
-    "
-></iframe>
-<script>
-    // 1. 播放器高度适配+歌单状态同步
-    window.addEventListener('load', () => {
-        const iframe = document.getElementById('musicPlayerIframe');
-        
-        // 初始化高度（确保播放器加载完成）
-        setTimeout(() => resizePlayerIframe(iframe), 500);
-        
-        // 监听播放器歌单展开/收起事件，同步高度
-        window.addEventListener('message', (e) => {
-            if (e.data.type === 'SONG_LIST_TOGGLED') {
-                iframe.style.height = e.data.isShow ? '380px !important' : '70px !important';
-            }
-            // 保留播放状态监听
-            if (e.data.type === 'PLAY_STATE_UPDATED') {
-                console.log('当前播放状态:', e.data.state.isPlaying);
+    <footer>
+        © <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.
+    </footer>
+
+    <!-- 音乐播放器 -->
+    <iframe 
+        id="musicPlayerIframe"
+        src="music-player.html"
+        frameborder="0"
+        scrolling="no"
+        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+    ></iframe>
+
+    <!-- 新增：回到顶部按钮 -->
+    <div class="back-to-top" onclick="scrollToTop()">↑</div>
+
+    <script>
+        // 年份自动更新
+        document.getElementById('year').textContent = new Date().getFullYear();
+
+        // 1. 音乐播放器通信优化
+        window.addEventListener('load', () => {
+            const iframe = document.getElementById('musicPlayerIframe');
+            
+            // 初始化高度（容错处理）
+            setTimeout(() => {
+                try {
+                    const playerHeight = iframe.contentWindow.document.querySelector('.mini-music-player').offsetHeight;
+                    iframe.style.height = `${playerHeight}px !important`;
+                } catch (err) {
+                    iframe.style.height = '70px !important';
+                }
+            }, 800);
+            
+            // 监听歌单展开/收起事件
+            window.addEventListener('message', (e) => {
+                if (e.data?.type === 'SONG_LIST_TOGGLED') {
+                    iframe.style.height = e.data.isShow ? '380px !important' : '70px !important';
+                }
+            });
+            
+            // 恢复播放状态（跨域容错）
+            try {
+                iframe.contentWindow.postMessage({ type: 'RESTORE_PLAY_STATE' }, '*');
+            } catch (err) {
+                console.log('播放器状态恢复失败:', err);
             }
         });
-        // 恢复播放状态
-        try {
-            iframe.contentWindow.postMessage({ type: 'RESTORE_PLAY_STATE' }, '*');
-        } catch (err) {}
-    });
-    // 2. 高度适配函数（容错处理）
-    function resizePlayerIframe(iframe) {
-        try {
-            const playerHeight = iframe.contentWindow.document.querySelector('.mini-music-player').offsetHeight;
-            iframe.style.height = (playerHeight + 10) + 'px';
-        } catch (err) {
-            iframe.style.height = '380px !important'; // 容错也设为380px
+
+        // 2. 角色跳转优化（无冗余弹窗+加载提示）
+        function jumpToDetail(targetUrl, charName) {
+            if (!targetUrl) return alert('详情页地址不存在');
+            
+            // 显示加载状态
+            const loadingDiv = document.createElement('div');
+            loadingDiv.style.cssText = `
+                position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                background: var(--card-bg); padding: 16px 24px; border-radius: var(--radius);
+                z-index: 999999; color: var(--text-highlight); display: flex; align-items: center; gap: 8px;
+            `;
+            loadingDiv.innerHTML = `<span class="loading-spinner"></span> 正在前往【${charName}】详情页...`;
+            document.body.appendChild(loadingDiv);
+            
+            // 跳转逻辑（避免重复跳转）
+            const link = document.createElement('a');
+            link.href = targetUrl;
+            link.target = '_self';
+            document.body.appendChild(link);
+            
+            // 延迟跳转+超时处理
+            setTimeout(() => {
+                link.click();
+                document.body.removeChild(loadingDiv);
+            }, 300);
+            
+            // 超时容错（5秒未跳转则提示）
+            setTimeout(() => {
+                if (document.body.contains(loadingDiv)) {
+                    loadingDiv.innerHTML = `<span style="color: #ff4444;">⌛ 加载超时</span> 点击重试`;
+                    loadingDiv.style.cursor = 'pointer';
+                    loadingDiv.onclick = () => jumpToDetail(targetUrl, charName);
+                }
+            }, 5000);
         }
-    }
-    // 3. 角色跳转函数
-    function jumpToDetail(targetUrl, charName) {
-        alert(`正在跳转到【${charName}】的详情页，请稍等~`);
-        const fallbackTimer = setTimeout(() => {
-            window.location.assign(targetUrl);
-            alert(`【${charName}】页面加载稍慢，已为你强制跳转`);
-        }, 2000);
-        window.location.href = targetUrl;
-        clearTimeout(fallbackTimer);
-    }
-    // 4. 网站运行天数
-    window.addEventListener('load', function() {
-        const launchDate = new Date(2025, 10, 1);
-        const siteAgeElem = document.getElementById('site-age');
-        
-        function updateSiteAge() {
-            const now = new Date();
-            const timeDiff = now - launchDate;
-            const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-            let text = '';
-            if (days === 30) {
-                text = `🎉 六哥荣耀WIKI上线30天啦！感恩陪伴 🎉`;
-                siteAgeElem.classList.add('special');
-            } else if (days === 78) {
-                text = `☁️ 奇怪的数字？六哥荣耀WIKI与你同行78天 ☁️`;
-                siteAgeElem.classList.add('special');
-            } else if (days === 91) {
-                text = `🧊 奇怪的数字？梅开二度，六哥荣耀WIKI与你同行91天 🧊`;
-                siteAgeElem.classList.add('special');    
-            } else if (days === 100) {
-                text = `🎊 百日庆典！六哥荣耀WIKI与你同行100天 🎊`;
-                siteAgeElem.classList.add('special');    
-            } else if (days === 365) {
-                text = `🎂 周年快乐！六哥荣耀WIKI一周年纪念 🎂`;
-                siteAgeElem.classList.add('special');
-            } else {
-                text = `📅 六哥荣耀WIKI已上线 ${days} 天 · 持续更新中`;
-                siteAgeElem.classList.remove('special');
+
+        // 3. 网站运行天数优化（精准计算+性能优化）
+        window.addEventListener('load', function() {
+            const launchDate = new Date(2025, 10, 1); // 2025年11月1日
+            const siteAgeElem = document.getElementById('site-age');
+            
+            // 只在日期变化时更新（避免频繁计算）
+            function updateSiteAge() {
+                const now = new Date();
+                const timeDiff = now - launchDate;
+                const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                
+                let text = '';
+                const specialDays = {
+                    30: '🎉 六哥荣耀WIKI上线30天啦！感恩陪伴 🎉',
+                    78: '☁️ 奇怪的数字？六哥荣耀WIKI与你同行78天 ☁️',
+                    91: '🧊 奇怪的数字？梅开二度，六哥荣耀WIKI与你同行91天 🧊',
+                    100: '🎊 百日庆典！六哥荣耀WIKI与你同行100天 🎊',
+                    365: '🎂 周年快乐！六哥荣耀WIKI一周年纪念 🎂'
+                };
+                
+                if (specialDays[days]) {
+                    text = specialDays[days];
+                    siteAgeElem.classList.add('special');
+                } else {
+                    text = `📅 六哥荣耀WIKI已上线 ${days} 天 · 持续更新中`;
+                    siteAgeElem.classList.remove('special');
+                }
+                
+                siteAgeElem.innerHTML = text;
             }
-            siteAgeElem.textContent = text;
-        }
-        updateSiteAge();
-        setInterval(updateSiteAge, 86400000);
-    });
-    // 5. 登录状态显示
-    (() => {
-        try {
-            const user = localStorage.getItem('user');
-            const nav = document.querySelector('.top-nav');
-            const authHTML = user 
-                ? `
-                    <span style="margin-left:auto;color:#d3af37;">欢迎 ${user}</span>
-                    <a href="#" onclick="logout()" style="margin-left:12px;" class="nav-link">退出</a>
-                  `
-                : `
+            
+            updateSiteAge();
+            // 每天凌晨更新一次（而非每秒计算）
+            const now = new Date();
+            const nextUpdate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+            const delay = nextUpdate - now;
+            setTimeout(() => {
+                updateSiteAge();
+                setInterval(updateSiteAge, 86400000); // 之后每天更新
+            }, delay);
+        });
+        // 4. 登录状态优化（无错误暴露）
+        (() => {
+            try {
+                const user = localStorage.getItem('user');
+                const nav = document.querySelector('.top-nav');
+                const authHTML = user 
+                    ? `
+                        <span style="margin-left:auto;color:var(--special-color);font-weight:500;">欢迎，${user}</span>
+                        <a href="javascript:;" onclick="logout()" style="margin-left:12px;" class="nav-link">退出</a>
+                      `
+                    : `
+                        <a href="login.html" style="margin-left:auto;" class="nav-link">登录/注册</a>
+                      `;
+                nav.insertAdjacentHTML('beforeend', authHTML);
+            } catch (err) {
+                // 静默失败，不影响页面
+                const nav = document.querySelector('.top-nav');
+                nav.insertAdjacentHTML('beforeend', `
                     <a href="login.html" style="margin-left:auto;" class="nav-link">登录/注册</a>
-                  `;
-            nav.insertAdjacentHTML('beforeend', authHTML);
-        } catch (err) {
-            document.querySelector('.top-nav').insertAdjacentHTML('beforeend', `
-                <a href="login.html" style="margin-left:auto;" class="nav-link">登录/注册</a>
-            `);
+                `);
+            }
+        })();
+
+        // 5. 退出登录优化（确认提示）
+        function logout() {
+            if (confirm('确定要退出登录吗？')) {
+                localStorage.removeItem('user');
+                window.location.reload(); // 刷新页面更可靠
+            }
         }
-    })();
-    // 6. 退出登录
-    function logout() {
-        localStorage.removeItem('user');
-        window.location.href = window.location.href;
-    }
-    // 7. 加载更新日志
-    (function loadChangelog() {
-        const container = document.getElementById('changelogContainer');
-        const timeoutTimer = setTimeout(() => {
+
+        // 6. 更新日志加载优化（超时重试+错误处理）
+        function loadChangelog() {
+            const container = document.getElementById('changelogContainer');
             container.innerHTML = `
-                <div class="changelog-error">
-                    <span style="color: #ff4444;">❌ 更新日志加载超时</span>
-                    <button class="pet-btn" style="margin-top: 8px;" onclick="loadChangelog()">重试</button>
+                <div class="changelog-loading">
+                    <span><span class="loading-spinner"></span>加载更新日志中...</span>
                 </div>
             `;
-        }, 8000);
-        fetch('changelog.html')
-            .then(response => {
-                clearTimeout(timeoutTimer);
-                if (!response.ok) throw new Error(`HTTP错误，状态码: ${response.status}`);
-                return response.text();
-            })
-            .then(logContent => {
-                container.innerHTML = `
-                    <div class="changelog-box">
-                        <div class="pet-header">
-                            <div class="pet-icon">
-                                <img src="https://xiaochen1235789.github.io/images/rizhitupian.png" 
-                                     alt="日志图标" 
-                                     style="width: 100%; height: 100%; object-fit: contain;">
-                            </div>
-                            <div class="pet-title">WIKI版本更新记录</div>
-                        </div>
-                        <div class="changelog-list">
-                            ${logContent || '<p style="color: var(--text-secondary); text-align: center; padding: 20px 0;">暂无更新记录</p>'}
-                        </div>
-                    </div>
-                `;
-            })
-            .catch(error => {
-                clearTimeout(timeoutTimer);
+            
+            // 超时处理（10秒）
+            const timeoutTimer = setTimeout(() => {
                 container.innerHTML = `
                     <div class="changelog-error">
-                        <span style="color: #ff4444;">❌ 更新日志加载失败：${error.message}</span>
-                        <button class="pet-btn" style="margin-top: 8px;" onclick="loadChangelog()">重试</button>
+                        <span style="color: #ff4444;">❌ 更新日志加载超时</span>
+                        <button onclick="loadChangelog()">点击重试</button>
                     </div>
                 `;
-            });
-    })();
-    // 8. 锚点平滑滚动
-    document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const targetId = this.getAttribute('href');
-            const targetElement = document.querySelector(targetId);
-            if (targetElement) {
-                window.scrollTo({
-                    top: targetElement.offsetTop - 80,
-                    behavior: 'smooth'
+            }, 10000);
+            
+            fetch('changelog.html')
+                .then(response => {
+                    clearTimeout(timeoutTimer);
+                    if (!response.ok) throw new Error(`状态码: ${response.status}`);
+                    return response.text();
+                })
+                .then(logContent => {
+                    container.innerHTML = `
+                        <div class="changelog-box">
+                            <div class="pet-header">
+                                <div class="pet-icon">
+                                    <img src="https://xiaochen1235789.github.io/images/rizhitupian.png" 
+                                         alt="日志图标" 
+                                         style="width: 100%; height: 100%; object-fit: contain;">
+                                </div>
+                                <div class="pet-title">WIKI版本更新记录</div>
+                            </div>
+                            <div class="changelog-list">
+                                ${logContent.trim() || '<p style="color: var(--text-secondary); text-align: center; padding: 20px 0;">暂无更新记录</p>'}
+                            </div>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    clearTimeout(timeoutTimer);
+                    container.innerHTML = `
+                        <div class="changelog-error">
+                            <span style="color: #ff4444;">❌ 更新日志加载失败：${error.message}</span>
+                            <button onclick="loadChangelog()">点击重试</button>
+                        </div>
+                    `;
                 });
-            }
+        }
+        
+        // 页面加载完成后加载日志（避免阻塞）
+        window.addEventListener('load', loadChangelog);
+
+        // 7. 锚点平滑滚动优化（兼容播放器高度+活跃导航）
+        document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    // 计算播放器高度，避免遮挡
+                    const playerHeight = document.getElementById('musicPlayerIframe').offsetHeight || 70;
+                    const scrollTop = targetElement.offsetTop - 80 - playerHeight;
+                    window.scrollTo({
+                        top: scrollTop,
+                        behavior: 'smooth'
+                    });
+                    // 切换活跃导航样式
+                    document.querySelectorAll('.nav-link').forEach(item => item.classList.remove('active'));
+                    this.classList.add('active');
+                }
+            });
         });
-    });
-</script>
+
+        // 8. 图片加载失败容错
+        document.querySelectorAll('img').forEach(img => {
+            img.onerror = function() {
+                this.src = `https://via.placeholder.com/${this.width || 150}x${this.height || 200}?text=图片失效`;
+                this.alt = '图片加载失败';
+            };
+        });
+
+        // 新增：9. 搜索功能（模糊匹配）
+        const searchInput = document.getElementById('search-input');
+        const allCards = document.querySelectorAll('.content-card');
+        const emptyResult = document.querySelector('.empty-result');
+        const gridContainers = document.querySelectorAll('.grid-container');
+        
+        searchInput.addEventListener('input', function() {
+            const keyword = this.value.trim().toLowerCase();
+            let matchCount = 0;
+            
+            // 显示所有网格容器
+            gridContainers.forEach(container => container.style.display = 'grid');
+            
+            if (!keyword) {
+                // 无关键词时显示所有卡片
+                allCards.forEach(card => card.style.display = 'block');
+                emptyResult.style.display = 'none';
+                return;
+            }
+            
+            // 模糊匹配关键词（名称/描述/类型）
+            allCards.forEach(card => {
+                const name = card.dataset.name?.toLowerCase() || '';
+                const desc = card.dataset.desc?.toLowerCase() || '';
+                const type = card.dataset.type?.toLowerCase() || '';
+                
+                const isMatch = name.includes(keyword) || desc.includes(keyword) || type.includes(keyword);
+                card.style.display = isMatch ? 'block' : 'none';
+                if (isMatch) matchCount++;
+            });
+            
+            // 显示/隐藏空结果提示
+            emptyResult.style.display = matchCount === 0 ? 'block' : 'none';
+            
+            // 隐藏无匹配卡片的网格容器
+            gridContainers.forEach(container => {
+                const hasVisibleCard = Array.from(container.querySelectorAll('.content-card')).some(card => card.style.display === 'block');
+                container.style.display = hasVisibleCard ? 'grid' : 'none';
+            });
+        });
+
+        // 新增：10. 回到顶部功能
+        const backToTopBtn = document.querySelector('.back-to-top');
+        
+        window.addEventListener('scroll', function() {
+            // 滚动超过300px显示回到顶部按钮
+            if (window.scrollY > 300) {
+                backToTopBtn.classList.add('show');
+            } else {
+                backToTopBtn.classList.remove('show');
+            }
+            
+            // 滚动时更新活跃导航
+            const sections = document.querySelectorAll('.section-header');
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop - 150;
+                const sectionId = section.getAttribute('id');
+                if (window.scrollY >= sectionTop) {
+                    document.querySelectorAll('.nav-link').forEach(link => {
+                        link.classList.remove('active');
+                        if (link.dataset.target === sectionId) {
+                            link.classList.add('active');
+                        }
+                    });
+                }
+            });
+        });
+        
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // 新增：11. 卡片分类标签初始化（修复光锥/材料标签颜色）
+        document.querySelectorAll('.lightcone-card').forEach(card => card.dataset.type = '光锥');
+        document.querySelectorAll('.material-card').forEach(card => card.dataset.type = '材料');
+    </script>
 </body>
 </html>
+
+        
