@@ -389,25 +389,48 @@ colorConstellation();
     "
 ></iframe>
 <script>
-// 简单恢复播放状态，不搞复杂适配
+// 新脚本：跨页播放状态同步（适配单文件播放器）
 window.addEventListener('load', () => {
     const iframe = document.getElementById('musicPlayerIframe');
+    
+    // 1. 向播放器同步本地存储的播放状态
     setTimeout(() => {
         try {
-            iframe.contentWindow.postMessage({ type: 'RESTORE_PLAY_STATE' }, '*');
-        } catch (err) {}
-    }, 300);
-});
-// 跨页状态同步
-const bc = new BroadcastChannel('music_player_broadcast');
-bc.onmessage = (e) => {
-    if (e.data.type === 'SYNC_STATE') {
-        const iframe = document.getElementById('musicPlayerIframe');
-        if (iframe) {
-            iframe.contentWindow.postMessage({ type: 'SYNC_STATE', state: e.data.state }, '*');
+            const savedState = localStorage.getItem('musicPlayerState');
+            if (savedState) {
+                iframe.contentWindow.postMessage({ 
+                    type: 'INIT_STATE', 
+                    state: JSON.parse(savedState) 
+                }, '*');
+            }
+        } catch (err) {
+            console.log('播放器状态同步失败:', err);
         }
+    }, 300);
+    
+    // 2. 监听播放器列表展开/收起（可选，保持高度适配）
+    window.addEventListener('message', (e) => {
+        if (e.data?.type === 'SONG_LIST_TOGGLED' && e.data.isShow) {
+            // 列表展开时确保高度足够（已固定380px，无需修改，仅做容错）
+            iframe.style.height = '380px !important';
+        }
+    });
+});
+
+// 3. 监听本地存储变化，实时同步播放状态（跨页统一）
+window.addEventListener('storage', (e) => {
+    if (e.key === 'musicPlayerState') {
+        const iframe = document.getElementById('musicPlayerIframe');
+        const newState = JSON.parse(e.newValue);
+        try {
+            iframe.contentWindow.postMessage({ 
+                type: 'INIT_STATE', 
+                state: newState 
+            }, '*');
+        } catch (err) {}
     }
-};
+});
+
 </script>
 </body>
 </html>
