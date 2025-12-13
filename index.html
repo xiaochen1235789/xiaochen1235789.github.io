@@ -696,7 +696,6 @@
     <footer>
         © <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.
     </footer>
-
     <!-- 音乐播放器 -->
     <iframe 
         id="musicPlayerIframe"
@@ -713,34 +712,47 @@
         // 年份自动更新
         document.getElementById('year').textContent = new Date().getFullYear();
 
-        // 1. 音乐播放器通信优化
-        window.addEventListener('load', () => {
-            const iframe = document.getElementById('musicPlayerIframe');
-            
-            // 初始化高度（容错处理）
-            setTimeout(() => {
-                try {
-                    const playerHeight = iframe.contentWindow.document.querySelector('.mini-music-player').offsetHeight;
-                    iframe.style.height = `${playerHeight}px !important`;
-                } catch (err) {
-                    iframe.style.height = '70px !important';
-                }
-            }, 800);
-            
-            // 监听歌单展开/收起事件
-            window.addEventListener('message', (e) => {
-                if (e.data?.type === 'SONG_LIST_TOGGLED') {
-                    iframe.style.height = e.data.isShow ? '380px !important' : '70px !important';
-                }
-            });
-            
-            // 恢复播放状态（跨域容错）
-            try {
-                iframe.contentWindow.postMessage({ type: 'RESTORE_PLAY_STATE' }, '*');
-            } catch (err) {
-                console.log('播放器状态恢复失败:', err);
-            }
-        });
+        // 替换后的新代码（跨页播放器通信+高度适配）
+window.addEventListener('load', () => {
+    const iframe = document.getElementById('musicPlayerIframe');
+    
+    // 初始化高度（匹配跨页播放器的默认高度）
+    setTimeout(() => {
+        try {
+            // 跨页播放器核心容器是 .player-container，获取真实高度
+            const playerHeight = iframe.contentWindow.document.querySelector('.player-container').offsetHeight;
+            iframe.style.height = `${playerHeight}px !important`;
+        } catch (err) {
+            iframe.style.height = '110px !important'; // 容错默认高度（包含进度条）
+        }
+    }, 800);
+    
+    // 监听歌单展开/收起（跨页播放器的列表状态通信）
+    window.addEventListener('message', (e) => {
+        // 监听跨页播放器的列表展开状态
+        if (e.data?.type === 'SONG_LIST_TOGGLED') {
+            iframe.style.height = e.data.isShow ? '400px !important' : '110px !important';
+        }
+        // 同步跨页播放状态（可选，确保主页刷新后播放器状态不丢失）
+        if (e.data?.type === 'PLAY_STATE_UPDATED') {
+            localStorage.setItem('musicPlayerState', JSON.stringify(e.data.state));
+        }
+    });
+    
+    // 向播放器发送初始状态（恢复之前的播放进度）
+    try {
+        const savedState = localStorage.getItem('musicPlayerState');
+        if (savedState) {
+            iframe.contentWindow.postMessage({ 
+                type: 'INIT_STATE', 
+                state: JSON.parse(savedState) 
+            }, '*');
+        }
+    } catch (err) {
+        console.log('播放器初始状态同步失败:', err);
+    }
+});
+
 
         // 2. 角色跳转优化（无冗余弹窗+加载提示）
         function jumpToDetail(targetUrl, charName) {
@@ -819,6 +831,7 @@
                 setInterval(updateSiteAge, 86400000); // 之后每天更新
             }, delay);
         });
+
         // 4. 登录状态优化（无错误暴露）
         (() => {
             try {
