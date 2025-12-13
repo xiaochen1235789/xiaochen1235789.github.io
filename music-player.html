@@ -19,7 +19,7 @@
             border-top: 1px solid #3d725f;
             box-shadow: 0 -2px 12px rgba(0,0,0,0.3);
         }
-        /* 核心播放区：封面+信息+控制+音量 横向排布 */
+        /* 核心播放区：封面+信息（含列表按钮）+控制+音量 横向排布 */
         .mini-music-player {
             width: 100%;
             height: 80px;
@@ -52,11 +52,14 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
-        /* 歌曲信息区：左对齐，占比适中 */
+        /* 歌曲信息区：左对齐，包含列表按钮 */
         .player-info {
             flex: 1;
             min-width: 150px;
-            max-width: 300px;
+            max-width: 350px; /* 加宽以容纳列表按钮 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         .player-title {
             font-size: 1rem;
@@ -66,6 +69,9 @@
             text-overflow: ellipsis;
             margin-bottom: 4px;
             font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         .player-singer {
             font-size: 0.8rem;
@@ -74,14 +80,22 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        /* 歌词占位区（常规播放器必备） */
-        .lyric-placeholder {
-            font-size: 0.75rem;
+        /* 单独的列表按钮（歌曲名称后） */
+        .song-list-btn {
+            background: transparent;
+            border: 1px solid #3d725f;
             color: #81c784;
-            margin-top: 2px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            cursor: pointer;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: auto;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        .song-list-btn:hover {
+            background: #2d5243;
+            border-color: #81c784;
         }
         /* 控制区：居中排布，按钮大小统一 */
         .player-controls {
@@ -89,6 +103,7 @@
             align-items: center;
             gap: 12px;
             pointer-events: auto !important;
+            flex-shrink: 0;
         }
         .player-btn {
             background: transparent;
@@ -132,6 +147,7 @@
             gap: 8px;
             padding: 0 8px;
             pointer-events: auto !important;
+            flex-shrink: 0;
         }
         .volume-btn {
             background: transparent;
@@ -164,22 +180,6 @@
             background: #81c784;
             cursor: pointer;
             box-shadow: 0 0 4px rgba(129, 199, 132, 0.5);
-        }
-        /* 列表按钮：常规文本样式 */
-        .list-btn {
-            background: transparent;
-            border: 1px solid #3d725f;
-            color: #81c784;
-            cursor: pointer;
-            font-size: 0.9rem;
-            padding: 4px 12px;
-            border-radius: 16px;
-            margin-left: 12px;
-            transition: all 0.2s ease;
-        }
-        .list-btn:hover {
-            background: #2d5243;
-            border-color: #81c784;
         }
         /* 进度条：全屏宽度，底部常驻（常规播放器位置） */
         .player-progress {
@@ -242,57 +242,31 @@
         .loop-btn:hover + .loop-mode-tooltip {
             display: block;
         }
-        /* 全屏列表弹窗样式（核心：竖屏适配） */
-        .list-modal-mask {
-            display: none;
+        /* 下拉歌曲列表（向上展开，播放器上方） */
+        .dropdown-song-list {
+            display: none; /* 默认隐藏 */
             position: fixed;
-            top: 0;
+            bottom: 80px; /* 紧贴播放器顶部 */
             left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0,0,0,0.7);
-            z-index: 999999;
-            align-items: center;
-            justify-content: center;
-        }
-        .list-modal {
-            width: 90%;
-            max-width: 400px;
+            right: 0;
+            width: 100%;
             background: #1e3a2f;
-            border-radius: 12px;
-            border: 1px solid #3d725f;
-            max-height: 80vh;
-            overflow-y: auto;
-            padding: 16px;
-            position: relative;
-        }
-        .modal-title {
-            font-size: 1.2rem;
-            color: #81c784;
-            text-align: center;
-            padding-bottom: 12px;
             border-bottom: 1px solid #3d725f;
-            margin-bottom: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 99998; /* 低于播放器，不遮挡控制区 */
+            box-shadow: 0 -2px 12px rgba(0,0,0,0.4);
         }
-        .close-btn {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            background: transparent;
-            border: none;
-            color: #99aabb;
-            font-size: 1.2rem;
-            cursor: pointer;
+        /* 列表展开的激活状态 */
+        .dropdown-song-list.show {
+            display: block !important;
         }
-        .close-btn:hover {
-            color: #fff;
-        }
-        /* 歌曲列表样式（弹窗内） */
+        /* 歌曲列表样式 */
         .song-list {
             list-style: none;
         }
         .song-list li {
-            padding: 10px 20px;
+            padding: 10px 16px;
             color: #e0e0e0;
             font-size: 0.95rem;
             cursor: pointer;
@@ -312,24 +286,30 @@
         .song-duration {
             font-size: 0.8rem;
             color: #99aabb;
+            margin-left: 16px;
         }
         /* 滚动条优化 */
-        .list-modal::-webkit-scrollbar {
+        .dropdown-song-list::-webkit-scrollbar {
             width: 6px;
         }
-        .list-modal::-webkit-scrollbar-track {
+        .dropdown-song-list::-webkit-scrollbar-track {
             background: #23322d;
         }
-        .list-modal::-webkit-scrollbar-thumb {
+        .dropdown-song-list::-webkit-scrollbar-thumb {
             background: #4a6e61;
             border-radius: 3px;
         }
-        .list-modal::-webkit-scrollbar-thumb:hover {
+        .dropdown-song-list::-webkit-scrollbar-thumb:hover {
             background: #81c784;
         }
     </style>
 </head>
 <body>
+    <!-- 歌曲列表容器（放在播放器外，确保向上展开） -->
+    <div class="dropdown-song-list" id="dropdownSongList">
+        <ul class="song-list" id="songListUl"></ul>
+    </div>
+
     <div class="player-container" id="playerContainer">
         <div class="mini-music-player" id="draggablePlayer">
             <!-- 封面区域 -->
@@ -369,11 +349,18 @@
             <div class="player-cover" id="playerCover12" style="display:none;">
                 <img src="http://p2.music.126.net/rqIc9szkJmBA3imeK8G1yA==/109951164451064842.jpg?param=300x300" alt="DJ Okawari-Flower Dance">  
             </div>
-            <!-- 歌曲信息+歌词区 -->
+            <div class="player-cover" id="playerCover13" style="display:none;">
+                <img src="111" alt="延长歌曲列表专用">  
+            </div>
+            
+            <!-- 歌曲信息区（歌曲名称后加列表按钮） -->
             <div class="player-info">
-                <div class="player-title" id="playerTitle">昔涟</div>
+                <div class="player-title">
+                    <span id="playerTitleText">昔涟</span>
+                    <!-- 单独的列表按钮（歌曲名称右侧） -->
+                    <button class="song-list-btn" id="songListBtn" tabindex="0">列表</button>
+                </div>
                 <div class="player-singer" id="playerSinger">张韶涵、HOYO-MiX</div>
-                <div class="lyric-placeholder" id="lyricPlaceholder">歌词加载中...（支持滚动显示）</div>
             </div>
             <!-- 播放控制区（常规布局：上一首-播放-下一首-循环） -->
             <div class="player-controls">
@@ -382,13 +369,11 @@
                 <button class="player-btn" id="miniNextBtn" tabindex="0">❯</button>
                 <button class="player-btn loop-btn" id="loopBtn" title="切换循环模式" tabindex="0">🔁</button>
             </div>
-            <!-- 音量控制区（常规显示，不隐藏） -->
+            <!-- 音量控制区 -->
             <div class="player-volume">
                 <button class="volume-btn" id="volumeBtn" tabindex="0">🔊</button>
                 <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.01" value="0.7">
             </div>
-            <!-- 歌曲列表按钮（常规文本按钮） -->
-            <button class="list-btn" id="listToggleBtn" tabindex="0">歌曲列表</button>
         </div>
         <!-- 进度条区域（底部常驻，常规播放器位置） -->
         <div class="player-progress">
@@ -406,14 +391,6 @@
             <source src="" type="audio/mpeg">
         </audio>
     </div>
-    <!-- 歌曲列表全屏弹窗 -->
-    <div class="list-modal-mask" id="listModalMask">
-        <div class="list-modal" id="listModal">
-            <button class="close-btn" id="closeBtn">×</button>
-            <h3 class="modal-title">歌曲列表</h3>
-            <ul class="song-list" id="modalSongList"></ul>
-        </div>
-    </div>
 <script>
     // 元素初始化
     const draggablePlayer = document.getElementById('draggablePlayer');
@@ -428,18 +405,17 @@
     const nextBtn = document.getElementById('miniNextBtn');
     const loopBtn = document.getElementById('loopBtn');
     const loopTooltip = document.getElementById('loopTooltip');
-    const playerTitle = document.getElementById('playerTitle');
+    const playerTitleText = document.getElementById('playerTitleText'); // 歌曲名称元素
     const playerSinger = document.getElementById('playerSinger');
-    const lyricPlaceholder = document.getElementById('lyricPlaceholder');
-    const listToggleBtn = document.getElementById('listToggleBtn');
     const globalAudio = document.getElementById('globalAudio');
     const playerContainer = document.getElementById('playerContainer');
-    // 弹窗元素
-    const listModalMask = document.getElementById('listModalMask');
-    const closeBtn = document.getElementById('closeBtn');
-    const modalSongList = document.getElementById('modalSongList');
+    // 列表按钮+下拉列表元素
+    const songListBtn = document.getElementById('songListBtn');
+    const dropdownSongList = document.getElementById('dropdownSongList');
+    const songListUl = document.getElementById('songListUl');
+    let listOpen = false; // 列表展开状态标记
 
-    // 歌曲列表数据（含歌词占位）
+    // 歌曲列表数据
     const songList = [
         { 
             audioId: 'miniAudio1', 
@@ -447,8 +423,7 @@
             title: '昔涟', 
             singer: '张韶涵、HOYO-MiX', 
             audioUrl: 'http://music.163.com/song/media/outer/url?id=3316968660.mp3',
-            duration: '03:06',
-            lyric: '心之所向 素履以往 生如逆旅 一苇以航'
+            duration: '03:06'
         },
         { 
             audioId: 'miniAudio2', 
@@ -456,8 +431,7 @@
             title: '耀斑', 
             singer: 'HOYO-MiX,YMIR', 
             audioUrl: 'http://music.163.com/song/media/outer/url?id=2722510685.mp3',
-            duration: '03:33',
-            lyric: '划破黑暗 燃起希望 光芒万丈 不可阻挡'
+            duration: '03:33'
         },
         { 
             audioId: 'miniAudio3', 
@@ -465,8 +439,7 @@
             title: '拂晓 Proi Proi', 
             singer: 'HOYO-MiX,NIDA', 
             audioUrl: 'http://music.163.com/song/media/outer/url?id=2709812973.mp3',
-            duration: '03:58',
-            lyric: '黎明将至 黑夜退去 新的征程 即刻开启'
+            duration: '03:58'
         },
         { 
             audioId: 'miniAudio4', 
@@ -474,8 +447,7 @@
             title: '何者', 
             singer: '谭晶,HOYO-MiX', 
             audioUrl: 'http://music.163.com/song/media/outer/url?id=2658660685.mp3',
-            duration: '02:26',
-            lyric: '一念执着 一念放下 何去何从 随心作答'
+            duration: '02:26'
         },
         { 
             audioId: 'miniAudio5', 
@@ -483,8 +455,7 @@
             title: '睡蕉之歌', 
             singer: 'HOYO-MiX', 
             audioUrl: 'http://music.163.com/song/media/outer/url?id=2646986980.mp3',
-            duration: '00:17',
-            lyric: '香蕉香蕉 快快睡觉 梦里有糖 甜到冒泡'
+            duration: '00:17'
         },
         { 
             audioId: 'miniAudio6', 
@@ -492,8 +463,7 @@
             title: '不眠之夜', 
             singer: '张杰,HOYO-MiX', 
             audioUrl: 'http://music.163.com/song/media/outer/url?id=2122308127.mp3',
-            duration: '02:18',
-            lyric: '夜未央 星光照 思绪飘 无眠到破晓'
+            duration: '02:18'
         },
         { 
             audioId: 'miniAudio7', 
@@ -501,8 +471,7 @@
             title: 'Montagem Miau', 
             singer: 'Pudding_PD,METAMOON', 
             audioUrl: 'http://music.163.com/song/media/outer/url?id=3320816993.mp3',
-            duration: '02:19',
-            lyric: 'Miau Miau 快乐围绕 节奏跳跃 烦恼全消'
+            duration: '02:19'
         },
         { 
             audioId: 'miniAudio8', 
@@ -510,8 +479,7 @@
             title: '猫的舞步', 
             singer: 'Candy_Wind', 
             audioUrl: 'http://music.163.com/song/media/outer/url?id=523902194.mp3',
-            duration: '03:07',
-            lyric: '踮起脚尖 轻轻跳跃 月光之下 舞步翩翩'
+            duration: '03:07'
         },
         { 
             audioId: 'miniAudio9', 
@@ -519,8 +487,7 @@
             title: '示例歌曲9', 
             singer: '歌手9', 
             audioUrl: 'http://music.163.com/song/media/outer/url?id=1428234445.mp3',
-            duration: '03:20',
-            lyric: '示例歌词 仅供参考 旋律响起 快乐就好'
+            duration: '03:20'
         },
         { 
             audioId: 'miniAudio10', 
@@ -528,8 +495,7 @@
             title: '反正（狮子座幻想曲）', 
             singer: '高桥千春', 
             audioUrl: 'http://music.163.com/song/media/outer/url?id=2045500209.mp3',
-            duration: '03:11',
-            lyric: '反正都是 一场梦 不如放纵 做自己'
+            duration: '03:11'
         },
         { 
             audioId: 'miniAudio11', 
@@ -537,8 +503,7 @@
             title: 'Counting Stars', 
             singer: 'OneRepublic', 
             audioUrl: 'http://music.163.com/song/media/outer/url?id=28575553.mp3',
-            duration: '04:16',
-            lyric: 'I feel something so right doing the wrong thing'
+            duration: '04:16'
         },
         { 
             audioId: 'miniAudio12', 
@@ -546,8 +511,15 @@
             title: 'DJ Okawari-Flower Dance', 
             singer: 'Chopin Remix', 
             audioUrl: 'http://music.163.com/song/media/outer/url?id=1405903472.mp3',
-            duration: '04:07',
-            lyric: '纯音乐 无歌词 旋律悠扬 治愈心房'
+            duration: '04:07'
+        },
+        { 
+            audioId: 'miniAudio13', 
+            coverId: 'playerCover13', 
+            title: '测试', 
+            singer: 'Chopin Remix', 
+            audioUrl: '13',
+            duration: '00:00'
         }
     ];
 
@@ -621,19 +593,6 @@
         return volume > 0.5 ? '🔊' : volume > 0 ? '🔉' : '🔇';
     }
 
-    // 歌词滚动模拟（常规播放器歌词效果）
-    function simulateLyricScroll(lyric) {
-        let index = 0;
-        const lyricText = lyric || '暂无歌词 尽情聆听';
-        // 每隔3秒切换歌词片段（模拟滚动）
-        setInterval(() => {
-            const start = index % lyricText.length;
-            const end = Math.min(start + 15, lyricText.length);
-            lyricPlaceholder.textContent = lyricText.slice(start, end);
-            index++;
-        }, 3000);
-    }
-
     // 歌曲切换（常规逻辑：无缝衔接）
     function switchSong(newIndex) {
         // 处理循环逻辑
@@ -648,7 +607,7 @@
         const newSong = songList[newIndex];
 
         // 更新UI（常规播放器即时反馈）
-        playerTitle.textContent = newSong.title;
+        playerTitleText.textContent = newSong.title;
         playerSinger.textContent = newSong.singer;
         totalTimeEl.textContent = newSong.duration;
         totalTimeEl.dataset.loaded = 'true';
@@ -660,9 +619,6 @@
         document.querySelectorAll('.player-cover').forEach(cover => cover.style.display = 'none');
         const currentCover = document.getElementById(newSong.coverId);
         if (currentCover) currentCover.style.display = 'block';
-
-        // 模拟歌词滚动
-        simulateLyricScroll(newSong.lyric);
 
         // 更新音频源
         globalAudio.src = newSong.audioUrl;
@@ -686,11 +642,14 @@
         }
 
         savePlayState();
+        // 切换歌曲后关闭下拉列表
+        listOpen = false;
+        dropdownSongList.classList.remove('show');
     }
 
-    // 渲染弹窗内的歌曲列表
-    function renderModalSongList() {
-        modalSongList.innerHTML = '';
+    // 渲染下拉歌曲列表
+    function renderSongList() {
+        songListUl.innerHTML = '';
         songList.forEach((song, idx) => {
             const li = document.createElement('li');
             li.classList.toggle('active', idx === playState.currentSongIndex);
@@ -698,13 +657,32 @@
                 <span>${idx + 1}. ${song.title} - ${song.singer}</span>
                 <span class="song-duration">${song.duration}</span>
             `;
+            // 点击歌曲：播放 + 关闭列表
             li.addEventListener('click', () => {
                 switchSong(idx);
-                listModalMask.style.display = 'none'; // 选择歌曲后关闭弹窗
             });
-            modalSongList.appendChild(li);
+            songListUl.appendChild(li);
         });
     }
+
+    // 列表按钮：点击展开/收起列表（向上展开）
+    songListBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // 阻止事件冒泡到播放器拖动
+        listOpen = !listOpen;
+        dropdownSongList.classList.toggle('show', listOpen);
+        if (listOpen) {
+            renderSongList(); // 渲染列表
+        }
+    });
+
+    // 点击页面其他区域，关闭下拉列表
+    document.addEventListener('click', (e) => {
+        // 排除播放器和列表区域，点击其他地方关闭
+        if (listOpen && !playerContainer.contains(e.target) && !dropdownSongList.contains(e.target)) {
+            listOpen = false;
+            dropdownSongList.classList.remove('show');
+        }
+    });
 
     // 播放/暂停控制（常规点击逻辑）
     playBtn.addEventListener('click', () => {
@@ -726,23 +704,7 @@
     prevBtn.addEventListener('click', () => switchSong(playState.currentSongIndex - 1));
     nextBtn.addEventListener('click', () => switchSong(playState.currentSongIndex + 1));
 
-    // 打开/关闭列表弹窗
-    listToggleBtn.addEventListener('click', () => {
-        listModalMask.style.display = 'flex';
-        renderModalSongList(); // 渲染弹窗内的歌曲列表
-    });
-
-    closeBtn.addEventListener('click', () => {
-        listModalMask.style.display = 'none';
-    });
-
-    listModalMask.addEventListener('click', (e) => {
-        if (e.target === listModalMask) {
-            listModalMask.style.display = 'none';
-        }
-    });
-
-    // 音量控制（常规滑动+点击逻辑）
+    // 音量控制（按钮+滑动条）
     volumeBtn.addEventListener('click', () => {
         globalAudio.volume = globalAudio.volume === 1.0 ? 0 : globalAudio.volume > 0 ? 1.0 : 0.7;
         volumeSlider.value = globalAudio.volume;
@@ -787,10 +749,10 @@
         savePlayState();
     });
 
-    // 拖动功能（优化：完全不拦截按钮点击）
+    // 拖动功能（优化：不拦截列表按钮）
     draggablePlayer.addEventListener('mousedown', (e) => {
-        // 精准排除所有可点击元素，点击这些元素时不启动拖动
-        if (e.target.closest('.player-btn, .volume-btn, .list-btn, .volume-slider, .progress-bar-mini, li')) {
+        // 精准排除可点击元素，避免拖动拦截
+        if (e.target.closest('.player-btn, .volume-btn, .song-list-btn, .volume-slider, .progress-bar-mini')) {
             return;
         }
         let isDragging = true;
@@ -837,5 +799,45 @@
 
     // 页面卸载时保存状态
     window.addEventListener('beforeunload', savePlayState);
+
+    // 初始化（常规播放器启动逻辑）
+    window.addEventListener('load', () => {
+        // 恢复保存的状态
+        globalAudio.volume = playState.volume;
+        volumeSlider.value = playState.volume;
+        volumeBtn.textContent = getVolumeIcon(playState.volume);
+        updateLoopModeUI();
+
+        // 加载当前歌曲
+        const currentSong = songList[playState.currentSongIndex];
+        globalAudio.src = currentSong.audioUrl;
+        globalAudio.currentTime = playState.currentTime;
+        globalAudio.load();
+
+        // 更新UI
+        playerTitleText.textContent = currentSong.title;
+        playerSinger.textContent = currentSong.singer;
+        totalTimeEl.textContent = currentSong.duration;
+        document.querySelectorAll('.player-cover').forEach(cover => cover.style.display = 'none');
+        document.getElementById(currentSong.coverId).style.display = 'block';
+
+        // 恢复播放状态
+        if (playState.isPlaying) {
+            globalAudio.play().then(() => {
+                playBtn.textContent = '⏸';
+                draggablePlayer.classList.add('playing');
+            }).catch(() => {
+                playBtn.textContent = '▶';
+                draggablePlayer.classList.remove('playing');
+                playState.isPlaying = false;
+            });
+        } else {
+            playBtn.textContent = '▶';
+            draggablePlayer.classList.remove('playing');
+        }
+    });
+</script>
+</body>
+</html>
 
 
