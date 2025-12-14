@@ -1,1 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
+    <title>快乐的路一天 - 暗绿主题版</title>
+    <style>
+        /* 全局变量：暗绿色调体系（保留原配色） */
+        :root {
+            --bg-main: #0f1c14;
+            --bg-card: #1a2e20;
+            --border-color: #2c4933;
+            --text-main: #d6e9dc;
+            --text-highlight: #a8d9b7;
+            --text-accent: #e6c870;
+            --icon-bg: #23402b;
+            --radius: 8px; /* 统一圆角值 */
+        }
+        /* 全局重置+基础优化 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            padding: 20px;
+            padding-bottom: 400px !important;
+            line-height: 1.5; /* 优化文本可读性 */
+        }
+        /* 顶部返回栏（新增：退出键模块） */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            margin-bottom: 16px;
+            background-color: var(--bg-card);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .back-btn {
+            font-size: 1.5rem;
+            color: var(--text-highlight);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .back-btn:hover {
+            color: var(--text-accent);
+            transform: translateX(-2px);
+        }
+        .back-btn span {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        /* 核心容器（保持居中逻辑） */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            gap: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        /* 角色卡片样式（细节优化） */
+        .character-card {
+            background-color: var(--bg-card);
+            padding: 20px;
+            border-radius: var(--radius);
+            text-align: center;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2); /* 增加轻微阴影提升层次感 */
+        }
+        .character-img {
+            width: 80%;
+            border-radius: var(--radius);
+            margin: 0 auto 16px; /* 优化居中逻辑 */
+            aspect-ratio: 3/4;
+            object-fit: cover;
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s ease; /*  hover缩放效果 */
+        }
+        .character-img:hover {
+            transform: scale(1.02); /* 轻微放大提升交互感 */
+        }
+        .card-title {
+            font-size: 24px;
+            margin-bottom: 12px;
+            color: var(--text-main);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3); /* 增加文字立体感 */
+        }
+        .icon-mid {
+            width: 40px;
+            height: 40px;
+            background-color: var(--icon-bg);
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a8d9b7'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z'/%3E%3C/svg%3E");
+            background-size: cover;
+            background-position: center;
+            border: 1px solid var(--border-color);
+        }
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 16px;
+            flex-wrap: wrap; /* 适配极端窄屏 */
+        }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            margin: 4px 0; /* 增加垂直间距 */
+        }
+        .stat-item emoji {
+            font-size: 20px;
+        }
+        /* 效果说明模块（优化交互体验） */
+        .effect-module {
+            background-color: var(--bg-card);
+            padding: 20px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .effect-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .effect-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--text-main);
+        }
+        .version-select {
+            background-color: var(--icon-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease; /*  hover变色 */
+        }
+        .version-select:hover {
+            background-color: #2d5338; /* 加深背景提升交互感 */
+        }
+        .effect-desc {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-main);
+            text-align: justify; /* 文本两端对齐，提升可读性 */
+        }
+        .highlight {
+            color: var(--text-accent);
+            font-weight: bold;
+            text-shadow: 0 0 2px rgba(230,200,112,0.3); /* 高亮数值增加光泽感 */
+        }
+        /* 版本更新日志（优化样式） */
+        .version-log {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background-color: rgba(35, 64, 43, 0.5);
+            border-radius: 4px;
+            font-size: 12px;
+            color: var(--text-highlight);
+            border-left: 2px solid var(--text-accent);
+            transition: transform 0.3s ease;
+        }
+        .version-log:hover {
+            transform: translateX(4px); /*  hover轻微右移，提升交互感 */
+        }
+        /* 光锥背景故事模块（新增） */
+        .lore-module {
+            background-color: var(--bg-card);
+            padding: 20px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .lore-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .lore-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a8d9b7'%3E%3Cpath d='M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 4h7v5l-2.5-.75L6 9V4z'/%3E%3C/svg%3E");
+            background-size: cover;
+        }
+        .lore-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--text-main);
+        }
+        .lore-content {
+            font-size: 14px;
+            line-height: 1.8;
+            color: var(--text-main);
+            text-align: justify;
+            white-space: pre-line; /* 保留换行 */
+        }
+        .lore-content::first-letter {
+            font-size: 18px;
+            color: var(--text-accent);
+            font-weight: bold;
+            margin-right: 2px;
+        }
+        /* 移动端响应式适配（优化适配逻辑） */
+        @media (max-width: 480px) {
+            .character-img {
+                width: 90%;
+            }
+            .stats-row {
+                flex-direction: column;
+                gap: 12px;
+            }
+            .stat-item {
+                justify-content: center;
+            }
+            .effect-desc, .lore-content {
+                font-size: 13px; /* 窄屏缩小字体，避免换行过多 */
+            }
+            .back-btn span {
+                font-size: 1rem;
+            }
+        }
+        /* 音乐播放器（保留原配置，优化层级逻辑） */
+        #musicPlayerIframe {
+            display: block !important;
+            visibility: visible !important;
+            height: 400px !important;
+            width: 100% !important;
+            z-index: 99999 !important;
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            overflow: visible !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部返回栏（新增：退出键） -->
+    <a href="index.html" class="back-btn" id="backBtn">
+        ‹
+        <span>返回上一级</span>
+    </a>
 
+    <!-- 核心内容容器 -->
+    <div class="container">
+        <!-- 角色卡片模块 -->
+        <div class="character-card">
+            <img src="https://xiaochen1235789.github.io/guangzhui.images/changjinglu.jpg" alt="快乐的路一天光锥" class="character-img">
+            <h2 class="card-title">快乐的路一天</h2>
+            <div class="icon-mid"></div>
+            <!-- 数值统计行 -->
+            <div class="stats-row">
+                <div class="stat-item">
+                    <emoji>❤️</emoji>
+                    <span>生命值：1058</span>
+                </div>
+                <div class="stat-item">
+                    <emoji>🔪</emoji>
+                    <span>攻击力：582</span>
+                </div>
+                <div class="stat-item">
+                    <emoji>🛡️</emoji>
+                    <span>防御力：463</span>
+                </div>
+            </div>
+        </div>
+        <!-- 效果说明模块 -->
+        <div class="effect-module">
+            <div class="effect-header">
+                <span class="effect-title">越蛇越多</span>
+                <select class="version-select" id="versionSelect">
+                    <option value="v1">v1</option>
+                    <option value="v2" selected>正式版</option>
+                </select>
+            </div>
+            <!-- 技能描述（按版本切换完整文本） -->
+            <div class="effect-desc" id="skillDesc">
+                使装备者的暴击率提高<span class='highlight'>20%/22.5%/25.0%/27.5%/30.0%</span>，当装备者在战斗中速度大于100时，每超过6点，开局立即获得1层[暗涌]，每层[暗涌]使装备者普攻和战技造成的伤害提高<span class='highlight'>6%/8%/10%/12%/14%</span>，终结技的暴击伤害提高<span class='highlight'>16%/18%/20%/22%/24%</span>，该效果可叠加10层。
+            </div>
+            <!-- 版本更新日志 -->
+            <div class="version-log" id="versionLog">
+                V2更新：该版本为正式版
+            </div>
+        </div>
+        <!-- 光锥背景故事模块（新增） -->
+        <div class="lore-module">
+            <div class="lore-header">
+                <div class="lore-icon"></div>
+                <span class="lore-title">光锥故事</span>
+            </div>
+            <div class="lore-content">
+                风屿的沙丘曾埋着逐风部落的欢声笑语，直到矿队与魔物踏碎绿洲的宁静。年轻猎手鹿管归来时，只剩腰间皮囊里的故乡泥土，和先辈遗留的风刃。
+                他循着风沙追猎仇敌，风为他引路，速度成了最锋利的武器。每多一分迅捷，便多一分破敌的底气。
+                岁月流转，鹿管带领幸存者肃清魔物，成为统领「风屿遗民」的将军。但他仍偏爱独自巡猎，镜子中映着他的身影，既是复仇的执念，也是守护的誓言。
+                有人问他为何执着，他会撒下一把故乡的泥土：「所谓快乐的路，是用风刃为族人劈开归途，为荒芜播种希望。」这句话便成了他巡猎星穹的见证，记录着一位将军与风同行的坚守。
+            </div>
+        </div>
+    </div>
+    <!-- 音乐播放器（保留原配置） -->
+    <iframe 
+        id="musicPlayerIframe"
+        src="music-player.html"
+        frameborder="0"
+        scrolling="no"
+        style="
+            display: block !important;
+            visibility: visible !important;
+            height: 400px !important;
+            width: 100% !important;
+            z-index: 99999 !important;
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            overflow: visible !important;
+        "
+    ></iframe>
+    <script>
+        // 合并脚本，减少全局变量暴露（优化性能）
+        (function() {
+            // 各版本完整配置（仅保留v1/v2，修正字符串闭合错误）
+            const versionData = {
+                v1: {
+                    desc: "使装备者的暴击率提高 <span class='highlight'> 20% / 22% / 24% / 26% / 28% </span>，暴击伤害提高<span class='highlight'> 36% / 45% / 54% / 63% / 72% </span>，速度提高<span class='highlight'> 18% / 21% / 24% / 27% / 30% </span>，对生命值≤90%的敌方目标单体额外造成等同于装备者<span class='highlight'> 60% / 80% / 100% / 120% / 140% </span>攻击力的风属性的附加伤害。",
+                    log: "v1初始版本：初版不做评价"
+                },
+                v2: {
+                    desc: "使装备者的暴击率提高<span class='highlight'> 20% / 22.5% / 25.0% / 27.5% / 30.0% </span>，当装备者在战斗中速度大于100时，每超过6点，开局立即获得1层[暗涌]，每层[暗涌]使装备者普攻和战技造成的伤害提高<span class='highlight'> 6% / 8% / 10% / 12% / 14% </span>，终结技的暴击伤害提高<span class='highlight'>16% / 18% / 20% / 22% / 24% </span>，该效果可叠加10层。",
+                    log: "v2更新：该版本为正式版"
+                }
+            };
+            // 获取DOM元素（缓存，避免重复查询）
+            const versionSelect = document.getElementById("versionSelect");
+            const skillDescEl = document.getElementById("skillDesc");
+            const versionLogEl = document.getElementById("versionLog");
+            // 版本切换事件
+            const handleVersionChange = function() {
+                const selectedVersion = this.value;
+                const data = versionData[selectedVersion];
+                skillDescEl.innerHTML = data.desc;
+                versionLogEl.textContent = data.log;
+            };
+            // 初始化
+            const init = function() {
+                // 绑定事件（使用addEventListener，避免覆盖）
+                versionSelect.addEventListener("change", handleVersionChange);
+                // 初始显示v2内容
+                const defaultData = versionData.v2;
+                skillDescEl.innerHTML = defaultData.desc;
+                versionLogEl.textContent = defaultData.log;
+            };
+            // 播放器状态同步逻辑
+            const initPlayerSync = function() {
+                const iframe = document.getElementById('musicPlayerIframe');
+                // 同步初始状态
+                setTimeout(() => {
+                    try {
+                        const savedState = localStorage.getItem('musicPlayerState');
+                        if (savedState) {
+                            iframe.contentWindow.postMessage({ 
+                                type: 'INIT_STATE', 
+                                state: JSON.parse(savedState) 
+                            }, '*');
+                        }
+                    } catch (err) {
+                        console.log('播放器状态同步失败:', err);
+                    }
+                }, 300);
+                // 监听播放器消息
+                window.addEventListener('message', (e) => {
+                    if (e.data?.type === 'SONG_LIST_TOGGLED' && e.data.isShow) {
+                        iframe.style.height = '380px !important';
+                    }
+                });
+                // 监听本地存储变化
+                window.addEventListener('storage', (e) => {
+                    if (e.key === 'musicPlayerState') {
+                        try {
+                            const newState = JSON.parse(e.newValue);
+                            iframe.contentWindow.postMessage({ 
+                                type: 'INIT_STATE', 
+                                state: newState 
+                            }, '*');
+                        } catch (err) {}
+                    }
+                });
+            };
+            // 页面加载完成后初始化
+            window.addEventListener('load', () => {
+                init();
+                initPlayerSync();
+            });
+        })();
+    </script>
+</body>
+</html>
