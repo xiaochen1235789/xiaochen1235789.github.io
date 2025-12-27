@@ -51,3 +51,4 @@ function createSnowflake() {
 window.onload = () => {
   setInterval(createSnowflake, 600);
 };
+
