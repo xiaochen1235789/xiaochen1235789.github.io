@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-cmn-Hans">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="keywords" content="六哥荣耀WIKI,角色,光锥,养成材料,游戏攻略">
+    <meta name="description" content="六哥荣耀WIKI，整理游戏内角色、光锥、养成材料等信息，为玩家提供详细参考，纯属虚构娱乐。">
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <title>六哥荣耀WIKI</title>
@@ -28,7 +30,7 @@
         }
         body {
             overflow-x: hidden;
-            padding-bottom: 500px !important; /* 适配播放器最小高度，减少冗余空间 */
+            padding-bottom: 500px !important;
             background: var(--bg) !important;
             color: var(--text-main);
             line-height: 1.5;
@@ -74,7 +76,7 @@
             display: block;
             color: var(--text-highlight);
         }
-        /* 导航栏优化 - 减少布局层级 */
+        /* 导航栏优化 */
         .top-nav {
             background: var(--card-bg);
             border-radius: var(--radius);
@@ -116,7 +118,7 @@
             font-weight: 600;
             border: 1px solid var(--special-color);
         }
-        /* 网站运行天数优化 - 简化动画 */
+        /* 网站运行天数优化 */
         .site-age-container {
             max-width: 1200px;
             margin: 0 auto 16px;
@@ -146,7 +148,7 @@
             from { opacity: 1; text-shadow: 0 0 5px rgba(255,215,0,0.5); }
             to { opacity: 0.9; text-shadow: 0 0 15px rgba(255,215,0,0.8); }
         }
-        /* 网格容器优化 - 减少重绘 */
+        /* 网格容器优化 */
         .grid-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -156,21 +158,20 @@
             padding: 0 8px;
             transition: opacity 0.3s ease;
         }
-        /* 卡片优化 - 简化过渡效果，提升渲染速度 */
+        /* 卡片统一样式（合并冗余） */
         .content-card {
             background: var(--card-bg);
             border-radius: var(--radius);
             padding: 12px;
             text-align: center;
             cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease; /* 只保留关键过渡 */
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
             width: 100% !important;
             height: auto !important;
             border: 1px solid transparent;
             position: relative;
             overflow: hidden;
         }
-        /* 分类标签 */
         .content-card::before {
             content: attr(data-type);
             position: absolute;
@@ -196,6 +197,7 @@
             background: var(--card-bg-hover);
             border-color: var(--text-highlight);
         }
+        /* 图片容器优化 */
         .card-img {
             width: 100%;
             background: #2d5243;
@@ -208,13 +210,16 @@
             justify-content: center;
             position: relative;
         }
-        /* 图片占位优化 - 预加载占位图减小体积 */
         .card-img img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transition: transform 0.3s ease;
-            image-rendering: optimizeSpeed; /* 优先速度而非画质 */
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            image-rendering: optimizeSpeed;
+            opacity: 0;
+        }
+        .card-img img.loaded {
+            opacity: 1;
         }
         .card-img img[src=""] {
             background: url("https://via.placeholder.com/150x200?text=暂无") center center no-repeat;
@@ -237,10 +242,24 @@
         .content-card:hover .card-img::after {
             opacity: 1;
         }
-        /* 角色卡片图片比例 */
+        /* 图片比例统一 */
         .content-card:not(.lightcone-card):not(.material-card) .card-img {
             aspect-ratio: 4/5;
         }
+        .lightcone-card .card-img {
+            aspect-ratio: 3/4;
+            transform: rotate(-5deg);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .lightcone-card:hover .card-img {
+            transform: rotate(-5deg) translateY(-3px) scale(1.05);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        .material-card .card-img {
+            aspect-ratio: 1/1;
+            border: 1px solid var(--border-color);
+        }
+        /* 卡片文字样式 */
         .card-name {
             font-size: 1rem;
             color: var(--text-highlight);
@@ -259,16 +278,6 @@
             overflow: hidden;
             min-height: 36px;
         }
-        /* 光锥卡片优化 */
-        .lightcone-card .card-img {
-            aspect-ratio: 3/4;
-            transform: rotate(-5deg);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-        .lightcone-card:hover .card-img {
-            transform: rotate(-5deg) translateY(-3px) scale(1.05);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-        }
         /* 标题优化 */
         .section-header {
             max-width: 1200px;
@@ -286,12 +295,7 @@
             content: "📌";
             font-size: 1.2em;
         }
-        /* 材料卡片优化 */
-        .material-card .card-img {
-            aspect-ratio: 1/1;
-            border: 1px solid var(--border-color);
-        }
-        /* 更新日志优化 - 减少初始渲染压力 */
+        /* 更新日志优化 */
         .changelog-loading, .changelog-error {
             text-align: center;
             padding: 30px;
@@ -403,19 +407,18 @@
             padding: 20px 0;
             font-size: 0.9rem;
             color: #888;
-            margin-top: 40px;
+            margin-top: 60px;
             border-top: 1px solid var(--border-color);
             max-width: 1200px;
             margin-left: auto;
             margin-right: auto;
         }
-        /* 音乐播放器优化 - 懒加载+高度自适应 */
-        /* 音乐播放器优化 - 列表展开足够高度+防遮挡 */
+        /* 音乐播放器优化 */
         #musicPlayerIframe {
             display: block !important;
             visibility: visible !important;
-            height: 400px !important; /* 初始最小高度 */
-           width: 100% !important;
+            height: 400px !important;
+            width: 100% !important;
             z-index: 99999 !important;
             position: fixed !important;
             bottom: 0 !important;
@@ -423,11 +426,78 @@
             right: 0 !important;
             border: none !important;
             background: transparent !important;
-            overflow: visible !important; /* 关键：允许列表溢出iframe显示，避免被截断 */
+            overflow: visible !important;
             transition: height 0.3s ease !important;
             will-change: height;
-       }
-            /* 响应式优化 - 简化移动端样式 */
+        }
+        /* 回到顶部按钮 */
+        .back-to-top {
+            position: fixed;
+            bottom: 130px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: var(--card-bg-hover);
+            color: var(--text-highlight);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 9999;
+            border: 1px solid var(--text-highlight);
+        }
+        .back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .back-to-top:hover {
+            background: var(--text-highlight);
+            color: var(--bg);
+        }
+        /* 预加载样式 */
+        .preload-placeholder {
+            background: linear-gradient(90deg, #2d5243 0%, #1e3a2f 50%, #2d5243 100%);
+            background-size: 200% 100%;
+            animation: preloadShimmer 1.5s infinite;
+        }
+        @keyframes preloadShimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        /* 加载动画 */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(129, 199, 132, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--text-highlight);
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        /* 全局加载动画 */
+        #global-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+        }
+        /* 响应式优化 */
         @media (max-width: 768px) {
             .grid-container {
                 grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -481,63 +551,17 @@
                 padding: 1px 4px;
             }
         }
-        /* 加载动画 - 简化 */
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(129, 199, 132, 0.3);
-            border-radius: 50%;
-            border-top-color: var(--text-highlight);
-            animation: spin 1s ease-in-out infinite;
-            margin-right: 8px;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        /* 回到顶部按钮 */
-        .back-to-top {
-            position: fixed;
-            bottom: 130px; /* 适配播放器高度 */
-            right: 20px;
-            width: 40px;
-            height: 40px;
-            background: var(--card-bg-hover);
-            color: var(--text-highlight);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            cursor: pointer;
-            box-shadow: var(--shadow);
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-            z-index: 9999;
-            border: 1px solid var(--text-highlight);
-        }
-        .back-to-top.show {
-            opacity: 1;
-            visibility: visible;
-        }
-        .back-to-top:hover {
-            background: var(--text-highlight);
-            color: var(--bg);
-        }
-        /* 预加载样式 - 减少白屏感知 */
-        .preload-placeholder {
-            background: linear-gradient(90deg, #2d5243 0%, #1e3a2f 50%, #2d5243 100%);
-            background-size: 200% 100%;
-            animation: preloadShimmer 1.5s infinite;
-        }
-        @keyframes preloadShimmer {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
     </style>
 </head>
-<body>
+    <body>
+    <!-- 全局加载动画 -->
+    <div id="global-loading">
+        <div style="text-align: center;">
+            <div class="loading-spinner"></div>
+            <p style="color: var(--text-highlight); margin-top: 16px; font-size: 1.1rem;">加载游戏资源中...</p>
+        </div>
+    </div>
+
     <!-- 导航栏 -->
     <div class="top-nav">
         <div class="nav-title">六哥荣耀WIKI</div>
@@ -546,27 +570,30 @@
         <a href="#material" class="nav-link" data-target="material">养成材料</a>
         <a href="#changelog" class="nav-link" data-target="changelog">更新日志</a>
     </div>
+
     <!-- 搜索框 -->
     <div class="search-container">
         <input type="text" id="search-input" placeholder="搜索角色/光锥/材料（支持关键词模糊匹配）">
     </div>
+
     <!-- 网站运行天数 -->
     <div class="site-age-container">
         <span id="site-age"><span class="loading-spinner"></span>加载中...</span>
     </div>
-    
+
     <!-- 空结果提示 -->
     <div class="empty-result">
         <<i>🔍</</i>
         <h3>未找到匹配结果</h3>
         <p>试试更换关键词或检查拼写~</p>
     </div>
-    
+
+    <!-- 角色列表 -->
     <h2 class="section-header" id="character">角色列表</h2>
     <div class="grid-container" data-category="character">
         <div class="content-card" onclick="jumpToDetail('yunli-detail.html', '云璃')" data-type="角色" data-name="云璃" data-desc="毁灭 · 物理 | 魔改五星 | 无版本">
             <div class="card-img preload-placeholder">
-                <img src="https://xiaochen1235789.github.io/images/yunli.webp" alt="璃宝" loading="lazy" width="150" height="188">
+                <img src="https://xiaochen1235789.github.io/images/yunli.webp" alt="璃宝" loading="lazy" width="150" height="188" onload="this.classList.add('loaded')" onerror="this.src='https://via.placeholder.com/150x188?text=图片失效'">
             </div>
             <div class="card-name">云璃</div>
             <div class="card-desc">毁灭 · 物理 | 魔改五星 | 无版本</div>
@@ -574,7 +601,7 @@
         
         <div class="content-card" onclick="jumpToDetail('luguan-detail.html', '鹿将军')" data-type="角色" data-name="鹿将军" data-desc="巡猎 · 风 | 限定五星 | 1.0上半">
             <div class="card-img preload-placeholder">
-                <img src="https://xiaochen1235789.github.io/images/changjinglu.webp" alt="鹿将军" loading="lazy" width="150" height="188">
+                <img src="https://xiaochen1235789.github.io/images/changjinglu.webp" alt="鹿将军" loading="lazy" width="150" height="188" onload="this.classList.add('loaded')" onerror="this.src='https://via.placeholder.com/150x188?text=图片失效'">
             </div>
             <div class="card-name">鹿将军</div>
             <div class="card-desc">巡猎 · 风 | 限定五星 | 1.0上半</div>
@@ -582,7 +609,7 @@
         
         <div class="content-card" onclick="jumpToDetail('pige-detail.html', '皮哥')" data-type="角色" data-name="皮哥" data-desc="存护 · 物理 | 限定五星 | 1.0下半">
             <div class="card-img preload-placeholder">
-                <img src="https://xiaochen1235789.github.io/images/pige.webp" alt="皮哥" loading="lazy" width="150" height="188">
+                <img src="https://xiaochen1235789.github.io/images/pige.webp" alt="皮哥" loading="lazy" width="150" height="188" onload="this.classList.add('loaded')" onerror="this.src='https://via.placeholder.com/150x188?text=图片失效'">
             </div>
             <div class="card-name">皮哥</div>
             <div class="card-desc">存护 · 物理 | 限定五星 | 1.0下半</div>
@@ -590,7 +617,7 @@
         
         <div class="content-card" onclick="jumpToDetail('jiazijie-detail.html', '夹子姐')" data-type="角色" data-name="夹子姐" data-desc="智识 · 雷 | 限定五星 | 1.1上半">
             <div class="card-img preload-placeholder">
-                <img src="https://xiaochen1235789.github.io/images/jiazijie.webp" alt="夹子姐" loading="lazy" width="150" height="188">
+                <img src="https://xiaochen1235789.github.io/images/jiazijie.webp" alt="夹子姐" loading="lazy" width="150" height="188" onload="this.classList.add('loaded')" onerror="this.src='https://via.placeholder.com/150x188?text=图片失效'">
             </div>
             <div class="card-name">夹子姐</div>
             <div class="card-desc">智识 · 雷 | 限定五星 | 1.1上半</div>
@@ -598,7 +625,7 @@
         
         <div class="content-card" onclick="jumpToDetail('han-detail.html', '涵')" data-type="角色" data-name="涵" data-desc="同谐 · 物理 | 限定五星 | 1.1下半">
             <div class="card-img preload-placeholder">
-                <img src="https://xiaochen1235789.github.io/images/han.webp" alt="涵" loading="lazy" width="150" height="188">
+                <img src="https://xiaochen1235789.github.io/images/han.webp" alt="涵" loading="lazy" width="150" height="188" onload="this.classList.add('loaded')" onerror="this.src='https://via.placeholder.com/150x188?text=图片失效'">
             </div>
             <div class="card-name">涵</div>
             <div class="card-desc">同谐 · 物理 | 限定五星 | 1.1下半</div>
@@ -606,7 +633,7 @@
         
         <div class="content-card" onclick="jumpToDetail('yuzhiboyan-detail.html', '宇智波.言')" data-type="角色" data-name="宇智波.言" data-desc="毁灭 · 雷 | 限定五星 | 1.2上半">
             <div class="card-img preload-placeholder">
-                <img src="https://xiaochen1235789.github.io/images/yuzhiboyan.webp" alt="帅气的言哥哥" loading="lazy" width="1550" height="188">
+                <img src="https://xiaochen1235789.github.io/images/yuzhiboyan.webp" alt="帅气的言哥哥" loading="lazy" width="150" height="188" onload="this.classList.add('loaded')" onerror="this.src='https://via.placeholder.com/150x188?text=图片失效'">
             </div>
             <div class="card-name">宇智波.言</div>
             <div class="card-desc">毁灭 · 雷 | 限定五星 | 1.2上半</div>
@@ -614,7 +641,7 @@
         
         <div class="content-card" onclick="jumpToDetail('banxierencheng-detail.html', '半械人.成')" data-type="角色" data-name="半械人.成" data-desc="毁灭 · 物理 | 限定五星 | 1.2下半">
             <div class="card-img preload-placeholder">
-                <img src="https://xiaochen1235789.github.io/images/banxierencheng.webp" alt="成哥" loading="lazy" width="150" height="188">
+                <img src="https://xiaochen1235789.github.io/images/banxierencheng.webp" alt="成哥" loading="lazy" width="150" height="188" onload="this.classList.add('loaded')" onerror="this.src='https://via.placeholder.com/150x188?text=图片失效'">
             </div>
             <div class="card-name">半械人.成</div>
             <div class="card-desc">毁灭 · 物理 | 限定五星 | 1.2下半</div>
@@ -622,7 +649,7 @@
     
         <div class="content-card" onclick="jumpToDetail('meng-detail.html', '梦')" data-type="角色" data-name="梦" data-desc="虚无 · 风 | 限定五星 | 1.3上半">
             <div class="card-img preload-placeholder">
-                <img src="https://xiaochen1235789.github.io/images/meng.webp" alt="梦" loading="lazy" width="150" height="188">
+                <img src="https://xiaochen1235789.github.io/images/meng.webp" alt="梦" loading="lazy" width="150" height="188" onload="this.classList.add('loaded')" onerror="this.src='https://via.placeholder.com/150x188?text=图片失效'">
             </div>
             <div class="card-name">梦</div>
             <div class="card-desc">虚无 · 风 | 限定五星 | 1.3上半</div>
@@ -630,7 +657,7 @@
         
         <div class="content-card" onclick="jumpToDetail('shenshengpige-detail.html', '神圣.皮哥')" data-type="角色" data-name="神圣.皮哥" data-desc="丰饶 · 虚数 | 限定五星 | 1.3下半">
             <div class="card-img preload-placeholder">
-                <img src="https://xiaochen1235789.github.io/images/shenshengpige.webp" alt="神圣.皮哥" loading="lazy" width="150" height="188">
+                <img src="https://xiaochen1235789.github.io/images/shenshengpige.webp" alt="神圣.皮哥" loading="lazy" width="150" height="188" onload="this.classList.add('loaded')" onerror="this.src='https://via.placeholder.com/150x188?text=图片失效'">
             </div>
             <div class="card-name">神圣.皮哥</div>
             <div class="card-desc">丰饶 · 虚数 | 限定五星 | 1.3下半</div>
@@ -638,7 +665,7 @@
         
         <div class="content-card" onclick="jumpToDetail('tianmingrenhouge-detail.html', '天命人.猴哥')" data-type="角色" data-name="天命人.猴哥" data-desc="繁育 · 量子 | 限定五星 | 2.0上半">
             <div class="card-img preload-placeholder">
-                <img src="https://xiaochen1235789.github.io/images/tianmingrenhouge.webp" alt="天命人.猴哥" loading="lazy" width="150" height="188">
+                <img src="https://xiaochen1235789.github.io/images/tianmingrenhouge.webp" alt="天命人.猴哥" loading="lazy" width="150" height="188" onload="this.classList.add('loaded')" onerror="this.src='https://via.placeholder.com/150x188?text=图片失效'">
             </div>
             <div class="card-name">天命人.猴哥</div>
             <div class="card-desc">繁育 · 量子 | 限定五星 | 2.0上半</div>
@@ -646,40 +673,39 @@
     </div>
     
     <!-- 光锥列表 -->
-<h2 class="section-header" id="lightcone">光锥列表</h2>
-<!-- 关键：添加这行网格容器，瞬间和角色区布局统一 -->
-<div class="grid-container" data-category="lightcone">
-    <div class="content-card lightcone-card" onclick="jumpToDetail('Light cone data/changjinglu.html','快乐的路一天')" data-type="光锥" data-name="快乐的路一天" data-desc="巡猎 | 鹿将军专武">
-        <div class="card-img preload-placeholder">
-            <img src="https://xiaochen1235789.github.io/guangzhui.images/changjinglu.jpg" alt="快乐的路一天" loading="lazy" width="150" height="200">
+    <h2 class="section-header" id="lightcone">光锥列表</h2>
+    <div class="grid-container" data-category="lightcone">
+        <div class="content-card lightcone-card" onclick="jumpToDetail('Light cone data/changjinglu.html','快乐的路一天')" data-type="光锥" data-name="快乐的路一天" data-desc="巡猎 | 鹿将军专武">
+            <div class="card-img preload-placeholder">
+                <img src="https://xiaochen1235789.github.io/guangzhui.images/changjinglu.jpg" alt="快乐的路一天" loading="lazy" width="150" height="200" onload="this.classList.add('loaded')" onerror="this.src='https://via.placeholder.com/150x200?text=图片失效'">
+            </div>
+            <div class="card-name">快乐的路一天</div>
+            <div class="card-desc">巡猎 | 鹿将军专武</div>
         </div>
-        <div class="card-name">快乐的路一天</div>
-        <div class="card-desc">巡猎 | 鹿将军专武</div>
-    </div>
-    
-    <div class="content-card lightcone-card" data-type="光锥" data-name="幻灵猫魅" data-desc="欢愉 | 魔法猫咪.小咪专武">
-        <div class="card-img preload-placeholder">
-            <img src="https://xiaochen1235789.github.io/guangzhui.images/xiaomi.jpg" alt="幻灵猫魅" loading="lazy" width="150" height="200">
+        
+        <div class="content-card lightcone-card" data-type="光锥" data-name="幻灵猫魅" data-desc="欢愉 | 魔法猫咪.小咪专武">
+            <div class="card-img preload-placeholder">
+                <img src="https://xiaochen1235789.github.io/guangzhui.images/xiaomi.jpg" alt="幻灵猫魅" loading="lazy" width="150" height="200" onload="this.classList.add('loaded')" onerror="this.src='https://via.placeholder.com/150x200?text=图片失效'">
+            </div>
+            <div class="card-name">幻灵猫魅</div>
+            <div class="card-desc">欢愉 | 魔法猫咪.小咪专武</div>
         </div>
-        <div class="card-name">幻灵猫魅</div>
-        <div class="card-desc">欢愉 | 魔法猫咪.小咪专武</div>
-    </div>
-    
-    <div class="content-card lightcone-card" data-type="光锥" data-name="未知光锥" data-desc="？？？">
-        <div class="card-img preload-placeholder">
-            <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="未知光锥" loading="lazy" width="150" height="200">
+        
+        <div class="content-card lightcone-card" data-type="光锥" data-name="未知光锥" data-desc="？？？">
+            <div class="card-img preload-placeholder">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="未知光锥" loading="lazy" width="150" height="200" onload="this.classList.add('loaded')" onerror="this.src='https://via.placeholder.com/150x200?text=图片失效'">
+            </div>
+            <div class="card-name">未知光锥</div>
+            <div class="card-desc">？？？</div>
         </div>
-        <div class="card-name">未知光锥</div>
-        <div class="card-desc">？？？</div>
     </div>
-</div>
     
     <!-- 养成材料 -->
     <h2 class="section-header" id="material">养成材料</h2>
     <div class="grid-container" data-category="material">
         <div class="content-card material-card" data-type="材料" data-name="养成材料1" data-desc="？？？">
             <div class="card-img preload-placeholder">
-                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="养成材料1" loading="lazy" width="150" height="150">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="养成材料1" loading="lazy" width="150" height="150" onload="this.classList.add('loaded')" onerror="this.src='https://via.placeholder.com/150x150?text=图片失效'">
             </div>
             <div class="card-name">养成材料1</div>
             <div class="card-desc">？？？</div>
@@ -687,26 +713,28 @@
         
         <div class="content-card material-card" data-type="材料" data-name="养成材料2" data-desc="？？？">
             <div class="card-img preload-placeholder">
-                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="养成材料2" loading="lazy" width="150" height="150">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="养成材料2" loading="lazy" width="150" height="150" onload="this.classList.add('loaded')" onerror="this.src='https://via.placeholder.com/150x150?text=图片失效'">
             </div>
             <div class="card-name">养成材料2</div>
             <div class="card-desc">？？？</div>
         </div>
     </div>
+
     <!-- 更新日志 -->
     <h2 class="section-header" id="changelog">更新日志</h2>
     <div class="pet-system" style="margin-top: 0;" id="changelogContainer">
         <div class="changelog-box">
             <div class="pet-header">
                 <div class="pet-icon">
-                    <img src="https://xiaochen1235789.github.io/images/rizhitupian.webp" 
+                    <img src="https://xiaochen1235789.github.io/images/rizhitupian.png" 
                          alt="日志图标" 
-                         style="width: 100%; height: 100%; object-fit: contain;">
+                         style="width: 100%; height: 100%; object-fit: contain;"
+                         onload="this.classList.add('loaded')"
+                         onerror="this.src='https://via.placeholder.com/60x60?text=图标失效'">
                 </div>
                 <div class="pet-title">WIKI版本更新记录</div>
             </div>
             <div class="changelog-list">
-                <!-- 内嵌日志内容，无需fetch请求 -->
                 <details class="changelog-item">
                     <summary>
                         <h4 class="changelog-version">功能教程专用栏</h4>
@@ -716,9 +744,9 @@
                             <li>
                             <span style="color:orange; font-size: 14px;">音乐播放器</span> | <span style="color:orange; font-size: 14px;">教程</span>
                             <br>
-                            🔊-音量为<span style="color:orange; font-size: 16px;">51%~100%</span>
+                            🔊-音量为<span style="color:orange; font-size: 16px;">100%</span>
                             <br>
-                            🔉-音量为<span style="color:orange; font-size: 16px;">1%~50%</span>
+                            🔉-音量为<span style="color:orange; font-size: 16px;">50%</span>
                             <br>
                             🔇-音量为<span style="color:orange; font-size: 16px;">0%</span>
                             <br>
@@ -836,17 +864,13 @@
             </div>
         </div>
     </div>
-    
-    <br>
-    <br>
-    <br>
-    <br>
-    <br>
-    <br>
+
+    <!-- 页脚 -->
     <footer>
         © <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.
     </footer>
-    <!-- 音乐播放器（懒加载优化） -->
+
+    <!-- 音乐播放器 -->
     <iframe 
         id="musicPlayerIframe"
         src="music-player.html"
@@ -855,221 +879,234 @@
         allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
         loading="lazy"
     ></iframe>
+
     <!-- 回到顶部按钮 -->
     <div class="back-to-top" onclick="scrollToTop()">↑</div>
 <script>
-    // 1. 核心功能优先执行，非核心功能延迟加载
-    document.addEventListener('DOMContentLoaded', () => {
-        // 年份自动更新（核心基础功能）
-        document.getElementById('year').textContent = new Date().getFullYear();
-        
-        // 角色跳转优化（核心交互功能）
-        window.jumpToDetail = function(targetUrl, charName) {
-            if (!targetUrl) return alert('详情页地址不存在');
+        // 1. 核心功能优先执行，非核心功能延迟加载
+        document.addEventListener('DOMContentLoaded', () => {
+            // 年份自动更新（核心基础功能）
+            document.getElementById('year').textContent = new Date().getFullYear();
             
-            // 简化加载提示，减少DOM操作
-            const loadingDiv = document.createElement('div');
-            loadingDiv.style.cssText = `
-                position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                background: var(--card-bg); padding: 16px 24px; border-radius: var(--radius);
-                z-index: 999999; color: var(--text-highlight); display: flex; align-items: center; gap: 8px;
-            `;
-            loadingDiv.innerHTML = `<span class="loading-spinner"></span> 前往【${charName}】详情页...`;
-            document.body.appendChild(loadingDiv);
-            
-            // 简化跳转逻辑
-            setTimeout(() => {
-                window.location.href = targetUrl;
-            }, 300);
-        };
-        
-        // 网站运行天数优化（减少计算频率）
-        const launchDate = new Date(2025, 10, 1);
-        const siteAgeElem = document.getElementById('site-age');
-        const specialDays = {
-            30: '🎉 六哥荣耀WIKI上线30天啦！感恩陪伴 🎉',
-            50: '⛄冬至快乐，记得吃饺子🥟⛄',
-            58: '🍰 恭喜言哥哥18岁，生日快乐🍰',
-            59: ' 🧨跨年倒计时2天🧨',
-            60: ' 🎉跨年倒计时1天🎉',
-            61: ' 🎉欢迎来到2026年🎉',
-            78: '☁️ 奇怪的数字？六哥荣耀WIKI与你同行78天 ☁️',
-            91: '🧊 奇怪的数字？梅开二度，六哥荣耀WIKI与你同行91天 🧊',
-            100: '🎊 百日庆典！六哥荣耀WIKI与你同行100天 🎊',
-            365: '🎂 周年快乐！六哥荣耀WIKI一周年纪念 🎂'
-        };
-        
-        function updateSiteAge() {
-            const days = Math.floor((new Date() - launchDate) / (1000 * 60 * 60 * 24));
-            if (specialDays[days]) {
-                siteAgeElem.innerHTML = specialDays[days];
-                siteAgeElem.classList.add('special');
-            } else {
-                siteAgeElem.innerHTML = `📅 六哥荣耀WIKI已上线 ${days} 天 · 持续更新中`;
-                siteAgeElem.classList.remove('special');
-            }
-        }
-        updateSiteAge();
-        // 每天更新一次，而非实时计算
-        setInterval(updateSiteAge, 86400000);
-        
-        // 搜索功能优化（减少DOM遍历次数）
-        const searchInput = document.getElementById('search-input');
-        const allCards = document.querySelectorAll('.content-card');
-        const emptyResult = document.querySelector('.empty-result');
-        const gridContainers = document.querySelectorAll('.grid-container');
-        const cardData = Array.from(allCards).map(card => ({
-            card,
-            name: card.dataset.name?.toLowerCase() || '',
-            desc: card.dataset.desc?.toLowerCase() || '',
-            type: card.dataset.type?.toLowerCase() || ''
-        }));
-        
-        searchInput.addEventListener('input', function() {
-            const keyword = this.value.trim().toLowerCase();
-            let matchCount = 0;
-            
-            if (!keyword) {
-                allCards.forEach(card => card.style.display = 'block');
-                gridContainers.forEach(container => container.style.display = 'grid');
-                emptyResult.style.display = 'none';
-                return;
-            }
-            
-            // 优化匹配逻辑，减少重复操作
-            cardData.forEach(item => {
-                const isMatch = item.name.includes(keyword) || item.desc.includes(keyword) || item.type.includes(keyword);
-                item.card.style.display = isMatch ? 'block' : 'none';
-                if (isMatch) matchCount++;
-            });
-            
-            emptyResult.style.display = matchCount === 0 ? 'block' : 'none';
-            
-            gridContainers.forEach(container => {
-                const hasVisible = Array.from(container.querySelectorAll('.content-card')).some(c => c.style.display === 'block');
-                container.style.display = hasVisible ? 'grid' : 'none';
-            });
-        });
-        
-        // 回到顶部功能（简化逻辑）
-        const backToTopBtn = document.querySelector('.back-to-top');
-        window.scrollToTop = function() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
-        
-        window.addEventListener('scroll', function() {
-            // 合并滚动事件，减少触发次数
-            if (window.scrollY > 300) {
-                backToTopBtn.classList.add('show');
-            } else {
-                backToTopBtn.classList.remove('show');
-            }
-            
-            // 简化活跃导航更新
-            const sections = document.querySelectorAll('.section-header');
-            sections.forEach(section => {
-                const sectionTop = section.offsetTop - 150;
-                if (window.scrollY >= sectionTop) {
-                    document.querySelectorAll('.nav-link').forEach(link => {
-                        link.classList.toggle('active', link.dataset.target === section.id);
-                    });
-                }
-            });
-        });
-        
-        // 锚点平滑滚动（简化适配逻辑）
-        document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    const playerHeight = document.getElementById('musicPlayerIframe').offsetHeight || 110;
-                    window.scrollTo({
-                        top: target.offsetTop - 80 - playerHeight,
-                        behavior: 'smooth'
-                    });
-                }
-            });
-        });
-    });
-    // 2. 非核心功能延迟加载（DOM加载完成后1秒执行）
-    setTimeout(() => {
-        // 图片加载失败容错（非核心，延迟执行）
-        document.querySelectorAll('img').forEach(img => {
-            img.onerror = function() {
-                this.src = `https://via.placeholder.com/${this.width || 150}x${this.height || 200}?text=图片失效`;
-                this.alt = '图片加载失败';
+            // 角色跳转优化（核心交互功能）
+            window.jumpToDetail = function(targetUrl, charName) {
+                if (!targetUrl) return alert('详情页地址不存在');
+                
+                // 简化加载提示，减少DOM操作
+                const loadingDiv = document.createElement('div');
+                loadingDiv.style.cssText = `
+                    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                    background: var(--card-bg); padding: 16px 24px; border-radius: var(--radius);
+                    z-index: 999999; color: var(--text-highlight); display: flex; align-items: center; gap: 8px;
+                `;
+                loadingDiv.innerHTML = `<span class="loading-spinner"></span> 前往【${charName}】详情页...`;
+                document.body.appendChild(loadingDiv);
+                
+                // 简化跳转逻辑
+                setTimeout(() => {
+                    window.location.href = targetUrl;
+                }, 300);
             };
+            
+            // 网站运行天数优化（减少计算频率）
+            const launchDate = new Date(2025, 10, 1);
+            const siteAgeElem = document.getElementById('site-age');
+            const specialDays = {
+                30: '🎉 六哥荣耀WIKI上线30天啦！感恩陪伴 🎉',
+                50: '⛄冬至快乐，记得吃饺子🥟⛄',
+                58: '🍰 恭喜言哥哥18岁，生日快乐🍰',
+                59: ' 🧨跨年倒计时2天🧨',
+                60: ' 🎉跨年倒计时1天🎉',
+                61: ' 🎉欢迎来到2026年🎉',
+                78: '☁️ 奇怪的数字？六哥荣耀WIKI与你同行78天 ☁️',
+                91: '🧊 奇怪的数字？梅开二度，六哥荣耀WIKI与你同行91天 🧊',
+                100: '🎊 百日庆典！六哥荣耀WIKI与你同行100天 🎊',
+                365: '🎂 周年快乐！六哥荣耀WIKI一周年纪念 🎂'
+            };
+            
+            function updateSiteAge() {
+                const days = Math.floor((new Date() - launchDate) / (1000 * 60 * 60 * 24));
+                if (specialDays[days]) {
+                    siteAgeElem.innerHTML = specialDays[days];
+                    siteAgeElem.classList.add('special');
+                } else {
+                    siteAgeElem.innerHTML = `📅 六哥荣耀WIKI已上线 ${days} 天 · 持续更新中`;
+                    siteAgeElem.classList.remove('special');
+                }
+            }
+            updateSiteAge();
+            // 每天更新一次，而非实时计算
+            setInterval(updateSiteAge, 86400000);
+            
+            // 搜索功能优化（减少DOM遍历次数）
+            const searchInput = document.getElementById('search-input');
+            const allCards = document.querySelectorAll('.content-card');
+            const emptyResult = document.querySelector('.empty-result');
+            const gridContainers = document.querySelectorAll('.grid-container');
+            const cardData = Array.from(allCards).map(card => ({
+                card,
+                name: card.dataset.name?.toLowerCase() || '',
+                desc: card.dataset.desc?.toLowerCase() || '',
+                type: card.dataset.type?.toLowerCase() || ''
+            }));
+            
+            searchInput.addEventListener('input', function() {
+                const keyword = this.value.trim().toLowerCase();
+                let matchCount = 0;
+                
+                if (!keyword) {
+                    allCards.forEach(card => card.style.display = 'block');
+                    gridContainers.forEach(container => container.style.display = 'grid');
+                    emptyResult.style.display = 'none';
+                    return;
+                }
+                
+                // 优化匹配逻辑，减少重复操作
+                cardData.forEach(item => {
+                    const isMatch = item.name.includes(keyword) || item.desc.includes(keyword) || item.type.includes(keyword);
+                    item.card.style.display = isMatch ? 'block' : 'none';
+                    if (isMatch) matchCount++;
+                });
+                
+                emptyResult.style.display = matchCount === 0 ? 'block' : 'none';
+                
+                gridContainers.forEach(container => {
+                    const hasVisible = Array.from(container.querySelectorAll('.content-card')).some(c => c.style.display === 'block');
+                    container.style.display = hasVisible ? 'grid' : 'none';
+                });
+            });
+            
+            // 回到顶部功能（简化逻辑）
+            const backToTopBtn = document.querySelector('.back-to-top');
+            window.scrollToTop = function() {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+            
+            window.addEventListener('scroll', function() {
+                // 合并滚动事件，减少触发次数
+                if (window.scrollY > 300) {
+                    backToTopBtn.classList.add('show');
+                } else {
+                    backToTopBtn.classList.remove('show');
+                }
+                
+                // 简化活跃导航更新
+                const sections = document.querySelectorAll('.section-header');
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop - 150;
+                    if (window.scrollY >= sectionTop) {
+                        document.querySelectorAll('.nav-link').forEach(link => {
+                            link.classList.toggle('active', link.dataset.target === section.id);
+                        });
+                    }
+                });
+            });
+            
+            // 锚点平滑滚动（简化适配逻辑）
+            document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        const playerHeight = document.getElementById('musicPlayerIframe').offsetHeight || 110;
+                        window.scrollTo({
+                            top: target.offsetTop - 80 - playerHeight,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
         });
         
-        // 登录状态优化（简化逻辑，减少DOM操作）
-        (() => {
-            try {
-                const user = localStorage.getItem('user');
-                const nav = document.querySelector('.top-nav');
-                if (user) {
-                    nav.insertAdjacentHTML('beforeend', `
-                        <span style="margin-left:auto;color:var(--special-color);font-weight:500;">欢迎，${user}</span>
-                        <a href="javascript:;" onclick="logout()" style="margin-left:12px;" class="nav-link">退出</a>
-                    `);
-                } else {
-                    nav.insertAdjacentHTML('beforeend', `
+        // 2. 非核心功能延迟加载（DOM加载完成后1秒执行）
+        setTimeout(() => {
+            // 图片加载失败容错（非核心，延迟执行）
+            document.querySelectorAll('img').forEach(img => {
+                img.onerror = function() {
+                    this.src = `https://via.placeholder.com/${this.width || 150}x${this.height || 200}?text=图片失效`;
+                    this.alt = '图片加载失败';
+                };
+            });
+            
+            // 登录状态优化（简化逻辑，减少DOM操作）
+            (() => {
+                try {
+                    const user = localStorage.getItem('user');
+                    const nav = document.querySelector('.top-nav');
+                    if (user) {
+                        nav.insertAdjacentHTML('beforeend', `
+                            <span style="margin-left:auto;color:var(--special-color);font-weight:500;">欢迎，${user}</span>
+                            <a href="javascript:;" onclick="logout()" style="margin-left:12px;" class="nav-link">退出</a>
+                        `);
+                    } else {
+                        nav.insertAdjacentHTML('beforeend', `
+                            <a href="login.html" style="margin-left:auto;" class="nav-link">登录/注册</a>
+                        `);
+                    }
+                } catch (err) {
+                    document.querySelector('.top-nav').insertAdjacentHTML('beforeend', `
                         <a href="login.html" style="margin-left:auto;" class="nav-link">登录/注册</a>
                     `);
                 }
-            } catch (err) {
-                document.querySelector('.top-nav').insertAdjacentHTML('beforeend', `
-                    <a href="login.html" style="margin-left:auto;" class="nav-link">登录/注册</a>
-                `);
-            }
-        })();
+            })();
+            
+            // 退出登录功能
+            window.logout = function() {
+                if (confirm('确定要退出登录吗？')) {
+                    localStorage.removeItem('user');
+                    window.location.reload();
+                }
+            };
+            
+            // 卡片分类标签初始化
+            document.querySelectorAll('.lightcone-card').forEach(card => card.dataset.type = '光锥');
+            document.querySelectorAll('.material-card').forEach(card => card.dataset.type = '材料');
+        }, 1000);
         
-        // 退出登录功能
-        window.logout = function() {
-            if (confirm('确定要退出登录吗？')) {
-                localStorage.removeItem('user');
-                window.location.reload();
-            }
-        };
-        
-        // 卡片分类标签初始化
-        document.querySelectorAll('.lightcone-card').forEach(card => card.dataset.type = '光锥');
-        document.querySelectorAll('.material-card').forEach(card => card.dataset.type = '材料');
-    }, 1000);
-    // 3. 音乐播放器优化（简化通信逻辑，提升性能）
-    window.addEventListener('load', () => {
-        const iframe = document.getElementById('musicPlayerIframe');
-        
-        // 简化高度适配，减少跨域通信频率
-        setTimeout(() => {
+        // 3. 音乐播放器优化（简化通信逻辑，提升性能）
+        window.addEventListener('load', () => {
+            const iframe = document.getElementById('musicPlayerIframe');
+            
+            // 简化高度适配，减少跨域通信频率
+            setTimeout(() => {
+                try {
+                    const playerHeight = iframe.contentWindow.document.querySelector('.player-container').offsetHeight;
+                    iframe.style.height = `${playerHeight}px !important`;
+                } catch (err) {
+                    iframe.style.height = '335px !important';
+                }
+            }, 500);
+            
+            // 简化播放器状态同步
+            window.addEventListener('message', (e) => {
+                if (e.data?.type === 'SONG_LIST_TOGGLED') {
+                    iframe.style.height = e.data.isShow ? '400px !important' : '110px !important';
+                }
+            });
+            
+            // 初始状态同步（简化逻辑）
             try {
-                const playerHeight = iframe.contentWindow.document.querySelector('.player-container').offsetHeight;
-                iframe.style.height = `${playerHeight}px !important`;
-            } catch (err) {
-                iframe.style.height = '335px !important';
-            }
-        }, 500);
-        
-        // 简化播放器状态同步
-        window.addEventListener('message', (e) => {
-            if (e.data?.type === 'SONG_LIST_TOGGLED') {
-                iframe.style.height = e.data.isShow ? '400px !important' : '110px !important';
-            }
+                const savedState = localStorage.getItem('musicPlayerState');
+                if (savedState) {
+                    iframe.contentWindow.postMessage({ 
+                        type: 'INIT_STATE', 
+                        state: JSON.parse(savedState) 
+                    }, '*');
+                }
+            } catch (err) {}
+            
+            // 加载完成后隐藏全局加载动画
+            setTimeout(() => {
+                document.getElementById('global-loading').style.opacity = 0;
+                document.getElementById('global-loading').style.transition = 'opacity 0.5s ease';
+                setTimeout(() => {
+                    document.getElementById('global-loading').style.display = 'none';
+                }, 500);
+            }, 300);
         });
-        
-        // 初始状态同步（简化逻辑）
-        try {
-            const savedState = localStorage.getItem('musicPlayerState');
-            if (savedState) {
-                iframe.contentWindow.postMessage({ 
-                    type: 'INIT_STATE', 
-                    state: JSON.parse(savedState) 
-                }, '*');
-            }
-        } catch (err) {}
-    });
-    
-</script>
+    </script>
+
+    <!-- 独立引入雪花脚本（修复原嵌套错误） -->
     <script src="snow.js"></script>
 </body>
 </html>
