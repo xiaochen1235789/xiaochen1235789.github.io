@@ -47,9 +47,9 @@ function createSnow() {
 }
 
 // 3. 立即启动雪花生成（每500ms生成一片，平衡效果与性能）
-setInterval(createSnow, 500);
-// 初始额外生成20片，避免启动时雪花过少
-for (let i = 0; i < 20; i++) {
-  setTimeout(createSnow, i * 100); // 错开生成时间，更自然
+setInterval(createSnow, 380);
+// 初始额外生成40片，避免启动时雪花过少
+for (let i = 0; i < 40; i++) {
+  setTimeout(createSnow, i * 80); // 错开生成时间，更自然
 }
 
