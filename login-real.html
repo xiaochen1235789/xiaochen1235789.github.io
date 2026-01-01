@@ -5,634 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Supabase登录系统</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            width: 100%;
-            max-width: 400px;
-            padding: 40px;
-        }
-        
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
-            font-weight: 600;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-weight: 500;
-        }
-        
-        input {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e1e5e9;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-        
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        button {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin-top: 10px;
-        }
-        
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-        
-        button:active {
-            transform: translateY(0);
-        }
-        
-        .tabs {
-            display: flex;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #e1e5e9;
-        }
-        
-        .tab {
-            flex: 1;
-            text-align: center;
-            padding: 15px;
-            cursor: pointer;
-            color: #888;
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-        
-        .tab.active {
-            color: #667eea;
-            border-bottom: 3px solid #667eea;
-            margin-bottom: -2px;
-        }
-        
-        .form-container {
-            display: none;
-        }
-        
-        .form-container.active {
-            display: block;
-        }
-        
-        .user-info {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 30px;
-        }
-        
-        .alert {
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            display: none;
-        }
-        
-        .alert.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .alert.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .alert.info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-        
-        .loading {
-            display: none;
-            text-align: center;
-            margin: 20px 0;
-        }
-        
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* 新增：调试信息 */
-        .debug-info {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            font-size: 12px;
-            font-family: monospace;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        
-        .debug-info h4 {
-            margin-top: 0;
-            color: #666;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>用户登录系统</h1>
-        
-        <div class="alert" id="alert"></div>
-        
-        <!-- 连接状态显示 -->
-        <div id="connection-status" style="margin-bottom: 20px; padding: 10px; border-radius: 10px; background: #f0f0f0; display: none;">
-            <strong>状态：</strong><span id="status-text">检查中...</span>
-        </div>
-        
-        <div class="tabs">
-            <div class="tab active" onclick="showTab('login')">登录</div>
-            <div class="tab" onclick="showTab('register')">注册</div>
-        </div>
-        
-        <!-- 登录表单 -->
-        <div class="form-container active" id="login-form">
-            <div class="form-group">
-                <label for="login-email">邮箱</label>
-                <input type="email" id="login-email" placeholder="test@example.com">
-            </div>
-            
-            <div class="form-group">
-                <label for="login-password">密码</label>
-                <input type="password" id="login-password" placeholder="至少6位密码">
-            </div>
-            
-            <button onclick="login()">登录</button>
-            
-            <!-- 测试账号 -->
-            <div style="margin-top: 15px; font-size: 12px; color: #666; text-align: center;">
-                <p>测试账号：test@example.com / test123456</p>
-            </div>
-        </div>
-        
-        <!-- 注册表单 -->
-        <div class="form-container" id="register-form">
-            <div class="form-group">
-                <label for="register-email">邮箱</label>
-                <input type="email" id="register-email" placeholder="你的邮箱">
-            </div>
-            
-            <div class="form-group">
-                <label for="register-password">密码</label>
-                <input type="password" id="register-password" placeholder="至少6位密码">
-            </div>
-            
-            <div class="form-group">
-                <label for="register-username">用户名</label>
-                <input type="text" id="register-username" placeholder="可选">
-            </div>
-            
-            <div class="form-group">
-                <label for="register-fullname">姓名</label>
-                <input type="text" id="register-fullname" placeholder="可选">
-            </div>
-            
-            <button onclick="register()">注册账号</button>
-        </div>
-        
-        <!-- 用户信息 -->
-        <div class="user-info" id="user-info" style="display: none;">
-            <h3>用户信息</h3>
-            <p><strong>邮箱：</strong><span id="user-email"></span></p>
-            <p><strong>用户ID：</strong><span id="user-id"></span></p>
-            <p><strong>登录时间：</strong><span id="login-time"></span></p>
-            <button onclick="logout()" style="background: #dc3545;">退出登录</button>
-        </div>
-        
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>处理中...</p>
-        </div>
-        
-        <!-- 调试信息 -->
-        <div class="debug-info">
-            <h4>调试信息</h4>
-            <div id="debug-log"></div>
-        </div>
-        
-        <!-- 快速操作 -->
-        <div style="margin-top: 20px; text-align: center;">
-            <button onclick="testConnection()" style="background: #28a745; width: auto; padding: 10px 20px;">测试连接</button>
-            <button onclick="clearDebug()" style="background: #6c757d; width: auto; padding: 10px 20px; margin-left: 10px;">清空日志</button>
-        </div>
-    </div>
-
-    <script>
-        // =================== 配置信息 ===================
-        const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
-        // 使用你提供的新密钥（2026年1月1日有效）
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-        
-        // =================== 初始化 ===================
-        let supabase;
-        let isInitialized = false;
-        
-        // 调试日志
-        function debugLog(message, type = 'info') {
-            const logDiv = document.getElementById('debug-log');
-            const time = new Date().toLocaleTimeString();
-            const color = type === 'error' ? 'red' : 
-                         type === 'success' ? 'green' : 
-                         type === 'warning' ? 'orange' : 'black';
-            
-            const entry = `<div style="color:${color}; margin:2px 0; font-size:11px;">
-                [${time}] ${message}
-            </div>`;
-            
-            logDiv.innerHTML = entry + logDiv.innerHTML;
-        }
-        
-        // 清空调试日志
-        function clearDebug() {
-            document.getElementById('debug-log').innerHTML = '';
-            debugLog('日志已清空', 'info');
-        }
-        
-        // 显示消息
-        function showAlert(message, type = 'info') {
-            const alert = document.getElementById('alert');
-            alert.textContent = message;
-            alert.className = `alert ${type}`;
-            alert.style.display = 'block';
-            
-            // 同时记录到调试日志
-            debugLog(`消息: ${message}`, type);
-            
-            setTimeout(() => {
-                alert.style.display = 'none';
-            }, 5000);
-        }
-        
-        // 更新连接状态
-        function updateConnectionStatus(message, type = 'info') {
-            const statusDiv = document.getElementById('connection-status');
-            const statusText = document.getElementById('status-text');
-            
-            statusDiv.style.display = 'block';
-            statusDiv.style.background = type === 'error' ? '#f8d7da' : 
-                                       type === 'success' ? '#d4edda' : 
-                                       type === 'warning' ? '#fff3cd' : '#f0f0f0';
-            
-            statusText.textContent = message;
-            statusText.style.color = type === 'error' ? '#721c24' : 
-                                    type === 'success' ? '#155724' : 
-                                    type === 'warning' ? '#856404' : '#000';
-        }
-        
-        // 初始化Supabase
-        function initSupabase() {
-            try {
-                debugLog('正在初始化Supabase客户端...');
-                
-                if (typeof supabase === 'undefined') {
-                    debugLog('错误: Supabase库未加载', 'error');
-                    updateConnectionStatus('Supabase库加载失败', 'error');
-                    return false;
-                }
-                
-                // 验证密钥格式
-                if (!SUPABASE_ANON_KEY.startsWith('eyJ')) {
-                    debugLog('错误: API密钥格式不正确', 'error');
-                    updateConnectionStatus('API密钥格式错误', 'error');
-                    return false;
-                }
-                
-                // 创建客户端
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                isInitialized = true;
-                
-                debugLog('Supabase客户端初始化成功', 'success');
-                updateConnectionStatus('已连接到Supabase', 'success');
-                
-                return true;
-            } catch (error) {
-                debugLog(`初始化失败: ${error.message}`, 'error');
-                updateConnectionStatus(`连接失败: ${error.message}`, 'error');
-                return false;
-            }
-        }
-        
-        // 测试连接
-        async function testConnection() {
-            debugLog('开始测试Supabase连接...');
-            updateConnectionStatus('正在测试连接...', 'info');
-            
-            if (!isInitialized) {
-                if (!initSupabase()) {
-                    return;
-                }
-            }
-            
-            try {
-                // 测试1: 查询profiles表
-                debugLog('测试1: 查询profiles表...');
-                const { data, error } = await supabase
-                    .from('profiles')
-                    .select('count', { count: 'exact', head: true });
-                
-                if (error) {
-                    debugLog(`查询失败: ${error.message}`, 'error');
-                    updateConnectionStatus(`数据库查询失败: ${error.message}`, 'error');
-                } else {
-                    debugLog(`查询成功! profiles表中有 ${data} 条记录`, 'success');
-                    updateConnectionStatus('数据库连接正常', 'success');
-                }
-                
-                // 测试2: 检查认证服务
-                debugLog('测试2: 检查认证服务...');
-                const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-                
-                if (sessionError) {
-                    debugLog(`认证检查失败: ${sessionError.message}`, 'warning');
-                } else {
-                    const hasSession = sessionData.session ? '已登录' : '未登录';
-                    debugLog(`认证服务正常，当前会话: ${hasSession}`, 'success');
-                }
-                
-            } catch (error) {
-                debugLog(`连接测试异常: ${error.message}`, 'error');
-                updateConnectionStatus(`连接异常: ${error.message}`, 'error');
-            }
-        }
-        
-        // =================== 页面功能 ===================
-        // 显示/隐藏标签页
-        function showTab(tabName) {
-            // 更新标签样式
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.form-container').forEach(form => {
-                form.classList.remove('active');
-            });
-            
-            if (tabName === 'login') {
-                document.querySelector('.tab:nth-child(1)').classList.add('active');
-                document.getElementById('login-form').classList.add('active');
-            } else {
-                document.querySelector('.tab:nth-child(2)').classList.add('active');
-                document.getElementById('register-form').classList.add('active');
-            }
-        }
-        
-        // 显示/隐藏加载动画
-        function setLoading(isLoading) {
-            document.getElementById('loading').style.display = isLoading ? 'block' : 'none';
-        }
-        
-        // =================== 认证功能 ===================
-        // 登录函数
-        async function login() {
-            if (!isInitialized) {
-                showAlert('请先等待系统初始化完成', 'error');
-                return;
-            }
-            
-            const email = document.getElementById('login-email').value.trim();
-            const password = document.getElementById('login-password').value;
-            
-            if (!email || !password) {
-                showAlert('请输入邮箱和密码', 'error');
-                return;
-            }
-            
-            if (password.length < 6) {
-                showAlert('密码至少需要6位', 'error');
-                return;
-            }
-            
-            setLoading(true);
-            debugLog(`尝试登录: ${email}`);
-            
-            try {
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email,
-                    password
-                });
-                
-                if (error) {
-                    debugLog(`登录失败: ${error.message}`, 'error');
-                    showAlert(`登录失败：${error.message}`, 'error');
-                } else {
-                    debugLog(`登录成功! 用户: ${data.user.email}`, 'success');
-                    showAlert('登录成功！', 'success');
-                    updateUserInfo(data.user);
-                }
-            } catch (error) {
-                debugLog(`登录异常: ${error.message}`, 'error');
-                showAlert(`登录异常：${error.message}`, 'error');
-            } finally {
-                setLoading(false);
-            }
-        }
-        
-        // 注册函数
-        async function register() {
-            if (!isInitialized) {
-                showAlert('请先等待系统初始化完成', 'error');
-                return;
-            }
-            
-            const email = document.getElementById('register-email').value.trim();
-            const password = document.getElementById('register-password').value;
-            const username = document.getElementById('register-username').value.trim();
-            const fullname = document.getElementById('register-fullname').value.trim();
-            
-            if (!email || !password) {
-                showAlert('邮箱和密码不能为空', 'error');
-                return;
-            }
-            
-            if (password.length < 6) {
-                showAlert('密码至少需要6位', 'error');
-                return;
-            }
-            
-            setLoading(true);
-            debugLog(`尝试注册: ${email}`);
-            
-            try {
-                const { data, error } = await supabase.auth.signUp({
-                    email,
-                    password,
-                    options: {
-                        data: {
-                            username: username || email.split('@')[0],
-                            full_name: fullname || '新用户'
-                        }
-                    }
-                });
-                
-                if (error) {
-                    debugLog(`注册失败: ${error.message}`, 'error');
-                    showAlert(`注册失败：${error.message}`, 'error');
-                } else {
-                    debugLog(`注册成功! 用户ID: ${data.user?.id || '未知'}`, 'success');
-                    showAlert('注册成功！请检查邮箱确认邮件', 'success');
-                    
-                    // 清空表单
-                    document.getElementById('register-email').value = '';
-                    document.getElementById('register-password').value = '';
-                    document.getElementById('register-username').value = '';
-                    document.getElementById('register-fullname').value = '';
-                    
-                    // 切换到登录标签
-                    showTab('login');
-                    
-                    // 如果不需要邮箱确认，自动登录
-                    if (data.user?.email_confirmed_at) {
-                        updateUserInfo(data.user);
-                    }
-                }
-            } catch (error) {
-                debugLog(`注册异常: ${error.message}`, 'error');
-                showAlert(`注册异常：${error.message}`, 'error');
-            } finally {
-                setLoading(false);
-            }
-        }
-        
-        // 退出登录
-        async function logout() {
-            if (!isInitialized) {
-                return;
-            }
-            
-            setLoading(true);
-            debugLog('正在退出登录...');
-            
-            try {
-                await supabase.auth.signOut();
-                debugLog('已退出登录', 'info');
-                showAlert('已退出登录', 'info');
-                document.getElementById('user-info').style.display = 'none';
-                document.querySelector('.tab:nth-child(1)').classList.add('active');
-                document.getElementById('login-form').classList.add('active');
-            } catch (error) {
-                debugLog(`退出失败: ${error.message}`, 'error');
-                showAlert(`退出失败：${error.message}`, 'error');
-            } finally {
-                setLoading(false);
-            }
-        }
-        
-        // 更新用户信息显示
-        function updateUserInfo(user) {
-            document.getElementById('user-email').textContent = user.email;
-            document.getElementById('user-id').textContent = user.id.substring(0, 8) + '...';
-            document.getElementById('login-time').textContent = new Date().toLocaleString();
-            document.getElementById('user-info').style.display = 'block';
-            
-            // 清空登录表单
-            document.getElementById('login-email').value = '';
-            document.getElementById('login-password').value = '';
-            
-            debugLog(`显示用户信息: ${user.email}`, 'info');
-        }
-        
-        // 检查认证状态
-        async function checkAuthState() {
-            if (!isInitialized) {
-                return;
-            }
-            
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                
-                if (user) {
-                    debugLog(`检测到已登录用户: ${user.email}`, 'success');
-                    updateUserInfo(user);
-                    showAlert(`欢迎回来，${user.email}`, 'success');
-                } else {
-                    debugLog('当前没有用户登录', 'info');
-                }
-            } catch (error) {
-                debugLog(`检查认证状态失败: ${error.message}`, 'error');
-            }
-        }
-        
-        // =================== 页面初始化 ===================
-        document.addEventListener('DOMContentLoaded', function() {
-            debugLog('页面加载完成，开始初始化...');
-            
-            // 初始化Supabase
-            if (initSupabase()) {
-                // 绑定按钮事件
-                document.querySelector('.tab:nth-child(1)').addEventListener('click', () => showTab('login'));
-                document.querySelector('.tab:nth-child(2)').addEventListener('click', () => showTab('register'));
-                
-                // 检查当前登录状态
-                setTimeout(() => {
-                    checkAuthState();
-                    testConnection();
-                }, 1000);
-                
-                // 监听认证状态变化
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Supabase登录系统</title>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
         body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
@@ -641,32 +14,67 @@
         
         /* 标签页样式 */
         .tabs { display: flex; margin-bottom: 30px; border-bottom: 2px solid #e1e5e9; }
-        .tab { flex: 1; text-align: center; padding: 15px; cursor: pointer; color: #888; font-weight: 500; }
+        .tab { flex: 1; text-align: center; padding: 15px; cursor: pointer; color: #888; font-weight: 500; transition: color 0.3s; }
         .tab.active { color: #667eea; border-bottom: 3px solid #667eea; margin-bottom: -2px; }
+        .tab:hover { color: #764ba2; }
         
         /* 表单容器 */
-        .form-container { display: none; }
-        .form-container.active { display: block; }
+        .form-container { display: none; opacity: 0; transition: opacity 0.3s ease; }
+        .form-container.active { display: block; opacity: 1; }
         
         /* 用户信息 */
         .user-info { background: #f8f9fa; padding: 20px; border-radius: 10px; margin-top: 30px; }
         
         /* 通用样式 */
-        input, button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; font-size: 16px; }
+        input, button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; font-size: 16px; transition: all 0.3s; }
         input { border: 2px solid #e1e5e9; }
-        input:focus { outline: none; border-color: #667eea; }
+        input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
         button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; cursor: pointer; }
         button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
         
         /* 消息提示 */
-        .alert { padding: 15px; border-radius: 10px; margin-bottom: 20px; display: none; }
+        .alert { padding: 15px; border-radius: 10px; margin-bottom: 20px; display: none; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .alert.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .alert.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert.info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
         
         /* 加载动画 */
         .loading { display: none; text-align: center; margin: 20px 0; }
         .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 10px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* 密码输入框容器 */
+        .password-container { position: relative; }
+        .toggle-password { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; user-select: none; }
+        .toggle-password:hover { color: #667eea; }
+        
+        /* 密码强度指示器 */
+        .password-strength { display: flex; height: 4px; margin-top: 5px; gap: 2px; }
+        .password-strength-bar { flex: 1; background: #e1e5e9; border-radius: 2px; transition: background 0.3s; }
+        .password-hint { font-size: 12px; color: #666; margin-top: 5px; transition: color 0.3s; }
+        
+        /* 记住我选项 */
+        .remember-me { display: flex; align-items: center; margin: 10px 0; font-size: 14px; }
+        .remember-me input { width: auto; margin-right: 8px; }
+        .remember-me label { cursor: pointer; color: #555; }
+        
+        /* 响应式设计 */
+        @media (max-width: 480px) {
+            .container { padding: 20px; margin: 10px; }
+            input, button { padding: 12px; }
+            h1 { font-size: 24px; }
+        }
+        
+        /* 状态显示 */
+        #status { margin-bottom: 20px; padding: 10px; border-radius: 10px; background: #f0f0f0; transition: background 0.3s; }
+        #status-text { font-weight: 500; }
+        
+        /* 额外链接 */
+        .extra-links { text-align: center; margin-top: 15px; font-size: 14px; }
+        .extra-links a { color: #667eea; text-decoration: none; }
+        .extra-links a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -674,7 +82,7 @@
         <h1>用户登录系统</h1>
         
         <!-- 状态显示 -->
-        <div id="status" style="margin-bottom: 20px; padding: 10px; border-radius: 10px; background: #f0f0f0;">
+        <div id="status">
             状态：<span id="status-text">等待连接...</span>
         </div>
         
@@ -689,16 +97,48 @@
         <!-- 登录表单 -->
         <div class="form-container active" id="form-login">
             <input type="email" id="login-email" placeholder="邮箱地址">
-            <input type="password" id="login-password" placeholder="密码（至少6位）">
+            
+            <div class="password-container">
+                <input type="password" id="login-password" placeholder="密码（至少6位）">
+                <span class="toggle-password" onclick="togglePassword('login-password')">
+                    <i class="fas fa-eye"></i>
+                </span>
+            </div>
+            
+            <div class="remember-me">
+                <input type="checkbox" id="remember-me">
+                <label for="remember-me">记住我</label>
+            </div>
+            
             <button id="btn-login">登录</button>
+            
+            <div class="extra-links">
+                <a href="javascript:void(0)" onclick="showForgotPassword()">忘记密码？</a>
+            </div>
         </div>
         
         <!-- 注册表单 -->
         <div class="form-container" id="form-register">
             <input type="email" id="register-email" placeholder="邮箱地址">
-            <input type="password" id="register-password" placeholder="密码（至少6位）">
+            
+            <div class="password-container">
+                <input type="password" id="register-password" placeholder="密码（至少6位）" oninput="updatePasswordMeter(this.value)">
+                <span class="toggle-password" onclick="togglePassword('register-password')">
+                    <i class="fas fa-eye"></i>
+                </span>
+            </div>
+            
+            <div class="password-strength" id="password-strength">
+                <div class="password-strength-bar"></div>
+                <div class="password-strength-bar"></div>
+                <div class="password-strength-bar"></div>
+                <div class="password-strength-bar"></div>
+            </div>
+            <div class="password-hint" id="password-hint"></div>
+            
             <input type="text" id="register-username" placeholder="用户名（可选）">
             <input type="text" id="register-fullname" placeholder="姓名（可选）">
+            
             <button id="btn-register">注册</button>
         </div>
         
@@ -720,13 +160,13 @@
 
     <script>
         // =================== 配置信息 ===================
-        // 请确保这些信息正确！
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
         
         // =================== 全局变量 ===================
         let supabaseClient = null;
-        let currentPage = 'login'; // 当前页面状态
+        let currentPage = 'login';
+        let isSubmitting = false; // 防止重复提交
         
         // =================== 工具函数 ===================
         function showMessage(text, type = 'info') {
@@ -734,7 +174,11 @@
             alert.textContent = text;
             alert.className = `alert ${type}`;
             alert.style.display = 'block';
-            setTimeout(() => alert.style.display = 'none', 5000);
+            
+            // 错误消息显示7秒，其他消息5秒
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, type === 'error' ? 7000 : 5000);
         }
         
         function updateStatus(text, type = 'info') {
@@ -742,7 +186,6 @@
             const statusText = document.getElementById('status-text');
             statusText.textContent = text;
             
-            // 设置颜色
             const colors = {
                 info: '#f0f0f0',
                 success: '#d4edda',
@@ -754,6 +197,13 @@
         
         function setLoading(loading) {
             document.getElementById('loading').style.display = loading ? 'block' : 'none';
+            isSubmitting = loading;
+            
+            // 禁用/启用按钮
+            const loginBtn = document.getElementById('btn-login');
+            const registerBtn = document.getElementById('btn-register');
+            if (loginBtn) loginBtn.disabled = loading;
+            if (registerBtn) registerBtn.disabled = loading;
         }
         
         function switchTab(tabName) {
@@ -767,7 +217,142 @@
             // 更新表单
             document.getElementById('form-login').classList.remove('active');
             document.getElementById('form-register').classList.remove('active');
-            document.getElementById(`form-${tabName}`).classList.add('active');
+            
+            // 使用setTimeout确保动画效果
+            setTimeout(() => {
+                document.getElementById(`form-${tabName}`).classList.add('active');
+            }, 10);
+        }
+        
+        // =================== 表单验证函数 ===================
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+        
+        function validatePassword(password) {
+            return password.length >= 6;
+        }
+        
+        function validateRegistration(email, password, username) {
+            const errors = [];
+            
+            // 邮箱验证
+            if (!validateEmail(email)) {
+                errors.push('请输入有效的邮箱地址');
+            }
+            
+            // 密码验证
+            if (!validatePassword(password)) {
+                errors.push('密码至少需要6位');
+            }
+            
+            // 用户名检查
+            if (username && username.length > 20) {
+                errors.push('用户名不能超过20个字符');
+            }
+            
+            return errors;
+        }
+        
+        // 密码强度检测
+        function updatePasswordMeter(password) {
+            const bars = document.querySelectorAll('#password-strength .password-strength-bar');
+            const hint = document.getElementById('password-hint');
+            
+            // 重置
+            bars.forEach(bar => bar.style.background = '#e1e5e9');
+            
+            if (!password) {
+                hint.textContent = '';
+                return;
+            }
+            
+            let score = 0;
+            const checks = [
+                password.length >= 6,
+                password.length >= 8,
+                /[A-Z]/.test(password),
+                /[0-9]/.test(password),
+                /[^A-Za-z0-9]/.test(password)
+            ];
+            
+            score = checks.filter(Boolean).length;
+            
+            // 更新进度条
+            for (let i = 0; i < Math.min(score, 4); i++) {
+                const colors = ['#ff4444', '#ffaa44', '#44aa44', '#44aa44'];
+                bars[i].style.background = colors[Math.min(score - 1, 3)];
+            }
+            
+            // 提示文字
+            const hints = [
+                '密码太短',
+                '还可以更强',
+                '不错的密码',
+                '强密码',
+                '非常强的密码'
+            ];
+            hint.textContent = hints[Math.min(score, 4)];
+            hint.style.color = ['#ff4444', '#ffaa44', '#44aa44', '#44aa44', '#44aa44'][Math.min(score, 4)];
+        }
+        
+        // =================== 界面功能函数 ===================
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const icon = input.nextElementSibling.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+        
+        async function showForgotPassword() {
+            const email = prompt('请输入您的邮箱地址：');
+            if (!email) return;
+            
+            if (!validateEmail(email)) {
+                showMessage('请输入有效的邮箱地址', 'error');
+                return;
+            }
+            
+            setLoading(true);
+            
+            try {
+                const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
+                
+                if (error) {
+                    showMessage(`发送重置邮件失败: ${error.message}`, 'error');
+                } else {
+                    showMessage('重置密码邮件已发送，请检查您的邮箱', 'success');
+                }
+            } catch (error) {
+                showMessage(`操作异常: ${error.message}`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        // =================== 错误处理函数 ===================
+        function handleAuthError(error) {
+            console.error('认证错误:', error);
+            
+            const errorMap = {
+                'Invalid login credentials': '邮箱或密码错误',
+                'Email not confirmed': '请先验证邮箱（检查垃圾邮件箱）',
+                'User already registered': '该邮箱已注册',
+                'Password should be at least 6 characters': '密码至少6位',
+                'Invalid email address': '邮箱格式不正确',
+                'To signup, please provide your email': '注册需要提供邮箱',
+                'A user with this email address has already been registered': '该邮箱已注册'
+            };
+            
+            const message = errorMap[error.message] || error.message || '操作失败，请稍后重试';
+            showMessage(message, 'error');
         }
         
         // =================== 初始化Supabase ===================
@@ -801,15 +386,24 @@
         
         // =================== 认证函数 ===================
         async function login() {
+            if (isSubmitting) return;
+            
             const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
+            const rememberMe = document.getElementById('remember-me')?.checked;
             
+            // 验证输入
             if (!email || !password) {
                 showMessage('请输入邮箱和密码', 'error');
                 return;
             }
             
-            if (password.length < 6) {
+            if (!validateEmail(email)) {
+                showMessage('请输入有效的邮箱地址', 'error');
+                return;
+            }
+            
+            if (!validatePassword(password)) {
                 showMessage('密码至少需要6位', 'error');
                 return;
             }
@@ -823,10 +417,15 @@
                 });
                 
                 if (error) {
-                    showMessage(`登录失败: ${error.message}`, 'error');
+                    handleAuthError(error);
                 } else {
                     showMessage('登录成功！', 'success');
                     showUserInfo(data.user);
+                    
+                    // 如果选择了"记住我"，延长会话
+                    if (rememberMe) {
+                        await supabaseClient.auth.refreshSession();
+                    }
                 }
             } catch (error) {
                 showMessage(`登录异常: ${error.message}`, 'error');
@@ -836,18 +435,17 @@
         }
         
         async function register() {
+            if (isSubmitting) return;
+            
             const email = document.getElementById('register-email').value.trim();
             const password = document.getElementById('register-password').value;
             const username = document.getElementById('register-username').value.trim();
             const fullname = document.getElementById('register-fullname').value.trim();
             
-            if (!email || !password) {
-                showMessage('邮箱和密码不能为空', 'error');
-                return;
-            }
-            
-            if (password.length < 6) {
-                showMessage('密码至少需要6位', 'error');
+            // 验证输入
+            const validationErrors = validateRegistration(email, password, username);
+            if (validationErrors.length > 0) {
+                validationErrors.forEach(error => showMessage(error, 'error'));
                 return;
             }
             
@@ -866,22 +464,25 @@
                 });
                 
                 if (error) {
-                    showMessage(`注册失败: ${error.message}`, 'error');
+                    handleAuthError(error);
                 } else {
-                    showMessage('注册成功！', 'success');
+                    showMessage('注册成功！请检查邮箱验证邮件', 'success');
                     
                     // 清空表单
                     document.getElementById('register-email').value = '';
                     document.getElementById('register-password').value = '';
                     document.getElementById('register-username').value = '';
                     document.getElementById('register-fullname').value = '';
+                    updatePasswordMeter(''); // 重置密码强度指示器
                     
                     // 切换到登录标签
                     switchTab('login');
                     
                     // 如果不需要邮箱确认，自动登录
                     if (data.user?.email_confirmed_at) {
-                        showUserInfo(data.user);
+                        setTimeout(() => {
+                            showUserInfo(data.user);
+                        }, 1000);
                     }
                 }
             } catch (error) {
@@ -892,6 +493,8 @@
         }
         
         async function logout() {
+            if (isSubmitting) return;
+            
             setLoading(true);
             
             try {
@@ -935,14 +538,47 @@
             }
         }
         
-        // =================== 页面初始化 ===================
+        // =================== 防抖函数 ===================
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        // =================== 事件绑定与初始化 ===================
         async function initPage() {
             // 绑定事件
             document.getElementById('tab-login').addEventListener('click', () => switchTab('login'));
             document.getElementById('tab-register').addEventListener('click', () => switchTab('register'));
-            document.getElementById('btn-login').addEventListener('click', login);
-            document.getElementById('btn-register').addEventListener('click', register);
+            
+            // 使用防抖处理按钮点击
+            const debouncedLogin = debounce(login, 500);
+            const debouncedRegister = debounce(register, 500);
+            
+            document.getElementById('btn-login').addEventListener('click', debouncedLogin);
+            document.getElementById('btn-register').addEventListener('click', debouncedRegister);
             document.getElementById('btn-logout').addEventListener('click', logout);
+            
+            // Enter键提交表单
+            document.getElementById('login-email').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') debouncedLogin();
+            });
+            document.getElementById('login-password').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') debouncedLogin();
+            });
+            
+            document.getElementById('register-email').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') debouncedRegister();
+            });
+            document.getElementById('register-password').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') debouncedRegister();
+            });
             
             // 初始化Supabase
             if (await initSupabase()) {
@@ -957,13 +593,21 @@
                         showUserInfo(session.user);
                     } else if (event === 'SIGNED_OUT') {
                         hideUserInfo();
+                    } else if (event === 'USER_UPDATED') {
+                        // 用户信息更新
+                        if (session?.user) {
+                            showMessage('用户信息已更新', 'success');
+                        }
                     }
                 });
             }
             
-            // 自动填充测试账号（方便测试）
-            document.getElementById('login-email').value = 'test@example.com';
-            document.getElementById('login-password').value = 'test123456';
+            // 自动填充测试账号（仅限本地环境）
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                document.getElementById('login-email').value = 'test@example.com';
+                document.getElementById('login-password').value = 'test123456';
+                showMessage('已填充测试账号（仅限本地环境）', 'info');
+            }
         }
         
         // 页面加载完成后初始化
