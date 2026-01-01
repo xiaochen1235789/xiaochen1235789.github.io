@@ -1114,7 +1114,29 @@
 
     <!-- 通知消息容器 -->
     <div class="notification" id="notification"></div>
-
+    <!-- 登录状态条 -->
+<div id="userStatusBar" style="
+    background: #2d443b;
+    padding: 10px 20px;
+    border-bottom: 1px solid #3a5048;
+    display: none;
+">
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;">
+        <span id="welcomeMsg"></span>
+        <button onclick="logout()" style="
+            background: #3a5048;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        ">
+            退出登录
+        </button>
+    </div>
+</div>
+    
     <!-- 导航栏 -->
     <nav class="top-nav" aria-label="主要导航">
         <div class="nav-title">
@@ -2046,6 +2068,34 @@
             }
         });
     }
+
+        <script>
+// 检查登录状态
+function checkLoginStatus() {
+    const userData = localStorage.getItem('user');
+    const statusBar = document.getElementById('userStatusBar');
+    const welcomeMsg = document.getElementById('welcomeMsg');
+    
+    if (userData) {
+        const user = JSON.parse(userData);
+        if (user.isLoggedIn) {
+            statusBar.style.display = 'block';
+            welcomeMsg.innerHTML = `👤 欢迎回来，<strong style="color:#a8d0b9">${user.username}</strong>`;
+        }
+    }
+}
+
+// 退出登录
+function logout() {
+    if (confirm('确定要退出登录吗？')) {
+        localStorage.removeItem('user');
+        alert('已退出登录');
+        window.location.reload();
+    }
+}
+
+// 页面加载时检查
+document.addEventListener('DOMContentLoaded', checkLoginStatus);
 
     // 在页面加载完成后调用
     setTimeout(highlightCurrentYearUpdates, 1000);
