@@ -16,6 +16,8 @@
             --border: #3a5048;
             --success: #4ade80;
             --error: #f87171;
+            --warning: #fbbf24;
+            --info: #60a5fa;
         }
         
         * {
@@ -124,6 +126,59 @@
             color: #6b8a7e;
         }
         
+        .password-strength {
+            height: 4px;
+            margin-top: 4px;
+            border-radius: 2px;
+            background: #3a5048;
+            overflow: hidden;
+        }
+        
+        .strength-bar {
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s, background-color 0.3s;
+        }
+        
+        .strength-weak {
+            background-color: var(--error);
+            width: 33%;
+        }
+        
+        .strength-medium {
+            background-color: var(--warning);
+            width: 66%;
+        }
+        
+        .strength-strong {
+            background-color: var(--success);
+            width: 100%;
+        }
+        
+        .strength-text {
+            font-size: 0.8rem;
+            margin-top: 2px;
+            text-align: right;
+        }
+        
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .remember-me input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        
+        .remember-me label {
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        
         .btn {
             background: #3a5048;
             color: white;
@@ -146,6 +201,13 @@
             transform: translateY(0);
         }
         
+        .btn:disabled {
+            background: #2d3a36;
+            color: #6b8a7e;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
         .message {
             padding: 12px 16px;
             border-radius: 8px;
@@ -166,6 +228,20 @@
             background: rgba(248, 113, 113, 0.1);
             border: 1px solid rgba(248, 113, 113, 0.3);
             color: var(--error);
+            display: block;
+        }
+        
+        .message.warning {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            color: var(--warning);
+            display: block;
+        }
+        
+        .message.info {
+            background: rgba(96, 165, 250, 0.1);
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            color: var(--info);
             display: block;
         }
         
@@ -212,6 +288,31 @@
             text-decoration: underline;
         }
         
+        .additional-links {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-size: 0.85rem;
+        }
+        
+        .additional-links a {
+            color: var(--text-highlight);
+            text-decoration: none;
+        }
+        
+        .additional-links a:hover {
+            text-decoration: underline;
+        }
+        
+        .security-note {
+            font-size: 0.75rem;
+            color: #6b8a7e;
+            text-align: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed var(--border);
+        }
+        
         @media (max-width: 480px) {
             .form-container {
                 padding: 25px 20px;
@@ -220,6 +321,12 @@
             .tab {
                 padding: 10px;
                 font-size: 0.9rem;
+            }
+            
+            .additional-links {
+                flex-direction: column;
+                gap: 8px;
+                align-items: center;
             }
         }
     </style>
@@ -233,12 +340,12 @@
         
         <div class="form-container">
             <!-- 登录表单 -->
-            <form id="loginForm" class="form active" onsubmit="return false;">
+            <form id="loginForm" class="form active">
                 <h2 style="text-align: center; color: var(--text-highlight); margin-bottom: 20px;">登录账号</h2>
                 
                 <div class="form-group">
-                    <label for="loginUsername">用户名</label>
-                    <input type="text" id="loginUsername" placeholder="请输入用户名" required>
+                    <label for="loginEmail">邮箱</label>
+                    <input type="email" id="loginEmail" placeholder="请输入邮箱" required>
                 </div>
                 
                 <div class="form-group">
@@ -246,31 +353,52 @@
                     <input type="password" id="loginPassword" placeholder="请输入密码" required>
                 </div>
                 
-                <button type="submit" class="btn" onclick="login()">登录</button>
+                <div class="remember-me">
+                    <input type="checkbox" id="rememberMe">
+                    <label for="rememberMe">记住我</label>
+                </div>
+                
+                <button type="submit" class="btn" id="loginBtn">登录</button>
+                
+                <div class="additional-links">
+                    <a href="#" onclick="showResetPassword()">忘记密码？</a>
+                    <a href="#" onclick="showResendVerification()">重发验证邮件</a>
+                </div>
                 
                 <div class="message" id="loginMessage"></div>
             </form>
             
             <!-- 注册表单 -->
-            <form id="registerForm" class="form" onsubmit="return false;">
+            <form id="registerForm" class="form">
                 <h2 style="text-align: center; color: var(--text-highlight); margin-bottom: 20px;">注册新账号</h2>
+                
+                <div class="form-group">
+                    <label for="registerEmail">邮箱</label>
+                    <input type="email" id="registerEmail" placeholder="请输入有效邮箱" required>
+                </div>
                 
                 <div class="form-group">
                     <label for="registerUsername">用户名</label>
                     <input type="text" id="registerUsername" placeholder="请输入用户名（3-20字符）" required>
+                    <div class="strength-text" id="usernameCheck"></div>
                 </div>
                 
                 <div class="form-group">
                     <label for="registerPassword">密码</label>
-                    <input type="password" id="registerPassword" placeholder="请输入密码（至少6位）" required>
+                    <input type="password" id="registerPassword" placeholder="请输入密码（至少8位）" required>
+                    <div class="password-strength">
+                        <div class="strength-bar" id="passwordStrengthBar"></div>
+                    </div>
+                    <div class="strength-text" id="passwordStrengthText"></div>
                 </div>
                 
                 <div class="form-group">
                     <label for="confirmPassword">确认密码</label>
                     <input type="password" id="confirmPassword" placeholder="请再次输入密码" required>
+                    <div class="strength-text" id="passwordMatchText"></div>
                 </div>
                 
-                <button type="submit" class="btn" onclick="register()">注册</button>
+                <button type="submit" class="btn" id="registerBtn">注册</button>
                 
                 <div class="message" id="registerMessage"></div>
             </form>
@@ -282,6 +410,10 @@
             </div>
         </div>
         
+        <div class="security-note">
+            您的信息安全已加密保护
+        </div>
+        
         <div class="back-link">
             <a href="index.html">
                 ← 返回首页
@@ -291,12 +423,18 @@
 
     <script>
         // === 配置部分：填Supabase信息 ===
-        const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';  // 替换为你的 Supabase URL
-        const SUPABASE_KEY = 'sb_publishable_ljgB6Zf_Yi5zD8-36izvJw_RTkSbU4P';  // 替换为你的 Supabase 公钥
+        // 注意：在生产环境中，应该通过环境变量或后端API获取这些信息
+        const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_ljgB6Zf_Yi5zD8-36izvJw_RTkSbU4P';
         // ======================================
         
         // 初始化 Supabase 客户端
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // 安全设置
+        let loginAttempts = 0;
+        const MAX_LOGIN_ATTEMPTS = 5;
+        const LOCKOUT_DURATION = 10 * 60 * 1000; // 10分钟
         
         // 切换登录/注册标签
         function switchTab(tab) {
@@ -322,6 +460,10 @@
         // 显示加载动画
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'block' : 'none';
+            
+            // 禁用/启用按钮
+            document.getElementById('loginBtn').disabled = show;
+            document.getElementById('registerBtn').disabled = show;
         }
         
         // 显示消息
@@ -330,87 +472,247 @@
             element.textContent = text;
             element.className = `message ${type}`;
             
-            // 自动隐藏错误消息
-            if (type === 'error') {
-                setTimeout(() => {
+            // 自动隐藏消息
+            const timeout = type === 'error' ? 5000 : 3000;
+            setTimeout(() => {
+                if (element.textContent === text) {
                     element.className = 'message';
-                }, 5000);
+                }
+            }, timeout);
+        }
+        
+        // HTML转义函数，防止XSS攻击
+        function escapeHTML(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // 检查登录尝试次数
+        function checkLoginAttempts() {
+            const attempts = parseInt(localStorage.getItem('loginAttempts') || '0');
+            const lastAttempt = parseInt(localStorage.getItem('lastLoginAttempt') || '0');
+            const now = Date.now();
+            
+            // 检查是否在锁定时间内
+            if (attempts >= MAX_LOGIN_ATTEMPTS && (now - lastAttempt) < LOCKOUT_DURATION) {
+                const remainingMinutes = Math.ceil((LOCKOUT_DURATION - (now - lastAttempt)) / 60000);
+                return {
+                    locked: true,
+                    message: `登录尝试次数过多，请${remainingMinutes}分钟后再试`
+                };
+            }
+            // 如果超过锁定时间，重置尝试次数
+            if ((now - lastAttempt) >= LOCKOUT_DURATION) {
+                localStorage.setItem('loginAttempts', '0');
+            }
+            
+            return { locked: false, message: '' };
+        }
+        
+        // 记录登录尝试
+        function recordLoginAttempt() {
+            const attempts = parseInt(localStorage.getItem('loginAttempts') || '0') + 1;
+            localStorage.setItem('loginAttempts', attempts.toString());
+            localStorage.setItem('lastLoginAttempt', Date.now().toString());
+            
+            // 如果达到最大尝试次数，锁定
+            if (attempts >= MAX_LOGIN_ATTEMPTS) {
+                localStorage.setItem('lockoutTime', Date.now().toString());
+            }
+        }
+        
+        // 重置登录尝试记录
+        function resetLoginAttempts() {
+            localStorage.setItem('loginAttempts', '0');
+            localStorage.setItem('lastLoginAttempt', '0');
+        }
+        
+        // 密码强度检查
+        function checkPasswordStrength(password) {
+            if (!password) return { strength: 'none', score: 0 };
+            
+            let score = 0;
+            
+            // 长度检查
+            if (password.length >= 8) score += 1;
+            if (password.length >= 12) score += 1;
+            
+            // 复杂度检查
+            if (/[a-z]/.test(password)) score += 1; // 小写字母
+            if (/[A-Z]/.test(password)) score += 1; // 大写字母
+            if (/\d/.test(password)) score += 1; // 数字
+            if (/[^A-Za-z0-9]/.test(password)) score += 1; // 特殊字符
+            
+            // 确定强度级别
+            let strength;
+            if (score >= 5) strength = 'strong';
+            else if (score >= 3) strength = 'medium';
+            else if (score >= 1) strength = 'weak';
+            else strength = 'none';
+            
+            return { strength, score };
+        }
+        
+        // 更新密码强度显示
+        function updatePasswordStrength() {
+            const password = document.getElementById('registerPassword').value;
+            const { strength } = checkPasswordStrength(password);
+            const bar = document.getElementById('passwordStrengthBar');
+            const text = document.getElementById('passwordStrengthText');
+            
+            bar.className = 'strength-bar';
+            text.textContent = '';
+            
+            if (strength === 'weak') {
+                bar.classList.add('strength-weak');
+                text.textContent = '密码强度：弱';
+                text.style.color = 'var(--error)';
+            } else if (strength === 'medium') {
+                bar.classList.add('strength-medium');
+                text.textContent = '密码强度：中等';
+                text.style.color = 'var(--warning)';
+            } else if (strength === 'strong') {
+                bar.classList.add('strength-strong');
+                text.textContent = '密码强度：强';
+                text.style.color = 'var(--success)';
+            }
+        }
+        
+        // 检查用户名
+        function checkUsername() {
+            const username = document.getElementById('registerUsername').value.trim();
+            const checkElement = document.getElementById('usernameCheck');
+            
+            if (username.length === 0) {
+                checkElement.textContent = '';
+                return true;
+            }
+            
+            if (username.length < 3) {
+                checkElement.textContent = '用户名至少3个字符';
+                checkElement.style.color = 'var(--error)';
+                return false;
+            }
+            
+            if (username.length > 20) {
+                checkElement.textContent = '用户名最多20个字符';
+                checkElement.style.color = 'var(--error)';
+                return false;
+            }
+            
+            if (/[<>"'&]/.test(username)) {
+                checkElement.textContent = '不能包含特殊字符<>"\'&';
+                checkElement.style.color = 'var(--error)';
+                return false;
+            }
+            
+            checkElement.textContent = '用户名可用';
+            checkElement.style.color = 'var(--success)';
+            return true;
+        }
+        
+        // 检查密码是否匹配
+        function checkPasswordMatch() {
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const matchText = document.getElementById('passwordMatchText');
+            
+            if (!password || !confirmPassword) {
+                matchText.textContent = '';
+                return true;
+            }
+            
+            if (password === confirmPassword) {
+                matchText.textContent = '密码匹配';
+                matchText.style.color = 'var(--success)';
+                return true;
+            } else {
+                matchText.textContent = '密码不匹配';
+                matchText.style.color = 'var(--error)';
+                return false;
             }
         }
         
         // === 注册功能 ===
-        async function register() {
+        async function register(e) {
+            if (e) e.preventDefault();
+            
+            const email = document.getElementById('registerEmail').value.trim();
             const username = document.getElementById('registerUsername').value.trim();
             const password = document.getElementById('registerPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             
-            // 简单验证
-            if (username.length < 3 || username.length > 20) {
-                showMessage('registerMessage', '用户名长度应为3-20字符', 'error');
+            // 验证输入
+            if (!email || !email.includes('@')) {
+                showMessage('registerMessage', '请输入有效的邮箱地址', 'error');
                 return;
             }
             
-            if (password.length < 6) {
-                showMessage('registerMessage', '密码长度至少6位', 'error');
+            if (!checkUsername()) {
+                showMessage('registerMessage', '用户名不符合要求', 'error');
                 return;
             }
             
-            if (password !== confirmPassword) {
+            if (password.length < 8) {
+                showMessage('registerMessage', '密码长度至少8位', 'error');
+                return;
+            }
+            
+            if (!checkPasswordMatch()) {
                 showMessage('registerMessage', '两次输入的密码不一致', 'error');
                 return;
+            }
+            
+            const passwordStrength = checkPasswordStrength(password);
+            if (passwordStrength.strength === 'weak') {
+                if (!confirm('密码强度较弱，建议使用更复杂的密码。是否继续注册？')) {
+                    return;
+                }
             }
             
             // 显示加载
             showLoading(true);
             
             try {
-                // 1. 检查用户名是否已存在
-                const { data: existingUsers, error: checkError } = await supabase
-                    .from('users')
-                    .select('username')
-                    .eq('username', username)
-                    .limit(1);
-                
-                if (checkError) throw checkError;
-                
-                if (existingUsers && existingUsers.length > 0) {
-                    showMessage('registerMessage', '用户名已存在，请换一个', 'error');
-                    showLoading(false);
-                    return;
-                }
-                
-                // 2. 创建新用户（实际项目中应该对密码进行哈希加密）
-                const { data, error } = await supabase
-                    .from('users')
-                    .insert([
-                        { 
-                            username: username, 
-                            password: password  // 注意：实际项目应该使用 bcrypt 加密
+                // 使用 Supabase Auth 注册
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            username: username,
+                            created_at: new Date().toISOString()
                         }
-                    ])
-                    .select();
+                    }
+                });
                 
-                if (error) throw error;
-                
-                // 注册成功
-                showMessage('registerMessage', '注册成功！正在自动登录...', 'success');
-                
-                // 自动登录
-                setTimeout(async () => {
-                    const user = data[0];
-                    localStorage.setItem('user', JSON.stringify({
-                        id: user.id,
-                        username: user.username,
-                        isLoggedIn: true
-                    }));
+                if (error) {
+                    // 检查是否是邮箱已存在的错误
+                    if (error.message.includes('already registered')) {
+                        showMessage('registerMessage', '该邮箱已注册，请直接登录或使用其他邮箱', 'error');
+                    } else {
+                        throw error;
+                    }
+                } else {
+                    // 注册成功
+                    const safeUsername = escapeHTML(username);
+                    showMessage('registerMessage', `注册成功！欢迎 ${safeUsername}。请检查邮箱验证邮件。`, 'success');
                     
-                    showMessage('registerMessage', `欢迎 ${user.username}！即将跳转到首页...`, 'success');
+                    // 清空表单
+                    document.getElementById('registerForm').reset();
+                    document.getElementById('passwordStrengthBar').className = 'strength-bar';
+                    document.getElementById('passwordStrengthText').textContent = '';
+                    document.getElementById('usernameCheck').textContent = '';
+                    document.getElementById('passwordMatchText').textContent = '';
                     
-                    // 3秒后跳转
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 2000);
-                }, 1000);
+                    // 如果是邮箱确认模式，提示用户验证邮箱
+                    if (data.user && !data.user.email_confirmed_at) {
+                        setTimeout(() => {
+                            showMessage('registerMessage', '请检查您的邮箱并点击验证链接以激活账户。', 'info');
+                        }, 3000);
+                    }
+                }
                 
             } catch (error) {
                 console.error('注册错误:', error);
@@ -421,84 +723,202 @@
         }
         
         // === 登录功能 ===
-        async function login() {
-            const username = document.getElementById('loginUsername').value.trim();
-            const password = document.getElementById('loginPassword').value;
+        async function login(e) {
+            if (e) e.preventDefault();
             
-            if (!username || !password) {
-                showMessage('loginMessage', '请输入用户名和密码', 'error');
+            // 检查登录尝试次数
+            const attemptCheck = checkLoginAttempts();
+            if (attemptCheck.locked) {
+                showMessage('loginMessage', attemptCheck.message, 'error');
+                return;
+            }
+            
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+            
+            if (!email || !email.includes('@')) {
+                showMessage('loginMessage', '请输入有效的邮箱地址', 'error');
+                return;
+            }
+            
+            if (!password) {
+                showMessage('loginMessage', '请输入密码', 'error');
                 return;
             }
             
             showLoading(true);
             
             try {
-                // 查询用户
-                const { data: users, error } = await supabase
-                    .from('users')
-                    .select('*')
-                    .eq('username', username)
-                    .eq('password', password)  // 注意：实际项目应该对比哈希后的密码
-                    .limit(1);
+                // 使用 Supabase Auth 登录
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
                 
-                if (error) throw error;
-                
-                if (!users || users.length === 0) {
-                    showMessage('loginMessage', '用户名或密码错误', 'error');
-                    showLoading(false);
-                    return;
+                if (error) {
+                    // 记录失败的登录尝试
+                    recordLoginAttempt();
+                    
+                    // 根据错误类型显示不同的消息
+                    if (error.message.includes('Invalid login credentials')) {
+                        showMessage('loginMessage', '邮箱或密码错误', 'error');
+                    } else if (error.message.includes('Email not confirmed')) {
+                        showMessage('loginMessage', '邮箱未验证，请检查您的邮箱', 'warning');
+                    } else {
+                        throw error;
+                    }
+                } else {
+                    // 登录成功，重置尝试次数
+                    resetLoginAttempts();
+                    
+                    // 获取用户信息
+                    const { data: userData, error: userError } = await supabase
+                        .from('profiles')
+                        .select('username')
+                        .eq('id', data.user.id)
+                        .single();
+                    
+                    const username = userError ? email.split('@')[0] : (userData?.username || email.split('@')[0]);
+                    const safeUsername = escapeHTML(username);
+                    
+                    showMessage('loginMessage', `登录成功！欢迎 ${safeUsername}`, 'success');
+                    
+                    // 保存用户信息到本地存储
+                    const userInfo = {
+                        id: data.user.id,
+                        email: data.user.email,
+                        username: username,
+                        isLoggedIn: true,
+                        sessionExpires: data.session.expires_at
+                    };
+                    
+                    if (rememberMe) {
+                        localStorage.setItem('user', JSON.stringify(userInfo));
+                    } else {
+                        sessionStorage.setItem('user', JSON.stringify(userInfo));
+                        localStorage.removeItem('user');
+                    }
+                    
+                    // 2秒后跳转
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 2000);
                 }
-                
-                const user = users[0];
-                
-                // 登录成功
-                showMessage('loginMessage', '登录成功！', 'success');
-                
-                // 保存用户信息到本地存储
-                localStorage.setItem('user', JSON.stringify({
-                    id: user.id,
-                    username: user.username,
-                    isLoggedIn: true,
-                    createdAt: user.created_at
-                }));
-                
-                // 2秒后跳转
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 2000);
                 
             } catch (error) {
                 console.error('登录错误:', error);
                 showMessage('loginMessage', `登录失败: ${error.message}`, 'error');
+            } finally {
                 showLoading(false);
+            }
+        }
+        
+        // === 重置密码功能 ===
+        async function showResetPassword() {
+            const email = prompt('请输入您的邮箱地址以重置密码：');
+            if (!email || !email.includes('@')) {
+                alert('请输入有效的邮箱地址');
+                return;
+            }
+            
+            try {
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: window.location.origin + '/reset-password.html'
+                });
+                
+                if (error) throw error;
+                
+                alert('重置密码邮件已发送，请检查您的邮箱');
+            } catch (error) {
+                console.error('重置密码错误:', error);
+                alert('发送重置密码邮件失败: ' + error.message);
+            }
+        }
+        
+        // === 重发验证邮件 ===
+        async function showResendVerification() {
+            const email = prompt('请输入您的邮箱地址以重发验证邮件：');
+            if (!email || !email.includes('@')) {
+                alert('请输入有效的邮箱地址');
+                return;
+            }
+            
+            try {
+                const { error } = await supabase.auth.resend({
+                    type: 'signup',
+                    email: email
+                });
+                
+                if (error) throw error;
+                
+                alert('验证邮件已重新发送，请检查您的邮箱');
+            } catch (error) {
+                console.error('重发验证邮件错误:', error);
+                alert('重发验证邮件失败: ' + error.message);
             }
         }
         
         // === 检查登录状态 ===
         function checkLoginStatus() {
-            const userData = localStorage.getItem('user');
+            const userData = localStorage.getItem('user') || sessionStorage.getItem('user');
             if (userData) {
                 const user = JSON.parse(userData);
                 if (user.isLoggedIn) {
+                    // 检查会话是否过期
+                    if (user.sessionExpires && user.sessionExpires < Date.now() / 1000) {
+                        // 会话已过期，清除用户数据
+                        localStorage.removeItem('user');
+                        sessionStorage.removeItem('user');
+                        return;
+                    }
+                    
                     // 如果已登录，直接跳转到首页
                     window.location.href = 'index.html';
                 }
             }
         }
         
-        // 页面加载时检查登录状态
+        // 页面加载时初始化
         document.addEventListener('DOMContentLoaded', function() {
+            // 检查登录状态
             checkLoginStatus();
+            
+            // 恢复记住的邮箱
+            const rememberedUser = localStorage.getItem('rememberedUser');
+            if (rememberedUser) {
+                document.getElementById('loginEmail').value = rememberedUser;
+                document.getElementById('rememberMe').checked = true;
+            }
+            
+            // 绑定表单提交事件
+            document.getElementById('loginForm').addEventListener('submit', login);
+            document.getElementById('registerForm').addEventListener('submit', register);
+            
+            // 实时验证
+            document.getElementById('registerUsername').addEventListener('input', checkUsername);
+            document.getElementById('registerPassword').addEventListener('input', function() {
+                updatePasswordStrength();
+                checkPasswordMatch();
+            });
+            document.getElementById('confirmPassword').addEventListener('input', checkPasswordMatch);
             
             // 为输入框添加回车键支持
             document.getElementById('loginPassword').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') login();
+                if (e.key === 'Enter') document.getElementById('loginForm').dispatchEvent(new Event('submit'));
             });
             
             document.getElementById('confirmPassword').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') register();
+                if (e.key === 'Enter') document.getElementById('registerForm').dispatchEvent(new Event('submit'));
             });
+            
+            // 检查登录尝试状态
+            const attemptCheck = checkLoginAttempts();
+            if (attemptCheck.locked) {
+                showMessage('loginMessage', attemptCheck.message, 'error');
+            }
         });
     </script>
 </body>
 </html>
+         
