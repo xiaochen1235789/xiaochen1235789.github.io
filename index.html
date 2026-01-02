@@ -22,13 +22,18 @@
         "@type": "WebSite",
         "name": "六哥荣耀WIKI",
         "description": "整理游戏内角色、光锥、养成材料等信息，为玩家提供详细参考",
-        "url": "https://your-website.com"
+        "url": "https://xiaochen1235789.github.io"
     }
     </script>
     
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <title>六哥荣耀WIKI</title>
+    
+    <!-- Supabase 客户端库 -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root {
@@ -45,6 +50,8 @@
             --shadow: 0 4px 12px rgba(0,0,0,0.3);
             --transition-fast: 0.2s ease;
             --transition-normal: 0.3s ease;
+            --supabase-blue: #3ecf8e;
+            --supabase-purple: #8a4baf;
         }
         
         * {
@@ -63,7 +70,7 @@
             min-height: 100vh;
         }
         
-        /* 加载进度条 */
+        /* ==================== 加载相关样式 ==================== */
         .loading-progress {
             position: fixed;
             top: 0;
@@ -76,7 +83,6 @@
             opacity: 1;
         }
         
-        /* 全局加载动画 */
         #global-loading {
             position: fixed;
             top: 0;
@@ -120,7 +126,141 @@
             100% { background-position: -200% 0; }
         }
         
-        /* 搜索框样式 */
+        /* ==================== 登录状态栏 ==================== */
+        .user-status-bar {
+            background: linear-gradient(135deg, #2d443b 0%, #1e3a2f 100%);
+            padding: 10px 20px;
+            border-bottom: 1px solid #3a5048;
+            display: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 10000;
+        }
+        
+        .user-status-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .welcome-message {
+            color: #a8d0b9;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .logout-btn {
+            background: rgba(129, 199, 132, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(129, 199, 132, 0.3);
+            padding: 6px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(129, 199, 132, 0.3);
+            color: #a8d0b9;
+        }
+        
+        /* ==================== 导航栏 ==================== */
+        .top-nav {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            margin: 16px auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            max-width: 1200px;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 50px;
+            z-index: 9999;
+        }
+        
+        .nav-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-highlight);
+            margin-right: auto;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .nav-link {
+            color: var(--text-main);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            transition: all var(--transition-fast);
+            white-space: nowrap;
+            position: relative;
+        }
+        
+        .nav-link:hover {
+            background: var(--card-bg-hover);
+            color: var(--text-highlight);
+            transform: translateY(-1px);
+        }
+        
+        .nav-link.active {
+            background: var(--card-bg-hover);
+            color: var(--special-color);
+            font-weight: 600;
+            border: 1px solid var(--special-color);
+        }
+        
+        .nav-link.active::after {
+            content: "";
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            background: var(--special-color);
+            border-radius: 50%;
+        }
+        
+        .user-nav-section {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--supabase-blue), var(--supabase-purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .username {
+            color: var(--text-highlight);
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        
+        /* ==================== 搜索相关样式 ==================== */
         .search-container {
             max-width: 1200px;
             margin: 0 auto 16px;
@@ -158,7 +298,6 @@
             pointer-events: none;
         }
         
-        /* 搜索历史下拉 */
         .search-history {
             position: absolute;
             top: 100%;
@@ -227,71 +366,7 @@
             color: var(--text-highlight);
         }
         
-        /* 导航栏优化 */
-        .top-nav {
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            padding: 12px 16px;
-            margin: 16px auto;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: center;
-            max-width: 1200px;
-            box-shadow: var(--shadow);
-            position: sticky;
-            top: 0;
-            z-index: 9999;
-        }
-        
-        .nav-title {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: var(--text-highlight);
-            margin-right: auto;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .nav-link {
-            color: var(--text-main);
-            text-decoration: none;
-            padding: 8px 16px;
-            border-radius: var(--radius);
-            font-size: 0.95rem;
-            transition: all var(--transition-fast);
-            white-space: nowrap;
-            position: relative;
-        }
-        
-        .nav-link:hover {
-            background: var(--card-bg-hover);
-            color: var(--text-highlight);
-            transform: translateY(-1px);
-        }
-        
-        .nav-link.active {
-            background: var(--card-bg-hover);
-            color: var(--special-color);
-            font-weight: 600;
-            border: 1px solid var(--special-color);
-        }
-        
-        .nav-link.active::after {
-            content: "";
-            position: absolute;
-            bottom: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 4px;
-            height: 4px;
-            background: var(--special-color);
-            border-radius: 50%;
-        }
-        
-        /* 网站运行天数优化 */
+        /* ==================== 网站运行天数 ==================== */
         .site-age-container {
             max-width: 1200px;
             margin: 0 auto 16px;
@@ -339,7 +414,7 @@
             }
         }
         
-        /* 网格容器优化 */
+        /* ==================== 内容卡片网格 ==================== */
         .grid-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -514,7 +589,7 @@
             font-size: 1.2em;
         }
         
-        /* 更新日志优化 */
+        /* ==================== 更新日志样式 ==================== */
         .changelog-loading, .changelog-error {
             text-align: center;
             padding: 30px;
@@ -606,229 +681,206 @@
             max-width: 1200px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        /* ================== 更新日志优化CSS ================== */
-
-/* 版本标签 */
-.version-tag {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-    margin-left: 8px;
-    background: rgba(129, 199, 132, 0.2);
-    color: var(--text-highlight);
-    border: 1px solid rgba(129, 199, 132, 0.3);
-}
-
-.version-tag.beta {
-    background: rgba(255, 215, 0, 0.2);
-    color: var(--special-color);
-    border-color: rgba(255, 215, 0, 0.3);
-}
-
-/* 更新徽章 */
-.update-badge {
-    display: inline-block;
-    padding: 1px 6px;
-    border-radius: 10px;
-    font-size: 10px;
-    font-weight: 600;
-    margin: 0 4px;
-    background: rgba(72, 187, 120, 0.2);
-    color: #48bb78;
-}
-
-.update-badge.fix {
-    background: rgba(245, 101, 101, 0.2);
-    color: #f56565;
-}
-
-.update-badge.optimize {
-    background: rgba(237, 137, 54, 0.2);
-    color: #ed8936;
-}
-
-/* 更新统计 */
-.changelog-stats {
-    margin: 10px 0 20px;
-    padding: 12px 16px;
-    background: rgba(129, 199, 132, 0.05);
-    border-radius: var(--radius);
-    border-left: 3px solid var(--text-highlight);
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-}
-
-.changelog-stats span {
-    display: inline-block;
-    margin-right: 15px;
-}
-
-/* 时间线样式 */
-.changelog-list {
-    position: relative;
-    padding-left: 20px;
-}
-
-.changelog-list::before {
-    content: '';
-    position: absolute;
-    left: 6px;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: linear-gradient(to bottom, 
-        rgba(129, 199, 132, 0.3) 0%, 
-        rgba(129, 199, 132, 0.6) 50%, 
-        rgba(129, 199, 132, 0.3) 100%);
-}
-
-.changelog-item {
-    position: relative;
-    margin-bottom: 20px;
-}
-
-.changelog-item::before {
-    content: '';
-    position: absolute;
-    left: -25px;
-    top: 20px;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--text-highlight);
-    border: 2px solid var(--card-bg);
-    z-index: 1;
-    transition: all var(--transition-fast);
-}
-
-.changelog-item[open]::before {
-    background: var(--special-color);
-    transform: scale(1.2);
-    box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
-}
-
-/* 更新内容优化 */
-.changelog-content {
-    padding: 16px;
-    background: rgba(35, 50, 45, 0.5);
-    border-radius: 0 var(--radius) var(--radius) var(--radius);
-    margin-top: 2px;
-}
-
-.update-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.update-list li {
-    margin: 10px 0;
-    padding: 8px 12px;
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 4px;
-    border-left: 3px solid var(--border-color);
-    transition: all var(--transition-fast);
-    position: relative;
-    padding-left: 32px;
-    display: block;
-}
-
-.update-list li:hover {
-    background: rgba(129, 199, 132, 0.05);
-    border-left-color: var(--text-highlight);
-    transform: translateX(2px);
-}
-
-.update-list li::before {
-    content: "▸";
-    position: absolute;
-    left: 12px;
-    color: var(--text-highlight);
-}
-
-.update-list .date {
-    font-weight: 600;
-    color: var(--text-highlight);
-    margin-bottom: 4px;
-    display: block;
-}
-
-.update-list .content {
-    color: var(--text-secondary);
-    line-height: 1.5;
-}
-
-.highlight {
-    color: var(--special-color);
-    font-weight: 600;
-    background: rgba(255, 215, 0, 0.1);
-    padding: 0 4px;
-    border-radius: 3px;
-    margin: 0 2px;
-}
-
-/* 控制按钮 */
-.changelog-controls {
-    display: flex;
-    gap: 10px;
-    margin: 20px 0;
-    padding: 0 16px;
-}
-
-.control-btn {
-    background: var(--card-bg);
-    color: var(--text-main);
-    border: 1px solid var(--border-color);
-    padding: 8px 16px;
-    border-radius: var(--radius);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.9rem;
-    transition: all var(--transition-fast);
-}
-
-.control-btn:hover {
-    background: var(--card-bg-hover);
-    border-color: var(--text-highlight);
-    transform: translateY(-1px);
-}
-
-.control-btn .icon {
-    font-size: 0.8em;
-    transition: transform var(--transition-fast);
-}
-
-.control-btn:hover .icon {
-    transform: translateY(1px);
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-    .changelog-list {
-        padding-left: 15px;
-    }
-    
-    .changelog-item::before {
-        left: -20px;
-        top: 18px;
-        width: 8px;
-        height: 8px;
-    }
-    
-    .changelog-controls {
-        flex-direction: column;
-    }
-    
-    .changelog-stats span {
-        display: block;
-        margin: 4px 0;
-    }
-}
         
+        /* 版本标签 */
+        .version-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+            background: rgba(129, 199, 132, 0.2);
+            color: var(--text-highlight);
+            border: 1px solid rgba(129, 199, 132, 0.3);
+        }
+        
+        .version-tag.beta {
+            background: rgba(255, 215, 0, 0.2);
+            color: var(--special-color);
+            border-color: rgba(255, 215, 0, 0.3);
+        }
+        
+        /* 更新徽章 */
+        .update-badge {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+            margin: 0 4px;
+            background: rgba(72, 187, 120, 0.2);
+            color: #48bb78;
+        }
+        
+        .update-badge.fix {
+            background: rgba(245, 101, 101, 0.2);
+            color: #f56565;
+        }
+        
+        .update-badge.optimize {
+            background: rgba(237, 137, 54, 0.2);
+            color: #ed8936;
+        }
+        
+        /* 更新统计 */
+        .changelog-stats {
+            margin: 10px 0 20px;
+            padding: 12px 16px;
+            background: rgba(129, 199, 132, 0.05);
+            border-radius: var(--radius);
+            border-left: 3px solid var(--text-highlight);
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        .changelog-stats span {
+            display: inline-block;
+            margin-right: 15px;
+        }
+        
+        /* 时间线样式 */
+        .changelog-list {
+            position: relative;
+            padding-left: 20px;
+        }
+        
+        .changelog-list::before {
+            content: '';
+            position: absolute;
+            left: 6px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, 
+                rgba(129, 199, 132, 0.3) 0%, 
+                rgba(129, 199, 132, 0.6) 50%, 
+                rgba(129, 199, 132, 0.3) 100%);
+        }
+        
+        .changelog-item {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        .changelog-item::before {
+            content: '';
+            position: absolute;
+            left: -25px;
+            top: 20px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--text-highlight);
+            border: 2px solid var(--card-bg);
+            z-index: 1;
+            transition: all var(--transition-fast);
+        }
+        
+        .changelog-item[open]::before {
+            background: var(--special-color);
+            transform: scale(1.2);
+            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
+        }
+        
+        /* 更新内容优化 */
+        .changelog-content {
+            padding: 16px;
+            background: rgba(35, 50, 45, 0.5);
+            border-radius: 0 var(--radius) var(--radius) var(--radius);
+            margin-top: 2px;
+        }
+        
+        .update-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .update-list li {
+            margin: 10px 0;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            border-left: 3px solid var(--border-color);
+            transition: all var(--transition-fast);
+            position: relative;
+            padding-left: 32px;
+            display: block;
+        }
+        
+        .update-list li:hover {
+            background: rgba(129, 199, 132, 0.05);
+            border-left-color: var(--text-highlight);
+            transform: translateX(2px);
+        }
+        
+        .update-list li::before {
+            content: "▸";
+            position: absolute;
+            left: 12px;
+            color: var(--text-highlight);
+        }
+        
+        .update-list .date {
+            font-weight: 600;
+            color: var(--text-highlight);
+            margin-bottom: 4px;
+            display: block;
+        }
+        
+        .update-list .content {
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        
+        .highlight {
+            color: var(--special-color);
+            font-weight: 600;
+            background: rgba(255, 215, 0, 0.1);
+            padding: 0 4px;
+            border-radius: 3px;
+            margin: 0 2px;
+        }
+        
+        /* 控制按钮 */
+        .changelog-controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            padding: 0 16px;
+        }
+        
+        .control-btn {
+            background: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+            transition: all var(--transition-fast);
+        }
+        
+        .control-btn:hover {
+            background: var(--card-bg-hover);
+            border-color: var(--text-highlight);
+            transform: translateY(-1px);
+        }
+        
+        .control-btn .icon {
+            font-size: 0.8em;
+            transition: transform var(--transition-fast);
+        }
+        
+        .control-btn:hover .icon {
+            transform: translateY(1px);
+        }
+        
+        /* 宠物系统样式 */
         .pet-header {
             display: flex;
             align-items: center;
@@ -853,7 +905,7 @@
             font-weight: 600;
         }
         
-        /* 滚动条优化 */
+        /* ==================== 滚动条优化 ==================== */
         ::-webkit-scrollbar {
             width: 10px;
             height: 10px;
@@ -873,7 +925,7 @@
             background: var(--text-highlight);
         }
         
-        /* 页脚优化 */
+        /* ==================== 页脚 ==================== */
         footer {
             text-align: center;
             padding: 30px 0;
@@ -886,7 +938,7 @@
             margin-right: auto;
         }
         
-        /* 音乐播放器优化 */
+        /* ==================== 音乐播放器 ==================== */
         #musicPlayerIframe {
             display: block !important;
             visibility: visible !important;
@@ -904,7 +956,7 @@
             will-change: height;
         }
         
-        /* 回到顶部按钮 */
+        /* ==================== 回到顶部按钮 ==================== */
         .back-to-top {
             position: fixed;
             bottom: 130px;
@@ -938,7 +990,7 @@
             transform: translateY(-2px);
         }
         
-        /* 通知消息 */
+        /* ==================== 通知消息 ==================== */
         .notification {
             position: fixed;
             top: 20px;
@@ -969,7 +1021,12 @@
             color: #4ade80;
         }
         
-        /* 响应式优化 */
+        .notification.info {
+            border-left-color: #3b82f6;
+            color: #3b82f6;
+        }
+        
+        /* ==================== 响应式优化 ==================== */
         @media (max-width: 1024px) {
             .grid-container {
                 grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -1024,6 +1081,13 @@
                 bottom: 110px;
                 right: 15px;
             }
+            
+            .user-nav-section {
+                order: -1;
+                width: 100%;
+                justify-content: flex-end;
+                margin-bottom: 10px;
+            }
         }
         
         @media (max-width: 480px) {
@@ -1067,12 +1131,22 @@
             .pet-title {
                 font-size: 1.1rem;
             }
+            
+            .changelog-controls {
+                flex-direction: column;
+            }
+            
+            .changelog-stats span {
+                display: block;
+                margin: 4px 0;
+            }
         }
         
-        /* 打印样式优化 */
+        /* ==================== 打印样式优化 ==================== */
         @media print {
             .top-nav, #search-input, .site-age-container, 
-            .back-to-top, #musicPlayerIframe, footer {
+            .back-to-top, #musicPlayerIframe, footer,
+            .user-status-bar {
                 display: none !important;
             }
             
@@ -1100,6 +1174,7 @@
     </style>
 </head>
 <body>
+
     <!-- 加载进度条 -->
     <div class="loading-progress" id="loadingProgress"></div>
     
@@ -1115,27 +1190,15 @@
     <div class="notification" id="notification"></div>
     
     <!-- 登录状态条 -->
-<div id="userStatusBar" style="
-    background: #2d443b;
-    padding: 10px 20px;
-    border-bottom: 1px solid #3a5048;
-    display: none;
-">
-    <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;">
-        <span id="welcomeMsg"></span>
-        <button onclick="logout()" style="
-            background: #3a5048;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9rem;
-        ">
-            退出登录
-        </button>
+    <div class="user-status-bar" id="userStatusBar">
+        <div class="user-status-content">
+            <span class="welcome-message" id="welcomeMsg">
+                <span style="margin-right: 8px;">👤</span>
+                <span>加载中...</span>
+            </span>
+            <button class="logout-btn" onclick="logoutUser()">退出登录</button>
+        </div>
     </div>
-</div>
 
     <!-- 导航栏 -->
     <nav class="top-nav" aria-label="主要导航">
@@ -1146,6 +1209,9 @@
         <a href="#lightcone" class="nav-link" data-target="lightcone">光锥</a>
         <a href="#material" class="nav-link" data-target="material">养成材料</a>
         <a href="#changelog" class="nav-link" data-target="changelog">更新日志</a>
+        
+        <!-- 用户导航部分（由JavaScript动态生成） -->
+        <div class="user-nav-section" id="userNavSection"></div>
     </nav>
 
     <!-- 搜索框 -->
@@ -1302,205 +1368,207 @@
     </div>
 
     <!-- 更新日志 -->
-<h2 class="section-header" id="changelog">更新日志</h2>
-<div class="pet-system" style="margin-top: 0;" id="changelogContainer">
-    <div class="changelog-box">
-        <div class="pet-header">
-            <div class="pet-icon">
-                <img src="./images/rizhitupian.webp" 
-                     alt="更新日志图标" 
-                     style="width: 100%; height: 100%; object-fit: contain;"
-                     onload="imageLoaded(this)"
-                     onerror="imageError(this)">
-            </div>
-            <div>
-                <div class="pet-title">WIKI版本更新记录</div>
-                <div class="changelog-stats">
-                    <span>📊 共 15 次更新</span>
-                    <span>👤 10 个角色</span>
-                    <span>✨ 3 个光锥</span>
-                    <span>⚡ 5 项优化</span>
-                    <span>🐛 2 项修复</span>
+    <h2 class="section-header" id="changelog">更新日志</h2>
+    <div class="pet-system" style="margin-top: 0;" id="changelogContainer">
+        <div class="changelog-box">
+            <div class="pet-header">
+                <div class="pet-icon">
+                    <img src="./images/rizhitupian.webp" 
+                         alt="更新日志图标" 
+                         style="width: 100%; height: 100%; object-fit: contain;"
+                         onload="imageLoaded(this)"
+                         onerror="imageError(this)">
+                </div>
+                <div>
+                    <div class="pet-title">WIKI版本更新记录</div>
+                    <div class="changelog-stats">
+                        <span>📊 共 15 次更新</span>
+                        <span>👤 10 个角色</span>
+                        <span>✨ 3 个光锥</span>
+                        <span>⚡ 5 项优化</span>
+                        <span>🐛 2 项修复</span>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="changelog-controls">
-            <button onclick="toggleAllChangelogs()" class="control-btn">
-                <span>展开全部</span>
-                <span class="icon">▼</span>
-            </button>
-            <button onclick="copyChangelog()" class="control-btn">
-                <span>复制更新记录</span>
-                <span class="icon">📋</span>
-            </button>
-        </div>
-        
-        <div class="changelog-list">
-            <details class="changelog-item" open>
-                <summary>
-                    <h4 class="changelog-version">
-                        功能教程专用栏
-                        <span class="version-tag beta">教程</span>
-                    </h4>
-                </summary>
-                <div class="changelog-content">
-                    <ul class="update-list">
-                        <li>
-                            <span class="date">音乐播放器教程</span>
-                            <span class="content">
-                                🔊-音量为<span class="highlight">100%</span>
-                                🔉-音量为<span class="highlight">50%</span>
-                                🔇-音量为<span class="highlight">0%</span>
-                                <br>
-                                ▶ - 播放<span class="highlight">下一首</span>歌曲
-                                ◀ - 播放<span class="highlight">上一首</span>歌曲
-                                <br>
-                                📜 歌曲列表-可以用来快捷听歌
-                                <br>
-                                ⏸ - 播放状态 | ▶ - 暂停状态
-                                <br>
-                                🔁-列表顺序播放
-                                🔄-列表循环播放
-                                🔂-单曲循环播放
-                            </span>
-                        </li>
-                    </ul>
-                </div>
-            </details>
             
-            <details class="changelog-item">
-                <summary>
-                    <h4 class="changelog-version">
-                        2025-12 | V1.0.6~1.1.0
-                        <span class="version-tag">稳定版</span>
-                    </h4>
-                </summary>
-                <div class="changelog-content">
-                    <ul class="update-list">
-                        <li>
-                            <span class="date">2025-12-20 | V1.1.0</span>
-                            <span class="content">
-                                <span class="update-badge optimize">优化</span>
-                                主页加载速度
-                                <br>
-                                <span class="update-badge">新增</span>
-                                歌曲 <span class="highlight">1</span> 首
-                            </span>
-                        </li>
-                        <li>
-                            <span class="date">2025-12-14 | V1.0.9</span>
-                            <span class="content">
-                                <span class="update-badge">新增</span>
-                                光锥：<span class="highlight">快乐的路一天 | 巡猎.暴击特化</span>
-                            </span>
-                        </li>
-                        <li>
-                            <span class="date">2025-12-12 | V1.0.8</span>
-                            <span class="content">
-                                <span class="update-badge">新增</span>
-                                角色：<span class="highlight">天命人.猴哥 | 繁育.量子</span>
-                            </span>
-                        </li>
-                        <li>
-                            <span class="date">2025-12-07 | V1.0.7</span>
-                            <span class="content">
-                                <span class="update-badge">新增</span>
-                                角色：<span class="highlight">梦 | 虚无.风</span>
-                                <br>
-                                <span class="update-badge">新增</span>
-                                角色：<span class="highlight">神圣.皮哥 | 丰饶.虚数</span>
-                                <br>
-                                <span class="update-badge optimize">优化</span>
-                                音乐播放器框架修改
-                            </span>
-                        </li>
-                        <li>
-                            <span class="date">2025-12-06 | V1.0.6</span>
-                            <span class="content">
-                                <span class="update-badge optimize">优化</span>
-                                整体角色框架
-                                <br>
-                                <span class="update-badge">新增</span>
-                                音乐播放器(简易完整版)
-                            </span>
-                        </li>
-                    </ul>
-                </div>
-            </details>
+            <div class="changelog-controls">
+                <button onclick="toggleAllChangelogs()" class="control-btn">
+                    <span>展开全部</span>
+                    <span class="icon">▼</span>
+                </button>
+                <button onclick="copyChangelog()" class="control-btn">
+                    <span>复制更新记录</span>
+                    <span class="icon">📋</span>
+                </button>
+            </div>
             
-            <details class="changelog-item">
-                <summary>
-                    <h4 class="changelog-version">
-                        2025-11 | V1.0.0~1.0.5
-                        <span class="version-tag">稳定版</span>
-                    </h4>
-                </summary>
-                <div class="changelog-content">
-                    <ul class="update-list">
-                        <li>
-                            <span class="date">2025-11-30 | V1.0.5</span>
-                            <span class="content">
-                                <span class="update-badge optimize">优化</span>
-                                整体角色框架
-                                <br>
-                                <span class="update-badge">新增</span>
-                                角色：<span class="highlight">半械人.成 | 毁灭.物理</span>
-                                <br>
-                                <span class="update-badge">新增</span>
-                                角色：<span class="highlight">夹子姐 | 智识.雷</span>
-                            </span>
-                        </li>
-                        <li>
-                            <span class="date">2025-11-16 | V1.0.4</span>
-                            <span class="content">
-                                <span class="update-badge">新增</span>
-                                角色：<span class="highlight">涵 | 同谐.物理</span>
-                            </span>
-                        </li>
-                        <li>
-                            <span class="date">2025-11-15 | V1.0.3</span>
-                            <span class="content">
-                                <span class="update-badge">新增</span>
-                                音乐播放器（半成品）
-                            </span>
-                        </li>
-                        <li>
-                            <span class="date">2025-11-10 | V1.0.2</span>
-                            <span class="content">
-                                <span class="update-badge">新增</span>
-                                角色：<span class="highlight">宇智波.言 | 毁灭.雷</span>
-                            </span>
-                        </li>
-                        <li>
-                            <span class="date">2025-11-09 | V1.0.1</span>
-                            <span class="content">
-                                <span class="update-badge fix">修复</span>
-                                云璃角色卡片跳转错误
-                                <br>
-                                <span class="update-badge fix">修复</span>
-                                光锥图片显示异常问题
-                            </span>
-                        </li>
-                        <li>
-                            <span class="date">2025-10-31 | V1.0.0</span>
-                            <span class="content">
-                                <span class="update-badge">上线</span>
-                                六哥荣耀WIKI上线
-                                <br>
-                                🎉 包含角色、光锥、养成材料基础模块
-                            </span>
-                        </li>
-                    </ul>
-                </div>
-            </details>
+            <div class="changelog-list">
+                <details class="changelog-item" open>
+                    <summary>
+                        <h4 class="changelog-version">
+                            功能教程专用栏
+                            <span class="version-tag beta">教程</span>
+                        </h4>
+                    </summary>
+                    <div class="changelog-content">
+                        <ul class="update-list">
+                            <li>
+                                <span class="date">音乐播放器教程</span>
+                                <span class="content">
+                                    🔊-音量为<span class="highlight">100%</span>
+                                    🔉-音量为<span class="highlight">50%</span>
+                                    🔇-音量为<span class="highlight">0%</span>
+                                    <br>
+                                    ▶ - 播放<span class="highlight">下一首</span>歌曲
+                                    ◀ - 播放<span class="highlight">上一首</span>歌曲
+                                    <br>
+                                    📜 歌曲列表-可以用来快捷听歌
+                                    <br>
+                                    ⏸ - 播放状态 | ▶ - 暂停状态
+                                    <br>
+                                    🔁-列表顺序播放
+                                    🔄-列表循环播放
+                                    🔂-单曲循环播放
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+                </details>
+                
+                <details class="changelog-item">
+                    <summary>
+                        <h4 class="changelog-version">
+                            2025-12 | V1.0.6~1.1.0
+                            <span class="version-tag">稳定版</span>
+                        </h4>
+                    </summary>
+                    <div class="changelog-content">
+                        <ul class="update-list">
+                            <li>
+                                <span class="date">2025-12-20 | V1.1.0</span>
+                                <span class="content">
+                                    <span class="update-badge optimize">优化</span>
+                                    主页加载速度
+                                    <br>
+                                    <span class="update-badge">新增</span>
+                                    歌曲 <span class="highlight">1</span> 首
+                                </span>
+                            </li>
+                            <li>
+                                <span class="date">2025-12-14 | V1.0.9</span>
+                                <span class="content">
+                                    <span class="update-badge">新增</span>
+                                    光锥：<span class="highlight">快乐的路一天 | 巡猎.暴击特化</span>
+                                </span>
+                            </li>
+                            <li>
+                                <span class="date">2025-12-12 | V1.0.8</span>
+                                <span class="content">
+                                    <span class="update-badge">新增</span>
+                                    角色：<span class="highlight">天命人.猴哥 | 繁育.量子</span>
+                                </span>
+                            </li>
+                            <li>
+                                <span class="date">2025-12-07 | V1.0.7</span>
+                                <span class="content">
+                                    <span class="update-badge">新增</span>
+                                    角色：<span class="highlight">梦 | 虚无.风</span>
+                                    <br>
+                                    <span class="update-badge">新增</span>
+                                    角色：<span class="highlight">神圣.皮哥 | 丰饶.虚数</span>
+                                    <br>
+                                    <span class="update-badge optimize">优化</span>
+                                    音乐播放器框架修改
+                                </span>
+                            </li>
+                            <li>
+                                <span class="date">2025-12-06 | V1.0.6</span>
+                                <span class="content">
+                                    <span class="update-badge optimize">优化</span>
+                                    整体角色框架
+                                    <br>
+                                    <span class="update-badge">新增</span>
+                                    音乐播放器(简易完整版)
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+                </details>
+                
+                <details class="changelog-item">
+                    <summary>
+                        <h4 class="changelog-version">
+                            2025-11 | V1.0.0~1.0.5
+                            <span class="version-tag">稳定版</span>
+                        </h4>
+                    </summary>
+                    <div class="changelog-content">
+                        <ul class="update-list">
+                            <li>
+                                <span class="date">2025-11-30 | V1.0.5</span>
+                                <span class="content">
+                                    <span class="update-badge optimize">优化</span>
+                                    整体角色框架
+                                    <br>
+                                    <span class="update-badge">新增</span>
+                                    角色：<span class="highlight">半械人.成 | 毁灭.物理</span>
+                                    <br>
+                                    <span class="update-badge">新增</span>
+                                    角色：<span class="highlight">夹子姐 | 智识.雷</span>
+                                </span>
+                            </li>
+                            <li>
+                                <span class="date">2025-11-16 | V1.0.4</span>
+                                <span class="content">
+                                    <span class="update-badge">新增</span>
+                                    角色：<span class="highlight">涵 | 同谐.物理</span>
+                                </span>
+                            </li>
+                            <li>
+                                <span class="date">2025-11-15 | V1.0.3</span>
+                                <span class="content">
+                                    <span class="update-badge">新增</span>
+                                    音乐播放器（半成品）
+                                </span>
+                            </li>
+                            <li>
+                                <span class="date">2025-11-10 | V1.0.2</span>
+                                <span class="content">
+                                    <span class="update-badge">新增</span>
+                                    角色：<span class="highlight">宇智波.言 | 毁灭.雷</span>
+                                </span>
+                            </li>
+                            <li>
+                                <span class="date">2025-11-09 | V1.0.1</span>
+                                <span class="content">
+                                    <span class="update-badge fix">修复</span>
+                                    云璃角色卡片跳转错误
+                                    <br>
+                                    <span class="update-badge fix">修复</span>
+                                    光锥图片显示异常问题
+                                </span>
+                            </li>
+                            <li>
+                                <span class="date">2025-10-31 | V1.0.0</span>
+                                <span class="content">
+                                    <span class="update-badge">上线</span>
+                                    六哥荣耀WIKI上线
+                                    <br>
+                                    🎉 包含角色、光锥、养成材料基础模块
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+                </details>
+            </div>
         </div>
     </div>
-</div>
 
     <!-- 页脚 -->
     <footer>
         © <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.
+        <br>
+        <span style="font-size: 0.8rem; color: #666;">用户认证由Supabase提供技术支持</span>
     </footer>
 
     <!-- 音乐播放器 -->
@@ -1517,591 +1585,765 @@
 
     <!-- 回到顶部按钮 -->
     <button class="back-to-top" onclick="scrollToTop()" aria-label="回到顶部">↑</button>
-    <!-- 在<body>标签内的<script>区域，替换为以下代码 -->
-<script>
-    // ==================== 1. 全局变量定义 ====================
-    let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
-    let searchTimeout;
-    
-    // ==================== 2. 页面初始化函数 ====================
-    function initializePage() {
-        console.log('页面开始初始化...');
+    <script>
+        // ==================== 1. 全局变量定义 ====================
+        let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+        let searchTimeout;
+        let supabaseClient = null;
+        let currentUser = null;
         
-        // 2.1 更新加载进度
-        updateLoadingProgress(30);
+        // Supabase配置
+        const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
         
-        // 2.2 初始化年份
-        document.getElementById('year').textContent = new Date().getFullYear();
-        updateLoadingProgress(40);
-        
-        // 2.3 初始化网站运行天数
-        initializeSiteAge();
-        updateLoadingProgress(50);
-        
-        // 2.4 初始化搜索功能
-        initializeSearch();
-        updateLoadingProgress(60);
-        
-        // 2.5 初始化导航功能
-        initializeNavigation();
-        updateLoadingProgress(70);
-        
-        // 2.6 初始化图片懒加载
-        initializeLazyLoad();
-        updateLoadingProgress(80);
-        
-        // 2.7 恢复滚动位置
-        restoreScrollPosition();
-        updateLoadingProgress(90);
-        
-        // 2.8 初始化用户状态
-        initializeUserState();
-        updateLoadingProgress(95);
-        
-        // 2.9 初始化音乐播放器
-        initializeMusicPlayer();
-        updateLoadingProgress(98);
-        
-        // 2.10 初始化更新日志功能
-        initializeChangelogFunctions();
-        updateLoadingProgress(99);
-        
-        // 2.11 页面加载完成
-        setTimeout(() => {
-            updateLoadingProgress(100);
-            hideLoading();
-            showNotification('页面加载完成！', 'success');
-            console.log('页面初始化完成');
-        }, 300);
-    }
-    
-    // ==================== 3. DOM加载完成后执行 ====================
-    document.addEventListener('DOMContentLoaded', initializePage);
-    
-    // ==================== 4. 加载进度条控制 ====================
-    function updateLoadingProgress(percent) {
-        const progressBar = document.getElementById('loadingProgress');
-        if (progressBar) {
-            progressBar.style.width = `${percent}%`;
-        }
-    }
-    
-    // ==================== 5. 图片处理函数 ====================
-    function imageLoaded(img) {
-        img.classList.add('loaded');
-        const parent = img.closest('.skeleton');
-        if (parent) {
-            parent.classList.remove('skeleton');
-        }
-    }
-    
-    function imageError(img) {
-        // 创建简单的占位图
-        const placeholder = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="${img.width || 150}" height="${img.height || 188}" viewBox="0 0 ${img.width || 150} ${img.height || 188}"><rect width="100%" height="100%" fill="%232d5243"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%2381c784" font-family="sans-serif">图片加载失败</text></svg>`;
-        img.src = placeholder;
-        img.alt = '图片加载失败';
-        const parent = img.closest('.skeleton');
-        if (parent) {
-            parent.classList.remove('skeleton');
-        }
-    }
-    
-    // ==================== 6. 网站运行天数功能 ====================
-    function initializeSiteAge() {
-        const launchDate = new Date(2025, 10, 1); // 2025年11月1日
-        const siteAgeElem = document.getElementById('site-age');
-        
-        const specialDays = {
-            30: '🎉 六哥荣耀WIKI上线30天啦！感恩陪伴 🎉',
-            50: '⛄冬至快乐，记得吃饺子🥟⛄',
-            58: '🍰 恭喜言哥哥18岁，生日快乐🍰',
-            59: ' 🧨跨年倒计时2天🧨',
-            60: ' 🎉跨年倒计时1天🎉',
-            61: ' 🎉欢迎来到2026年🎉',
-            78: '☁️ 奇怪的数字？六哥荣耀WIKI与你同行78天 ☁️',
-            91: '🧊 奇怪的数字？梅开二度，六哥荣耀WIKI与你同行91天 🧊',
-            100: '🎊 百日庆典！六哥荣耀WIKI与你同行100天 🎊',
-            365: '🎂 周年快乐！六哥荣耀WIKI一周年纪念 🎂'
-        };
-        
-        function updateSiteAge() {
-            const today = new Date();
-            const days = Math.floor((today - launchDate) / (1000 * 60 * 60 * 24));
+        // ==================== 2. 页面初始化函数 ====================
+        async function initializePage() {
+            console.log('页面开始初始化...');
             
-            if (specialDays[days]) {
-                siteAgeElem.innerHTML = specialDays[days];
-                siteAgeElem.classList.add('special');
-            } else {
-                siteAgeElem.innerHTML = `📅 六哥荣耀WIKI已上线 ${days} 天 · 持续更新中`;
-                siteAgeElem.classList.remove('special');
+            // 2.1 更新加载进度
+            updateLoadingProgress(30);
+            
+            // 2.2 初始化年份
+            document.getElementById('year').textContent = new Date().getFullYear();
+            updateLoadingProgress(40);
+            
+            // 2.3 初始化网站运行天数
+            initializeSiteAge();
+            updateLoadingProgress(50);
+            
+            // 2.4 初始化Supabase
+            await initializeSupabase();
+            updateLoadingProgress(60);
+            
+            // 2.5 初始化搜索功能
+            initializeSearch();
+            updateLoadingProgress(70);
+            
+            // 2.6 初始化导航功能
+            initializeNavigation();
+            updateLoadingProgress(80);
+            
+            // 2.7 初始化图片懒加载
+            initializeLazyLoad();
+            updateLoadingProgress(90);
+            
+            // 2.8 恢复滚动位置
+            restoreScrollPosition();
+            updateLoadingProgress(95);
+            
+            // 2.9 初始化用户状态
+            updateUserUI();
+            updateLoadingProgress(98);
+            
+            // 2.10 初始化音乐播放器
+            initializeMusicPlayer();
+            updateLoadingProgress(99);
+            
+            // 2.11 初始化更新日志功能
+            initializeChangelogFunctions();
+            updateLoadingProgress(99.5);
+            
+            // 2.12 页面加载完成
+            setTimeout(() => {
+                updateLoadingProgress(100);
+                hideLoading();
+                showNotification('页面加载完成！', 'success');
+                console.log('页面初始化完成');
+            }, 300);
+        }
+        
+        // ==================== 3. DOM加载完成后执行 ====================
+        document.addEventListener('DOMContentLoaded', initializePage);
+        
+        // ==================== 4. 加载进度条控制 ====================
+        function updateLoadingProgress(percent) {
+            const progressBar = document.getElementById('loadingProgress');
+            if (progressBar) {
+                progressBar.style.width = `${percent}%`;
             }
         }
         
-        // 立即更新一次
-        updateSiteAge();
+        // ==================== 5. 图片处理函数 ====================
+        function imageLoaded(img) {
+            img.classList.add('loaded');
+            const parent = img.closest('.skeleton');
+            if (parent) {
+                parent.classList.remove('skeleton');
+            }
+        }
         
-        // 每天更新一次
-        setInterval(updateSiteAge, 86400000); // 24小时
-    }
-    
-    // ==================== 7. 搜索功能 ====================
-    function initializeSearch() {
-        const searchInput = document.getElementById('search-input');
-        const searchHistoryElem = document.getElementById('searchHistory');
-        const clearHistoryBtn = document.getElementById('clearHistory');
-        const allCards = document.querySelectorAll('.content-card');
-        const emptyResult = document.querySelector('.empty-result');
-        const gridContainers = document.querySelectorAll('.grid-container');
+        function imageError(img) {
+            // 创建简单的占位图
+            const placeholder = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="${img.width || 150}" height="${img.height || 188}" viewBox="0 0 ${img.width || 150} ${img.height || 188}"><rect width="100%" height="100%" fill="%232d5243"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%2381c784" font-family="sans-serif">图片加载失败</text></svg>`;
+            img.src = placeholder;
+            img.alt = '图片加载失败';
+            const parent = img.closest('.skeleton');
+            if (parent) {
+                parent.classList.remove('skeleton');
+            }
+        }
         
-        // 7.1 渲染搜索历史
-        function renderSearchHistory() {
-            if (searchHistory.length === 0) {
-                searchHistoryElem.innerHTML = '<div class="history-item" style="color: var(--text-secondary);">暂无搜索历史</div>';
-                return;
+        // ==================== 6. 网站运行天数功能 ====================
+        function initializeSiteAge() {
+            const launchDate = new Date(2025, 10, 1); // 2025年11月1日
+            const siteAgeElem = document.getElementById('site-age');
+            
+            const specialDays = {
+                30: '🎉 六哥荣耀WIKI上线30天啦！感恩陪伴 🎉',
+                50: '⛄冬至快乐，记得吃饺子🥟⛄',
+                58: '🍰 恭喜言哥哥18岁，生日快乐🍰',
+                59: ' 🧨跨年倒计时2天🧨',
+                60: ' 🎉跨年倒计时1天🎉',
+                61: ' 🎉欢迎来到2026年🎉',
+                78: '☁️ 奇怪的数字？六哥荣耀WIKI与你同行78天 ☁️',
+                91: '🧊 奇怪的数字？梅开二度，六哥荣耀WIKI与你同行91天 🧊',
+                100: '🎊 百日庆典！六哥荣耀WIKI与你同行100天 🎊',
+                365: '🎂 周年快乐！六哥荣耀WIKI一周年纪念 🎂'
+            };
+            
+            function updateSiteAge() {
+                const today = new Date();
+                const days = Math.floor((today - launchDate) / (1000 * 60 * 60 * 24));
+                
+                if (specialDays[days]) {
+                    siteAgeElem.innerHTML = specialDays[days];
+                    siteAgeElem.classList.add('special');
+                } else {
+                    siteAgeElem.innerHTML = `📅 六哥荣耀WIKI已上线 ${days} 天 · 持续更新中`;
+                    siteAgeElem.classList.remove('special');
+                }
             }
             
-            searchHistoryElem.innerHTML = '';
+            // 立即更新一次
+            updateSiteAge();
             
-            // 添加历史记录
-            searchHistory.forEach(item => {
-                const historyItem = document.createElement('div');
-                historyItem.className = 'history-item';
-                historyItem.textContent = item;
-                historyItem.addEventListener('click', () => {
-                    searchInput.value = item;
-                    performSearch(item);
-                    searchHistoryElem.classList.remove('show');
+            // 每天更新一次
+            setInterval(updateSiteAge, 86400000); // 24小时
+        }
+        
+        // ==================== 7. 搜索功能 ====================
+        function initializeSearch() {
+            const searchInput = document.getElementById('search-input');
+            const searchHistoryElem = document.getElementById('searchHistory');
+            const clearHistoryBtn = document.getElementById('clearHistory');
+            const allCards = document.querySelectorAll('.content-card');
+            const emptyResult = document.querySelector('.empty-result');
+            const gridContainers = document.querySelectorAll('.grid-container');
+            
+            // 7.1 渲染搜索历史
+            function renderSearchHistory() {
+                if (searchHistory.length === 0) {
+                    searchHistoryElem.innerHTML = '<div class="history-item" style="color: var(--text-secondary);">暂无搜索历史</div>';
+                    return;
+                }
+                
+                searchHistoryElem.innerHTML = '';
+                
+                // 添加历史记录
+                searchHistory.forEach(item => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'history-item';
+                    historyItem.textContent = item;
+                    historyItem.addEventListener('click', () => {
+                        searchInput.value = item;
+                        performSearch(item);
+                        searchHistoryElem.classList.remove('show');
+                    });
+                    searchHistoryElem.appendChild(historyItem);
                 });
-                searchHistoryElem.appendChild(historyItem);
-            });
+                
+                // 添加清空按钮
+                const clearBtn = document.createElement('div');
+                clearBtn.className = 'history-clear';
+                clearBtn.textContent = '清空搜索历史';
+                clearBtn.addEventListener('click', () => {
+                    if (confirm('确定要清空搜索历史吗？')) {
+                        searchHistory = [];
+                        localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+                        renderSearchHistory();
+                        showNotification('搜索历史已清空', 'success');
+                    }
+                });
+                searchHistoryElem.appendChild(clearBtn);
+            }
             
-            // 添加清空按钮
-            const clearBtn = document.createElement('div');
-            clearBtn.className = 'history-clear';
-            clearBtn.textContent = '清空搜索历史';
-            clearBtn.addEventListener('click', () => {
-                if (confirm('确定要清空搜索历史吗？')) {
-                    searchHistory = [];
+            // 7.2 执行搜索
+            function performSearch(keyword) {
+                let matchCount = 0;
+                
+                // 如果没有关键词，显示所有卡片
+                if (!keyword) {
+                    allCards.forEach(card => card.style.display = 'block');
+                    gridContainers.forEach(container => container.style.display = 'grid');
+                    emptyResult.style.display = 'none';
+                    return;
+                }
+                
+                // 保存搜索历史
+                if (keyword && !searchHistory.includes(keyword)) {
+                    searchHistory.unshift(keyword);
+                    if (searchHistory.length > 10) searchHistory.pop();
                     localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
                     renderSearchHistory();
-                    showNotification('搜索历史已清空', 'success');
+                }
+                
+                // 搜索匹配逻辑
+                allCards.forEach(card => {
+                    const name = card.dataset.name?.toLowerCase() || '';
+                    const desc = card.dataset.desc?.toLowerCase() || '';
+                    const type = card.dataset.type?.toLowerCase() || '';
+                    
+                    const isMatch = name.includes(keyword) || 
+                                   desc.includes(keyword) || 
+                                   type.includes(keyword);
+                    
+                    card.style.display = isMatch ? 'block' : 'none';
+                    if (isMatch) matchCount++;
+                });
+                
+                // 显示空结果提示
+                emptyResult.style.display = matchCount === 0 ? 'block' : 'none';
+                
+                // 隐藏空的网格容器
+                gridContainers.forEach(container => {
+                    const visibleCards = Array.from(container.querySelectorAll('.content-card'))
+                        .some(card => card.style.display === 'block');
+                    container.style.display = visibleCards ? 'grid' : 'none';
+                });
+            }
+            
+            // 7.3 防抖函数
+            function debounce(func, delay) {
+                return function() {
+                    clearTimeout(searchTimeout);
+                    const context = this;
+                    const args = arguments;
+                    searchTimeout = setTimeout(() => func.apply(context, args), delay);
+                };
+            }
+            
+            // 7.4 初始化事件监听
+            // 渲染搜索历史
+            renderSearchHistory();
+            
+            // 搜索框焦点事件
+            searchInput.addEventListener('focus', () => {
+                if (searchHistory.length > 0) {
+                    searchHistoryElem.classList.add('show');
                 }
             });
-            searchHistoryElem.appendChild(clearBtn);
-        }
-        
-        // 7.2 执行搜索
-        function performSearch(keyword) {
-            let matchCount = 0;
             
-            // 如果没有关键词，显示所有卡片
-            if (!keyword) {
-                allCards.forEach(card => card.style.display = 'block');
-                gridContainers.forEach(container => container.style.display = 'grid');
-                emptyResult.style.display = 'none';
-                return;
-            }
-            
-            // 保存搜索历史
-            if (keyword && !searchHistory.includes(keyword)) {
-                searchHistory.unshift(keyword);
-                if (searchHistory.length > 10) searchHistory.pop();
-                localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
-                renderSearchHistory();
-            }
-            
-            // 搜索匹配逻辑
-            allCards.forEach(card => {
-                const name = card.dataset.name?.toLowerCase() || '';
-                const desc = card.dataset.desc?.toLowerCase() || '';
-                const type = card.dataset.type?.toLowerCase() || '';
-                
-                const isMatch = name.includes(keyword) || 
-                               desc.includes(keyword) || 
-                               type.includes(keyword);
-                
-                card.style.display = isMatch ? 'block' : 'none';
-                if (isMatch) matchCount++;
+            // 点击外部关闭搜索历史
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target) && !searchHistoryElem.contains(e.target)) {
+                    searchHistoryElem.classList.remove('show');
+                }
             });
             
-            // 显示空结果提示
-            emptyResult.style.display = matchCount === 0 ? 'block' : 'none';
-            
-            // 隐藏空的网格容器
-            gridContainers.forEach(container => {
-                const visibleCards = Array.from(container.querySelectorAll('.content-card'))
-                    .some(card => card.style.display === 'block');
-                container.style.display = visibleCards ? 'grid' : 'none';
-            });
+            // 搜索输入事件（防抖）
+            searchInput.addEventListener('input', debounce(function() {
+                performSearch(this.value.trim().toLowerCase());
+            }, 200));
         }
         
-        // 7.3 防抖函数
-        function debounce(func, delay) {
-            return function() {
-                clearTimeout(searchTimeout);
-                const context = this;
-                const args = arguments;
-                searchTimeout = setTimeout(() => func.apply(context, args), delay);
+        // ==================== 8. 导航和滚动功能 ====================
+        function initializeNavigation() {
+            const backToTopBtn = document.querySelector('.back-to-top');
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            // 8.1 回到顶部功能
+            window.scrollToTop = function() {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+            
+            // 8.2 滚动事件监听
+            window.addEventListener('scroll', function() {
+                // 显示/隐藏回到顶部按钮
+                if (window.scrollY > 300) {
+                    backToTopBtn.classList.add('show');
+                } else {
+                    backToTopBtn.classList.remove('show');
+                }
+                
+                // 更新导航激活状态
+                const sections = document.querySelectorAll('.section-header');
+                let currentSection = '';
+                
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop - 150;
+                    if (window.scrollY >= sectionTop) {
+                        currentSection = section.id;
+                    }
+                });
+                
+                navLinks.forEach(link => {
+                    link.classList.toggle('active', link.dataset.target === currentSection);
+                });
+            });
+            
+            // 8.3 锚点平滑滚动
+            navLinks.forEach(link => {
+                if (link.getAttribute('href').startsWith('#')) {
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const targetId = this.getAttribute('href').substring(1);
+                        const target = document.getElementById(targetId);
+                        if (target) {
+                            const playerHeight = document.getElementById('musicPlayerIframe').offsetHeight || 110;
+                            const targetPosition = target.offsetTop - 80 - playerHeight;
+                            
+                            window.scrollTo({
+                                top: targetPosition,
+                                behavior: 'smooth'
+                            });
+                            
+                            // 更新URL哈希
+                            history.pushState(null, null, `#${targetId}`);
+                        }
+                    });
+                }
+            });
+            
+            // 8.4 角色跳转函数
+            window.jumpToDetail = function(targetUrl, charName) {
+                if (!targetUrl) {
+                    showNotification('详情页地址不存在', 'error');
+                    return;
+                }
+                
+                const loadingDiv = document.createElement('div');
+                loadingDiv.style.cssText = `
+                    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                    background: var(--card-bg); padding: 16px 24px; border-radius: var(--radius);
+                    z-index: 999999; color: var(--text-highlight); display: flex; align-items: center; gap: 8px;
+                    box-shadow: var(--shadow); border: 1px solid var(--border-color);
+                `;
+                loadingDiv.innerHTML = `<span class="loading-spinner" style="width: 20px; height: 20px;"></span> 前往【${charName}】详情页...`;
+                document.body.appendChild(loadingDiv);
+                
+                setTimeout(() => {
+                    window.location.href = targetUrl;
+                }, 300);
             };
         }
         
-        // 7.4 初始化事件监听
-        // 渲染搜索历史
-        renderSearchHistory();
-        
-        // 搜索框焦点事件
-        searchInput.addEventListener('focus', () => {
-            if (searchHistory.length > 0) {
-                searchHistoryElem.classList.add('show');
-            }
-        });
-        
-        // 点击外部关闭搜索历史
-        document.addEventListener('click', (e) => {
-            if (!searchInput.contains(e.target) && !searchHistoryElem.contains(e.target)) {
-                searchHistoryElem.classList.remove('show');
-            }
-        });
-        
-        // 搜索输入事件（防抖）
-        searchInput.addEventListener('input', debounce(function() {
-            performSearch(this.value.trim().toLowerCase());
-        }, 200));
-    }
-    
-    // ==================== 8. 导航和滚动功能 ====================
-    function initializeNavigation() {
-        const backToTopBtn = document.querySelector('.back-to-top');
-        const navLinks = document.querySelectorAll('.nav-link');
-        
-        // 8.1 回到顶部功能
-        window.scrollToTop = function() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
-        
-        // 8.2 滚动事件监听
-        window.addEventListener('scroll', function() {
-            // 显示/隐藏回到顶部按钮
-            if (window.scrollY > 300) {
-                backToTopBtn.classList.add('show');
-            } else {
-                backToTopBtn.classList.remove('show');
-            }
+        // ==================== 9. 图片懒加载 ====================
+        function initializeLazyLoad() {
+            const images = document.querySelectorAll('img[loading="lazy"]');
             
-            // 更新导航激活状态
-            const sections = document.querySelectorAll('.section-header');
-            let currentSection = '';
-            
-            sections.forEach(section => {
-                const sectionTop = section.offsetTop - 150;
-                if (window.scrollY >= sectionTop) {
-                    currentSection = section.id;
-                }
-            });
-            
-            navLinks.forEach(link => {
-                link.classList.toggle('active', link.dataset.target === currentSection);
-            });
-        });
-        
-        // 8.3 锚点平滑滚动
-        navLinks.forEach(link => {
-            if (link.getAttribute('href').startsWith('#')) {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const targetId = this.getAttribute('href').substring(1);
-                    const target = document.getElementById(targetId);
-                    if (target) {
-                        const playerHeight = document.getElementById('musicPlayerIframe').offsetHeight || 110;
-                        const targetPosition = target.offsetTop - 80 - playerHeight;
-                        
-                        window.scrollTo({
-                            top: targetPosition,
-                            behavior: 'smooth'
-                        });
-                        
-                        // 更新URL哈希
-                        history.pushState(null, null, `#${targetId}`);
-                    }
-                });
-            }
-        });
-        
-        // 8.4 角色跳转函数
-        window.jumpToDetail = function(targetUrl, charName) {
-            if (!targetUrl) {
-                showNotification('详情页地址不存在', 'error');
-                return;
-            }
-            
-            const loadingDiv = document.createElement('div');
-            loadingDiv.style.cssText = `
-                position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                background: var(--card-bg); padding: 16px 24px; border-radius: var(--radius);
-                z-index: 999999; color: var(--text-highlight); display: flex; align-items: center; gap: 8px;
-                box-shadow: var(--shadow); border: 1px solid var(--border-color);
-            `;
-            loadingDiv.innerHTML = `<span class="loading-spinner" style="width: 20px; height: 20px;"></span> 前往【${charName}】详情页...`;
-            document.body.appendChild(loadingDiv);
-            
-            setTimeout(() => {
-                window.location.href = targetUrl;
-            }, 300);
-        };
-    }
-    
-    // ==================== 9. 图片懒加载 ====================
-    function initializeLazyLoad() {
-        const images = document.querySelectorAll('img[loading="lazy"]');
-        
-        // 使用IntersectionObserver实现懒加载
-        if ('IntersectionObserver' in window) {
-            const imageObserver = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const img = entry.target;
-                        // 如果有data-src属性，则加载真实图片
-                        if (img.dataset.src && img.dataset.src !== img.src) {
-                            img.src = img.dataset.src;
+            // 使用IntersectionObserver实现懒加载
+            if ('IntersectionObserver' in window) {
+                const imageObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            // 如果有data-src属性，则加载真实图片
+                            if (img.dataset.src && img.dataset.src !== img.src) {
+                                img.src = img.dataset.src;
+                            }
+                            imageObserver.unobserve(img);
                         }
-                        imageObserver.unobserve(img);
+                    });
+                });
+                
+                images.forEach(img => {
+                    // 如果图片还没有src，设置data-src
+                    if (!img.src && img.dataset.src) {
+                        imageObserver.observe(img);
                     }
                 });
-            });
-            
-            images.forEach(img => {
-                // 如果图片还没有src，设置data-src
-                if (!img.src && img.dataset.src) {
-                    imageObserver.observe(img);
-                }
-            });
-        }
-    }
-    
-    // ==================== 10. 滚动位置记忆 ====================
-    function saveScrollPosition() {
-        sessionStorage.setItem('scrollPos', window.scrollY);
-    }
-    
-    function restoreScrollPosition() {
-        const savedPos = sessionStorage.getItem('scrollPos');
-        if (savedPos) {
-            setTimeout(() => {
-                window.scrollTo(0, parseInt(savedPos));
-                sessionStorage.removeItem('scrollPos');
-            }, 100);
-        }
-    }
-    
-    window.addEventListener('beforeunload', saveScrollPosition);
-    
-    // ==================== 11. 用户状态管理 ====================
-    function initializeUserState() {
-        try {
-            const user = localStorage.getItem('user');
-            const nav = document.querySelector('.top-nav');
-            
-            if (user) {
-                nav.insertAdjacentHTML('beforeend', `
-                    <span style="margin-left:auto;color:var(--special-color);font-weight:500;display:flex;align-items:center;gap:4px;">
-                        <span style="font-size:0.9em;">👤</span>
-                        <span>${user}</span>
-                    </span>
-                    <a href="javascript:;" onclick="logoutUser()" style="margin-left:12px;" class="nav-link">退出</a>
-                `);
-            } else {
-                nav.insertAdjacentHTML('beforeend', `
-                    <a href="login-real.html" style="margin-left:auto;" class="nav-link">登录/注册</a>
-                `);
             }
-        } catch (err) {
-            console.error('用户状态初始化失败:', err);
-        }
-    }
-    
-    // 退出登录函数
-    window.logoutUser = function() {
-        if (confirm('确定要退出登录吗？')) {
-            localStorage.removeItem('user');
-            showNotification('已退出登录', 'success');
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-        }
-    };
-    
-    // ==================== 12. 通知系统 ====================
-    function showNotification(message, type = 'info') {
-        const notification = document.getElementById('notification');
-        notification.textContent = message;
-        notification.className = `notification ${type}`;
-        notification.classList.add('show');
-        
-        setTimeout(() => {
-            notification.classList.remove('show');
-        }, 3000);
-    }
-    
-    // ==================== 13. 全局错误处理 ====================
-    window.addEventListener('error', function(e) {
-        console.error('页面错误:', e.error);
-        showNotification('页面出现错误，请刷新重试', 'error');
-    });
-    
-    window.addEventListener('unhandledrejection', function(e) {
-        console.error('未处理的Promise错误:', e.reason);
-        showNotification('操作失败，请稍后重试', 'error');
-    });
-    
-    // ==================== 14. 隐藏加载动画 ====================
-    function hideLoading() {
-        const loading = document.getElementById('global-loading');
-        const progress = document.getElementById('loadingProgress');
-        
-        if (loading) {
-            loading.style.opacity = '0';
-            setTimeout(() => {
-                loading.style.display = 'none';
-            }, 500);
         }
         
-        if (progress) {
-            progress.style.opacity = '0';
-            setTimeout(() => {
-                progress.style.display = 'none';
-            }, 500);
+        // ==================== 10. 滚动位置记忆 ====================
+        function saveScrollPosition() {
+            sessionStorage.setItem('scrollPos', window.scrollY);
         }
-    }
-    
-    // 强制3秒后隐藏加载动画（兜底）
-    setTimeout(hideLoading, 3000);
-    
-    // ==================== 15. 音乐播放器优化 ====================
-    function initializeMusicPlayer() {
-        const iframe = document.getElementById('musicPlayerIframe');
         
-        // 设置初始高度
-        iframe.style.height = '110px';
-        
-        // 监听音乐播放器状态变化
-        window.addEventListener('message', (e) => {
-            if (e.data?.type === 'SONG_LIST_TOGGLED') {
-                iframe.style.height = e.data.isShow ? '400px' : '110px';
+        function restoreScrollPosition() {
+            const savedPos = sessionStorage.getItem('scrollPos');
+            if (savedPos) {
+                setTimeout(() => {
+                    window.scrollTo(0, parseInt(savedPos));
+                    sessionStorage.removeItem('scrollPos');
+                }, 100);
             }
-        });
-    }
-    
-    // ==================== 16. 更新日志功能 ====================
-    function initializeChangelogFunctions() {
-        // 16.1 高亮当前年份的更新
-        function highlightCurrentYearUpdates() {
-            const currentYear = new Date().getFullYear();
-            const currentMonth = new Date().getMonth() + 1;
-            
-            document.querySelectorAll('.changelog-version').forEach(title => {
-                if (title.textContent.includes(`${currentYear}`)) {
-                    title.style.color = 'var(--special-color)';
-                    
-                    // 如果是当前月份的更新，添加特殊标记
-                    const currentMonthStr = currentMonth < 10 ? `0${currentMonth}` : `${currentMonth}`;
-                    if (title.textContent.includes(`-${currentMonthStr}-`)) {
-                        title.innerHTML += ' <span style="animation: flash 1s infinite alternate;">✨</span>';
-                    }
-                }
-            });
         }
         
-        // 16.2 切换所有更新日志的展开/收起状态
-        window.toggleAllChangelogs = function() {
-            const changelogs = document.querySelectorAll('.changelog-item');
-            const controlBtn = document.querySelector('.control-btn span:first-child');
-            const icon = document.querySelector('.control-btn .icon');
-            
-            const allOpen = Array.from(changelogs).every(item => item.open);
-            
-            changelogs.forEach(item => {
-                item.open = !allOpen;
-            });
-            
-            if (allOpen) {
-                controlBtn.textContent = '展开全部';
-                icon.textContent = '▼';
-                showNotification('已收起所有更新记录', 'success');
-            } else {
-                controlBtn.textContent = '收起全部';
-                icon.textContent = '▲';
-                showNotification('已展开所有更新记录', 'success');
-            }
-        };
+        window.addEventListener('beforeunload', saveScrollPosition);
         
-        // 16.3 复制更新日志内容
-        window.copyChangelog = function() {
-            const changelogContent = document.querySelector('.changelog-list');
-            const text = changelogContent.innerText;
-            
-            navigator.clipboard.writeText(text).then(() => {
-                showNotification('更新记录已复制到剪贴板！', 'success');
-            }).catch(err => {
-                console.error('复制失败:', err);
-                showNotification('复制失败，请手动选择文本复制', 'error');
-            });
-        };
-        
-        // 执行高亮功能
-        highlightCurrentYearUpdates();
-    }
-    
-    // ==================== 17. 打印优化 ====================
-    window.addEventListener('beforeprint', () => {
-        document.body.classList.add('printing');
-    });
-    
-    window.addEventListener('afterprint', () => {
-        document.body.classList.remove('printing');
-    });
-    
-    // ==================== 18. 性能监控 ====================
-    if ('performance' in window) {
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                const timing = performance.timing;
-                const loadTime = timing.loadEventEnd - timing.navigationStart;
-                console.log(`页面总加载时间: ${loadTime}ms`);
-            }, 0);
-        });
-    }
-    
-    // ==================== 19. 登录状态检查（单独的函数）====================
-    function checkLoginStatus() {
-        const userData = localStorage.getItem('user');
-        const statusBar = document.getElementById('userStatusBar');
-        const welcomeMsg = document.getElementById('welcomeMsg');
-        
-        if (userData) {
+        // ==================== 11. Supabase初始化 ====================
+        async function initializeSupabase() {
             try {
-                const user = JSON.parse(userData);
-                if (user.isLoggedIn) {
-                    statusBar.style.display = 'block';
-                    welcomeMsg.innerHTML = `👤 欢迎回来，<strong style="color:#a8d0b9">${user.username}</strong>`;
+                console.log('初始化Supabase...');
+                
+                // 创建Supabase客户端
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                
+                // 获取当前用户
+                const { data: { user }, error } = await supabaseClient.auth.getUser();
+                
+                if (error) {
+                    console.error('获取用户信息失败:', error);
+                    return false;
                 }
+                
+                if (user) {
+                    currentUser = user;
+                    console.log('当前用户:', user.email);
+                    
+                    // 保存用户信息到本地存储（用于页面刷新时快速显示）
+                    localStorage.setItem('user', JSON.stringify({
+                        email: user.email,
+                        id: user.id,
+                        username: user.user_metadata?.username || user.email.split('@')[0],
+                        avatarLetter: (user.user_metadata?.username || user.email.split('@')[0]).charAt(0).toUpperCase(),
+                        isLoggedIn: true
+                    }));
+                } else {
+                    console.log('没有用户登录');
+                    localStorage.removeItem('user');
+                }
+                
+                // 监听认证状态变化
+                supabaseClient.auth.onAuthStateChange((event, session) => {
+                    console.log('认证状态变化:', event);
+                    
+                    if (event === 'SIGNED_IN' && session?.user) {
+                        currentUser = session.user;
+                        showNotification(`欢迎回来，${session.user.email}!`, 'success');
+                        
+                        // 保存用户信息
+                        localStorage.setItem('user', JSON.stringify({
+                            email: session.user.email,
+                            id: session.user.id,
+                            username: session.user.user_metadata?.username || session.user.email.split('@')[0],
+                            avatarLetter: (session.user.user_metadata?.username || session.user.email.split('@')[0]).charAt(0).toUpperCase(),
+                            isLoggedIn: true
+                        }));
+                        
+                        // 更新UI
+                        updateUserUI();
+                        
+                    } else if (event === 'SIGNED_OUT') {
+                        currentUser = null;
+                        localStorage.removeItem('user');
+                        showNotification('已退出登录', 'info');
+                        
+                        // 更新UI
+                        updateUserUI();
+                        
+                        // 如果是从登录页跳转过来的，就不刷新页面
+                        if (!window.location.href.includes('login-real.html')) {
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                        }
+                    }
+                });
+                
+                return true;
             } catch (error) {
-                console.error('用户数据解析错误:', error);
+                console.error('Supabase初始化失败:', error);
+                showNotification('用户系统初始化失败，部分功能受限', 'error');
+                return false;
             }
         }
-    }
-    
-    // 在页面加载完成后检查登录状态
-    setTimeout(checkLoginStatus, 1500);
-    
-    // ==================== 20. 雪花脚本（异步加载）====================
-    if (window.innerWidth > 768) { // 只在桌面端显示雪花
-        const snowScript = document.createElement('script');
-        snowScript.src = 'snow.js';
-        snowScript.async = true;
-        snowScript.onload = () => console.log('雪花脚本加载完成');
-        snowScript.onerror = () => console.log('雪花脚本加载失败');
-        document.body.appendChild(snowScript);
-    }
-</script>
+        
+        // ==================== 12. 用户状态管理 ====================
+        function updateUserUI() {
+            const userStatusBar = document.getElementById('userStatusBar');
+            const welcomeMsg = document.getElementById('welcomeMsg');
+            const userNavSection = document.getElementById('userNavSection');
+            
+            if (currentUser) {
+                // 用户已登录
+                const username = currentUser.user_metadata?.username || currentUser.email.split('@')[0];
+                const avatarLetter = username.charAt(0).toUpperCase();
+                
+                // 更新状态栏
+                userStatusBar.style.display = 'block';
+                welcomeMsg.innerHTML = `<span style="margin-right: 8px;">👤</span>欢迎回来，<strong style="color:#a8d0b9">${username}</strong>`;
+                
+                // 更新导航栏
+                userNavSection.innerHTML = `
+                    <div class="user-avatar" title="${username}">${avatarLetter}</div>
+                    <span class="username">${username}</span>
+                    <a href="javascript:;" onclick="logoutUser()" class="nav-link">退出</a>
+                `;
+                
+            } else {
+                // 用户未登录
+                userStatusBar.style.display = 'none';
+                
+                // 更新导航栏为登录链接
+                userNavSection.innerHTML = `
+                    <a href="login-real.html" class="nav-link">登录/注册</a>
+                `;
+            }
+        }
+        
+        // ==================== 13. 退出登录函数 ====================
+        async function logoutUser() {
+            if (confirm('确定要退出登录吗？')) {
+                try {
+                    if (supabaseClient) {
+                        const { error } = await supabaseClient.auth.signOut();
+                        if (error) throw error;
+                    }
+                    
+                    currentUser = null;
+                    localStorage.removeItem('user');
+                    
+                    showNotification('已退出登录', 'success');
+                    
+                    // 更新UI
+                    updateUserUI();
+                    
+                    // 1秒后刷新页面
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                    
+                } catch (error) {
+                    console.error('退出登录失败:', error);
+                    showNotification('退出失败，请刷新页面重试', 'error');
+                }
+            }
+        }
+        
+        // ==================== 14. 通知系统 ====================
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // ==================== 15. 全局错误处理 ====================
+        window.addEventListener('error', function(e) {
+            console.error('页面错误:', e.error);
+            showNotification('页面出现错误，请刷新重试', 'error');
+        });
+        
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('未处理的Promise错误:', e.reason);
+            showNotification('操作失败，请稍后重试', 'error');
+        });
+        
+        // ==================== 16. 隐藏加载动画 ====================
+        function hideLoading() {
+            const loading = document.getElementById('global-loading');
+            const progress = document.getElementById('loadingProgress');
+            
+            if (loading) {
+                loading.style.opacity = '0';
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                }, 500);
+            }
+            
+            if (progress) {
+                progress.style.opacity = '0';
+                setTimeout(() => {
+                    progress.style.display = 'none';
+                }, 500);
+            }
+        }
+        
+        // 强制3秒后隐藏加载动画（兜底）
+        setTimeout(hideLoading, 3000);
+        
+        // ==================== 17. 音乐播放器优化 ====================
+        function initializeMusicPlayer() {
+            const iframe = document.getElementById('musicPlayerIframe');
+            
+            // 设置初始高度
+            iframe.style.height = '110px';
+            
+            // 监听音乐播放器状态变化
+            window.addEventListener('message', (e) => {
+                if (e.data?.type === 'SONG_LIST_TOGGLED') {
+                    iframe.style.height = e.data.isShow ? '400px' : '110px';
+                }
+            });
+        }
+        
+        // ==================== 18. 更新日志功能 ====================
+        function initializeChangelogFunctions() {
+            // 18.1 高亮当前年份的更新
+            function highlightCurrentYearUpdates() {
+                const currentYear = new Date().getFullYear();
+                const currentMonth = new Date().getMonth() + 1;
+                
+                document.querySelectorAll('.changelog-version').forEach(title => {
+                    if (title.textContent.includes(`${currentYear}`)) {
+                        title.style.color = 'var(--special-color)';
+                        
+                        // 如果是当前月份的更新，添加特殊标记
+                        const currentMonthStr = currentMonth < 10 ? `0${currentMonth}` : `${currentMonth}`;
+                        if (title.textContent.includes(`-${currentMonthStr}-`)) {
+                            title.innerHTML += ' <span style="animation: flash 1s infinite alternate;">✨</span>';
+                        }
+                    }
+                });
+            }
+            
+            // 18.2 切换所有更新日志的展开/收起状态
+            window.toggleAllChangelogs = function() {
+                const changelogs = document.querySelectorAll('.changelog-item');
+                const controlBtn = document.querySelector('.control-btn span:first-child');
+                const icon = document.querySelector('.control-btn .icon');
+                
+                const allOpen = Array.from(changelogs).every(item => item.open);
+                
+                changelogs.forEach(item => {
+                    item.open = !allOpen;
+                });
+                
+                if (allOpen) {
+                    controlBtn.textContent = '展开全部';
+                    icon.textContent = '▼';
+                    showNotification('已收起所有更新记录', 'success');
+                } else {
+                    controlBtn.textContent = '收起全部';
+                    icon.textContent = '▲';
+                    showNotification('已展开所有更新记录', 'success');
+                }
+            };
+            
+            // 18.3 复制更新日志内容
+            window.copyChangelog = function() {
+                const changelogContent = document.querySelector('.changelog-list');
+                const text = changelogContent.innerText;
+                
+                navigator.clipboard.writeText(text).then(() => {
+                    showNotification('更新记录已复制到剪贴板！', 'success');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    showNotification('复制失败，请手动选择文本复制', 'error');
+                });
+            };
+            
+            // 执行高亮功能
+            highlightCurrentYearUpdates();
+        }
+        
+        // ==================== 19. 打印优化 ====================
+        window.addEventListener('beforeprint', () => {
+            document.body.classList.add('printing');
+        });
+        
+        window.addEventListener('afterprint', () => {
+            document.body.classList.remove('printing');
+        });
+        
+        // ==================== 20. 性能监控 ====================
+        if ('performance' in window) {
+            window.addEventListener('load', () => {
+                setTimeout(() => {
+                    const timing = performance.timing;
+                    const loadTime = timing.loadEventEnd - timing.navigationStart;
+                    console.log(`页面总加载时间: ${loadTime}ms`);
+                }, 0);
+            });
+        }
+        
+        // ==================== 21. 登录重定向功能 ====================
+        // 检查URL参数，如果有登录成功的参数，显示欢迎消息
+        function checkLoginRedirect() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('login') === 'success') {
+                showNotification('登录成功！欢迎回来~', 'success');
+                // 移除URL参数
+                history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+        
+        // 在页面加载后检查
+        setTimeout(checkLoginRedirect, 500);
+        
+        // ==================== 22. 登录页快速访问功能 ====================
+        // 如果是移动设备，并且用户未登录，显示快速登录提示
+        function checkMobileLoginHint() {
+            if (!currentUser && window.innerWidth <= 768) {
+                setTimeout(() => {
+                    showNotification('点击右上角登录/注册，获取更好体验', 'info');
+                }, 3000);
+            }
+        }
+        
+        // 检查设备类型
+        setTimeout(checkMobileLoginHint, 2000);
+        
+        // ==================== 23. 用户登录状态验证 ====================
+        // 定期检查登录状态（每5分钟一次）
+        setInterval(async () => {
+            if (currentUser && supabaseClient) {
+                try {
+                    const { data: { user }, error } = await supabaseClient.auth.getUser();
+                    if (error || !user) {
+                        // 登录状态失效
+                        currentUser = null;
+                        localStorage.removeItem('user');
+                        updateUserUI();
+                        showNotification('登录状态已过期，请重新登录', 'warning');
+                    }
+                } catch (error) {
+                    console.error('登录状态验证失败:', error);
+                }
+            }
+        }, 5 * 60 * 1000); // 5分钟
+        
+        // ==================== 24. 自动填充测试账号（仅开发环境）====================
+        function checkAndFillTestAccount() {
+            // 仅本地环境且用户未登录时显示
+            if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !currentUser) {
+                const testHint = document.createElement('div');
+                testHint.style.cssText = `
+                    position: fixed;
+                    bottom: 160px;
+                    right: 20px;
+                    background: rgba(62, 207, 142, 0.9);
+                    color: white;
+                    padding: 10px 15px;
+                    border-radius: 20px;
+                    font-size: 0.8rem;
+                    z-index: 9998;
+                    cursor: pointer;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                    transition: all 0.3s;
+                    max-width: 200px;
+                `;
+                testHint.innerHTML = '👨‍💻 开发提示：<br>测试账号已可用';
+                testHint.onclick = () => {
+                    window.location.href = 'login-real.html';
+                };
+                testHint.onmouseover = () => {
+                    testHint.style.transform = 'translateY(-2px)';
+                    testHint.style.boxShadow = '0 6px 16px rgba(0,0,0,0.3)';
+                };
+                testHint.onmouseout = () => {
+                    testHint.style.transform = 'translateY(0)';
+                    testHint.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+                };
+                document.body.appendChild(testHint);
+                
+                // 10秒后自动隐藏
+                setTimeout(() => {
+                    testHint.style.opacity = '0';
+                    testHint.style.transform = 'translateY(20px)';
+                    setTimeout(() => testHint.remove(), 300);
+                }, 10000);
+            }
+        }
+        
+        // 延迟执行，确保页面加载完成
+        setTimeout(checkAndFillTestAccount, 1500);
+    </script>
 </body>
 </html>
