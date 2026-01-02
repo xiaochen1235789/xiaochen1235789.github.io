@@ -126,51 +126,10 @@
             100% { background-position: -200% 0; }
         }
         
-        /* ==================== 登录状态栏 ==================== */
-        .user-status-bar {
-            background: linear-gradient(135deg, #2d443b 0%, #1e3a2f 100%);
-            padding: 10px 20px;
-            border-bottom: 1px solid #3a5048;
-            display: none;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            position: sticky;
-            top: 0;
-            z-index: 10000;
-        }
+        /* ==================== 修复：顶部固定布局 ==================== */
+        /* 移除了 user-status-bar，将其功能整合到导航栏中 */
         
-        .user-status-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .welcome-message {
-            color: #a8d0b9;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .logout-btn {
-            background: rgba(129, 199, 132, 0.2);
-            color: #81c784;
-            border: 1px solid rgba(129, 199, 132, 0.3);
-            padding: 6px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.3s;
-        }
-        
-        .logout-btn:hover {
-            background: rgba(129, 199, 132, 0.3);
-            color: #a8d0b9;
-        }
-        
-        /* ==================== 导航栏 ==================== */
+        /* ==================== 导航栏（重构版） ==================== */
         .top-nav {
             background: var(--card-bg);
             border-radius: var(--radius);
@@ -183,8 +142,10 @@
             max-width: 1200px;
             box-shadow: var(--shadow);
             position: sticky;
-            top: 50px;
+            top: 0;
             z-index: 9999;
+            /* 修复：添加背景色避免透明 */
+            background: var(--card-bg);
         }
         
         .nav-title {
@@ -234,11 +195,22 @@
             border-radius: 50%;
         }
         
+        /* ==================== 用户信息区域（整合到导航栏中） ==================== */
         .user-nav-section {
             margin-left: auto;
             display: flex;
             align-items: center;
             gap: 12px;
+        }
+        
+        .user-info-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: rgba(129, 199, 132, 0.1);
+            border-radius: 20px;
+            border: 1px solid rgba(129, 199, 132, 0.2);
         }
         
         .user-avatar {
@@ -252,12 +224,34 @@
             color: white;
             font-weight: 600;
             font-size: 0.9rem;
+            flex-shrink: 0;
         }
         
         .username {
             color: var(--text-highlight);
             font-weight: 500;
             font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+        }
+        
+        .logout-btn {
+            background: transparent;
+            color: #f87171;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            padding: 6px 12px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all var(--transition-fast);
+            flex-shrink: 0;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(248, 113, 113, 0.1);
+            transform: translateY(-1px);
         }
         
         /* ==================== 搜索相关样式 ==================== */
@@ -842,7 +836,6 @@
             border-radius: 3px;
             margin: 0 2px;
         }
-        
         /* 控制按钮 */
         .changelog-controls {
             display: flex;
@@ -1082,11 +1075,25 @@
                 right: 15px;
             }
             
-            .user-nav-section {
-                order: -1;
-                width: 100%;
-                justify-content: flex-end;
-                margin-bottom: 10px;
+            .user-info-container {
+                padding: 6px 12px;
+                gap: 8px;
+            }
+            
+            .username {
+                max-width: 80px;
+                font-size: 0.85rem;
+            }
+            
+            .user-avatar {
+                width: 28px;
+                height: 28px;
+                font-size: 0.8rem;
+            }
+            
+            .logout-btn {
+                padding: 4px 8px;
+                font-size: 0.8rem;
             }
         }
         
@@ -1099,6 +1106,17 @@
             .top-nav {
                 padding: 10px 12px;
                 gap: 8px;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .user-nav-section {
+                order: 3;
+                width: 100%;
+                justify-content: space-between;
+                margin-top: 10px;
+                border-top: 1px solid var(--border-color);
+                padding-top: 10px;
             }
             
             .nav-link {
@@ -1140,13 +1158,21 @@
                 display: block;
                 margin: 4px 0;
             }
+            
+            .user-info-container {
+                padding: 4px 8px;
+            }
+            
+            .username {
+                max-width: 60px;
+                font-size: 0.8rem;
+            }
         }
         
         /* ==================== 打印样式优化 ==================== */
         @media print {
             .top-nav, #search-input, .site-age-container, 
-            .back-to-top, #musicPlayerIframe, footer,
-            .user-status-bar {
+            .back-to-top, #musicPlayerIframe, footer {
                 display: none !important;
             }
             
@@ -1188,19 +1214,8 @@
 
     <!-- 通知消息容器 -->
     <div class="notification" id="notification"></div>
-    
-    <!-- 登录状态条 -->
-    <div class="user-status-bar" id="userStatusBar">
-        <div class="user-status-content">
-            <span class="welcome-message" id="welcomeMsg">
-                <span style="margin-right: 8px;">👤</span>
-                <span>加载中...</span>
-            </span>
-            <button class="logout-btn" onclick="logoutUser()">退出登录</button>
-        </div>
-    </div>
 
-    <!-- 导航栏 -->
+    <!-- 导航栏（已整合登录状态） -->
     <nav class="top-nav" aria-label="主要导航">
         <div class="nav-title">
             <span>六哥荣耀WIKI</span>
@@ -1211,7 +1226,10 @@
         <a href="#changelog" class="nav-link" data-target="changelog">更新日志</a>
         
         <!-- 用户导航部分（由JavaScript动态生成） -->
-        <div class="user-nav-section" id="userNavSection"></div>
+        <div class="user-nav-section" id="userNavSection">
+            <!-- 默认显示登录链接，登录后显示用户信息 -->
+            <a href="login-real.html" class="nav-link">登录/注册</a>
+        </div>
     </nav>
 
     <!-- 搜索框 -->
@@ -1585,6 +1603,7 @@
 
     <!-- 回到顶部按钮 -->
     <button class="back-to-top" onclick="scrollToTop()" aria-label="回到顶部">↑</button>
+
     <script>
         // ==================== 1. 全局变量定义 ====================
         let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
@@ -2050,10 +2069,8 @@
             }
         }
         
-        // ==================== 12. 用户状态管理 ====================
+        // ==================== 12. 用户状态管理（已整合到导航栏） ====================
         function updateUserUI() {
-            const userStatusBar = document.getElementById('userStatusBar');
-            const welcomeMsg = document.getElementById('welcomeMsg');
             const userNavSection = document.getElementById('userNavSection');
             
             if (currentUser) {
@@ -2061,21 +2078,17 @@
                 const username = currentUser.user_metadata?.username || currentUser.email.split('@')[0];
                 const avatarLetter = username.charAt(0).toUpperCase();
                 
-                // 更新状态栏
-                userStatusBar.style.display = 'block';
-                welcomeMsg.innerHTML = `<span style="margin-right: 8px;">👤</span>欢迎回来，<strong style="color:#a8d0b9">${username}</strong>`;
-                
                 // 更新导航栏
                 userNavSection.innerHTML = `
-                    <div class="user-avatar" title="${username}">${avatarLetter}</div>
-                    <span class="username">${username}</span>
-                    <a href="javascript:;" onclick="logoutUser()" class="nav-link">退出</a>
+                    <div class="user-info-container">
+                        <div class="user-avatar" title="${username}">${avatarLetter}</div>
+                        <span class="username">${username}</span>
+                        <button class="logout-btn" onclick="logoutUser()">退出</button>
+                    </div>
                 `;
                 
             } else {
                 // 用户未登录
-                userStatusBar.style.display = 'none';
-                
                 // 更新导航栏为登录链接
                 userNavSection.innerHTML = `
                     <a href="login-real.html" class="nav-link">登录/注册</a>
@@ -2267,20 +2280,7 @@
         // 在页面加载后检查
         setTimeout(checkLoginRedirect, 500);
         
-        // ==================== 22. 登录页快速访问功能 ====================
-        // 如果是移动设备，并且用户未登录，显示快速登录提示
-        function checkMobileLoginHint() {
-            if (!currentUser && window.innerWidth <= 768) {
-                setTimeout(() => {
-                    showNotification('点击右上角登录/注册，获取更好体验', 'info');
-                }, 3000);
-            }
-        }
-        
-        // 检查设备类型
-        setTimeout(checkMobileLoginHint, 2000);
-        
-        // ==================== 23. 用户登录状态验证 ====================
+        // ==================== 22. 用户登录状态验证 ====================
         // 定期检查登录状态（每5分钟一次）
         setInterval(async () => {
             if (currentUser && supabaseClient) {
@@ -2299,7 +2299,7 @@
             }
         }, 5 * 60 * 1000); // 5分钟
         
-        // ==================== 24. 自动填充测试账号（仅开发环境）====================
+        // ==================== 23. 自动填充测试账号（仅开发环境）====================
         function checkAndFillTestAccount() {
             // 仅本地环境且用户未登录时显示
             if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && !currentUser) {
@@ -2344,6 +2344,27 @@
         
         // 延迟执行，确保页面加载完成
         setTimeout(checkAndFillTestAccount, 1500);
+        
+        // ==================== 24. 修复：确保导航栏不会被遮挡 ====================
+        // 添加滚动事件监听，确保导航栏始终可见
+        window.addEventListener('scroll', function() {
+            const nav = document.querySelector('.top-nav');
+            if (nav) {
+                // 确保导航栏在滚动时不会失去背景
+                if (window.scrollY > 50) {
+                    nav.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
+                    nav.style.background = 'var(--card-bg)';
+                } else {
+                    nav.style.boxShadow = 'var(--shadow)';
+                }
+            }
+        });
+        
+        // ==================== 25. 移动端优化 ====================
+        // 防止移动端点击延迟
+        if ('ontouchstart' in window) {
+            document.documentElement.style.cursor = 'pointer';
+        }
     </script>
 </body>
 </html>
