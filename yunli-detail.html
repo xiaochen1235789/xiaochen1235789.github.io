@@ -11,6 +11,8 @@
   --surface: #1a1a1a;
   --card: #202020;
   --primary: #d3af37;   /* 玉衡金 */
+  --primary-light: #e8c96b; /* 浅金色 */
+  --primary-dark: #b8941a; /* 深金色 */
   --second: #81c784;
   --text: #e0e0e0;
   --sub: #99aabb;
@@ -122,6 +124,7 @@ img {
   font-weight: 600;
   font-size: 1.3rem;
   color: var(--primary);
+  transition: all var(--tran);
 }
 .level-btn {
   width: 34px;
@@ -183,6 +186,24 @@ img {
   background-clip: text;
   color: transparent;
   font-weight: 600;
+}
+/* 技能数值高亮 */
+.skill-val {
+  color: var(--primary);
+  font-weight: 600;
+  transition: all var(--tran);
+}
+/* 命座数值高亮样式 */
+.const-val {
+  color: var(--primary);
+  font-weight: 700;
+  text-shadow: 0 0 3px rgba(211, 175, 55, 0.3);
+  transition: all var(--tran);
+  display: inline-block;
+}
+.const-val:hover {
+  text-shadow: 0 0 8px rgba(211, 175, 55, 0.6);
+  transform: scale(1.05);
 }
 /* 额外能力区域 */
 .extra-ability {
@@ -291,7 +312,7 @@ img {
 
 <!-- 立绘 + 名字 + 标签 -->
 <div class="art-box">
-  <img src="https://xiaochen1235789.github.io/images/yunli.webp" alt="云璃立绘">
+  <img src="https://xiaochen1235789.github.io/images/yunli.png" alt="云璃立绘">
   <div class="name-tag">
     <div class="ch-name">云璃(魔改加强)</div>
     <div class="tags">
@@ -450,7 +471,6 @@ img {
         <td>九尺运斤</td>
         <td>
           普攻等级+<span class="const-val" data-lv="3">1</span>，最多不超过<span class="const-val" data-lv="3">10</span>级
-          <br>
           天赋等级+<span class="const-val" data-lv="3">2</span>，最多不超过<span class="const-val" data-lv="3">15</span>级
         </td>
       </tr>
@@ -466,7 +486,6 @@ img {
         <td>恒兵匪石</td>
         <td>
           战技等级+<span class="const-val" data-lv="5">2</span>，最多不超过<span class="const-val" data-lv="5">15</span>级
-          <br>
           终结技等级+<span class="const-val" data-lv="5">2</span>，最多不超过<span class="const-val" data-lv="5">15</span>级
         </td>
       </tr>
@@ -546,13 +565,13 @@ const skillData = {
   }
 };
 
-// 颜色等级数组（1-15级）
+// 优化颜色等级数组，创建真正的金色渐变效果
 const levelColors = [
-  '#d3af37', '#d3af37', '#d3af37',           // 1-3 浅金（入门）
-  '#d3af37', '#d3af37', '#d3af37',           // 4-6 亮金（进阶）
-  '#d3af37', '#d3af37', '#d3af37',           // 7-9 暗金（稀有）
-  '#d3af37', '#d3af37', '#d3af37',           // 10-12 深金（史诗）
-  '#d3af37', '#d3af37', '#d3af37'            // 13-15 传说金（传说）
+  '#e8c96b', '#e6c463', '#e4bf5b',           // 1-3 浅金
+  '#e2ba53', '#e0b54b', '#deb043',           // 4-6 中等金
+  '#dcab3b', '#daa633', '#d8a12b',           // 7-9 标准金
+  '#d69c23', '#d4971b', '#d29213',           // 10-12 深金
+  '#d38d0b', '#d18803', '#d18300'            // 13-15 传说金（越来越深）
 ];
 
 // 改变技能等级
@@ -583,9 +602,10 @@ function updateSkillDisplay(skillType) {
   // 设置等级颜色
   if (skill.level >= 13 && skill.level <= 15) {
     levelElement.className = 'level-value legend-text';
+    levelElement.style.color = ''; // 清除内联样式
   } else {
     levelElement.className = 'level-value';
-    levelElement.style.color = levelColors[skill.level - 1];
+    levelElement.style.color = levelColors[skill.level - 1] || levelColors[0];
   }
   
   // 更新技能数值
@@ -597,9 +617,10 @@ function updateSkillDisplay(skillType) {
     // 设置数值颜色
     if (skill.level >= 13 && skill.level <= 15) {
       element.className = 'skill-val legend-text';
+      element.style.color = ''; // 清除内联样式
     } else {
       element.className = 'skill-val';
-      element.style.color = levelColors[skill.level - 1];
+      element.style.color = levelColors[skill.level - 1] || levelColors[0];
     }
   });
 }
@@ -612,6 +633,23 @@ function updateButtonState(skillType) {
   
   downButton.disabled = skill.level <= 1;
   upButton.disabled = skill.level >= skill.maxLevel;
+}
+
+// 初始化命座数值高亮效果
+function initConstellationValues() {
+  const constVals = document.querySelectorAll('.const-val');
+  constVals.forEach(val => {
+    // 为每个命座数值添加悬停效果
+    val.addEventListener('mouseenter', function() {
+      this.style.textShadow = '0 0 8px rgba(211, 175, 55, 0.6)';
+      this.style.transform = 'scale(1.05)';
+    });
+    
+    val.addEventListener('mouseleave', function() {
+      this.style.textShadow = '0 0 3px rgba(211, 175, 55, 0.3)';
+      this.style.transform = 'scale(1)';
+    });
+  });
 }
 
 // 初始化所有技能
@@ -644,6 +682,7 @@ window.addEventListener('message', (e) => {
 // 页面加载完成
 window.addEventListener('DOMContentLoaded', () => {
   initAllSkills();
+  initConstellationValues();
   
   // 初始化音乐播放器状态
   setTimeout(() => {
@@ -663,4 +702,4 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 </body>
-            </html>
+</html>
