@@ -2709,6 +2709,163 @@ body::before {
                 `;
             }
         }
+        
+        // ==================== 管理员功能 ====================
+async function addUserExpByEmail(email, expAmount, reason = '') {
+    try {
+        // 1. 验证是否是管理员（这里需要你实现管理员验证逻辑）
+        if (!await isAdmin()) {
+            showNotification('权限不足，需要管理员权限', 'error');
+            return false;
+        }
+        
+        // 2. 根据邮箱查找用户ID
+        const { data: userData, error: userError } = await supabaseClient
+            .from('auth.users')
+            .select('id')
+            .eq('email', email)
+            .single();
+        
+        if (userError || !userData) {
+            showNotification('未找到该邮箱的用户', 'error');
+            return false;
+        }
+        
+        const userId = userData.id;
+        
+        // 3. 调用RPC函数增加经验值
+        const { error: expError } = await supabaseClient.rpc('add_user_exp', {
+            user_id_param: userId,
+            exp_amount: expAmount
+        });
+        
+        if (expError) throw expError;
+        
+        // 4. 记录操作日志
+        await logAdminAction('add_exp', {
+            admin_id: currentUser.id,
+            target_user_id: userId,
+            target_email: email,
+            exp_amount: expAmount,
+            reason: reason,
+            timestamp: new Date().toISOString()
+        });
+        
+        // 5. 显示成功消息
+        showNotification(`已为用户 ${email} 增加 ${expAmount} 经验值`, 'success');
+        
+        return true;
+        
+    } catch (error) {
+        console.error('增加经验值失败:', error);
+        showNotification(`操作失败: ${error.message}`, 'error');
+        return false;
+    }
+}
+
+// 管理员验证函数（需要你根据实际情况实现）
+async function isAdmin() {
+    try {
+        // 方法1：检查用户角色（如果有roles表）
+        const { data: roleData, error: roleError } = await supabaseClient
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', currentUser.id)
+            .single();
+        
+        if (!roleError && roleData && roleData.role === 'admin') {
+            return true;
+        }
+        
+        // 方法2：检查特定邮箱（简单方法）
+        const adminEmails = ['admin@example.com', 'your-admin-email@example.com'];
+        if (adminEmails.includes(currentUser.email)) {
+            return true;
+        }
+        
+        // 方法3：检查用户元数据
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (user?.user_metadata?.is_admin) {
+            return true;
+        }
+        
+        return false;
+        
+    } catch (error) {
+        console.error('验证管理员权限失败:', error);
+        return false;
+    }
+}
+
+// 记录管理员操作日志
+async function logAdminAction(action, details) {
+    try {
+        const { error } = await supabaseClient
+            .from('admin_logs')
+            .insert({
+                action: action,
+                details: details,
+                created_at: new Date().toISOString()
+            });
+        
+        if (error) console.error('记录操作日志失败:', error);
+    } catch (error) {
+        console.error('记录操作日志失败:', error);
+    }
+}
+
+// ==================== 添加管理员界面（可选） ====================
+function addAdminPanel() {
+    if (!isAdmin()) return;
+    
+    // 在页面中添加管理员面板
+    const settingsSection = document.querySelector('.settings-section');
+    if (settingsSection) {
+        const adminPanel = document.createElement('div');
+        adminPanel.className = 'admin-panel danger-zone';
+        adminPanel.innerHTML = `
+            <div class="danger-title">
+                <i class="fas fa-user-shield"></i>
+                管理员功能
+            </div>
+            <div style="margin-bottom: 15px;">
+                <div class="form-group">
+                    <label class="form-label">用户邮箱</label>
+                    <input type="email" class="form-input" id="targetUserEmail" placeholder="输入用户邮箱">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">经验值数量</label>
+                    <input type="number" class="form-input" id="expAmount" placeholder="输入经验值" min="1" max="1000" value="10">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">操作原因</label>
+                    <input type="text" class="form-input" id="expReason" placeholder="操作原因（可选）">
+                </div>
+                <button class="btn btn-primary" id="addExpBtn" style="width: 100%;">
+                    <i class="fas fa-plus"></i> 增加经验值
+                </button>
+            </div>
+        `;
+        
+        settingsSection.parentNode.insertBefore(adminPanel, settingsSection);
+        
+        // 绑定事件
+        document.getElementById('addExpBtn')?.addEventListener('click', async () => {
+            const email = document.getElementById('targetUserEmail').value;
+            const expAmount = parseInt(document.getElementById('expAmount').value);
+            const reason = document.getElementById('expReason').value;
+            
+            if (!email || !expAmount) {
+                showNotification('请填写邮箱和经验值数量', 'error');
+                return;
+            }
+            
+            if (confirm(`确定要给 ${email} 增加 ${expAmount} 经验值吗？`)) {
+                await addUserExpByEmail(email, expAmount, reason);
+            }
+        });
+    }
+}
 
         // ==================== 页面加载初始化 ====================
         document.addEventListener('DOMContentLoaded', function() {
