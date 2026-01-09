@@ -2,7 +2,7 @@
 <html lang="zh-cmn-Hans">
 <head>
     <meta charset="UTF-8">
-    <title>Supabase奖励邮箱</title>
+    <title>奖励邮箱 - 修复版</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -207,15 +207,30 @@
         .toast.error {
             background: #ef4444;
         }
-        .debug-info {
-            font-size: 11px;
-            color: #64748b;
-            text-align: center;
+        .debug-panel {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 15px;
             margin-top: 20px;
-            padding: 10px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 6px;
+            font-size: 12px;
+            color: #94a3b8;
             font-family: monospace;
+            border: 1px solid #334155;
+        }
+        .debug-title {
+            color: #60a5fa;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .debug-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 10px;
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -226,7 +241,7 @@
     <div class="container">
         <div class="header">
             <h1>📬 奖励邮箱系统</h1>
-            <div>基于Supabase后端</div>
+            <div>基于Supabase后端 - 修复版</div>
             <div id="connectionStatus" class="status">连接中...</div>
         </div>
         
@@ -237,7 +252,13 @@
             </div>
         </div>
         
-        <div class="debug-info" id="debugInfo"></div>
+        <!-- 调试面板 -->
+        <div class="debug-panel" id="debugPanel" style="display: none;">
+            <div class="debug-title">调试信息</div>
+            <div id="debugInfo">等待数据...</div>
+            <button class="debug-btn" onclick="testConnection()">测试连接</button>
+            <button class="debug-btn" onclick="viewRawData()">查看原始数据</button>
+        </div>
     </div>
     
     <div class="toast" id="toast">
@@ -254,49 +275,132 @@
             auth: { persistSession: false }
         });
         
-        // ==================== 状态管理 ====================
-        let isConnected = false;
-        
         // ==================== 初始化 ====================
         async function init() {
             try {
-                showLoading('正在测试Supabase连接...');
+                showLoading('正在连接Supabase...');
                 updateStatus('连接中...', false);
                 
-                // 测试连接
-                const { data, error, count } = await supabase
-                    .from('reward_mails')
-                    .select('*', { count: 'exact', head: true });
+                // 先直接测试API连接
+                const testUrl = `${SUPABASE_URL}/rest/v1/reward_mails?apikey=${SUPABASE_ANON_KEY}`;
+                console.log('测试URL:', testUrl);
                 
-                if (error) {
-                    throw new Error(`连接失败: ${error.message}`);
+                const response = await fetch(testUrl, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status}`);
                 }
+                
+                const data = await response.json();
+                console.log('直接API响应:', data);
                 
                 isConnected = true;
                 updateStatus('已连接 ✓', true);
-                showToast('成功连接到Supabase数据库', 'success');
+                showToast(`成功连接到数据库，找到 ${data.length} 封邮件`, 'success');
                 
-                // 加载邮件
+                // 显示调试面板
+                document.getElementById('debugPanel').style.display = 'block';
+                updateDebugInfo(`API连接成功，数据条数: ${data.length}`);
+                
+                // 使用Supabase客户端加载邮件
                 await loadMails();
                 
             } catch (error) {
                 console.error('初始化错误:', error);
                 showError(`连接失败: ${error.message}`);
                 updateStatus('连接失败 ✗', false);
+                
+                // 显示调试面板
+                document.getElementById('debugPanel').style.display = 'block';
+                updateDebugInfo(`错误: ${error.message}`);
             }
         }
         
         // ==================== 加载邮件 ====================
         async function loadMails() {
             try {
-                showLoading('正在加载邮件...');
+                showLoading('正在加载邮件数据...');
                 
+                // 尝试不同的查询方式
                 const { data: mails, error } = await supabase
                     .from('reward_mails')
                     .select('*')
                     .order('created_at', { ascending: false });
                 
-                if (error) throw error;
+                console.log('Supabase查询结果:', { mails, error });
+                
+                if (error) {
+                    console.warn('Supabase查询出错，尝试直接API...');
+                    await loadMailsDirectAPI();
+                    return;
+                }
+                
+                if (!mails || mails.length === 0) {
+                    showNoMails();
+                    updateDebugInfo('数据库为空，没有邮件');
+                    return;
+                }
+                
+                // 修复数据格式
+                const fixedMails = mails.map(mail => {
+                    // 处理rewards字段
+                    let rewards = [];
+                    try {
+                        if (mail.rewards) {
+                            if (typeof mail.rewards === 'string') {
+                                rewards = JSON.parse(mail.rewards);
+                            } else if (Array.isArray(mail.rewards)) {
+                                rewards = mail.rewards;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('解析rewards失败:', e);
+                        rewards = [];
+                    }
+                    
+                    return {
+                        ...mail,
+                        rewards: rewards
+                    };
+                });
+                
+                console.log('处理后的邮件数据:', fixedMails);
+                renderMails(fixedMails);
+                updateDebugInfo(`成功加载 ${fixedMails.length} 封邮件`);
+                
+            } catch (error) {
+                console.error('加载邮件错误:', error);
+                await loadMailsDirectAPI();
+            }
+        }
+        
+        // ==================== 直接API加载（备用方案） ====================
+        async function loadMailsDirectAPI() {
+            try {
+                showLoading('使用直接API加载...');
+                
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/reward_mails?select=*&order=created_at.desc`, 
+                    {
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                            'Accept': 'application/json'
+                        }
+                    }
+                );
+                
+                if (!response.ok) {
+                    throw new Error(`API错误: ${response.status}`);
+                }
+                
+                const mails = await response.json();
+                console.log('直接API数据:', mails);
                 
                 if (!mails || mails.length === 0) {
                     showNoMails();
@@ -304,11 +408,11 @@
                 }
                 
                 renderMails(mails);
-                updateDebugInfo(`加载到 ${mails.length} 封邮件`);
+                updateDebugInfo(`直接API加载 ${mails.length} 封邮件`);
                 
             } catch (error) {
-                console.error('加载邮件错误:', error);
-                showError(`加载失败: ${error.message}`);
+                console.error('直接API也失败:', error);
+                showError(`双重加载失败: ${error.message}`);
             }
         }
         
@@ -316,32 +420,52 @@
         function renderMails(mails) {
             const container = document.getElementById('mailContainer');
             
-            const html = mails.map(mail => `
+            if (!mails || mails.length === 0) {
+                showNoMails();
+                return;
+            }
+            
+            const html = mails.map(mail => {
+                // 处理奖励数据
+                let rewards = [];
+                try {
+                    if (mail.rewards) {
+                        if (typeof mail.rewards === 'string') {
+                            rewards = JSON.parse(mail.rewards);
+                        } else if (Array.isArray(mail.rewards)) {
+                            rewards = mail.rewards;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('渲染时解析rewards失败:', e);
+                }
+                
+                return `
                 <div class="mail-card ${mail.claimed ? 'claimed' : ''}" data-id="${mail.id}">
                     <div class="mail-header">
                         <div>
-                            <div class="mail-title">${mail.title}</div>
-                            <div class="mail-sender">发件人：${mail.sender}</div>
+                            <div class="mail-title">${mail.title || '无标题'}</div>
+                            <div class="mail-sender">发件人：${mail.sender || '系统'}</div>
                         </div>
                         <div class="mail-status ${mail.claimed ? 'claimed' : 'new'}">
                             ${mail.claimed ? '已领取' : '未领取'}
                         </div>
                     </div>
                     
-                    <div class="mail-content">${mail.content}</div>
+                    <div class="mail-content">${mail.content || '无内容'}</div>
                     
-                    ${mail.rewards && mail.rewards.length > 0 ? `
+                    ${rewards.length > 0 ? `
                         <div class="rewards-section">
                             <div class="rewards-title">
                                 <i class="fas fa-gift"></i>
                                 <span>奖励内容</span>
                             </div>
                             <div class="rewards-grid">
-                                ${JSON.parse(mail.rewards).map(reward => `
+                                ${rewards.map(reward => `
                                     <div class="reward-item">
                                         <i class="${reward.icon || 'fas fa-gift'} reward-icon"></i>
-                                        <div class="reward-amount">${reward.amount}</div>
-                                        <div class="reward-name">${reward.name}</div>
+                                        <div class="reward-amount">${reward.amount || 0}</div>
+                                        <div class="reward-name">${reward.name || '未知'}</div>
                                     </div>
                                 `).join('')}
                             </div>
@@ -357,7 +481,7 @@
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
             
             container.innerHTML = `
                 <div class="mail-list">
@@ -369,37 +493,36 @@
         // ==================== 领取奖励 ====================
         async function claimReward(mailId) {
             try {
-                // 1. 检查是否已领取
-                const { data: mail, error: checkError } = await supabase
-                    .from('reward_mails')
-                    .select('claimed, rewards')
-                    .eq('id', mailId)
-                    .single();
+                // 使用直接API更新
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/reward_mails?id=eq.${mailId}`, 
+                    {
+                        method: 'PATCH',
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=representation'
+                        },
+                        body: JSON.stringify({ claimed: true })
+                    }
+                );
                 
-                if (checkError) throw checkError;
-                
-                if (mail.claimed) {
-                    showToast('这封邮件的奖励已经领取过了', 'error');
-                    return;
+                if (!response.ok) {
+                    throw new Error(`更新失败: ${response.status}`);
                 }
                 
-                // 2. 更新领取状态
-                const { error: updateError } = await supabase
-                    .from('reward_mails')
-                    .update({ claimed: true })
-                    .eq('id', mailId)
-                    .select();
+                const updated = await response.json();
+                console.log('更新结果:', updated);
                 
-                if (updateError) throw updateError;
+                // 显示成功消息
+                const mailElement = document.querySelector(`.mail-card[data-id="${mailId}"]`);
+                const title = mailElement?.querySelector('.mail-title')?.textContent || '邮件';
                 
-                // 3. 显示成功消息
-                const rewards = JSON.parse(mail.rewards || '[]');
-                const rewardText = rewards.map(r => `${r.amount} ${r.name}`).join('、');
+                showToast(`🎉 成功领取 "${title}" 的奖励`, 'success');
                 
-                showToast(`🎉 领取成功！获得：${rewardText}`, 'success');
-                
-                // 4. 刷新列表
-                setTimeout(() => loadMails(), 800);
+                // 刷新列表
+                setTimeout(() => loadMails(), 500);
                 
             } catch (error) {
                 console.error('领取失败:', error);
@@ -423,6 +546,9 @@
                     <i class="fas fa-inbox"></i>
                     <h3>📭 邮箱是空的</h3>
                     <p>暂时没有可领取的奖励邮件</p>
+                    <button class="claim-btn" onclick="init()" style="margin-top: 20px;">
+                        <i class="fas fa-redo"></i> 重新加载
+                    </button>
                 </div>
             `;
         }
@@ -433,6 +559,7 @@
                     <i class="fas fa-exclamation-triangle"></i>
                     <h3>出错了</h3>
                     <p>${message}</p>
+                    <p style="font-size: 12px; margin-top: 10px;">请按F12查看控制台详情</p>
                     <button class="claim-btn" onclick="init()" style="margin-top: 20px;">
                         <i class="fas fa-redo"></i> 重新连接
                     </button>
@@ -463,17 +590,57 @@
             }, 3000);
         }
         
+        // ==================== 调试功能 ====================
+        async function testConnection() {
+            try {
+                showLoading('测试连接中...');
+                
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/reward_mails?select=count`, 
+                    {
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY
+                        }
+                    }
+                );
+                
+                const data = await response.json();
+                showToast(`连接正常，表存在`, 'success');
+                
+                // 重新加载
+                setTimeout(() => loadMails(), 500);
+                
+            } catch (error) {
+                showToast(`测试失败: ${error.message}`, 'error');
+            }
+        }
+        
+        async function viewRawData() {
+            try {
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/reward_mails?select=*`, 
+                    {
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY
+                        }
+                    }
+                );
+                
+                const data = await response.json();
+                console.log('原始数据:', data);
+                alert(`原始数据已打印到控制台（按F12查看）\n邮件数量: ${data.length}`);
+                
+            } catch (error) {
+                showToast(`获取数据失败: ${error.message}`, 'error');
+            }
+        }
+        
         // ==================== 页面加载 ====================
         document.addEventListener('DOMContentLoaded', () => {
             console.log('页面加载完成，开始初始化...');
-            console.log('Supabase URL:', SUPABASE_URL);
+            console.log('Supabase配置:', { SUPABASE_URL, SUPABASE_ANON_KEY });
             init();
         });
-        
-        // ==================== 手动重连 ====================
-        window.reconnect = function() {
-            init();
-        };
     </script>
 </body>
 </html>
