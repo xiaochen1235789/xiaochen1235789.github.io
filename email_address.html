@@ -234,16 +234,109 @@
             background: rgba(34, 197, 94, 0.2);
             color: #22c55e;
         }
+        
+        .admin-panel {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+            border: 1px solid #334155;
+        }
+        
+        .admin-panel h3 {
+            color: #60a5fa;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            color: #cbd5e1;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: #f1f5f9;
+            font-size: 14px;
+        }
+        
+        .reward-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .reward-row input {
+            flex: 1;
+        }
+        
+        .btn-add-reward {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 12px;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入 Supabase 客户端库 -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="container">
         <h1>🎁 奖励邮箱</h1>
-        <p class="subtitle">领取游戏奖励，简化操作</p>
+        <p class="subtitle">基于 Supabase 的实时奖励系统</p>
         
         <div class="mail-box" id="mailBox">
             <!-- 邮件会在这里动态生成 -->
+        </div>
+        
+        <!-- 管理员面板 -->
+        <div class="admin-panel">
+            <h3>📝 创建新奖励邮件</h3>
+            <div class="form-group">
+                <label>邮件标题</label>
+                <input type="text" id="mailTitle" class="form-control" placeholder="例如：🎁 活动奖励">
+            </div>
+            <div class="form-group">
+                <label>发件人</label>
+                <input type="text" id="mailSender" class="form-control" placeholder="例如：系统管理员" value="系统管理员">
+            </div>
+            <div class="form-group">
+                <label>邮件内容</label>
+                <textarea id="mailContent" class="form-control" rows="3" placeholder="输入邮件内容..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>奖励物品</label>
+                <div id="rewardsContainer">
+                    <div class="reward-row">
+                        <input type="text" class="form-control reward-name" placeholder="物品名称">
+                        <input type="number" class="form-control reward-amount" placeholder="数量" value="1">
+                        <input type="text" class="form-control reward-icon" placeholder="图标类名" value="fas fa-gift">
+                    </div>
+                </div>
+                <button class="btn-add-reward" onclick="addRewardRow()">
+                    <i class="fas fa-plus"></i> 添加奖励
+                </button>
+            </div>
+            
+            <button class="btn claim" onclick="createNewMail()" style="width: 100%;">
+                <i class="fas fa-paper-plane"></i> 发送奖励邮件
+            </button>
         </div>
     </div>
     
@@ -253,170 +346,481 @@
     </div>
 
     <script>
-        // ==================== 数据库（极简内存存储） ====================
-        const MailDB = {
-            // 只有一封系统欢迎邮件
-            mails: [{
-                id: 1,
-                title: '✨ 欢迎来到六哥荣耀WIKI！',
-                sender: '系统管理员',
-                date: '刚刚',
-                content: '欢迎加入我们的游戏社区！感谢你的注册，我们为你准备了一份新手礼包作为见面礼。祝你在游戏中玩得开心，收获满满！',
-                rewards: [
-                    { name: '金币', amount: 1000, icon: 'fas fa-coins' },
-                    { name: '钻石', amount: 200, icon: 'fas fa-gem' },
-                    { name: '经验药水', amount: 5, icon: 'fas fa-flask' },
-                    { name: '新手武器', amount: 1, icon: 'fas fa-sword' }
-                ],
-                isReward: true,
-                claimed: false,
-                deleted: false
-            }],
-            
-            // 获取所有有效的奖励邮件
-            getAllRewardMails() {
-                return this.mails.filter(mail => mail.isReward && !mail.deleted);
-            },
-            
-            // 领取奖励
-            claimReward(mailId) {
-                const mail = this.mails.find(m => m.id === mailId);
-                if (mail && !mail.claimed) {
-                    mail.claimed = true;
-                    return true;
-                }
-                return false;
-            },
-            
-            // 删除邮件
-            deleteMail(mailId) {
-                const mail = this.mails.find(m => m.id === mailId);
-                if (mail) {
-                    mail.deleted = true;
-                    return true;
-                }
-                return false;
-            },
-            
-            // 添加新邮件（如果需要）
-            addMail(mailData) {
-                const newMail = {
-                    id: Date.now(),
-                    date: '刚刚',
-                    isReward: true,
-                    claimed: false,
-                    deleted: false,
-                    ...mailData
-                };
-                this.mails.push(newMail);
-                return newMail;
+        // ==================== Supabase 配置 ====================
+        // 使用你提供的 Supabase 连接信息
+        const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
+        
+        // 创建 Supabase 客户端
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // ==================== 邮件管理类 ====================
+        class MailManager {
+            constructor() {
+                this.mails = [];
             }
-        };
 
-        // ==================== 主函数 ====================
-        function init() {
-            renderMailList();
-            showNotification('邮箱已就绪，请查收欢迎邮件！', 'success');
+            // 从 Supabase 加载邮件
+            async loadMails() {
+                try {
+                    console.log('正在从 Supabase 加载邮件...');
+                    
+                    const { data, error } = await supabase
+                        .from('mail_with_rewards')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+                    
+                    if (error) {
+                        console.error('Supabase 查询错误:', error);
+                        throw error;
+                    }
+                    
+                    console.log('加载到邮件数据:', data);
+                    
+                    this.mails = data.map(mail => ({
+                        id: mail.id,
+                        title: mail.title,
+                        sender: mail.sender,
+                        date: this.formatDate(mail.date || mail.created_at),
+                        content: mail.content,
+                        rewards: mail.rewards || [],
+                        isReward: mail.is_reward,
+                        claimed: mail.claimed,
+                        deleted: mail.deleted
+                    }));
+                    
+                    return this.mails;
+                } catch (error) {
+                    console.error('加载邮件失败:', error);
+                    throw error;
+                }
+            }
+
+            // 领取奖励
+            async claimReward(mailId) {
+                try {
+                    console.log('领取奖励，邮件ID:', mailId);
+                    
+                    // 检查本地数据
+                    const mail = this.mails.find(m => m.id === mailId);
+                    if (!mail) {
+                        throw new Error('邮件不存在');
+                    }
+                    
+                    if (mail.claimed) {
+                        return { 
+                            success: false, 
+                            message: '奖励已领取过，不能重复领取' 
+                        };
+                    }
+
+                    // 更新数据库
+                    const { data, error } = await supabase
+                        .from('reward_mails')
+                        .update({ claimed: true })
+                        .eq('id', mailId)
+                        .select();
+
+                    if (error) {
+                        console.error('更新数据库错误:', error);
+                        throw error;
+                    }
+
+                    if (data && data.length > 0) {
+                        // 更新本地数据
+                        mail.claimed = true;
+                        console.log('奖励领取成功:', mail.rewards);
+                        
+                        return { 
+                            success: true, 
+                            message: '领取成功',
+                            rewards: mail.rewards 
+                        };
+                    }
+                    
+                    return { 
+                        success: false, 
+                        message: '领取失败，请稍后重试' 
+                    };
+                } catch (error) {
+                    console.error('领取奖励失败:', error);
+                    return { 
+                        success: false, 
+                        message: error.message || '领取失败' 
+                    };
+                }
+            }
+
+            // 删除邮件
+            async deleteMail(mailId) {
+                try {
+                    console.log('删除邮件，邮件ID:', mailId);
+                    
+                    const { data, error } = await supabase
+                        .from('reward_mails')
+                        .update({ deleted: true })
+                        .eq('id', mailId)
+                        .select();
+
+                    if (error) {
+                        console.error('删除邮件错误:', error);
+                        throw error;
+                    }
+
+                    if (data && data.length > 0) {
+                        // 从本地移除
+                        this.mails = this.mails.filter(m => m.id !== mailId);
+                        return { 
+                            success: true, 
+                            message: '邮件已删除' 
+                        };
+                    }
+                    
+                    return { 
+                        success: false, 
+                        message: '删除失败' 
+                    };
+                } catch (error) {
+                    console.error('删除邮件失败:', error);
+                    return { 
+                        success: false, 
+                        message: error.message || '删除失败' 
+                    };
+                }
+            }
+
+            // 创建新邮件
+            async createMail(mailData) {
+                try {
+                    console.log('创建新邮件:', mailData);
+                    
+                    // 先创建邮件
+                    const { data: mail, error: mailError } = await supabase
+                        .from('reward_mails')
+                        .insert([{
+                            title: mailData.title,
+                            sender: mailData.sender || '系统',
+                            content: mailData.content,
+                            is_reward: true,
+                            claimed: false,
+                            deleted: false
+                        }])
+                        .select();
+                    
+                    if (mailError) {
+                        console.error('创建邮件错误:', mailError);
+                        throw mailError;
+                    }
+                    
+                    if (!mail || mail.length === 0) {
+                        throw new Error('邮件创建失败');
+                    }
+                    
+                    const mailId = mail[0].id;
+                    console.log('邮件创建成功，ID:', mailId);
+                    
+                    // 如果有奖励，创建奖励物品
+                    if (mailData.rewards && mailData.rewards.length > 0) {
+                        const rewardItems = mailData.rewards.map(reward => ({
+                            mail_id: mailId,
+                            name: reward.name,
+                            amount: parseInt(reward.amount) || 1,
+                            icon: reward.icon || 'fas fa-gift'
+                        }));
+                        
+                        console.log('插入奖励物品:', rewardItems);
+                        
+                        const { error: rewardError } = await supabase
+                            .from('reward_items')
+                            .insert(rewardItems);
+                        
+                        if (rewardError) {
+                            console.error('创建奖励物品错误:', rewardError);
+                            // 注意：这里不抛出错误，因为邮件已创建成功
+                        }
+                    }
+                    
+                    return { 
+                        success: true, 
+                        message: '邮件创建成功',
+                        mail: mail[0]
+                    };
+                } catch (error) {
+                    console.error('创建邮件失败:', error);
+                    return { 
+                        success: false, 
+                        message: error.message || '创建失败' 
+                    };
+                }
+            }
+
+            // 格式化日期
+            formatDate(dateString) {
+                if (!dateString) return '刚刚';
+                
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return '刚刚';
+                
+                const now = new Date();
+                const diffMs = now - date;
+                const diffSec = Math.floor(diffMs / 1000);
+                const diffMin = Math.floor(diffSec / 60);
+                const diffHour = Math.floor(diffMin / 60);
+                const diffDay = Math.floor(diffHour / 24);
+
+                if (diffSec < 60) return '刚刚';
+                if (diffMin < 60) return `${diffMin}分钟前`;
+                if (diffHour < 24) return `${diffHour}小时前`;
+                if (diffDay < 7) return `${diffDay}天前`;
+                
+                return date.toLocaleDateString('zh-CN');
+            }
+        }
+
+        // ==================== 全局邮件管理器 ====================
+        const mailManager = new MailManager();
+
+        // ==================== 初始化函数 ====================
+        async function init() {
+            try {
+                await renderMailList();
+                showNotification('奖励邮箱已连接至Supabase数据库！', 'success');
+            } catch (error) {
+                console.error('初始化失败:', error);
+                showNotification('初始化失败: ' + error.message, 'error');
+            }
         }
 
         // ==================== 渲染邮件列表 ====================
-        function renderMailList() {
+        async function renderMailList() {
             const mailBox = document.getElementById('mailBox');
-            const mails = MailDB.getAllRewardMails();
             
-            if (mails.length === 0) {
+            // 显示加载状态
+            mailBox.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <h3>正在从数据库加载邮件...</h3>
+                </div>
+            `;
+            
+            try {
+                const mails = await mailManager.loadMails();
+                console.log('渲染邮件列表，邮件数量:', mails.length);
+                
+                if (mails.length === 0) {
+                    mailBox.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <h3>📭 邮箱空空如也</h3>
+                            <p>暂时没有可领取的奖励邮件</p>
+                            <button class="btn claim" onclick="createDemoMail()" style="margin-top: 20px; max-width: 200px;">
+                                <i class="fas fa-plus"></i>
+                                创建示例邮件
+                            </button>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                mailBox.innerHTML = mails.map(mail => `
+                    <div class="mail-item" data-id="${mail.id}">
+                        <div class="mail-meta">
+                            <span>发件人：${mail.sender}</span>
+                            <span>${mail.date}</span>
+                        </div>
+                        
+                        <h3 class="mail-title">
+                            ${mail.title}
+                            ${!mail.claimed ? 
+                                '<span class="badge">NEW</span>' : 
+                                '<span class="status-badge status-claimed"><i class="fas fa-check"></i> 已领取</span>'
+                            }
+                        </h3>
+                        
+                        <div class="mail-content">
+                            ${mail.content}
+                        </div>
+                        
+                        ${mail.rewards && mail.rewards.length > 0 ? `
+                            <div class="mail-rewards">
+                                <div class="reward-title">
+                                    <i class="fas fa-gift"></i>
+                                    <span>包含奖励</span>
+                                </div>
+                                <div class="reward-list">
+                                    ${mail.rewards.map(reward => `
+                                        <div class="reward-item">
+                                            <i class="${reward.icon || 'fas fa-gift'}"></i>
+                                            <span>${reward.amount} ${reward.name}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="mail-actions">
+                            <button class="btn claim" onclick="claimMail(${mail.id})" 
+                                    ${mail.claimed ? 'disabled' : ''}>
+                                <i class="fas fa-gift"></i>
+                                ${mail.claimed ? '已领取' : '领取全部奖励'}
+                            </button>
+                            <button class="btn delete" onclick="deleteMail(${mail.id})">
+                                <i class="fas fa-trash"></i>
+                                删除邮件
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('渲染邮件列表失败:', error);
                 mailBox.innerHTML = `
                     <div class="empty-state">
-                        <i class="fas fa-inbox"></i>
-                        <h3>📭 邮箱空空如也</h3>
-                        <p>暂时没有可领取的奖励邮件</p>
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>加载失败</h3>
+                        <p>${error.message}</p>
+                        <p style="font-size: 12px; margin-top: 10px;">请确保数据库表已正确创建</p>
+                        <button class="btn claim" onclick="init()" style="margin-top: 20px;">
+                            <i class="fas fa-redo"></i>
+                            重新加载
+                        </button>
                     </div>
                 `;
-                return;
             }
-            
-            mailBox.innerHTML = mails.map(mail => `
-                <div class="mail-item">
-                    <div class="mail-meta">
-                        <span>发件人：${mail.sender}</span>
-                        <span>${mail.date}</span>
-                    </div>
-                    
-                    <h3 class="mail-title">
-                        ${mail.title}
-                        ${!mail.claimed ? 
-                            '<span class="badge">NEW</span>' : 
-                            '<span class="status-badge status-claimed"><i class="fas fa-check"></i> 已领取</span>'
-                        }
-                    </h3>
-                    
-                    <div class="mail-content">
-                        ${mail.content}
-                    </div>
-                    
-                    ${mail.rewards && mail.rewards.length > 0 ? `
-                        <div class="mail-rewards">
-                            <div class="reward-title">
-                                <i class="fas fa-gift"></i>
-                                <span>包含奖励</span>
-                            </div>
-                            <div class="reward-list">
-                                ${mail.rewards.map(reward => `
-                                    <div class="reward-item">
-                                        <i class="${reward.icon}"></i>
-                                        <span>${reward.amount} ${reward.name}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <div class="mail-actions">
-                        <button class="btn claim" onclick="claimMail(${mail.id})" 
-                                ${mail.claimed ? 'disabled' : ''}>
-                            <i class="fas fa-gift"></i>
-                            ${mail.claimed ? '已领取' : '领取全部奖励'}
-                        </button>
-                        <button class="btn delete" onclick="deleteMail(${mail.id})">
-                            <i class="fas fa-trash"></i>
-                            删除邮件
-                        </button>
-                    </div>
-                </div>
-            `).join('');
         }
 
         // ==================== 领取奖励 ====================
-        function claimMail(mailId) {
-            const success = MailDB.claimReward(mailId);
+        async function claimMail(mailId) {
+            console.log('调用领取奖励函数，邮件ID:', mailId);
             
-            if (success) {
-                const mail = MailDB.mails.find(m => m.id === mailId);
-                const rewardNames = mail.rewards.map(r => `${r.amount} ${r.name}`).join('、');
-                
+            const result = await mailManager.claimReward(mailId);
+            
+            if (result.success) {
+                const rewardNames = result.rewards.map(r => `${r.amount} ${r.name}`).join('、');
                 showNotification(`🎉 成功领取：${rewardNames}`, 'success');
-                renderMailList();
+                
+                // 更新界面
+                await renderMailList();
                 
                 // 询问是否删除
-                setTimeout(() => {
+                setTimeout(async () => {
                     if (confirm('奖励已领取完成，是否删除这封邮件？')) {
-                        deleteMail(mailId);
+                        await deleteMail(mailId);
                     }
                 }, 1000);
             } else {
-                showNotification('奖励已领取过或不存在', 'error');
+                showNotification(result.message, 'error');
             }
         }
 
         // ==================== 删除邮件 ====================
-        function deleteMail(mailId) {
+        async function deleteMail(mailId) {
             if (confirm('确定要删除这封邮件吗？删除后无法恢复。')) {
-                const success = MailDB.deleteMail(mailId);
+                const result = await mailManager.deleteMail(mailId);
                 
-                if (success) {
+                if (result.success) {
                     showNotification('🗑️ 邮件已删除', 'success');
-                    renderMailList();
+                    await renderMailList();
+                } else {
+                    showNotification(`删除失败: ${result.message}`, 'error');
                 }
+            }
+        }
+
+        // ==================== 创建新邮件（管理员功能） ====================
+        function addRewardRow() {
+            const container = document.getElementById('rewardsContainer');
+            const newRow = document.createElement('div');
+            newRow.className = 'reward-row';
+            newRow.innerHTML = `
+                <input type="text" class="form-control reward-name" placeholder="物品名称">
+                <input type="number" class="form-control reward-amount" placeholder="数量" value="1">
+                <input type="text" class="form-control reward-icon" placeholder="图标类名" value="fas fa-gift">
+            `;
+            container.appendChild(newRow);
+        }
+
+        async function createNewMail() {
+            // 获取表单数据
+            const title = document.getElementById('mailTitle').value.trim();
+            const sender = document.getElementById('mailSender').value.trim();
+            const content = document.getElementById('mailContent').value.trim();
+            
+            if (!title || !content) {
+                showNotification('请填写邮件标题和内容', 'error');
+                return;
+            }
+            
+            // 获取奖励数据
+            const rewardRows = document.querySelectorAll('.reward-row');
+            const rewards = [];
+            
+            rewardRows.forEach(row => {
+                const name = row.querySelector('.reward-name').value.trim();
+                const amount = row.querySelector('.reward-amount').value.trim();
+                const icon = row.querySelector('.reward-icon').value.trim();
+                
+                if (name) {
+                    rewards.push({
+                        name: name,
+                        amount: amount || '1',
+                        icon: icon || 'fas fa-gift'
+                    });
+                }
+            });
+            
+            // 创建邮件数据
+            const mailData = {
+                title: title,
+                sender: sender || '系统管理员',
+                content: content,
+                rewards: rewards
+            };
+            
+            console.log('准备创建邮件:', mailData);
+            
+            const result = await mailManager.createMail(mailData);
+            
+            if (result.success) {
+                showNotification('✅ 奖励邮件创建成功！', 'success');
+                
+                // 清空表单
+                document.getElementById('mailTitle').value = '';
+                document.getElementById('mailContent').value = '';
+                document.getElementById('rewardsContainer').innerHTML = `
+                    <div class="reward-row">
+                        <input type="text" class="form-control reward-name" placeholder="物品名称">
+                        <input type="number" class="form-control reward-amount" placeholder="数量" value="1">
+                        <input type="text" class="form-control reward-icon" placeholder="图标类名" value="fas fa-gift">
+                    </div>
+                `;
+                
+                // 刷新邮件列表
+                await renderMailList();
+            } else {
+                showNotification('创建失败: ' + result.message, 'error');
+            }
+        }
+
+        // ==================== 创建示例邮件 ====================
+        async function createDemoMail() {
+            const demoMail = {
+                title: '🏆 活动奖励',
+                sender: '活动中心',
+                content: '恭喜您在最新活动中获得优胜！这是您的活动奖励。',
+                rewards: [
+                    { name: '传说武器', amount: 1, icon: 'fas fa-sword' },
+                    { name: '钻石', amount: 1000, icon: 'fas fa-gem' },
+                    { name: '稀有材料', amount: 10, icon: 'fas fa-box-open' }
+                ]
+            };
+            
+            const result = await mailManager.createMail(demoMail);
+            
+            if (result.success) {
+                showNotification('示例邮件创建成功！', 'success');
+                await renderMailList();
+            } else {
+                showNotification('创建失败: ' + result.message, 'error');
             }
         }
 
@@ -442,27 +846,9 @@
             }, 3000);
         }
 
-        // ==================== 自动生成欢迎邮件 ====================
-        function generateWelcomeMail() {
-            // 如果还没有邮件，自动创建一封
-            if (MailDB.getAllRewardMails().length === 0) {
-                MailDB.addMail({
-                    title: '🎁 每日登录奖励',
-                    sender: '系统奖励',
-                    date: '刚刚',
-                    content: '恭喜你连续登录游戏！这是今天的登录奖励，请查收。',
-                    rewards: [
-                        { name: '金币', amount: 500, icon: 'fas fa-coins' },
-                        { name: '经验值', amount: 1000, icon: 'fas fa-level-up-alt' },
-                        { name: '材料箱', amount: 3, icon: 'fas fa-box' }
-                    ]
-                });
-            }
-        }
-
-        // ==================== 初始化 ====================
+        // ==================== 页面加载完成 ====================
         document.addEventListener('DOMContentLoaded', () => {
-            generateWelcomeMail();
+            console.log('页面加载完成，开始初始化...');
             init();
         });
     </script>
