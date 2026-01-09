@@ -2,1362 +2,426 @@
 <html lang="zh-cmn-Hans">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>星穹邮箱 - 六哥荣耀WIKI</title>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>奖励邮箱 - 六哥荣耀WIKI</title>
     <style>
-        :root {
-            --bg-primary: #0a0e17;
-            --bg-secondary: #111827;
-            --bg-card: #1a2332;
-            --accent-gold: #ffd166;
-            --accent-blue: #5bc0de;
-            --accent-purple: #9d4edd;
-            --accent-red: #ef476f;
-            --accent-green: #06d6a0;
-            --text-primary: #e2e8f0;
-            --text-secondary: #94a3b8;
-            --border-color: #2d3748;
-            --radius: 12px;
-            --shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            --star-rail-gradient: linear-gradient(135deg, #1a237e 0%, #311b92 50%, #4a148c 100%);
-        }
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
         }
-
+        
         body {
-            background: var(--bg-primary);
-            color: var(--text-primary);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f1f5f9;
+            font-family: "Microsoft YaHei", sans-serif;
             min-height: 100vh;
-            overflow-x: hidden;
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(93, 192, 222, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 90% 80%, rgba(157, 78, 221, 0.1) 0%, transparent 50%),
-                linear-gradient(45deg, rgba(26, 35, 126, 0.05) 25%, transparent 25%),
-                linear-gradient(-45deg, rgba(49, 27, 146, 0.05) 25%, transparent 25%);
-            background-size: 100% 100%, 100% 100%, 60px 60px, 60px 60px;
-        }
-
-        /* 星穹铁道风格容器 */
-        .star-rail-container {
-            max-width: 1200px;
-            margin: 0 auto;
             padding: 20px;
-            position: relative;
         }
-
-        /* 星穹装饰 */
-        .star-rail-decoration {
-            position: fixed;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-        }
-
-        .star {
-            position: absolute;
-            width: 2px;
-            height: 2px;
-            background: white;
-            border-radius: 50%;
-            animation: twinkle 3s infinite;
-        }
-
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.2; }
-            50% { opacity: 1; }
-        }
-
-        /* 头部 */
-        .star-rail-header {
-            text-align: center;
-            margin-bottom: 40px;
-            position: relative;
-            padding: 20px;
-            background: linear-gradient(90deg, transparent, rgba(93, 192, 222, 0.1), transparent);
-            border-bottom: 1px solid rgba(93, 192, 222, 0.3);
-        }
-
-        .star-rail-title {
-            font-size: 3rem;
-            background: linear-gradient(45deg, #5bc0de, #9d4edd);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 30px rgba(93, 192, 222, 0.5);
-            margin-bottom: 10px;
-            letter-spacing: 4px;
-            position: relative;
-            display: inline-block;
-        }
-
-        .star-rail-title::before {
-            content: '✦';
-            position: absolute;
-            left: -40px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 2rem;
-            color: var(--accent-gold);
-        }
-
-        .star-rail-title::after {
-            content: '✦';
-            position: absolute;
-            right: -40px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 2rem;
-            color: var(--accent-gold);
-        }
-
-        .star-rail-subtitle {
-            color: var(--text-secondary);
-            font-size: 1.2rem;
+        
+        .container {
             max-width: 600px;
-            margin: 0 auto;
-            line-height: 1.6;
-            letter-spacing: 2px;
+            margin: 50px auto;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border: 1px solid #334155;
         }
-
-        /* 邮箱主区域 */
-        .mailbox-container {
-            display: grid;
-            grid-template-columns: 280px 1fr;
-            gap: 30px;
-            min-height: 700px;
+        
+        h1 {
+            text-align: center;
+            color: #60a5fa;
+            margin-bottom: 10px;
+            font-size: 28px;
         }
-
-        @media (max-width: 968px) {
-            .mailbox-container {
-                grid-template-columns: 1fr;
-            }
+        
+        .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            margin-bottom: 30px;
+            font-size: 14px;
         }
-
-        /* 左侧导航 - 星穹风格 */
-        .mailbox-sidebar {
-            background: rgba(26, 35, 50, 0.8);
-            backdrop-filter: blur(10px);
-            border-radius: var(--radius);
-            border: 1px solid rgba(93, 192, 222, 0.2);
-            box-shadow: var(--shadow);
-            padding: 25px;
-            position: relative;
+        
+        .mail-box {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 0;
             overflow: hidden;
+            border: 1px solid #334155;
         }
-
-        .mailbox-sidebar::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+        
+        .mail-item {
+            padding: 25px;
+            border-bottom: 1px solid #334155;
         }
-
-        .mailbox-nav {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+        
+        .mail-item:last-child {
+            border-bottom: none;
         }
-
-        .nav-item {
+        
+        .mail-title {
+            color: #f8fafc;
+            font-size: 18px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
-            gap: 15px;
-            padding: 16px 20px;
-            background: transparent;
-            border: 1px solid transparent;
-            color: var(--text-secondary);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: var(--transition);
-            font-size: 1.1rem;
-            text-align: left;
-            position: relative;
-            overflow: hidden;
+            gap: 10px;
         }
-
-        .nav-item::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            height: 100%;
-            width: 3px;
-            background: linear-gradient(to bottom, var(--accent-blue), var(--accent-purple));
-            transform: translateX(-10px);
-            transition: var(--transition);
-        }
-
-        .nav-item:hover {
-            background: rgba(93, 192, 222, 0.1);
-            border-color: rgba(93, 192, 222, 0.3);
-            color: var(--text-primary);
-            transform: translateX(5px);
-        }
-
-        .nav-item:hover::before {
-            transform: translateX(0);
-        }
-
-        .nav-item.active {
-            background: rgba(93, 192, 222, 0.15);
-            border-color: var(--accent-blue);
-            color: var(--text-primary);
-            transform: translateX(5px);
-        }
-
-        .nav-item.active::before {
-            transform: translateX(0);
-        }
-
-        .nav-icon {
-            font-size: 1.3rem;
-            width: 30px;
-            text-align: center;
-            color: var(--accent-blue);
-        }
-
-        .nav-count {
-            margin-left: auto;
-            background: var(--accent-purple);
+        
+        .mail-title .badge {
+            background: #22c55e;
             color: white;
-            font-size: 0.9rem;
-            padding: 4px 10px;
-            border-radius: 20px;
-            min-width: 28px;
-            text-align: center;
-            font-weight: bold;
-            box-shadow: 0 2px 8px rgba(157, 78, 221, 0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: normal;
         }
-
-        /* 邮件列表区域 */
-        .mailbox-content {
-            background: rgba(26, 35, 50, 0.8);
-            backdrop-filter: blur(10px);
-            border-radius: var(--radius);
-            border: 1px solid rgba(93, 192, 222, 0.2);
-            box-shadow: var(--shadow);
-            overflow: hidden;
-            position: relative;
+        
+        .mail-content {
+            color: #cbd5e1;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            font-size: 14px;
         }
-
-        .mailbox-content::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
-        }
-
-        .mailbox-header {
-            padding: 25px;
-            background: rgba(36, 45, 62, 0.6);
-            border-bottom: 1px solid rgba(93, 192, 222, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .folder-title {
-            font-size: 1.6rem;
-            background: linear-gradient(45deg, var(--accent-blue), var(--text-primary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-weight: 600;
-        }
-
-        .folder-icon {
-            font-size: 1.8rem;
-            color: var(--accent-blue);
-        }
-
-        .mailbox-actions {
-            display: flex;
-            gap: 15px;
-        }
-
-        .action-btn {
-            background: rgba(93, 192, 222, 0.1);
-            border: 1px solid rgba(93, 192, 222, 0.3);
-            color: var(--text-primary);
-            padding: 10px 20px;
+        
+        .mail-rewards {
+            background: rgba(34, 197, 94, 0.1);
             border-radius: 8px;
-            cursor: pointer;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #22c55e;
+        }
+        
+        .reward-title {
+            color: #22c55e;
+            font-size: 14px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 8px;
-            transition: var(--transition);
-            font-size: 1rem;
-            font-weight: 500;
         }
-
-        .action-btn:hover {
-            background: rgba(93, 192, 222, 0.2);
-            border-color: var(--accent-blue);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(93, 192, 222, 0.2);
-        }
-
-        .mail-list {
-            padding: 25px;
-            max-height: 600px;
-            overflow-y: auto;
-        }
-
-        /* 自定义滚动条 */
-        .mail-list::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .mail-list::-webkit-scrollbar-track {
-            background: rgba(36, 45, 62, 0.6);
-            border-radius: 4px;
-        }
-
-        .mail-list::-webkit-scrollbar-thumb {
-            background: linear-gradient(to bottom, var(--accent-blue), var(--accent-purple));
-            border-radius: 4px;
-        }
-
-        /* 邮件项 - 星穹风格 */
-        .mail-item {
-            background: linear-gradient(135deg, rgba(26, 35, 50, 0.9), rgba(36, 45, 62, 0.9));
-            border: 1px solid rgba(93, 192, 222, 0.2);
-            border-radius: var(--radius);
-            padding: 25px;
-            margin-bottom: 20px;
-            cursor: pointer;
-            transition: var(--transition);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .mail-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
-        }
-
-        .mail-item:hover {
-            border-color: var(--accent-blue);
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(93, 192, 222, 0.2);
-        }
-
-        .mail-item.unread {
-            border-left: 4px solid var(--accent-gold);
-            background: linear-gradient(135deg, rgba(26, 35, 50, 0.95), rgba(36, 45, 62, 0.95));
-        }
-
-        .mail-item.read {
-            opacity: 0.8;
-        }
-
-        .mail-item.reward {
-            border: 2px solid var(--accent-gold);
-            background: linear-gradient(135deg, rgba(26, 35, 50, 0.9), rgba(255, 209, 102, 0.05));
-        }
-
-        .mail-item.reward::after {
-            content: '✦';
-            position: absolute;
-            right: 15px;
-            top: 15px;
-            color: var(--accent-gold);
-            font-size: 1.5rem;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-        }
-
-        .mail-header {
+        
+        .reward-list {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .mail-sender {
-            font-weight: 600;
-            color: var(--accent-blue);
-            font-size: 1.2rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .sender-icon {
-            color: var(--accent-purple);
-            font-size: 1.1rem;
-        }
-
-        .mail-date {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            background: rgba(45, 55, 72, 0.5);
-            padding: 4px 12px;
-            border-radius: 12px;
-        }
-
-        .mail-subject {
-            font-size: 1.3rem;
-            color: var(--text-primary);
-            margin-bottom: 12px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .mail-preview {
-            color: var(--text-secondary);
-            line-height: 1.6;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            margin-bottom: 15px;
-            padding-left: 5px;
-            border-left: 2px solid rgba(93, 192, 222, 0.3);
-        }
-
-        /* 邮件详情 */
-        .mail-detail {
-            display: none;
-            padding: 30px;
-            background: linear-gradient(135deg, rgba(26, 35, 50, 0.95), rgba(36, 45, 62, 0.95));
-            border-radius: var(--radius);
-            margin: 25px;
-            border: 1px solid rgba(93, 192, 222, 0.3);
-            animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @keyframes slideIn {
-            from { 
-                opacity: 0; 
-                transform: translateY(20px) scale(0.95);
-            }
-            to { 
-                opacity: 1; 
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        .mail-detail.active {
-            display: block;
-        }
-
-        .detail-header {
-            padding-bottom: 20px;
-            margin-bottom: 25px;
-            border-bottom: 1px solid rgba(93, 192, 222, 0.2);
-        }
-
-        .detail-subject {
-            font-size: 2rem;
-            background: linear-gradient(45deg, var(--accent-blue), var(--accent-purple));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 15px;
-            font-weight: 700;
-            letter-spacing: 1px;
-        }
-
-        .detail-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .detail-sender {
-            color: var(--text-primary);
-            font-size: 1.2rem;
-            display: flex;
-            align-items: center;
             gap: 10px;
         }
-
-        .detail-date {
-            color: var(--text-secondary);
-            font-size: 1rem;
-            background: rgba(45, 55, 72, 0.5);
-            padding: 6px 15px;
-            border-radius: 15px;
-        }
-
-        .detail-content {
-            line-height: 1.8;
-            color: var(--text-secondary);
-            margin-bottom: 30px;
-            font-size: 1.1rem;
-        }
-
-        .detail-content p {
-            margin-bottom: 20px;
-        }
-
-        .detail-content ul {
-            margin-left: 25px;
-            margin-bottom: 20px;
-        }
-
-        .detail-content li {
-            margin-bottom: 10px;
-            position: relative;
-        }
-
-        .detail-content li::before {
-            content: '▶';
-            color: var(--accent-blue);
-            position: absolute;
-            left: -20px;
-            top: 2px;
-            font-size: 0.8rem;
-        }
-
-        /* 奖励部分 */
-        .rewards-section {
-            background: linear-gradient(135deg, rgba(255, 209, 102, 0.05), rgba(157, 78, 221, 0.05));
-            border: 1px solid rgba(255, 209, 102, 0.2);
-            border-radius: var(--radius);
-            padding: 25px;
-            margin: 25px 0;
-        }
-
-        .rewards-title {
-            color: var(--accent-gold);
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .rewards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 15px;
-        }
-
+        
         .reward-item {
-            background: rgba(26, 35, 50, 0.8);
-            border: 1px solid rgba(255, 209, 102, 0.3);
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-            transition: var(--transition);
-            cursor: pointer;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid #22c55e;
+            border-radius: 6px;
+            padding: 8px 15px;
+            color: #f8fafc;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
-
-        .reward-item:hover {
-            transform: translateY(-5px);
-            border-color: var(--accent-gold);
-            box-shadow: 0 5px 15px rgba(255, 209, 102, 0.2);
-        }
-
-        .reward-icon {
-            font-size: 2rem;
-            color: var(--accent-gold);
-            margin-bottom: 10px;
-        }
-
-        .reward-name {
-            color: var(--text-primary);
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-
-        .reward-amount {
-            color: var(--accent-green);
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-
-        /* 操作按钮 */
-        .detail-actions {
+        
+        .mail-actions {
             display: flex;
             gap: 15px;
-            padding-top: 25px;
-            border-top: 1px solid rgba(93, 192, 222, 0.2);
+            margin-top: 10px;
         }
-
+        
         .btn {
-            padding: 14px 28px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
+            flex: 1;
+            padding: 12px;
             border: none;
-            font-size: 1.1rem;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            min-width: 150px;
-            letter-spacing: 1px;
+            gap: 8px;
         }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+        
+        .btn.claim {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
             color: white;
-            box-shadow: 0 4px 15px rgba(93, 192, 222, 0.3);
         }
-
-        .btn-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(93, 192, 222, 0.4);
+        
+        .btn.claim:hover {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(34, 197, 94, 0.3);
         }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, rgba(239, 71, 111, 0.1), rgba(157, 78, 221, 0.1));
-            border: 1px solid rgba(239, 71, 111, 0.3);
-            color: var(--text-primary);
+        
+        .btn.delete {
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
         }
-
-        .btn-secondary:hover {
-            background: linear-gradient(135deg, rgba(239, 71, 111, 0.2), rgba(157, 78, 221, 0.2));
-            border-color: var(--accent-red);
-            transform: translateY(-3px);
+        
+        .btn.delete:hover {
+            background: rgba(239, 68, 68, 0.2);
+            transform: translateY(-2px);
         }
-
-        /* 空状态 */
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
         .empty-state {
             text-align: center;
-            padding: 80px 20px;
-            color: var(--text-secondary);
+            padding: 60px 20px;
+            color: #64748b;
         }
-
-        .empty-icon {
-            font-size: 5rem;
-            margin-bottom: 25px;
-            opacity: 0.2;
-            color: var(--accent-blue);
+        
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.3;
         }
-
-        .empty-text {
-            font-size: 1.3rem;
-            letter-spacing: 2px;
+        
+        .mail-meta {
+            display: flex;
+            justify-content: space-between;
+            color: #94a3b8;
+            font-size: 12px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #334155;
         }
-
-        /* 通知 */
+        
         .notification {
             position: fixed;
-            top: 30px;
-            right: 30px;
-            padding: 16px 24px;
-            border-radius: var(--radius);
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: #22c55e;
             color: white;
-            box-shadow: var(--shadow);
-            transform: translateX(120%) translateY(-20px) scale(0.9);
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 1001;
-            max-width: 350px;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            transform: translateX(120%);
+            transition: transform 0.4s;
+            z-index: 1000;
+            max-width: 300px;
             display: flex;
             align-items: center;
-            gap: 12px;
-            border-left: 4px solid var(--accent-gold);
+            gap: 10px;
         }
-
+        
         .notification.show {
-            transform: translateX(0) translateY(0) scale(1);
+            transform: translateX(0);
         }
-
+        
         .notification.error {
-            background: linear-gradient(135deg, #ef476f, #f78c6b);
+            background: #ef4444;
         }
-
-        .notification.success {
-            background: linear-gradient(135deg, var(--accent-green), #83d483);
+        
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 10px;
         }
-
-        .notification-icon {
-            font-size: 1.3rem;
+        
+        .status-pending {
+            background: rgba(234, 179, 8, 0.2);
+            color: #fbbf24;
         }
-
-        /* 加载状态 */
-        .loading {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--text-secondary);
-        }
-
-        .loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 4px solid rgba(93, 192, 222, 0.1);
-            border-top-color: var(--accent-blue);
-            border-right-color: var(--accent-purple);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 25px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* 星穹背景装饰 */
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            50% { transform: translate(10px, -10px) rotate(180deg); }
-        }
-
-        .floating-object {
-            position: fixed;
-            opacity: 0.1;
-            pointer-events: none;
-            animation: float 20s infinite ease-in-out;
+        
+        .status-claimed {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
         }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- 星穹背景装饰 -->
-    <div class="star-rail-decoration" id="starField"></div>
-    
-    <!-- 浮动装饰物 -->
-    <div class="floating-object" style="top: 10%; left: 5%; font-size: 2rem; color: var(--accent-blue);">✦</div>
-    <div class="floating-object" style="top: 20%; right: 8%; font-size: 3rem; color: var(--accent-purple);">✦</div>
-    <div class="floating-object" style="bottom: 30%; left: 10%; font-size: 1.5rem; color: var(--accent-gold);">✦</div>
-
-    <div class="star-rail-container">
-        <!-- 头部 -->
-        <header class="star-rail-header">
-            <h1 class="star-rail-title">星穹邮箱</h1>
-            <p class="star-rail-subtitle">领取奖励 · 查看通知 · 管理邮件</p>
-        </header>
-
-        <!-- 主邮箱区域 -->
-        <div class="mailbox-container">
-            <!-- 左侧导航 -->
-            <div class="mailbox-sidebar">
-                <div class="mailbox-nav">
-                    <button class="nav-item active" data-folder="rewards">
-                        <i class="fas fa-gift nav-icon"></i>
-                        奖励邮件
-                        <span class="nav-count" id="rewardsCount">0</span>
-                    </button>
-                    <button class="nav-item" data-folder="unread">
-                        <i class="fas fa-envelope nav-icon"></i>
-                        未读邮件
-                        <span class="nav-count" id="unreadCount">0</span>
-                    </button>
-                    <button class="nav-item" data-folder="system">
-                        <i class="fas fa-cog nav-icon"></i>
-                        系统通知
-                        <span class="nav-count" id="systemCount">0</span>
-                    </button>
-                    <button class="nav-item" data-folder="all">
-                        <i class="fas fa-inbox nav-icon"></i>
-                        全部邮件
-                        <span class="nav-count" id="allCount">0</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 邮件列表区域 -->
-            <div class="mailbox-content">
-                <div class="mailbox-header">
-                    <div class="folder-title">
-                        <i class="fas fa-gift folder-icon"></i>
-                        <span id="currentFolder">奖励邮件</span>
-                    </div>
-                    <div class="mailbox-actions">
-                        <button class="action-btn" id="refreshBtn">
-                            <i class="fas fa-redo"></i>
-                            刷新
-                        </button>
-                        <button class="action-btn" id="deleteAllBtn">
-                            <i class="fas fa-trash"></i>
-                            清空已读
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 邮件列表 -->
-                <div class="mail-list" id="mailList">
-                    <div class="loading">
-                        <div class="loading-spinner"></div>
-                        <p>正在连接星穹网络...</p>
-                    </div>
-                </div>
-
-                <!-- 邮件详情 -->
-                <div class="mail-detail" id="mailDetail">
-                    <div class="detail-header">
-                        <h2 class="detail-subject" id="detailSubject">欢迎来到六哥荣耀WIKI</h2>
-                        <div class="detail-meta">
-                            <div class="detail-sender">
-                                <i class="fas fa-user-astronaut"></i>
-                                <span id="detailSender">系统管理员</span>
-                            </div>
-                            <div class="detail-date" id="detailDate">2024年3月15日</div>
-                        </div>
-                    </div>
-                    
-                    <div class="detail-content" id="detailContent">
-                        <p>欢迎加入六哥荣耀WIKI！我们很高兴你的到来。</p>
-                        <p>在这里你可以：</p>
-                        <ul>
-                            <li>查看游戏攻略和英雄资料</li>
-                            <li>参与社区讨论</li>
-                            <li>接收游戏更新通知</li>
-                            <li>领取每日奖励</li>
-                        </ul>
-                        <p>祝你游戏愉快！</p>
-                    </div>
-
-                    <!-- 奖励展示区域 -->
-                    <div class="rewards-section" id="rewardsSection">
-                        <h3 class="rewards-title">
-                            <i class="fas fa-gift"></i>
-                            包含奖励
-                        </h3>
-                        <div class="rewards-grid" id="rewardsGrid">
-                            <!-- 奖励项将由JS动态生成 -->
-                        </div>
-                    </div>
-
-                    <!-- 操作按钮 -->
-                    <div class="detail-actions">
-                        <button class="btn btn-primary" id="claimRewardBtn">
-                            <i class="fas fa-gift"></i>
-                            领取全部奖励
-                        </button>
-                        <button class="btn btn-secondary" id="deleteMailBtn">
-                            <i class="fas fa-trash"></i>
-                            删除邮件
-                        </button>
-                    </div>
-                </div>
-            </div>
+    <div class="container">
+        <h1>🎁 奖励邮箱</h1>
+        <p class="subtitle">领取游戏奖励，简化操作</p>
+        
+        <div class="mail-box" id="mailBox">
+            <!-- 邮件会在这里动态生成 -->
         </div>
     </div>
-
-    <!-- 通知 -->
+    
     <div class="notification" id="notification">
-        <i class="fas fa-info-circle notification-icon"></i>
-        <span id="notificationText"></span>
+        <i class="fas fa-check-circle"></i>
+        <span id="notificationText">奖励领取成功！</span>
     </div>
 
     <script>
-        // ==================== 星穹铁道风格配置 ====================
-        const STAR_RAIL_CONFIG = {
-            colors: {
-                gold: '#ffd166',
-                blue: '#5bc0de',
-                purple: '#9d4edd',
-                green: '#06d6a0',
-                red: '#ef476f'
+        // ==================== 数据库（极简内存存储） ====================
+        const MailDB = {
+            // 只有一封系统欢迎邮件
+            mails: [{
+                id: 1,
+                title: '✨ 欢迎来到六哥荣耀WIKI！',
+                sender: '系统管理员',
+                date: '刚刚',
+                content: '欢迎加入我们的游戏社区！感谢你的注册，我们为你准备了一份新手礼包作为见面礼。祝你在游戏中玩得开心，收获满满！',
+                rewards: [
+                    { name: '金币', amount: 1000, icon: 'fas fa-coins' },
+                    { name: '钻石', amount: 200, icon: 'fas fa-gem' },
+                    { name: '经验药水', amount: 5, icon: 'fas fa-flask' },
+                    { name: '新手武器', amount: 1, icon: 'fas fa-sword' }
+                ],
+                isReward: true,
+                claimed: false,
+                deleted: false
+            }],
+            
+            // 获取所有有效的奖励邮件
+            getAllRewardMails() {
+                return this.mails.filter(mail => mail.isReward && !mail.deleted);
             },
-            rewards: {
-                types: {
-                    coin: { icon: 'fas fa-coins', color: '#ffd700', name: '星穹币' },
-                    diamond: { icon: 'fas fa-gem', color: '#5bc0de', name: '钻石' },
-                    exp: { icon: 'fas fa-level-up-alt', color: '#06d6a0', name: '经验' },
-                    item: { icon: 'fas fa-box-open', color: '#9d4edd', name: '道具' },
-                    ticket: { icon: 'fas fa-ticket-alt', color: '#ef476f', name: '抽奖券' }
+            
+            // 领取奖励
+            claimReward(mailId) {
+                const mail = this.mails.find(m => m.id === mailId);
+                if (mail && !mail.claimed) {
+                    mail.claimed = true;
+                    return true;
                 }
+                return false;
+            },
+            
+            // 删除邮件
+            deleteMail(mailId) {
+                const mail = this.mails.find(m => m.id === mailId);
+                if (mail) {
+                    mail.deleted = true;
+                    return true;
+                }
+                return false;
+            },
+            
+            // 添加新邮件（如果需要）
+            addMail(mailData) {
+                const newMail = {
+                    id: Date.now(),
+                    date: '刚刚',
+                    isReward: true,
+                    claimed: false,
+                    deleted: false,
+                    ...mailData
+                };
+                this.mails.push(newMail);
+                return newMail;
             }
         };
 
-        // ==================== 邮件数据 ====================
-        const starRailMails = [
-            {
-                id: 1,
-                sender: '星际和平公司',
-                sender_id: 'star_rail_system',
-                subject: '🎁 欢迎来到星穹铁道！',
-                content: `<p>开拓者，欢迎登上星穹列车！</p>
-                         <p>为了庆祝你的到来，我们准备了一份特别的欢迎礼包：</p>
-                         <p>愿这趟旅程能为你带来无尽的惊喜与收获。</p>
-                         <p>「愿此行，终抵群星。」</p>`,
-                timestamp: new Date().toISOString(),
-                read: false,
-                folder: 'rewards',
-                is_reward: true,
-                rewards: [
-                    { type: 'diamond', amount: 300, name: '星琼' },
-                    { type: 'coin', amount: 50000, name: '信用点' },
-                    { type: 'ticket', amount: 5, name: '跃迁票' },
-                    { type: 'item', amount: 10, name: '燃料' }
-                ],
-                claimed: false
-            },
-            {
-                id: 2,
-                sender: '列车组',
-                sender_id: 'astral_express',
-                subject: '🚂 每日登录奖励',
-                content: `<p>开拓者，今天也辛苦了！</p>
-                         <p>这是你连续登录第7天的奖励，请查收。</p>
-                         <p>别忘了每天来看看，还有更多奖励等着你！</p>
-                         <p>帕姆会在列车上等着你哦~</p>`,
-                timestamp: new Date(Date.now() - 86400000).toISOString(),
-                read: true,
-                folder: 'rewards',
-                is_reward: true,
-                rewards: [
-                    { type: 'diamond', amount: 100, name: '星琼' },
-                    { type: 'coin', amount: 20000, name: '信用点' },
-                    { type: 'exp', amount: 5000, name: '经验' }
-                ],
-                claimed: true
-            },
-            {
-                id: 3,
-                sender: '黑塔空间站',
-                sender_id: 'herta_space_station',
-                subject: '🔬 研究任务完成奖励',
-                content: `<p>恭喜你完成了「模拟宇宙」的研究任务！</p>
-                         <p>这是你的研究报酬，感谢你对科学研究的贡献。</p>
-                         <p>期待你在后续研究中取得更多成果！</p>
-                         <p>——黑塔</p>`,
-                timestamp: new Date(Date.now() - 172800000).toISOString(),
-                read: false,
-                folder: 'rewards',
-                is_reward: true,
-                rewards: [
-                    { type: 'diamond', amount: 200, name: '星琼' },
-                    { type: 'item', amount: 3, name: '沉浸器' },
-                    { type: 'exp', amount: 10000, name: '经验' }
-                ],
-                claimed: false
-            },
-            {
-                id: 4,
-                sender: '系统通知',
-                sender_id: 'system',
-                subject: '📢 版本更新预告',
-                content: `<p>亲爱的开拓者：</p>
-                         <p>「星穹铁道」1.5版本即将更新！</p>
-                         <p>更新内容预告：</p>
-                         <ul>
-                            <li>新角色「XXX」上线</li>
-                            <li>新活动「XXX」开启</li>
-                            <li>系统优化与bug修复</li>
-                         </ul>
-                         <p>敬请期待！</p>`,
-                timestamp: new Date(Date.now() - 259200000).toISOString(),
-                read: true,
-                folder: 'system',
-                is_reward: false,
-                rewards: []
-            },
-            {
-                id: 5,
-                sender: '战斗委员会',
-                sender_id: 'combat_committee',
-                subject: '⚔️ 深渊通关奖励',
-                content: `<p>恭喜你成功通关「忘却之庭」第15层！</p>
-                         <p>这是你的通关奖励，展现了出色的战斗技巧。</p>
-                         <p>继续挑战更高层数，获取更丰厚的奖励！</p>`,
-                timestamp: new Date(Date.now() - 345600000).toISOString(),
-                read: false,
-                folder: 'rewards',
-                is_reward: true,
-                rewards: [
-                    { type: 'diamond', amount: 400, name: '星琼' },
-                    { type: 'ticket', amount: 3, name: '跃迁票' },
-                    { type: 'item', amount: 5, name: '遗器强化材料' }
-                ],
-                claimed: false
-            }
-        ];
-
-        // ==================== 全局变量 ====================
-        let currentUser = null;
-        let currentFolder = 'rewards';
-        let selectedMailId = null;
-        let allMails = [...starRailMails];
-
-        // ==================== 初始化函数 ====================
+        // ==================== 主函数 ====================
         function init() {
-            createStarField();
-            setupEventListeners();
-            loadMails();
-            updateMailCounts();
-            showNotification('星穹邮箱已就绪', 'success');
+            renderMailList();
+            showNotification('邮箱已就绪，请查收欢迎邮件！', 'success');
         }
 
-        // ==================== 星空背景 ====================
-        function createStarField() {
-            const starField = document.getElementById('starField');
-            const starCount = 100;
-            
-            for (let i = 0; i < starCount; i++) {
-                const star = document.createElement('div');
-                star.className = 'star';
-                
-                // 随机位置
-                star.style.left = `${Math.random() * 100}%`;
-                star.style.top = `${Math.random() * 100}%`;
-                
-                // 随机大小
-                const size = Math.random() * 3 + 1;
-                star.style.width = `${size}px`;
-                star.style.height = `${size}px`;
-                
-                // 随机动画延迟
-                star.style.animationDelay = `${Math.random() * 5}s`;
-                star.style.animationDuration = `${Math.random() * 3 + 2}s`;
-                
-                starField.appendChild(star);
-            }
-        }
-
-        // ==================== 邮件加载函数 ====================
-        function loadMails() {
-            const mailList = document.getElementById('mailList');
-            
-            // 显示加载状态
-            mailList.innerHTML = `
-                <div class="loading">
-                    <div class="loading-spinner"></div>
-                    <p>正在加载邮件...</p>
-                </div>
-            `;
-            
-            setTimeout(() => {
-                const filteredMails = filterMailsByFolder(currentFolder);
-                renderMailList(filteredMails);
-            }, 500); // 模拟加载延迟
-        }
-
-        function filterMailsByFolder(folder) {
-            switch(folder) {
-                case 'rewards':
-                    return allMails.filter(mail => mail.is_reward);
-                case 'unread':
-                    return allMails.filter(mail => !mail.read);
-                case 'system':
-                    return allMails.filter(mail => mail.folder === 'system');
-                case 'all':
-                    return allMails;
-                default:
-                    return allMails;
-            }
-        }
-
-        // ==================== 渲染函数 ====================
-        function renderMailList(mails) {
-            const mailList = document.getElementById('mailList');
+        // ==================== 渲染邮件列表 ====================
+        function renderMailList() {
+            const mailBox = document.getElementById('mailBox');
+            const mails = MailDB.getAllRewardMails();
             
             if (mails.length === 0) {
-                mailList.innerHTML = `
+                mailBox.innerHTML = `
                     <div class="empty-state">
-                        <i class="fas fa-inbox empty-icon"></i>
-                        <p class="empty-text">当前没有邮件</p>
+                        <i class="fas fa-inbox"></i>
+                        <h3>📭 邮箱空空如也</h3>
+                        <p>暂时没有可领取的奖励邮件</p>
                     </div>
                 `;
                 return;
             }
             
-            mailList.innerHTML = mails.map(mail => `
-                <div class="mail-item ${mail.read ? 'read' : 'unread'} ${mail.is_reward ? 'reward' : ''}" 
-                     data-id="${mail.id}"
-                     onclick="viewMail(${mail.id})">
-                    <div class="mail-header">
-                        <div class="mail-sender">
-                            <i class="fas fa-user-astronaut sender-icon"></i>
-                            ${mail.sender}
+            mailBox.innerHTML = mails.map(mail => `
+                <div class="mail-item">
+                    <div class="mail-meta">
+                        <span>发件人：${mail.sender}</span>
+                        <span>${mail.date}</span>
+                    </div>
+                    
+                    <h3 class="mail-title">
+                        ${mail.title}
+                        ${!mail.claimed ? 
+                            '<span class="badge">NEW</span>' : 
+                            '<span class="status-badge status-claimed"><i class="fas fa-check"></i> 已领取</span>'
+                        }
+                    </h3>
+                    
+                    <div class="mail-content">
+                        ${mail.content}
+                    </div>
+                    
+                    ${mail.rewards && mail.rewards.length > 0 ? `
+                        <div class="mail-rewards">
+                            <div class="reward-title">
+                                <i class="fas fa-gift"></i>
+                                <span>包含奖励</span>
+                            </div>
+                            <div class="reward-list">
+                                ${mail.rewards.map(reward => `
+                                    <div class="reward-item">
+                                        <i class="${reward.icon}"></i>
+                                        <span>${reward.amount} ${reward.name}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
                         </div>
-                        <div class="mail-date">${formatDate(mail.timestamp)}</div>
+                    ` : ''}
+                    
+                    <div class="mail-actions">
+                        <button class="btn claim" onclick="claimMail(${mail.id})" 
+                                ${mail.claimed ? 'disabled' : ''}>
+                            <i class="fas fa-gift"></i>
+                            ${mail.claimed ? '已领取' : '领取全部奖励'}
+                        </button>
+                        <button class="btn delete" onclick="deleteMail(${mail.id})">
+                            <i class="fas fa-trash"></i>
+                            删除邮件
+                        </button>
                     </div>
-                    <div class="mail-subject">
-                        ${mail.is_reward ? '<i class="fas fa-gift" style="color: var(--accent-gold);"></i>' : ''}
-                        ${mail.subject}
-                    </div>
-                    <div class="mail-preview">${mail.content.replace(/<[^>]*>/g, '').substring(0, 120)}...</div>
-                    ${mail.is_reward && mail.rewards.length > 0 ? 
-                        `<div style="display: flex; gap: 10px; margin-top: 15px;">
-                            ${mail.rewards.map(reward => `
-                                <span style="background: rgba(255, 209, 102, 0.1); padding: 4px 10px; border-radius: 12px; font-size: 0.9rem; color: var(--accent-gold);">
-                                    <i class="${STAR_RAIL_CONFIG.rewards.types[reward.type]?.icon || 'fas fa-star'}"></i>
-                                    ${reward.amount} ${reward.name}
-                                </span>
-                            `).join('')}
-                        </div>` : ''}
-                    ${mail.claimed ? '<div style="margin-top: 10px; color: var(--accent-green);"><i class="fas fa-check-circle"></i> 已领取</div>' : ''}
                 </div>
             `).join('');
         }
 
-        function viewMail(mailId) {
-            const mail = allMails.find(m => m.id === mailId);
-            if (!mail) return;
+        // ==================== 领取奖励 ====================
+        function claimMail(mailId) {
+            const success = MailDB.claimReward(mailId);
             
-            // 标记为已读
-            if (!mail.read) {
-                mail.read = true;
-                updateMailCounts();
-                loadMails(); // 重新加载更新状态
-            }
-            
-            // 更新详情视图
-            document.getElementById('detailSubject').textContent = mail.subject;
-            document.getElementById('detailSender').textContent = mail.sender;
-            document.getElementById('detailDate').textContent = formatDate(mail.timestamp, true);
-            document.getElementById('detailContent').innerHTML = mail.content;
-            
-            // 显示详情
-            document.getElementById('mailDetail').classList.add('active');
-            selectedMailId = mailId;
-            
-            // 更新奖励区域
-            updateRewardsSection(mail);
-            
-            // 更新按钮状态
-            updateActionButtons(mail);
-        }
-
-        function updateRewardsSection(mail) {
-            const rewardsSection = document.getElementById('rewardsSection');
-            const rewardsGrid = document.getElementById('rewardsGrid');
-            
-            if (mail.is_reward && mail.rewards.length > 0) {
-                rewardsSection.style.display = 'block';
-                rewardsGrid.innerHTML = mail.rewards.map(reward => {
-                    const rewardType = STAR_RAIL_CONFIG.rewards.types[reward.type];
-                    return `
-                        <div class="reward-item" onclick="claimSingleReward(${mail.id}, '${reward.type}')">
-                            <div class="reward-icon">
-                                <i class="${rewardType.icon}" style="color: ${rewardType.color};"></i>
-                            </div>
-                            <div class="reward-name">${reward.name}</div>
-                            <div class="reward-amount">${reward.amount}</div>
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                rewardsSection.style.display = 'none';
-            }
-        }
-
-        function updateActionButtons(mail) {
-            const claimBtn = document.getElementById('claimRewardBtn');
-            const deleteBtn = document.getElementById('deleteMailBtn');
-            
-            if (mail.is_reward && mail.rewards.length > 0 && !mail.claimed) {
-                claimBtn.style.display = 'flex';
-                claimBtn.onclick = () => claimAllRewards(mail.id);
-                claimBtn.innerHTML = `<i class="fas fa-gift"></i> 领取全部奖励 (${mail.rewards.length})`;
-            } else if (mail.is_reward && mail.claimed) {
-                claimBtn.style.display = 'flex';
-                claimBtn.disabled = true;
-                claimBtn.innerHTML = `<i class="fas fa-check-circle"></i> 奖励已领取`;
-                claimBtn.style.opacity = '0.6';
-                claimBtn.style.cursor = 'not-allowed';
-            } else {
-                claimBtn.style.display = 'none';
-            }
-            
-            deleteBtn.onclick = () => deleteMail(mail.id);
-        }
-
-        // ==================== 邮件操作函数 ====================
-        function claimAllRewards(mailId) {
-            const mail = allMails.find(m => m.id === mailId);
-            if (!mail || mail.claimed) return;
-            
-            mail.claimed = true;
-            mail.read = true;
-            
-            // 显示奖励领取效果
-            const rewards = mail.rewards;
-            rewards.forEach((reward, index) => {
+            if (success) {
+                const mail = MailDB.mails.find(m => m.id === mailId);
+                const rewardNames = mail.rewards.map(r => `${r.amount} ${r.name}`).join('、');
+                
+                showNotification(`🎉 成功领取：${rewardNames}`, 'success');
+                renderMailList();
+                
+                // 询问是否删除
                 setTimeout(() => {
-                    showNotification(`🎉 获得 ${reward.amount} ${reward.name}`, 'success');
-                }, index * 300);
-            });
-            
-            // 更新UI
-            updateActionButtons(mail);
-            loadMails();
-            updateMailCounts();
-            
-            // 最后显示总奖励提示
-            setTimeout(() => {
-                const totalRewards = rewards.reduce((sum, r) => sum + r.amount, 0);
-                showNotification(`✨ 成功领取${rewards.length}项奖励，总计${totalRewards}个物品`, 'success');
-            }, rewards.length * 300);
-        }
-
-        function claimSingleReward(mailId, rewardType) {
-            const mail = allMails.find(m => m.id === mailId);
-            if (!mail || mail.claimed) return;
-            
-            const reward = mail.rewards.find(r => r.type === rewardType);
-            if (!reward) return;
-            
-            showNotification(`✨ 获得 ${reward.amount} ${reward.name}`, 'success');
-            
-            // 从邮件中移除该奖励
-            mail.rewards = mail.rewards.filter(r => r.type !== rewardType);
-            
-            // 如果所有奖励都已领取，标记邮件为已领取
-            if (mail.rewards.length === 0) {
-                mail.claimed = true;
-                showNotification('🎁 所有奖励已领取完成！', 'success');
-            }
-            
-            // 更新UI
-            updateRewardsSection(mail);
-            updateActionButtons(mail);
-            loadMails();
-        }
-
-        function deleteMail(mailId) {
-            if (!confirm('确定要删除这封邮件吗？删除后无法恢复。')) return;
-            
-            allMails = allMails.filter(mail => mail.id !== mailId);
-            
-            showNotification('邮件已删除', 'success');
-            document.getElementById('mailDetail').classList.remove('active');
-            loadMails();
-            updateMailCounts();
-        }
-
-        function deleteAllReadMails() {
-            const readMails = allMails.filter(mail => mail.read);
-            if (readMails.length === 0) {
-                showNotification('没有可删除的已读邮件', 'info');
-                return;
-            }
-            
-            if (!confirm(`确定要删除所有已读邮件吗？共${readMails.length}封邮件将被删除。`)) return;
-            
-            allMails = allMails.filter(mail => !mail.read);
-            
-            showNotification(`已删除${readMails.length}封邮件`, 'success');
-            document.getElementById('mailDetail').classList.remove('active');
-            loadMails();
-            updateMailCounts();
-        }
-
-        // ==================== UI更新函数 ====================
-        function updateMailCounts() {
-            // 奖励邮件计数
-            const rewardsCount = allMails.filter(m => m.is_reward && !m.claimed).length;
-            document.getElementById('rewardsCount').textContent = rewardsCount;
-            
-            // 未读邮件计数
-            const unreadCount = allMails.filter(m => !m.read).length;
-            document.getElementById('unreadCount').textContent = unreadCount;
-            
-            // 系统通知计数
-            const systemCount = allMails.filter(m => m.folder === 'system').length;
-            document.getElementById('systemCount').textContent = systemCount;
-            
-            // 全部邮件计数
-            const allCount = allMails.length;
-            document.getElementById('allCount').textContent = allCount;
-        }
-
-        function updateFolderTitle(folder) {
-            const titles = {
-                'rewards': '奖励邮件',
-                'unread': '未读邮件',
-                'system': '系统通知',
-                'all': '全部邮件'
-            };
-            const title = titles[folder] || folder;
-            document.getElementById('currentFolder').textContent = title;
-            
-            // 更新图标
-            const icons = {
-                'rewards': 'fa-gift',
-                'unread': 'fa-envelope',
-                'system': 'fa-cog',
-                'all': 'fa-inbox'
-            };
-            const iconClass = icons[folder] || 'fa-inbox';
-            document.querySelector('.folder-icon').className = `fas ${iconClass} folder-icon`;
-        }
-
-        // ==================== 事件监听器 ====================
-        function setupEventListeners() {
-            // 导航点击
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.addEventListener('click', function() {
-                    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    currentFolder = this.dataset.folder;
-                    updateFolderTitle(currentFolder);
-                    document.getElementById('mailDetail').classList.remove('active');
-                    loadMails();
-                });
-            });
-            
-            // 刷新按钮
-            document.getElementById('refreshBtn').addEventListener('click', function() {
-                showNotification('邮箱已刷新', 'success');
-                loadMails();
-            });
-            
-            // 清空已读按钮
-            document.getElementById('deleteAllBtn').addEventListener('click', deleteAllReadMails);
-            
-            // 全局函数导出
-            window.viewMail = viewMail;
-            window.claimSingleReward = claimSingleReward;
-            window.deleteMail = deleteMail;
-        }
-
-        // ==================== 工具函数 ====================
-        function formatDate(dateString, full = false) {
-            const date = new Date(dateString);
-            const now = new Date();
-            const diffMs = now - date;
-            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-            
-            if (full) {
-                return date.toLocaleString('zh-CN', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            }
-            
-            if (diffDays === 0) {
-                return '今天 ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-            } else if (diffDays === 1) {
-                return '昨天 ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-            } else if (diffDays < 7) {
-                return `${diffDays}天前`;
+                    if (confirm('奖励已领取完成，是否删除这封邮件？')) {
+                        deleteMail(mailId);
+                    }
+                }, 1000);
             } else {
-                return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+                showNotification('奖励已领取过或不存在', 'error');
             }
         }
 
-        function showNotification(message, type = 'info') {
+        // ==================== 删除邮件 ====================
+        function deleteMail(mailId) {
+            if (confirm('确定要删除这封邮件吗？删除后无法恢复。')) {
+                const success = MailDB.deleteMail(mailId);
+                
+                if (success) {
+                    showNotification('🗑️ 邮件已删除', 'success');
+                    renderMailList();
+                }
+            }
+        }
+
+        // ==================== 通知系统 ====================
+        function showNotification(message, type = 'success') {
             const notification = document.getElementById('notification');
             const notificationText = document.getElementById('notificationText');
             
@@ -1366,20 +430,41 @@
             notification.classList.add('show');
             
             // 更新图标
-            const iconMap = {
-                'info': 'fa-info-circle',
-                'success': 'fa-check-circle',
-                'error': 'fa-exclamation-circle'
-            };
-            notification.querySelector('.notification-icon').className = `fas ${iconMap[type] || 'fa-info-circle'} notification-icon`;
+            const icon = notification.querySelector('i');
+            if (type === 'success') {
+                icon.className = 'fas fa-check-circle';
+            } else {
+                icon.className = 'fas fa-exclamation-circle';
+            }
             
             setTimeout(() => {
                 notification.classList.remove('show');
             }, 3000);
         }
 
-        // ==================== 页面初始化 ====================
-        document.addEventListener('DOMContentLoaded', init);
+        // ==================== 自动生成欢迎邮件 ====================
+        function generateWelcomeMail() {
+            // 如果还没有邮件，自动创建一封
+            if (MailDB.getAllRewardMails().length === 0) {
+                MailDB.addMail({
+                    title: '🎁 每日登录奖励',
+                    sender: '系统奖励',
+                    date: '刚刚',
+                    content: '恭喜你连续登录游戏！这是今天的登录奖励，请查收。',
+                    rewards: [
+                        { name: '金币', amount: 500, icon: 'fas fa-coins' },
+                        { name: '经验值', amount: 1000, icon: 'fas fa-level-up-alt' },
+                        { name: '材料箱', amount: 3, icon: 'fas fa-box' }
+                    ]
+                });
+            }
+        }
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            generateWelcomeMail();
+            init();
+        });
     </script>
 </body>
 </html>
