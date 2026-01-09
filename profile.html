@@ -1696,12 +1696,10 @@
             let currentExp = exp;
             let totalExpToNextLevel = LEVEL_CONFIG[1].expRequired;
             
-            // 计算当前等级
             for (let lvl = 1; lvl <= 12; lvl++) {
                 const config = LEVEL_CONFIG[lvl];
                 
                 if (lvl < 12) {
-                    // 如果不是最后一级，检查是否达到升级要求
                     if (currentExp >= config.expRequired) {
                         currentExp -= config.expRequired;
                         level = lvl + 1;
@@ -1710,7 +1708,6 @@
                         break;
                     }
                 } else {
-                    // 最后一级
                     totalExpToNextLevel = 0;
                     break;
                 }
@@ -1737,19 +1734,15 @@
 
         function getNextLevelMultiplier(level) {
             if (level >= 12) return 2.0;
-            
-            // 根据等级范围确定下一阶段的加成
-            if (level <= 2) return 1.4;  // 当前1.2，下一阶段1.4
-            if (level <= 5) return 1.6;  // 当前1.4，下一阶段1.6
-            if (level <= 9) return 2.0;  // 当前1.6，下一阶段2.0
-            return 2.0;  // 12级已经最高
+            if (level <= 2) return 1.4;
+            if (level <= 5) return 1.6;
+            if (level <= 9) return 2.0;
+            return 2.0;
         }
 
         function updateLevelDisplay() {
             const config = LEVEL_CONFIG[userLevel];
             const nextLevel = userLevel < 12 ? userLevel + 1 : null;
-            
-            // 计算进度百分比
             const progress = expToNextLevel > 0 ? (currentExpInLevel / expToNextLevel) * 100 : 100;
             
             // 更新等级徽章
@@ -1781,8 +1774,6 @@
             
             if (levelProgressFill) {
                 levelProgressFill.style.width = `${progress}%`;
-                
-                // 根据等级设置进度条颜色
                 if (nextLevel) {
                     const nextConfig = LEVEL_CONFIG[nextLevel];
                     levelProgressFill.style.background = `linear-gradient(90deg, ${config.color}, ${nextConfig.color})`;
@@ -1812,10 +1803,8 @@
                 expMultiplierElement.textContent = `${expMultiplier.toFixed(1)}x`;
             }
             
-            // 更新等级详情
             updateLevelDetails();
             
-            // 添加等级特效（高级别时）
             if (userLevel >= 5) {
                 addLevelGlowEffect(userLevel);
             }
@@ -1827,21 +1816,18 @@
             const actualExp = Math.round(checkinExp * expMultiplier);
             const nextBonus = getNextLevelMultiplier(userLevel);
             
-            // 更新等级详情卡片
             safeSetText('currentLevelNumber', userLevel.toString());
             safeSetText('currentExpNumber', currentExpInLevel.toString());
             safeSetText('totalExpRequired', expToNextLevel.toString());
             safeSetText('baseCheckinExp', `${checkinExp} 经验`);
             safeSetText('finalCheckinExp', `${actualExp} 经验`);
             
-            // 格式化加成显示
             const bonusPercent = Math.round((expMultiplier - 1) * 100);
             safeSetText('currentExpBonus', `${bonusPercent}% (${expMultiplier.toFixed(1)}倍)`);
             
             const nextBonusPercent = Math.round((nextBonus - 1) * 100);
             safeSetText('nextExpBonus', `${nextBonusPercent}% (${nextBonus.toFixed(1)}倍)`);
             
-            // 更新签到区域
             safeSetText('dailyReward', `${checkinExp} 经验`);
             safeSetText('expBonus', `+${bonusPercent}% (${expMultiplier.toFixed(1)}倍)`);
             safeSetText('actualExp', `${actualExp} 经验`);
@@ -1851,11 +1837,9 @@
             const levelBadge = safeGetElement('levelBadge');
             if (!levelBadge) return;
             
-            // 移除旧的glow效果
             const oldGlow = levelBadge.querySelector('.level-glow');
             if (oldGlow) oldGlow.remove();
             
-            // 添加新的glow效果
             const glow = document.createElement('div');
             glow.className = 'level-glow';
             glow.style.setProperty('--level-color', getLevelColor(level));
@@ -1876,6 +1860,348 @@
             if (modal) {
                 modal.classList.remove('show');
                 document.body.style.overflow = '';
+            }
+        }
+
+        // ==================== 签到相关函数（修复部分）====================
+        function updateCheckinButton(canCheckin) {
+            const checkinBtn = safeGetElement('dailyCheckinBtn');
+            if (!checkinBtn) return;
+            
+            if (canCheckin) {
+                checkinBtn.disabled = false;
+                checkinBtn.innerHTML = '<i class="fas fa-gift"></i> 每日签到';
+                checkinBtn.style.background = 'linear-gradient(135deg, #ffd700, #ff9800)';
+                checkinBtn.style.color = '#121212';
+            } else {
+                checkinBtn.disabled = true;
+                checkinBtn.innerHTML = '<i class="fas fa-check"></i> 今日已签到';
+                checkinBtn.style.background = '#666';
+                checkinBtn.style.color = '#999';
+            }
+        }
+
+        function updateCheckinDisplay() {
+            const checkinStreakElement = safeGetElement('checkinStreak');
+            const checkinDaysElement = safeGetElement('checkinDays');
+            
+            if (checkinStreakElement) {
+                checkinStreakElement.textContent = checkinStreak.toString();
+            }
+            
+            if (checkinDaysElement) {
+                checkinDaysElement.textContent = checkinStreak.toString();
+            }
+        }
+
+        async function checkDailyCheckin() {
+            try {
+                if (!currentUser || !supabaseClient) return;
+                
+                const today = new Date().toISOString().split('T')[0];
+                
+                // 1. 先查询数据库中的签到记录
+                try {
+                    const { data: checkins, error } = await supabaseClient
+                        .from('user_checkins')
+                        .select('*')
+                        .eq('user_id', currentUser.id)
+                        .eq('checkin_date', today)
+                        .single();
+                    
+                    if (error && error.code !== 'PGRST116') {
+                        console.error('查询签到记录失败:', error);
+                    }
+                    
+                    // 数据库中有今天的记录 = 已签到
+                    if (checkins) {
+                        canCheckinToday = false;
+                        checkinStreak = checkins.streak_days || 0;
+                        
+                        updateCheckinButton(false);
+                        updateCheckinDisplay();
+                        return;
+                    }
+                } catch (dbError) {
+                    console.warn('数据库查询失败，使用本地存储:', dbError);
+                }
+                
+                // 2. 数据库没有记录，检查本地存储
+                const lastCheckinDate = localStorage.getItem('lastCheckinDate');
+                if (lastCheckinDate === today) {
+                    canCheckinToday = false;
+                    checkinStreak = parseInt(localStorage.getItem('checkinStreak') || '0');
+                    
+                    updateCheckinButton(false);
+                } else {
+                    canCheckinToday = true;
+                    checkinStreak = parseInt(localStorage.getItem('checkinStreak') || '0');
+                    
+                    // 检查是否连续签到中断
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const yesterdayStr = yesterday.toISOString().split('T')[0];
+                    
+                    if (localStorage.getItem('lastCheckinDate') !== yesterdayStr) {
+                        checkinStreak = 0;
+                    }
+                    
+                    updateCheckinButton(true);
+                }
+                
+                updateCheckinDisplay();
+                
+            } catch (error) {
+                console.error('检查签到状态失败:', error);
+                canCheckinToday = true;
+                updateCheckinButton(true);
+            }
+        }
+
+        async function dailyCheckin() {
+            try {
+                if (!canCheckinToday) {
+                    showNotification('今天已经签到过了，明天再来吧！', 'info');
+                    return;
+                }
+                
+                const checkinBtn = safeGetElement('dailyCheckinBtn');
+                if (checkinBtn) {
+                    checkinBtn.disabled = true;
+                    checkinBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 签到中...';
+                }
+                
+                // 计算签到奖励
+                const baseExp = getCheckinExp(userLevel);
+                const actualExp = Math.round(baseExp * expMultiplier);
+                
+                // 添加经验值
+                const success = await addExp(actualExp, '每日签到');
+                
+                if (success) {
+                    // 更新签到状态
+                    canCheckinToday = false;
+                    
+                    // 保存签到记录
+                    await saveCheckinRecord(actualExp);
+                    
+                    // 更新UI
+                    updateCheckinDisplay();
+                    
+                    // 更新按钮状态
+                    updateCheckinButton(false);
+                    
+                    // 显示签到成功通知
+                    showNotification(`签到成功！获得 ${actualExp} 经验值`, 'success');
+                    
+                    // 播放签到动画
+                    playCheckinAnimation();
+                } else {
+                    throw new Error('添加经验值失败');
+                }
+                
+            } catch (error) {
+                console.error('签到失败:', error);
+                showNotification('签到失败，请重试', 'error');
+                
+                const checkinBtn = safeGetElement('dailyCheckinBtn');
+                if (checkinBtn) {
+                    checkinBtn.disabled = false;
+                    checkinBtn.innerHTML = '<i class="fas fa-gift"></i> 每日签到';
+                }
+            }
+        }
+
+        async function saveCheckinRecord(expGained) {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                
+                // 1. 保存到数据库（如果有）
+                if (supabaseClient && currentUser) {
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const yesterdayStr = yesterday.toISOString().split('T')[0];
+                    
+                    let newStreak = 1;
+                    
+                    try {
+                        const { data: yesterdayCheckin } = await supabaseClient
+                            .from('user_checkins')
+                            .select('streak_days')
+                            .eq('user_id', currentUser.id)
+                            .eq('checkin_date', yesterdayStr)
+                            .single();
+                        
+                        if (yesterdayCheckin) {
+                            newStreak = yesterdayCheckin.streak_days + 1;
+                        }
+                    } catch (e) {
+                        console.log('昨天未签到，开始新的连续签到');
+                    }
+                    
+                    try {
+                        const { error } = await supabaseClient
+                            .from('user_checkins')
+                            .insert({
+                                user_id: currentUser.id,
+                                checkin_date: today,
+                                exp_gained: expGained,
+                                streak_days: newStreak
+                            });
+                        
+                        if (error) {
+                            console.warn('保存签到记录到数据库失败:', error);
+                        } else {
+                            checkinStreak = newStreak;
+                        }
+                    } catch (dbError) {
+                        console.warn('数据库保存失败，使用本地存储:', dbError);
+                    }
+                }
+                
+                // 2. 保存到本地存储
+                const lastCheckinDate = localStorage.getItem('lastCheckinDate');
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = yesterday.toISOString().split('T')[0];
+                
+                if (lastCheckinDate === yesterdayStr) {
+                    // 昨天签到了，连续签到+1
+                    checkinStreak = parseInt(localStorage.getItem('checkinStreak') || '0') + 1;
+                } else if (lastCheckinDate !== today) {
+                    // 昨天没签到，重新开始
+                    checkinStreak = 1;
+                }
+                
+                localStorage.setItem('lastCheckinDate', today);
+                localStorage.setItem('checkinStreak', checkinStreak.toString());
+                
+                updateCheckinDisplay();
+                
+            } catch (error) {
+                console.error('保存签到记录失败:', error);
+                
+                // 保底方案：使用本地存储
+                const today = new Date().toISOString().split('T')[0];
+                localStorage.setItem('lastCheckinDate', today);
+                checkinStreak = parseInt(localStorage.getItem('checkinStreak') || '0') + 1;
+                localStorage.setItem('checkinStreak', checkinStreak.toString());
+                updateCheckinDisplay();
+            }
+        }
+
+        function playCheckinAnimation() {
+            const dailySection = document.querySelector('.daily-section');
+            if (!dailySection) return;
+            
+            const animation = document.createElement('div');
+            animation.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%);
+                z-index: 1;
+                animation: fadeOut 1s forwards;
+                pointer-events: none;
+            `;
+            
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes fadeOut {
+                    0% { opacity: 1; }
+                    100% { opacity: 0; }
+                }
+            `;
+            
+            document.head.appendChild(style);
+            dailySection.appendChild(animation);
+            
+            setTimeout(() => {
+                if (animation.parentNode) {
+                    animation.remove();
+                }
+                if (style.parentNode) {
+                    style.remove();
+                }
+            }, 1000);
+        }
+
+        // ==================== 经验值相关函数 ====================
+        async function addExp(amount, source = '') {
+            try {
+                if (!currentUser) return false;
+                
+                // 更新数据库中的经验值
+                const { error } = await supabaseClient.rpc('add_user_exp', {
+                    user_id_param: currentUser.id,
+                    exp_amount: amount
+                });
+                
+                if (error) {
+                    // 如果RPC函数不存在，使用直接更新
+                    console.warn('RPC函数不存在，使用直接更新:', error);
+                    
+                    // 先获取当前经验值
+                    const { data: stats } = await supabaseClient
+                        .from('user_stats')
+                        .select('exp')
+                        .eq('user_id', currentUser.id)
+                        .single();
+                    
+                    const currentExp = stats?.exp || 0;
+                    const newExp = currentExp + amount;
+                    
+                    const { error: updateError } = await supabaseClient
+                        .from('user_stats')
+                        .update({ exp: newExp })
+                        .eq('user_id', currentUser.id);
+                    
+                    if (updateError) throw updateError;
+                }
+                
+                // 更新本地经验值
+                userExp += amount;
+                
+                // 重新计算等级
+                const levelData = calculateLevel(userExp);
+                const oldLevel = userLevel;
+                userLevel = levelData.level;
+                currentExpInLevel = levelData.currentExp;
+                expToNextLevel = levelData.expToNext;
+                
+                // 更新显示
+                updateLevelDisplay();
+                
+                // 检查是否升级
+                if (userLevel > oldLevel) {
+                    showLevelUpAnimation(oldLevel, userLevel);
+                }
+                
+                // 显示获得经验的通知
+                if (source) {
+                    showNotification(`获得 ${amount} 经验 (${source})`, 'success');
+                } else {
+                    showNotification(`获得 ${amount} 经验`, 'success');
+                }
+                
+                return true;
+                
+            } catch (error) {
+                console.error('添加经验值失败:', error);
+                
+                // 保底方案：仅更新本地状态
+                userExp += amount;
+                const levelData = calculateLevel(userExp);
+                userLevel = levelData.level;
+                currentExpInLevel = levelData.currentExp;
+                expToNextLevel = levelData.expToNext;
+                
+                updateLevelDisplay();
+                showNotification(`获得 ${amount} 经验 (离线模式)`, 'success');
+                
+                return true;
             }
         }
 
@@ -1984,7 +2310,6 @@
             
             // 添加键盘快捷键
             document.addEventListener('keydown', function(e) {
-                // ESC键关闭所有模态框
                 if (e.key === 'Escape') {
                     document.querySelectorAll('.modal-overlay.show').forEach(modal => {
                         closeModal(modal.id);
@@ -2032,7 +2357,6 @@
                 const file = e.target.files[0];
                 if (!file) return;
                 
-                // 检查文件大小（限制2MB）
                 if (file.size > 2 * 1024 * 1024) {
                     showNotification('图片大小不能超过2MB', 'error');
                     return;
@@ -2065,7 +2389,6 @@
                     
                     if (updateError) throw updateError;
                     
-                    // 更新页面显示
                     updateAvatarDisplay(publicUrl);
                     
                     // 保存到本地存储作为缓存
@@ -2075,7 +2398,7 @@
                     };
                     reader.readAsDataURL(file);
                     
-                    // 添加经验值（上传头像获得经验）
+                    // 添加经验值
                     await addExp(10, '上传头像');
                     
                     showNotification('头像上传成功', 'success');
@@ -2083,7 +2406,6 @@
                 } catch (error) {
                     console.error('上传头像失败:', error);
                     
-                    // 如果存储桶不存在，使用base64方式
                     if (error.message.includes('bucket') || error.message.includes('storage')) {
                         await uploadAvatarAsBase64(file);
                     } else {
@@ -2098,215 +2420,13 @@
             input.click();
         };
 
-        // ==================== 每日签到功能 ====================
-        async function dailyCheckin() {
-            try {
-                if (!canCheckinToday) {
-                    showNotification('今天已经签到过了，明天再来吧！', 'info');
-                    return;
-                }
-                
-                const checkinBtn = safeGetElement('dailyCheckinBtn');
-                if (checkinBtn) {
-                    checkinBtn.disabled = true;
-                    checkinBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 签到中...';
-                }
-                
-                // 计算签到奖励
-                const baseExp = getCheckinExp(userLevel);
-                const actualExp = Math.round(baseExp * expMultiplier);
-                
-                // 添加经验值
-                const success = await addExp(actualExp, '每日签到');
-                
-                if (success) {
-                    // 更新签到状态
-                    canCheckinToday = false;
-                    checkinStreak++;
-                    
-                    // 保存签到记录
-                    await saveCheckinRecord(actualExp);
-                    
-                    // 更新UI
-                    const checkinStreakElement = safeGetElement('checkinStreak');
-                    const checkinDaysElement = safeGetElement('checkinDays');
-                    
-                    if (checkinStreakElement) {
-                        checkinStreakElement.textContent = checkinStreak.toString();
-                    }
-                    
-                    if (checkinDaysElement) {
-                        checkinDaysElement.textContent = checkinStreak.toString();
-                    }
-                    
-                    // 更新按钮状态
-                    if (checkinBtn) {
-                        checkinBtn.innerHTML = '<i class="fas fa-check"></i> 今日已签到';
-                        checkinBtn.style.background = '#666';
-                        checkinBtn.style.color = '#999';
-                    }
-                    
-                    // 显示签到成功通知
-                    showNotification(`签到成功！获得 ${actualExp} 经验值`, 'success');
-                    
-                    // 播放签到动画
-                    playCheckinAnimation();
-                }
-                
-            } catch (error) {
-                console.error('签到失败:', error);
-                showNotification('签到失败，请重试', 'error');
-                
-                const checkinBtn = safeGetElement('dailyCheckinBtn');
-                if (checkinBtn) {
-                    checkinBtn.disabled = false;
-                    checkinBtn.innerHTML = '<i class="fas fa-gift"></i> 每日签到';
-                }
-            }
-        }
-
-        async function checkDailyCheckin() {
-    try {
-        // 获取今天的日期字符串
-        const today = new Date().toISOString().split('T')[0];
-        
-        // 从本地存储检查今天是否签到
-        const lastCheckinDate = localStorage.getItem('lastCheckinDate');
-        if (lastCheckinDate === today) {
-            canCheckinToday = false;
-            
-            const checkinBtn = safeGetElement('dailyCheckinBtn');
-            if (checkinBtn) {
-                checkinBtn.disabled = true;
-                checkinBtn.innerHTML = '<i class="fas fa-check"></i> 今日已签到';
-                checkinBtn.style.background = '#666';
-                checkinBtn.style.color = '#999';
-            }
-        } else {
-            canCheckinToday = true;
-            
-            const checkinBtn = safeGetElement('dailyCheckinBtn');
-            if (checkinBtn) {
-                checkinBtn.disabled = false;
-                checkinBtn.innerHTML = '<i class="fas fa-gift"></i> 每日签到';
-                checkinBtn.style.background = 'linear-gradient(135deg, #ffd700, #ff9800)';
-                checkinBtn.style.color = '#121212';
-            }
-        }
-                
-                // 获取连续签到天数
-                const streak = parseInt(localStorage.getItem('checkinStreak') || '0');
-                checkinStreak = streak;
-                
-                // 更新显示
-                const checkinStreakElement = safeGetElement('checkinStreak');
-                const checkinDaysElement = safeGetElement('checkinDays');
-                
-                if (checkinStreakElement) {
-                    checkinStreakElement.textContent = streak.toString();
-                }
-                
-                if (checkinDaysElement) {
-                    checkinDaysElement.textContent = streak.toString();
-                }
-                
-            } catch (error) {
-                console.error('检查签到状态失败:', error);
-                canCheckinToday = true;
-            }
-        }
-
-        async function saveCheckinRecord(expGained) {
-            try {
-                const today = new Date().toISOString().split('T')[0];
-                
-                // 保存到本地存储
-                localStorage.setItem('lastCheckinDate', today);
-                
-                // 更新连续签到天数
-                const lastCheckinDate = localStorage.getItem('lastCheckinDate');
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
-                const yesterdayStr = yesterday.toISOString().split('T')[0];
-                
-                if (localStorage.getItem('lastCheckinDateBefore') === yesterdayStr) {
-                    // 昨天也签到了，连续签到天数+1
-                    checkinStreak = parseInt(localStorage.getItem('checkinStreak') || '0') + 1;
-                } else {
-                    // 昨天没签到，重新开始计数
-                    checkinStreak = 1;
-                }
-                
-                localStorage.setItem('checkinStreak', checkinStreak.toString());
-                localStorage.setItem('lastCheckinDateBefore', today);
-                
-                // 如果有数据库，保存到数据库
-                if (supabaseClient) {
-                    const { error } = await supabaseClient
-                        .from('user_checkins')
-                        .insert({
-                            user_id: currentUser.id,
-                            checkin_date: today,
-                            exp_gained: expGained,
-                            streak_days: checkinStreak
-                        });
-                    
-                    if (error) throw error;
-                }
-                
-            } catch (error) {
-                console.error('保存签到记录失败:', error);
-            }
-        }
-
-        function playCheckinAnimation() {
-            // 创建签到动画效果
-            const dailySection = document.querySelector('.daily-section');
-            if (!dailySection) return;
-            
-            const animation = document.createElement('div');
-            animation.style.cssText = `
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%);
-                z-index: 1;
-                animation: fadeOut 1s forwards;
-                pointer-events: none;
-            `;
-            
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes fadeOut {
-                    0% { opacity: 1; }
-                    100% { opacity: 0; }
-                }
-            `;
-            
-            document.head.appendChild(style);
-            dailySection.appendChild(animation);
-            
-            // 移除动画元素
-            setTimeout(() => {
-                if (animation.parentNode) {
-                    animation.remove();
-                }
-                if (style.parentNode) {
-                    style.remove();
-                }
-            }, 1000);
-        }
-
         window.viewCheckinHistory = function() {
             showNotification('签到记录功能开发中...', 'info');
         };
 
-        // ==================== 经验值相关函数 ====================
+        // ==================== 用户资料相关函数 ====================
         async function loadUserExp() {
             try {
-                // 从user_stats表获取经验值
                 const { data: stats, error } = await supabaseClient
                     .from('user_stats')
                     .select('exp')
@@ -2314,7 +2434,6 @@
                     .single();
                 
                 if (error) {
-                    // 如果记录不存在，创建默认记录
                     if (error.code === 'PGRST116') {
                         await createUserStats();
                         userExp = 0;
@@ -2333,146 +2452,8 @@
             }
         }
 
-        async function addExp(amount, source = '') {
-            try {
-                if (!currentUser) return false;
-                
-                // 更新数据库中的经验值
-                const { error } = await supabaseClient.rpc('add_user_exp', {
-                    user_id_param: currentUser.id,
-                    exp_amount: amount
-                });
-                
-                if (error) throw error;
-                
-                // 更新本地经验值
-                userExp += amount;
-                
-                // 重新计算等级
-                const levelData = calculateLevel(userExp);
-                const oldLevel = userLevel;
-                userLevel = levelData.level;
-                currentExpInLevel = levelData.currentExp;
-                expToNextLevel = levelData.expToNext;
-                
-                // 更新显示
-                updateLevelDisplay();
-                
-                // 检查是否升级
-                if (userLevel > oldLevel) {
-                    showLevelUpAnimation(oldLevel, userLevel);
-                }
-                
-                // 显示获得经验的通知
-                if (source) {
-                    showNotification(`获得 ${amount} 经验 (${source})`, 'success');
-                } else {
-                    showNotification(`获得 ${amount} 经验`, 'success');
-                }
-                
-                return true;
-                
-            } catch (error) {
-                console.error('添加经验值失败:', error);
-                return false;
-            }
-        }
-
-        function showLevelUpAnimation(oldLevel, newLevel) {
-            // 创建升级动画
-            const animation = document.createElement('div');
-            animation.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.8);
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                z-index: 10001;
-                animation: fadeIn 0.3s forwards;
-            `;
-            
-            animation.innerHTML = `
-                <div style="
-                    background: linear-gradient(135deg, ${getLevelColor(oldLevel)}, ${getLevelColor(newLevel)});
-                    padding: 40px;
-                    border-radius: 20px;
-                    text-align: center;
-                    box-shadow: 0 0 50px ${getLevelColor(newLevel)};
-                    animation: scaleIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-                ">
-                    <div style="font-size: 4rem; margin-bottom: 20px;">
-                        <i class="fas fa-trophy"></i>
-                    </div>
-                    <div style="font-size: 2.5rem; font-weight: bold; margin-bottom: 10px; color: white;">
-                        等级提升！
-                    </div>
-                    <div style="font-size: 1.8rem; margin-bottom: 30px; color: white;">
-                        Lv.${oldLevel} → <span style="color: ${getLevelColor(newLevel)}; font-weight: bold;">Lv.${newLevel}</span>
-                    </div>
-                    <div style="font-size: 1.2rem; color: rgba(255, 255, 255, 0.9); margin-bottom: 30px;">
-                        恭喜您升到 ${LEVEL_CONFIG[newLevel].name}
-                    </div>
-                    <button onclick="this.parentElement.parentElement.remove()" style="
-                        background: white;
-                        color: #121212;
-                        border: none;
-                        padding: 12px 30px;
-                        border-radius: 10px;
-                        font-size: 1.1rem;
-                        font-weight: bold;
-                        cursor: pointer;
-                        transition: transform 0.2s;
-                    ">
-                        确认
-                    </button>
-                </div>
-            `;
-            
-            // 添加动画样式
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes scaleIn {
-                    from { transform: scale(0.5); opacity: 0; }
-                    to { transform: scale(1); opacity: 1; }
-                }
-            `;
-            
-            document.head.appendChild(style);
-            document.body.appendChild(animation);
-            
-            // 3秒后自动移除动画
-            setTimeout(() => {
-                if (animation.parentNode) {
-                    animation.remove();
-                }
-                if (style.parentNode) {
-                    style.remove();
-                }
-            }, 3000);
-            
-            // 播放升级音效（如果有）
-            try {
-                const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3');
-                audio.volume = 0.3;
-                audio.play().catch(() => {});
-            } catch (e) {
-                // 忽略音效错误
-            }
-        }
-
-        // ==================== 用户资料相关函数 ====================
         async function loadUserProfile() {
             try {
-                // 从user_profiles表获取用户资料
                 const { data: profile, error } = await supabaseClient
                     .from('user_profiles')
                     .select('*')
@@ -2480,10 +2461,9 @@
                     .single();
                 
                 if (error) {
-                    // 如果记录不存在，创建默认记录
                     if (error.code === 'PGRST116') {
                         await createUserProfile();
-                        return loadUserProfile(); // 递归调用，重新加载
+                        return loadUserProfile();
                     }
                     throw error;
                 }
@@ -2493,17 +2473,12 @@
                 safeSetText('displayUsername', username);
                 safeSetText('avatarPlaceholder', username.charAt(0).toUpperCase());
                 
-                // 显示邮箱
                 safeSetText('userEmail', currentUser.email);
-                
-                // 显示个人简介
                 safeSetText('userBio', profile.bio);
                 
-                // 显示创建时间
                 const createdAt = new Date(currentUser.created_at);
                 safeSetText('createdAt', createdAt.toLocaleString('zh-CN'));
                 
-                // 显示头像（如果有）
                 if (profile.avatar_url) {
                     updateAvatarDisplay(profile.avatar_url);
                 }
@@ -2543,6 +2518,26 @@
             }
         }
 
+        async function createUserStats() {
+            try {
+                const { error } = await supabaseClient
+                    .from('user_stats')
+                    .upsert({
+                        user_id: currentUser.id,
+                        view_count: 0,
+                        favorite_count: 0,
+                        exp: 0,
+                        last_login: new Date().toISOString()
+                    });
+                
+                if (error) throw error;
+                
+            } catch (error) {
+                console.error('创建用户统计失败:', error);
+                throw error;
+            }
+        }
+
         // ==================== 用户信息更新函数 ====================
         async function updateUsername() {
             const newUsernameInput = safeGetElement('newUsername');
@@ -2576,15 +2571,12 @@
                 
                 if (profileError) throw profileError;
                 
-                // 更新页面显示
                 userProfile.username = newUsername;
                 safeSetText('displayUsername', newUsername);
                 safeSetText('avatarPlaceholder', newUsername.charAt(0).toUpperCase());
                 
-                // 添加经验值（修改用户名获得经验）
                 await addExp(5, '修改用户名');
                 
-                // 更新导航栏
                 updateNavbar();
                 
                 closeModal('usernameModal');
@@ -2610,11 +2602,9 @@
                 
                 if (error) throw error;
                 
-                // 更新页面显示
                 userProfile.bio = newBio;
                 safeSetText('userBio', newBio);
                 
-                // 添加经验值（完善资料获得经验）
                 if (newBio.length > 20) {
                     await addExp(5, '完善个人资料');
                 }
@@ -2675,12 +2665,10 @@
                 
                 closeModal('passwordModal');
                 
-                // 添加经验值（修改密码获得经验）
                 await addExp(15, '修改密码');
                 
                 showNotification('密码更新成功', 'success');
                 
-                // 退出登录，让用户重新登录
                 setTimeout(async () => {
                     await logout();
                 }, 1500);
@@ -2747,26 +2735,6 @@
             }
         }
 
-        async function createUserStats() {
-            try {
-                const { error } = await supabaseClient
-                    .from('user_stats')
-                    .upsert({
-                        user_id: currentUser.id,
-                        view_count: 0,
-                        favorite_count: 0,
-                        exp: 0,
-                        last_login: new Date().toISOString()
-                    });
-                
-                if (error) throw error;
-                
-            } catch (error) {
-                console.error('创建用户统计失败:', error);
-                throw error;
-            }
-        }
-
         async function updateLastLogin() {
             try {
                 const { error } = await supabaseClient
@@ -2779,7 +2747,6 @@
                 
                 if (error) throw error;
                 
-                // 显示最后登录时间
                 const lastLogin = new Date();
                 safeSetText('lastLogin', lastLogin.toLocaleString('zh-CN'));
                 
@@ -2854,7 +2821,6 @@
                 </div>
             `;
             
-            // 添加退出登录事件监听
             document.getElementById('logoutBtn')?.addEventListener('click', logout);
         }
 
@@ -2911,6 +2877,91 @@
             }, 3000);
         }
 
+        function showLevelUpAnimation(oldLevel, newLevel) {
+            const animation = document.createElement('div');
+            animation.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 10001;
+                animation: fadeIn 0.3s forwards;
+            `;
+            
+            animation.innerHTML = `
+                <div style="
+                    background: linear-gradient(135deg, ${getLevelColor(oldLevel)}, ${getLevelColor(newLevel)});
+                    padding: 40px;
+                    border-radius: 20px;
+                    text-align: center;
+                    box-shadow: 0 0 50px ${getLevelColor(newLevel)};
+                    animation: scaleIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+                ">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div style="font-size: 2.5rem; font-weight: bold; margin-bottom: 10px; color: white;">
+                        等级提升！
+                    </div>
+                    <div style="font-size: 1.8rem; margin-bottom: 30px; color: white;">
+                        Lv.${oldLevel} → <span style="color: ${getLevelColor(newLevel)}; font-weight: bold;">Lv.${newLevel}</span>
+                    </div>
+                    <div style="font-size: 1.2rem; color: rgba(255, 255, 255, 0.9); margin-bottom: 30px;">
+                        恭喜您升到 ${LEVEL_CONFIG[newLevel].name}
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" style="
+                        background: white;
+                        color: #121212;
+                        border: none;
+                        padding: 12px 30px;
+                        border-radius: 10px;
+                        font-size: 1.1rem;
+                        font-weight: bold;
+                        cursor: pointer;
+                        transition: transform 0.2s;
+                    ">
+                        确认
+                    </button>
+                </div>
+            `;
+            
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                @keyframes scaleIn {
+                    from { transform: scale(0.5); opacity: 0; }
+                    to { transform: scale(1); opacity: 1; }
+                }
+            `;
+            
+            document.head.appendChild(style);
+            document.body.appendChild(animation);
+            
+            setTimeout(() => {
+                if (animation.parentNode) {
+                    animation.remove();
+                }
+                if (style.parentNode) {
+                    style.remove();
+                }
+            }, 3000);
+            
+            try {
+                const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3');
+                audio.volume = 0.3;
+                audio.play().catch(() => {});
+            } catch (e) {}
+        }
+
         function handleInitializationError(error) {
             const loadingElement = safeGetElement('loading');
             if (loadingElement) {
@@ -2935,7 +2986,6 @@
             console.log('DOM已加载，开始初始化个人主页...');
             setTimeout(initializeProfile, 100);
             
-            // 检查本地存储的头像
             window.addEventListener('load', function() {
                 const savedAvatar = localStorage.getItem('userAvatar');
                 if (savedAvatar) {
