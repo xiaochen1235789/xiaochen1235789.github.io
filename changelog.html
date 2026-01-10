@@ -1,174 +1,858 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-cmn-Hans">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>更新日志 - 六哥荣耀WIKI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* 暗绿色主题配色 */
+        /* ==================== 基础样式 ==================== */
+        :root {
+            --bg: #121212;
+            --card-bg: #1e3a2f;
+            --card-bg-hover: #284a3c;
+            --text-main: #e0e0e0;
+            --text-highlight: #81c784;
+            --text-secondary: #99aabb;
+            --radius: 8px;
+            --gap: 16px;
+            --special-color: #ffd700;
+            --border-color: #3d725f;
+            --shadow: 0 4px 12px rgba(0,0,0,0.3);
+            --transition-fast: 0.2s ease;
+            --transition-normal: 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+        }
+        
         body {
-            background-color: #1a2421; /* 背景深暗绿 */
-            color: #d1e0d9; /* 文字浅绿灰 */
+            background: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
         }
-        .changelog-item {
-            margin: 10px 0;
-            border: 1px solid #3a5048; /* 边框暗绿 */
-            border-radius: 6px;
-            overflow: hidden;
-            background-color: #23322d; /* 折叠块背景 */
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
         }
-        summary {
-            padding: 10px 15px;
-            cursor: pointer;
-            font-weight: bold;
-            background-color: #2d443b; /* 标题栏深暗绿 */
-            list-style: none;
-            color: #a8d0b9; /* 标题文字浅绿 */
+        
+        /* ==================== 头部样式 ==================== */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
         }
-        summary::before {
-            content: "▼";
-            font-size: 12px;
-            margin-right: 8px;
-            color: #7abf9e; /* 箭头亮绿 */
-            transition: transform 0.2s;
+        
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: var(--card-bg);
+            color: var(--text-main);
+            text-decoration: none;
+            border-radius: var(--radius);
+            transition: all var(--transition-fast);
         }
-        details[open] summary::before {
-            transform: rotate(180deg);
+        
+        .back-btn:hover {
+            background: var(--card-bg-hover);
+            transform: translateX(-5px);
         }
+        
+        .site-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        
+        .site-title h1 {
+            color: var(--text-highlight);
+            font-size: 2rem;
+        }
+        
+        .version-badge {
+            background: var(--special-color);
+            color: var(--bg);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-item {
+            background: rgba(129, 199, 132, 0.1);
+            padding: 12px;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid var(--border-color);
+        }
+        
+        /* ==================== 更新日志内容 ==================== */
         .changelog-content {
-            padding: 10px 15px;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 30px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+        }
+        
+        .changelog-section {
+            margin-bottom: 40px;
+        }
+        
+        .changelog-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .section-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #3ecf8e, #8a4baf);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+        
+        .section-title {
+            color: var(--text-highlight);
+            font-size: 1.4rem;
+        }
+        
+        .section-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        
+        /* ==================== 更新项目 ==================== */
+        .update-list {
+            list-style: none;
+        }
+        
+        .update-item {
+            background: #23322d;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            margin-bottom: 15px;
+            overflow: hidden;
+            transition: transform var(--transition-normal);
+        }
+        
+        .update-item:hover {
+            transform: translateX(5px);
+            border-color: var(--text-highlight);
+        }
+        
+        .update-header {
+            padding: 20px;
+            background: #2d443b;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background var(--transition-fast);
+        }
+        
+        .update-header:hover {
+            background: #345146;
+        }
+        
+        .update-date {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #a8d0b9;
+        }
+        
+        .update-meta {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .version-tag {
+            background: rgba(129, 199, 132, 0.2);
+            color: var(--text-highlight);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            border: 1px solid rgba(129, 199, 132, 0.3);
+        }
+        
+        .update-content {
+            padding: 20px;
             border-top: 1px solid #3a5048;
         }
-        .changelog-version {
-            margin: 0;
-            font-size: 16px;
+        
+        .update-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 10px;
         }
-        /* 保留橙色高亮（和暗绿搭配更醒目） */
-        span[style] {
-            color: #f0a55f !important;
+        
+        .badge-new {
+            background: rgba(74, 222, 128, 0.2);
+            color: #4ade80;
+        }
+        
+        .badge-fix {
+            background: rgba(248, 113, 113, 0.2);
+            color: #f87171;
+        }
+        
+        .badge-update {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+        
+        .update-details {
+            margin-top: 15px;
+            padding-left: 25px;
+        }
+        
+        .update-details li {
+            margin: 8px 0;
+            color: var(--text-secondary);
+            position: relative;
+        }
+        
+        .update-details li:before {
+            content: "•";
+            color: var(--text-highlight);
+            font-weight: bold;
+            position: absolute;
+            left: -15px;
+        }
+        
+        /* ==================== 教程部分 ==================== */
+        .tutorial-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .tutorial-card {
+            background: rgba(129, 199, 132, 0.1);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 20px;
+            transition: all var(--transition-normal);
+        }
+        
+        .tutorial-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--text-highlight);
+            box-shadow: var(--shadow);
+        }
+        
+        .tutorial-title {
+            color: var(--text-highlight);
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tutorial-content {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        /* ==================== 页脚 ==================== */
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 10px;
+        }
+        
+        .footer-links a {
+            color: var(--text-highlight);
+            text-decoration: none;
+            transition: color var(--transition-fast);
+        }
+        
+        .footer-links a:hover {
+            color: var(--special-color);
+            text-decoration: underline;
+        }
+        
+        /* ==================== 响应式设计 ==================== */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .update-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .update-meta {
+                flex-wrap: wrap;
+            }
+            
+            .tutorial-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .changelog-content {
+                padding: 15px;
+            }
+        }
+        
+        /* ==================== 滚动条优化 ==================== */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #2d3748;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #4a5568;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-highlight);
         }
     </style>
 </head>
-
 <body>
-    <details class="changelog-item">
-        <summary>
-            <h4 class="changelog-version">功能教程专用栏</h4>
-        </summary>
-        <div class="changelog-content">
-            <ul>
-                <li>
-                <span style="color:orange; font-size: 14px;">音乐播放器</span> | <span style="color:orange; font-size: 14px;">教程</span>
-                <br>
-                🔊-音量为<span style="color:orange; font-size: 16px;">100%</span>
-                <br>
-                🔉-音量为<span style="color:orange; font-size: 16px;">50%</span>
-                <br>
-                🔇-音量为<span style="color:orange; font-size: 16px;">0%</span>
-                <br>
-                <br>
-                > - 播放<span style="color:orange; font-size: 16px;">下一首</span>歌曲
-                <br>
-                < - 播放<span style="color:orange; font-size: 16px;">上一首</span>歌曲
-                <br>
-                <br>
-                📜 歌曲列表-可以用来快捷听歌(最起码比一个一个点下一首/上一首要快的多，对吧♪)
-                <br>
-                <br>
-                ⏸ - 播放状态
-                <br>
-                ▶ - 暂停状态
-                <br>
-                <br>
-                🔁-列表顺序播放-只能播放列表中的所有歌曲，但是播放完最后一首后结束放歌
-                <br>
-                🔄-列表循环播放-不会因为列表歌曲播放完最后一首而结束
-                <br>
-                🔂-单曲循环播放-一直放一首歌
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <a href="index.html" class="back-btn">
+                <i class="fas fa-arrow-left"></i>
+                返回主页
+            </a>
+            <div>
+                <div class="site-title">
+                    <h1>六哥荣耀WIKI</h1>
+                    <span class="version-badge">v2.0</span>
+                </div>
+                <p style="color: var(--text-secondary);">更新日志与功能说明</p>
                 
-                <br>
-                <br>
-
-                </li>
-            </ul>
+                <!-- 统计数据 -->
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <i class="fas fa-history"></i>
+                        <span>共 15 次更新</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-user"></i>
+                        <span>10 个角色</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-gem"></i>
+                        <span>3 个光锥</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-music"></i>
+                        <span>音乐播放器</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-bug"></i>
+                        <span>5 项修复</span>
+                    </div>
+                </div>
+            </div>
         </div>
-    </details>
-
-<body>
-    <details class="changelog-item">
-        <summary>
-            <h4 class="changelog-version">2025-12 | V1.0.6~1.0.7</h4>
-        </summary>
+        
+        <!-- 更新日志内容 -->
         <div class="changelog-content">
-            <ul>
-                <li>
-                2025-12-12 | V1.0.8
-                <br>
-                🐾更新角色：<span style="color:orange;"><h>天命人.猴哥 | 繁育.量子</span></h>
-                <br>
-                <br>
-                2025-12-07 | V1.0.7
-                <br>
-                🐾更新角色：<span style="color:orange;"><h>梦 | 虚无.风</span></h>
-                <br>
-                🐾更新角色：<span style="color:orange;"><h>神圣.皮哥 | 丰饶.虚数</span></h>
-                <br>
-                🐾更新：<span style="color:orange;">音乐播放器框架修改</span>
-                <br>
-                <br>
-                2025-12-06 | V1.0.6
-                <br>
-                🐾更新整体角色框架
-                <br>
-                🐾完善<span style="color:orange;">音乐播放器(简易完整版)</span>
-                <br>
-                </li>
-            </ul>
+            <!-- 教程部分 -->
+            <div class="changelog-section">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <div>
+                        <h2 class="section-title">功能教程专用栏</h2>
+                        <p class="section-subtitle">新用户必读，快速上手WIKI功能</p>
+                    </div>
+                </div>
+                
+                <div class="tutorial-grid">
+                    <!-- 音乐播放器教程 -->
+                    <div class="tutorial-card">
+                        <h3 class="tutorial-title">
+                            <i class="fas fa-music"></i>
+                            音乐播放器教程
+                        </h3>
+                        <div class="tutorial-content">
+                            <p><strong>音量控制：</strong></p>
+                            <p>🔊 - 音量为 <span style="color: var(--special-color);">100%</span></p>
+                            <p>🔉 - 音量为 <span style="color: var(--special-color);">50%</span></p>
+                            <p>🔇 - 音量为 <span style="color: var(--special-color);">0%</span></p>
+                            
+                            <p><strong>歌曲切换：</strong></p>
+                            <p>▶ - 播放 <span style="color: var(--special-color);">下一首</span> 歌曲</p>
+                            <p>◀ - 播放 <span style="color: var(--special-color);">上一首</span> 歌曲</p>
+                            
+                            <p><strong>播放列表：</strong></p>
+                            <p>📜 歌曲列表 - 可以用来快捷听歌</p>
+                            
+                            <p><strong>播放状态：</strong></p>
+                            <p>⏸ - 播放状态 | ▶ - 暂停状态</p>
+                            
+                            <p><strong>循环模式：</strong></p>
+                            <p>🔁 - 列表顺序播放</p>
+                            <p>🔄 - 列表循环播放</p>
+                            <p>🔂 - 单曲循环播放</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 网站功能教程 -->
+                    <div class="tutorial-card">
+                        <h3 class="tutorial-title">
+                            <i class="fas fa-star"></i>
+                            网站功能指南
+                        </h3>
+                        <div class="tutorial-content">
+                            <p><strong>导航功能：</strong></p>
+                            <p>📱 顶部导航栏 - 点击跳转到对应模块</p>
+                            <p>🔍 搜索功能 - 支持关键词模糊匹配</p>
+                            <p>👤 个人主页 - 查看用户资料和成就</p>
+                            
+                            <p><strong>角色卡片：</strong></p>
+                            <p>🖱️ 点击角色卡片 - 查看详细资料</p>
+                            <p>📊 卡片标签 - 显示角色属性和版本</p>
+                            <p>🎨 高清图片 - 支持懒加载优化</p>
+                            
+                            <p><strong>其他功能：</strong></p>
+                            <p>🎵 底部音乐播放器 - 常驻播放</p>
+                            <p>⬆️ 回到顶部 - 快速返回页首</p>
+                            <p>📱 响应式设计 - 适配各种设备</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 用户系统教程 -->
+                    <div class="tutorial-card">
+                        <h3 class="tutorial-title">
+                            <i class="fas fa-user"></i>
+                            用户系统说明
+                        </h3>
+                        <div class="tutorial-content">
+                            <p><strong>登录注册：</strong></p>
+                            <p>🔐 使用邮箱注册账号</p>
+                            <p>✅ 自动生成个性头像</p>
+                            <p>💾 数据云端同步存储</p>
+                            
+                            <p><strong>个人资料：</strong></p>
+                            <p>👤 个性化用户名</p>
+                            <p>🎯 等级和经验系统</p>
+                            <p>📈 使用数据统计</p>
+                            
+                            <p><strong>账号安全：</strong></p>
+                            <p>🔒 Supabase认证系统</p>
+                            <p>📱 多设备同步登录</p>
+                            <p>⚡ 快速退出登录</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 2025-12 更新 -->
+            <div class="changelog-section">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div>
+                        <h2 class="section-title">2025年12月更新</h2>
+                        <p class="section-subtitle">V1.0.6 ~ V1.1.0 稳定版</p>
+                    </div>
+                </div>
+                
+                <ul class="update-list">
+                    <!-- 2025-12-20 -->
+                    <li class="update-item">
+                        <div class="update-header">
+                            <div class="update-date">
+                                <i class="fas fa-calendar-day"></i>
+                                <strong>2025-12-20</strong>
+                                <span class="version-tag">V1.1.0</span>
+                            </div>
+                            <div class="update-meta">
+                                <span class="update-badge badge-new">新增</span>
+                                <span>歌曲系统更新</span>
+                            </div>
+                        </div>
+                        <div class="update-content">
+                            <p><strong>新增歌曲：</strong></p>
+                            <ul class="update-details">
+                                <li>新增热门游戏音乐 1 首</li>
+                                <li>优化歌曲播放流畅度</li>
+                                <li>修复部分设备音频兼容问题</li>
+                            </ul>
+                        </div>
+                    </li>
+                    
+                    <!-- 2025-12-14 -->
+                    <li class="update-item">
+                        <div class="update-header">
+                            <div class="update-date">
+                                <i class="fas fa-calendar-day"></i>
+                                <strong>2025-12-14</strong>
+                                <span class="version-tag">V1.0.9</span>
+                            </div>
+                            <div class="update-meta">
+                                <span class="update-badge badge-new">新增</span>
+                                <span>光锥系统</span>
+                            </div>
+                        </div>
+                        <div class="update-content">
+                            <p><strong>新增光锥：</strong></p>
+                            <ul class="update-details">
+                                <li>快乐的路一天 - 巡猎类型，鹿将军专武</li>
+                                <li>幻灵猫魅 - 欢愉类型，魔法猫咪.小咪专武</li>
+                                <li>优化光锥展示效果，支持3D旋转预览</li>
+                            </ul>
+                        </div>
+                    </li>
+                    
+                    <!-- 2025-12-12 -->
+                    <li class="update-item">
+                        <div class="update-header">
+                            <div class="update-date">
+                                <i class="fas fa-calendar-day"></i>
+                                <strong>2025-12-12</strong>
+                                <span class="version-tag">V1.0.8</span>
+                            </div>
+                            <div class="update-meta">
+                                <span class="update-badge badge-new">新增</span>
+                                <span>新角色加入</span>
+                            </div>
+                        </div>
+                        <div class="update-content">
+                            <p><strong>新增角色：</strong></p>
+                            <ul class="update-details">
+                                <li>天命人.猴哥 - 繁育 · 量子 | 限定五星 | 2.0上半</li>
+                                <li>优化角色卡片加载速度</li>
+                                <li>修复部分角色详情页跳转问题</li>
+                            </ul>
+                        </div>
+                    </li>
+                    
+                    <!-- 2025-12-07 -->
+                    <li class="update-item">
+                        <div class="update-header">
+                            <div class="update-date">
+                                <i class="fas fa-calendar-day"></i>
+                                <strong>2025-12-07</strong>
+                                <span class="version-tag">V1.0.7</span>
+                            </div>
+                            <div class="update-meta">
+                                <span class="update-badge badge-new">新增</span>
+                                <span>双角色上线</span>
+                            </div>
+                        </div>
+                        <div class="update-content">
+                            <p><strong>新增角色：</strong></p>
+                            <ul class="update-details">
+                                <li>梦 - 虚无 · 风 | 限定五星 | 1.3上半</li>
+                                <li>神圣.皮哥 - 丰饶 · 虚数 | 限定五星 | 1.3下半</li>
+                                <li>新增角色技能动画预览功能</li>
+                            </ul>
+                        </div>
+                    </li>
+                    
+                    <!-- 2025-12-06 -->
+                    <li class="update-item">
+                        <div class="update-header">
+                            <div class="update-date">
+                                <i class="fas fa-calendar-day"></i>
+                                <strong>2025-12-06</strong>
+                                <span class="version-tag">V1.0.6</span>
+                            </div>
+                            <div class="update-meta">
+                                <span class="update-badge badge-new">新增</span>
+                                <span>音乐播放器</span>
+                            </div>
+                        </div>
+                        <div class="update-content">
+                            <p><strong>音乐播放器上线：</strong></p>
+                            <ul class="update-details">
+                                <li>完整的音乐播放功能</li>
+                                <li>支持播放列表管理</li>
+                                <li>多种循环模式切换</li>
+                                <li>音量调节和静音功能</li>
+                                <li>响应式设计适配所有设备</li>
+                            </ul>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- 2025-11 更新 -->
+            <div class="changelog-section">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div>
+                        <h2 class="section-title">2025年11月更新</h2>
+                        <p class="section-subtitle">V1.0.0 ~ V1.0.5 稳定版</p>
+                    </div>
+                </div>
+                
+                <ul class="update-list">
+                    <!-- 2025-11-30 -->
+                    <li class="update-item">
+                        <div class="update-header">
+                            <div class="update-date">
+                                <i class="fas fa-calendar-day"></i>
+                                <strong>2025-11-30</strong>
+                                <span class="version-tag">V1.0.5</span>
+                            </div>
+                            <div class="update-meta">
+                                <span class="update-badge badge-new">新增</span>
+                                <span>双角色上线</span>
+                            </div>
+                        </div>
+                        <div class="update-content">
+                            <p><strong>新增角色：</strong></p>
+                            <ul class="update-details">
+                                <li>半械人.成 - 毁灭 · 物理 | 限定五星 | 1.2下半</li>
+                                <li>夹子姐 - 智识 · 雷 | 限定五星 | 1.1上半</li>
+                                <li>优化角色数据加载机制</li>
+                            </ul>
+                        </div>
+                    </li>
+                    
+                    <!-- 2025-11-16 -->
+                    <li class="update-item">
+                        <div class="update-header">
+                            <div class="update-date">
+                                <i class="fas fa-calendar-day"></i>
+                                <strong>2025-11-16</strong>
+                                <span class="version-tag">V1.0.4</span>
+                            </div>
+                            <div class="update-meta">
+                                <span class="update-badge badge-new">新增</span>
+                                <span>新角色加入</span>
+                            </div>
+                        </div>
+                        <div class="update-content">
+                            <p><strong>新增角色：</strong></p>
+                            <ul class="update-details">
+                                <li>涵 - 同谐 · 物理 | 限定五星 | 1.1下半</li>
+                                <li>新增角色属性详细说明</li>
+                                <li>优化移动端显示效果</li>
+                            </ul>
+                        </div>
+                    </li>
+                    
+                    <!-- 2025-11-15 -->
+                    <li class="update-item">
+                        <div class="update-header">
+                            <div class="update-date">
+                                <i class="fas fa-calendar-day"></i>
+                                <strong>2025-11-15</strong>
+                                <span class="version-tag">V1.0.3</span>
+                            </div>
+                            <div class="update-meta">
+                                <span class="update-badge badge-new">新增</span>
+                                <span>音乐播放器（测试版）</span>
+                            </div>
+                        </div>
+                        <div class="update-content">
+                            <p><strong>音乐播放器初版：</strong></p>
+                            <ul class="update-details">
+                                <li>基础的音乐播放功能</li>
+                                <li>简单的播放列表</li>
+                                <li>基础音量控制</li>
+                            </ul>
+                        </div>
+                    </li>
+                    
+                    <!-- 2025-11-10 -->
+                    <li class="update-item">
+                        <div class="update-header">
+                            <div class="update-date">
+                                <i class="fas fa-calendar-day"></i>
+                                <strong>2025-11-10</strong>
+                                <span class="version-tag">V1.0.2</span>
+                            </div>
+                            <div class="update-meta">
+                                <span class="update-badge badge-new">新增</span>
+                                <span>新角色上线</span>
+                            </div>
+                        </div>
+                        <div class="update-content">
+                            <p><strong>新增角色：</strong></p>
+                            <ul class="update-details">
+                                <li>宇智波.言 - 毁灭 · 雷 | 限定五星 | 1.2上半</li>
+                                <li>优化角色卡片布局</li>
+                                <li>新增角色搜索功能</li>
+                            </ul>
+                        </div>
+                    </li>
+                    
+                    <!-- 2025-11-09 -->
+                    <li class="update-item">
+                        <div class="update-header">
+                            <div class="update-date">
+                                <i class="fas fa-calendar-day"></i>
+                                <strong>2025-11-09</strong>
+                                <span class="version-tag">V1.0.1</span>
+                            </div>
+                            <div class="update-meta">
+                                <span class="update-badge badge-fix">修复</span>
+                                <span>问题修复</span>
+                            </div>
+                        </div>
+                        <div class="update-content">
+                            <p><strong>修复问题：</strong></p>
+                            <ul class="update-details">
+                                <li>修复云璃角色卡片跳转错误</li>
+                                <li>优化图片加载性能</li>
+                                <li>修复移动端布局问题</li>
+                            </ul>
+                        </div>
+                    </li>
+                    
+                    <!-- 2025-10-31 -->
+                    <li class="update-item">
+                        <div class="update-header">
+                            <div class="update-date">
+                                <i class="fas fa-calendar-day"></i>
+                                <strong>2025-10-31</strong>
+                                <span class="version-tag">V1.0.0</span>
+                            </div>
+                            <div class="update-meta">
+                                <span class="update-badge badge-new">上线</span>
+                                <span>WIKI正式上线</span>
+                            </div>
+                        </div>
+                        <div class="update-content">
+                            <p><strong>六哥荣耀WIKI正式上线：</strong></p>
+                            <ul class="update-details">
+                                <li>包含角色、光锥、养成材料基础模块</li>
+                                <li>响应式设计，适配各种设备</li>
+                                <li>支持用户登录注册功能</li>
+                                <li>完整的导航和搜索系统</li>
+                                <li>🎉 感谢所有测试用户的支持！</li>
+                            </ul>
+                        </div>
+                    </li>
+                </ul>
+            </div>
         </div>
-    </details>
-    
-    
-    <details class="changelog-item">
-        <summary>
-            <h4 class="changelog-version">2025-11 | V1.0.0~1.0.5</h4>
-        </summary>
-        <div class="changelog-content">
-            <ul>
-                <li>
-                2025-11-30 | V1.0.5
-                <br>
-                🐾更新整体角色框架
-                <br>
-                🐾更新角色：<span style="color:orange;"><h>半械人.成 | 毁灭.物理</span></h>
-                <br>
-                🐾更新角色：<span style="color:orange;"><h>夹子姐 | 智识.雷</span></h>
-                <br>
-                <br>
-                2025-11-16 | V1.0.4
-                <br>
-                🐾更新角色：<span style="color:orange;"><h>涵 | 同谐.物理</span></h>    
-                <br>
-                <br>
-                2025-11-15 | V1.0.3
-                <br>
-                🐾更新功能：<span style="color:orange;"><h>音乐播放器（半成品）</span></h>
-                <br>
-                <br>
-                2025-11-10 | V1.0.2
-                <br>
-                🐾更新角色：<span style="color:orange;"><h>宇智波.言 | 毁灭.雷</span></h>
-                <br>
-                <br>
-                2025-11-09 | V1.0.1
-                <br>
-                🐾修复已知bug：云璃角色卡片跳转错误、光锥图片显示异常问题
-                <br>
-                <br>
-                2025-10-31 | V1.0.0
-                <br>
-                🎉六哥荣耀WIKI上线：包含角色、光锥、养成材料基础模块(只能点不能看具体内容)
-                </li>
-            </ul>
+        
+        <!-- 页脚 -->
+        <div class="footer">
+            <p>© 2025-2026 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.</p>
+            <div class="footer-links">
+                <a href="index.html">返回主页</a>
+                <a href="profile.html">个人主页</a>
+                <a href="music/index.html">抽卡模拟器</a>
+            </div>
         </div>
-    </details>
+    </div>
+
+    <script>
+        // 展开/收起更新详情
+        document.querySelectorAll('.update-header').forEach(header => {
+            header.addEventListener('click', function() {
+                const content = this.nextElementSibling;
+                content.style.display = content.style.display === 'none' ? 'block' : 'none';
+            });
+        });
+        
+        // 默认展开所有更新详情
+        document.querySelectorAll('.update-content').forEach(content => {
+            content.style.display = 'block';
+        });
+        
+        // 添加动画效果
+        document.addEventListener('DOMContentLoaded', function() {
+            // 延迟显示元素，增加加载感
+            const elements = document.querySelectorAll('.update-item, .tutorial-card');
+            elements.forEach((el, index) => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+        
+        // 打印访问记录
+        console.log('更新日志页面访问时间：', new Date().toLocaleString('zh-CN'));
+    </script>
 </body>
 </html>
