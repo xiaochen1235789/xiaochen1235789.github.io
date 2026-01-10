@@ -3,36 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>崩铁卡池模拟 - 图片化UI</title>
+    <title>崩坏：星穹铁道 - 卡池模拟</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            font-family: 'HYWenHei', 'Microsoft YaHei', sans-serif;
             user-select: none;
         }
         
-        body {
-            background: linear-gradient(135deg, #0c0c1e 0%, #1a1a3a 50%, #0c0c1e 100%);
-            color: #e0e0ff;
-            min-height: 100vh;
-            overflow-x: hidden;
-            position: relative;
+        @font-face {
+            font-family: 'HYWenHei';
+            src: url('https://fonts.gstatic.com/ea/nanumgothic/v5/NanumGothic-Regular.eot');
+            font-weight: normal;
+            font-style: normal;
         }
         
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: 
-                radial-gradient(circle at 20% 30%, rgba(74, 44, 140, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(107, 70, 193, 0.1) 0%, transparent 50%);
-            z-index: -1;
+        body {
+            background: #0a0a14;
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(28, 58, 173, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(189, 28, 173, 0.1) 0%, transparent 20%);
+            position: relative;
         }
         
         .container {
@@ -41,265 +38,213 @@
             padding: 20px;
         }
         
-        /* 顶部横幅 */
-        .header-banner {
-            position: relative;
-            height: 180px;
-            background: linear-gradient(90deg, rgba(26, 26, 46, 0.9) 0%, rgba(38, 28, 68, 0.9) 100%);
-            border-radius: 20px;
+        /* 顶部标题栏 */
+        .title-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 30px;
-            overflow: hidden;
-            border: 1px solid rgba(107, 70, 193, 0.5);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            padding: 15px 30px;
+            background: linear-gradient(90deg, rgba(18, 22, 55, 0.9) 0%, rgba(25, 30, 70, 0.9) 100%);
+            border-radius: 15px;
+            border: 1px solid rgba(101, 110, 255, 0.3);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
         }
         
-        .banner-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: url('https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80') center/cover no-repeat;
-            opacity: 0.2;
-            filter: brightness(0.7) saturate(1.5);
-        }
-        
-        .banner-content {
-            position: relative;
-            height: 100%;
+        .game-logo {
             display: flex;
             align-items: center;
-            padding: 0 40px;
+            gap: 15px;
         }
         
-        .pool-title {
-            font-size: 36px;
-            font-weight: bold;
-            background: linear-gradient(90deg, #ffd166, #ff9e6d);
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #656eff, #3a42c9);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .logo-text h1 {
+            font-size: 24px;
+            background: linear-gradient(90deg, #a3b5ff, #ffffff);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            text-shadow: 0 0 20px rgba(255, 209, 102, 0.3);
+            letter-spacing: 1px;
+        }
+        
+        .logo-text p {
+            font-size: 14px;
+            color: #b8c1ff;
+            letter-spacing: 2px;
+        }
+        
+        .nav-menu {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .nav-item {
+            padding: 8px 20px;
+            background: rgba(40, 45, 100, 0.7);
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+        
+        .nav-item:hover {
+            background: rgba(60, 65, 140, 0.9);
+            border-color: #656eff;
+        }
+        
+        .nav-item.active {
+            background: linear-gradient(90deg, #656eff, #3a42c9);
+            box-shadow: 0 0 10px rgba(101, 110, 255, 0.5);
+        }
+        
+        /* 主卡池区域 */
+        .warp-banner {
+            position: relative;
+            height: 500px;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-bottom: 30px;
+            border: 1px solid rgba(101, 110, 255, 0.4);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+        }
+        
+        .warp-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(90deg, rgba(10, 15, 45, 0.9) 0%, rgba(20, 25, 70, 0.9) 100%),
+                url('https://images.unsplash.com/photo-1534447677768-be436bb09401?ixlib=rb-4.0.3&auto=format&fit=crop&w=1790&q=80') center/cover;
+            filter: brightness(0.6) saturate(1.3);
+        }
+        
+        .warp-content {
+            position: relative;
+            height: 100%;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .warp-title {
+            font-size: 42px;
+            font-weight: bold;
+            background: linear-gradient(90deg, #ffd166, #ff9e6d, #ff6b9d);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 20px rgba(255, 107, 157, 0.3);
             margin-bottom: 10px;
         }
         
-        .pool-subtitle {
-            font-size: 20px;
-            color: #b8b8ff;
+        .warp-subtitle {
+            font-size: 22px;
+            color: #d8e1ff;
             margin-bottom: 5px;
         }
         
-        .pool-time {
-            color: #8888cc;
-            font-size: 16px;
-        }
-        
-        .character-tag {
+        .warp-character {
             position: absolute;
-            right: 40px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: linear-gradient(90deg, #4a2c8c, #6b46c1);
-            padding: 12px 25px;
-            border-radius: 12px;
-            font-size: 24px;
-            font-weight: bold;
-            box-shadow: 0 5px 15px rgba(107, 70, 193, 0.4);
-        }
-        
-        /* 主内容区域 */
-        .main-content {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 25px;
-            margin-bottom: 30px;
-        }
-        
-        .left-panel {
-            flex: 1;
-            min-width: 300px;
-        }
-        
-        .right-panel {
-            flex: 1;
-            min-width: 300px;
-        }
-        
-        /* 角色展示面板 */
-        .character-panel {
-            background: rgba(26, 26, 46, 0.8);
-            border-radius: 20px;
-            padding: 25px;
-            margin-bottom: 25px;
-            border: 1px solid rgba(107, 70, 193, 0.3);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-        }
-        
-        .char-image-container {
-            position: relative;
-            width: 100%;
-            height: 350px;
+            right: 60px;
+            bottom: 40px;
+            width: 300px;
+            height: 400px;
+            background: linear-gradient(135deg, rgba(255, 209, 102, 0.1), rgba(255, 107, 157, 0.1));
             border-radius: 15px;
-            overflow: hidden;
-            margin-bottom: 20px;
-            background: linear-gradient(45deg, #1a1a2e, #2d2d4e);
             display: flex;
             align-items: center;
             justify-content: center;
+            border: 2px solid rgba(255, 209, 102, 0.3);
+            overflow: hidden;
         }
         
-        .char-image {
+        .char-display {
+            position: relative;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, rgba(74, 44, 140, 0.7), rgba(107, 70, 193, 0.5)), 
-                        url('https://images.unsplash.com/photo-1518709268805-4e9042af2176?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80') center/cover no-repeat;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-size: 22px;
-            color: #fff;
-            position: relative;
-        }
-        
-        .char-info {
-            text-align: center;
-        }
-        
-        .char-name {
-            font-size: 28px;
-            font-weight: bold;
-            color: #ffd166;
-            margin-bottom: 8px;
-        }
-        
-        .char-desc {
-            color: #b8b8ff;
-            font-size: 18px;
-            margin-bottom: 5px;
+            padding: 20px;
         }
         
         .char-rarity {
-            color: #ff9e6d;
-            font-size: 16px;
-        }
-        
-        /* 概率面板 */
-        .rate-panel {
-            background: rgba(26, 26, 46, 0.8);
-            border-radius: 20px;
-            padding: 25px;
-            border: 1px solid rgba(107, 70, 193, 0.3);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-        }
-        
-        .panel-title {
-            font-size: 22px;
-            font-weight: bold;
-            margin-bottom: 20px;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 28px;
             color: #ffd166;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            text-shadow: 0 0 10px rgba(255, 209, 102, 0.5);
         }
         
-        .panel-title i {
-            color: #6b46c1;
+        .char-name {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ffd166;
+            margin-bottom: 10px;
+            text-align: center;
         }
         
-        .rate-item {
-            margin-bottom: 20px;
+        .char-type {
+            font-size: 18px;
+            color: #b8c1ff;
+            margin-bottom: 5px;
         }
         
-        .rate-header {
+        .char-path {
+            display: inline-block;
+            padding: 5px 15px;
+            background: rgba(101, 110, 255, 0.3);
+            border-radius: 20px;
+            font-size: 16px;
+            color: #a3b5ff;
+            margin-top: 10px;
+        }
+        
+        .warp-time {
+            color: #8a94e6;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+        
+        /* 抽卡按钮区域 */
+        .warp-control {
+            background: rgba(18, 22, 55, 0.9);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(101, 110, 255, 0.3);
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
+            align-items: center;
         }
         
-        .rate-name {
-            font-size: 18px;
-        }
-        
-        .rate-value {
-            font-weight: bold;
-            color: #ff9e6d;
-        }
-        
-        .rate-bar {
-            height: 12px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            overflow: hidden;
-        }
-        
-        .rate-fill {
-            height: 100%;
-            border-radius: 6px;
-        }
-        
-        .rate-5 { background: linear-gradient(90deg, #ffd166, #ff9e6d); width: 0.6%; }
-        .rate-4 { background: linear-gradient(90deg, #b266ff, #8a2be2); width: 5.1%; }
-        .rate-3 { background: linear-gradient(90deg, #66b3ff, #4682b4); width: 94.3%; }
-        
-        /* 保底计数 */
-        .pity-counter {
+        .currency-info {
             display: flex;
-            gap: 15px;
-            margin-top: 25px;
-        }
-        
-        .pity-box {
-            flex: 1;
-            background: rgba(40, 40, 80, 0.5);
-            border-radius: 12px;
-            padding: 15px;
-            text-align: center;
-            border: 1px solid rgba(107, 70, 193, 0.3);
-        }
-        
-        .pity-title {
-            font-size: 16px;
-            color: #b8b8ff;
-            margin-bottom: 8px;
-        }
-        
-        .pity-value {
-            font-size: 28px;
-            font-weight: bold;
-            color: #ff9e6d;
-        }
-        
-        .pity-sub {
-            font-size: 14px;
-            color: #8888cc;
-            margin-top: 5px;
-        }
-        
-        /* 货币和抽卡按钮 */
-        .currency-panel {
-            background: rgba(26, 26, 46, 0.8);
-            border-radius: 20px;
-            padding: 25px;
-            margin-bottom: 25px;
-            border: 1px solid rgba(107, 70, 193, 0.3);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-        }
-        
-        .currency-display {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 25px;
+            gap: 20px;
         }
         
         .currency-item {
-            flex: 1;
             display: flex;
             align-items: center;
             gap: 12px;
-            background: rgba(40, 40, 80, 0.5);
-            padding: 15px;
-            border-radius: 12px;
-            border: 1px solid rgba(107, 70, 193, 0.3);
+            background: rgba(30, 35, 80, 0.7);
+            padding: 12px 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(101, 110, 255, 0.2);
         }
         
         .currency-icon {
@@ -313,136 +258,299 @@
         }
         
         .stellar-icon {
-            background: linear-gradient(135deg, #66b3ff, #0066cc);
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
         }
         
         .ticket-icon {
             background: linear-gradient(135deg, #ff6b9d, #ff4757);
         }
         
-        .currency-info {
-            flex: 1;
+        .currency-detail {
+            display: flex;
+            flex-direction: column;
         }
         
         .currency-name {
             font-size: 14px;
-            color: #b8b8ff;
+            color: #b8c1ff;
         }
         
         .currency-amount {
             font-size: 24px;
             font-weight: bold;
+            color: white;
         }
         
-        .draw-buttons {
+        .warp-buttons {
             display: flex;
+            gap: 20px;
+        }
+        
+        .warp-button {
+            padding: 18px 35px;
+            border: none;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .warp-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .warp-button:hover::before {
+            left: 100%;
+        }
+        
+        .warp-single {
+            background: linear-gradient(135deg, #3a42c9, #656eff);
+            color: white;
+            box-shadow: 0 5px 15px rgba(101, 110, 255, 0.4);
+        }
+        
+        .warp-ten {
+            background: linear-gradient(135deg, #ff4757, #ff6b9d);
+            color: white;
+            box-shadow: 0 5px 15px rgba(255, 107, 157, 0.4);
+        }
+        
+        .warp-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .warp-button:disabled:hover::before {
+            left: -100%;
+        }
+        
+        /* 详细信息区域 */
+        .details-panel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .detail-card {
+            background: rgba(18, 22, 55, 0.9);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(101, 110, 255, 0.3);
+        }
+        
+        .detail-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ffd166;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(101, 110, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .rate-item {
+            margin-bottom: 15px;
+        }
+        
+        .rate-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .rate-name {
+            font-size: 16px;
+            color: #d8e1ff;
+        }
+        
+        .rate-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ff9e6d;
+        }
+        
+        .rate-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .rate-fill {
+            height: 100%;
+            border-radius: 4px;
+        }
+        
+        .rate-5 { background: linear-gradient(90deg, #ffd166, #ff9e6d); width: 0.6%; }
+        .rate-4 { background: linear-gradient(90deg, #b266ff, #8a2be2); width: 5.1%; }
+        .rate-3 { background: linear-gradient(90deg, #66b3ff, #0072ff); width: 94.3%; }
+        
+        .pity-count {
+            display: flex;
+            flex-direction: column;
             gap: 15px;
         }
         
-        .draw-btn {
-            flex: 1;
-            padding: 18px;
-            border: none;
-            border-radius: 12px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            color: white;
+        .pity-item {
+            background: rgba(30, 35, 80, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .pity-header {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .pity-name {
+            font-size: 16px;
+            color: #d8e1ff;
+        }
+        
+        .pity-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff9e6d;
+        }
+        
+        .pity-progress {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: linear-gradient(90deg, #656eff, #ff6b9d);
+        }
+        
+        /* UP角色展示 */
+        .up-characters {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        
+        .up-character {
+            background: rgba(30, 35, 80, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid rgba(101, 110, 255, 0.2);
             transition: all 0.3s;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
         
-        .draw-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        .up-character:hover {
+            transform: translateY(-5px);
+            border-color: #656eff;
+            box-shadow: 0 5px 15px rgba(101, 110, 255, 0.3);
         }
         
-        .draw-btn:active {
-            transform: translateY(1px);
+        .up-rarity {
+            font-size: 18px;
+            color: #b266ff;
+            margin-bottom: 8px;
         }
         
-        .draw-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
+        .up-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffd166;
+            margin-bottom: 5px;
         }
         
-        .single-draw {
-            background: linear-gradient(135deg, #4a2c8c, #6b46c1);
-        }
-        
-        .ten-draw {
-            background: linear-gradient(135deg, #ff6b9d, #ff4757);
+        .up-type {
+            font-size: 14px;
+            color: #b8c1ff;
         }
         
         /* 抽卡结果弹窗 */
-        .modal {
+        .warp-result-modal {
             display: none;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.95);
             justify-content: center;
             align-items: center;
             z-index: 1000;
-            backdrop-filter: blur(5px);
         }
         
-        .modal-content {
-            background: linear-gradient(135deg, rgba(26, 26, 46, 0.95), rgba(38, 28, 68, 0.95));
+        .warp-result-content {
+            background: linear-gradient(135deg, rgba(10, 15, 45, 0.95), rgba(20, 25, 70, 0.95));
             border-radius: 20px;
-            padding: 25px;
-            max-width: 800px;
             width: 95%;
-            max-height: 85vh;
-            overflow-y: auto;
-            border: 1px solid rgba(107, 70, 193, 0.5);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
-            position: relative;
+            max-width: 1000px;
+            max-height: 90vh;
+            overflow: hidden;
+            border: 1px solid rgba(101, 110, 255, 0.5);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
         }
         
-        .modal-header {
+        .result-header {
+            background: linear-gradient(90deg, rgba(18, 22, 55, 0.9), rgba(25, 30, 70, 0.9));
+            padding: 20px 30px;
             text-align: center;
-            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(101, 110, 255, 0.3);
         }
         
-        .modal-title {
+        .result-title {
             font-size: 28px;
             font-weight: bold;
             background: linear-gradient(90deg, #ffd166, #ff9e6d);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            margin-bottom: 10px;
         }
         
-        .modal-subtitle {
-            color: #b8b8ff;
+        .result-subtitle {
+            color: #b8c1ff;
             font-size: 16px;
+            margin-top: 5px;
         }
         
         .result-grid {
+            padding: 25px;
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            margin-bottom: 25px;
+            gap: 15px;
+            max-height: 60vh;
+            overflow-y: auto;
         }
         
         .result-item {
-            background: rgba(40, 40, 80, 0.5);
-            border-radius: 10px;
-            padding: 15px;
+            background: rgba(30, 35, 80, 0.7);
+            border-radius: 12px;
+            padding: 20px 15px;
             text-align: center;
             border: 1px solid rgba(255, 255, 255, 0.1);
             transition: all 0.3s;
             opacity: 0;
-            transform: translateY(20px) scale(0.95);
+            transform: translateY(20px) scale(0.9);
+            position: relative;
+            overflow: hidden;
         }
         
         .result-item.revealed {
@@ -451,86 +559,154 @@
         }
         
         .result-rarity {
-            font-size: 18px;
-            margin-bottom: 8px;
+            font-size: 20px;
+            margin-bottom: 10px;
             font-weight: bold;
         }
         
         .result-name {
-            font-size: 14px;
+            font-size: 16px;
+            font-weight: bold;
             margin-bottom: 5px;
         }
         
         .result-type {
+            font-size: 14px;
+            color: #b8c1ff;
+        }
+        
+        .result-up {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #ff4757;
+            color: white;
             font-size: 12px;
-            color: #8888cc;
+            padding: 2px 8px;
+            border-radius: 10px;
         }
         
         .result-5star {
             border-color: #ffd166;
-            box-shadow: 0 0 15px rgba(255, 209, 102, 0.3);
+            background: linear-gradient(135deg, rgba(40, 35, 80, 0.9), rgba(60, 50, 100, 0.9));
+            box-shadow: 0 0 20px rgba(255, 209, 102, 0.3);
         }
         
         .result-4star {
             border-color: #b266ff;
-            box-shadow: 0 0 10px rgba(178, 102, 255, 0.3);
+            background: linear-gradient(135deg, rgba(35, 30, 80, 0.9), rgba(50, 40, 100, 0.9));
+            box-shadow: 0 0 10px rgba(178, 102, 255, 0.2);
         }
         
-        .modal-close {
+        .result-3star {
+            border-color: #66b3ff;
+            background: linear-gradient(135deg, rgba(30, 35, 80, 0.9), rgba(40, 45, 100, 0.9));
+        }
+        
+        .result-footer {
+            padding: 20px;
             text-align: center;
+            border-top: 1px solid rgba(101, 110, 255, 0.3);
+            background: rgba(18, 22, 55, 0.9);
         }
         
-        .close-btn {
+        .close-result {
             padding: 12px 40px;
-            background: linear-gradient(135deg, #4a2c8c, #6b46c1);
+            background: linear-gradient(135deg, #656eff, #3a42c9);
             color: white;
             border: none;
             border-radius: 10px;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s;
         }
         
-        .close-btn:hover {
-            background: linear-gradient(135deg, #5a3c9c, #7b56d1);
+        .close-result:hover {
+            background: linear-gradient(135deg, #757eff, #4a52d9);
             transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(101, 110, 255, 0.4);
         }
         
-        /* 动画效果 */
-        @keyframes glow {
-            0% { box-shadow: 0 0 10px rgba(255, 209, 102, 0.5); }
-            50% { box-shadow: 0 0 20px rgba(255, 209, 102, 0.8); }
-            100% { box-shadow: 0 0 10px rgba(255, 209, 102, 0.5); }
+        /* 粒子背景效果 */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
         }
         
-        .glowing {
-            animation: glow 2s infinite;
+        .particle {
+            position: absolute;
+            background: rgba(101, 110, 255, 0.3);
+            border-radius: 50%;
+            animation: float 15s infinite linear;
+        }
+        
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.7;
+            }
+            90% {
+                opacity: 0.7;
+            }
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+                opacity: 0;
+            }
         }
         
         /* 响应式调整 */
+        @media (max-width: 1024px) {
+            .details-panel {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .warp-character {
+                width: 250px;
+                height: 350px;
+                right: 30px;
+                bottom: 30px;
+            }
+        }
+        
         @media (max-width: 768px) {
-            .result-grid {
-                grid-template-columns: repeat(3, 1fr);
+            .title-bar {
+                flex-direction: column;
+                gap: 20px;
             }
             
-            .pool-title {
-                font-size: 28px;
+            .warp-control {
+                flex-direction: column;
+                gap: 25px;
             }
             
-            .character-tag {
+            .details-panel {
+                grid-template-columns: 1fr;
+            }
+            
+            .warp-banner {
+                height: 400px;
+            }
+            
+            .warp-character {
                 position: relative;
                 right: auto;
-                top: auto;
-                transform: none;
+                bottom: auto;
+                width: 100%;
+                height: 300px;
                 margin-top: 20px;
-                display: inline-block;
             }
             
-            .banner-content {
-                flex-direction: column;
-                align-items: flex-start;
-                padding: 25px;
+            .result-grid {
+                grid-template-columns: repeat(3, 1fr);
             }
         }
         
@@ -539,199 +715,275 @@
                 grid-template-columns: repeat(2, 1fr);
             }
             
-            .draw-buttons {
+            .warp-buttons {
                 flex-direction: column;
+                width: 100%;
             }
             
-            .pity-counter {
-                flex-direction: column;
+            .warp-button {
+                width: 100%;
+                justify-content: center;
             }
+            
+            .currency-info {
+                flex-direction: column;
+                width: 100%;
+            }
+        }
+        
+        /* 特效类 */
+        .golden-glow {
+            animation: goldenGlow 2s infinite alternate;
+        }
+        
+        @keyframes goldenGlow {
+            0% { box-shadow: 0 0 10px rgba(255, 209, 102, 0.5), 0 0 20px rgba(255, 209, 102, 0.3); }
+            100% { box-shadow: 0 0 20px rgba(255, 209, 102, 0.8), 0 0 40px rgba(255, 209, 102, 0.5), 0 0 60px rgba(255, 209, 102, 0.3); }
+        }
+        
+        .rainbow-border {
+            position: relative;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+        
+        .rainbow-border::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #ff0000, #ff9900, #ffff00, #33cc33, #0099ff, #6633cc);
+            border-radius: inherit;
+            z-index: -1;
+            animation: rainbow 3s linear infinite;
+        }
+        
+        @keyframes rainbow {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
         }
     </style>
 </head>
 <body>
+    <!-- 粒子背景 -->
+    <div class="particles" id="particles"></div>
+    
     <div class="container">
-        <!-- 顶部横幅 -->
-        <div class="header-banner">
-            <div class="banner-bg"></div>
-            <div class="banner-content">
-                <div>
-                    <h1 class="pool-title">「烛中翩影」限定跃迁</h1>
-                    <p class="pool-subtitle">米游记·金老君</p>
-                    <p class="pool-time">活动时间：2024-01-10 12:00 - 2024-01-31 11:59</p>
+        <!-- 顶部标题栏 -->
+        <div class="title-bar">
+            <div class="game-logo">
+                <div class="logo-icon">
+                    <i class="fas fa-rocket"></i>
                 </div>
-                <div class="character-tag">★★★★★</div>
+                <div class="logo-text">
+                    <h1>崩坏：星穹铁道</h1>
+                    <p>WARP SIMULATOR</p>
+                </div>
+            </div>
+            
+            <div class="nav-menu">
+                <div class="nav-item active">角色活动跃迁</div>
+                <div class="nav-item">光锥活动跃迁</div>
+                <div class="nav-item">常驻跃迁</div>
             </div>
         </div>
         
-        <!-- 主内容区域 -->
-        <div class="main-content">
-            <!-- 左侧面板 -->
-            <div class="left-panel">
-                <!-- 角色展示 -->
-                <div class="character-panel">
-                    <div class="char-image-container">
-                        <div class="char-image glowing">
-                            <div style="text-align: center; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px;">
-                                <i class="fas fa-user" style="font-size: 48px; margin-bottom: 15px; color: #ffd166;"></i>
-                                <div>角色展示</div>
-                                <div style="font-size: 16px; margin-top: 10px; color: #b8b8ff;">点击下方按钮抽卡</div>
-                            </div>
-                        </div>
+        <!-- 主卡池横幅 -->
+        <div class="warp-banner">
+            <div class="warp-bg"></div>
+            <div class="warp-content">
+                <div>
+                    <h1 class="warp-title">「烛中翩影」限定跃迁</h1>
+                    <p class="warp-subtitle">米游记·金老君</p>
+                    <p class="warp-time">活动时间：2024-01-10 12:00:00 ~ 2024-01-31 11:59:59</p>
+                    <p class="warp-time">每10次跃迁必出4星或以上对象 · 指定角色出现概率提升</p>
+                </div>
+                
+                <div class="warp-character">
+                    <div class="char-display">
+                        <div class="char-rarity">★★★★★</div>
+                        <h2 class="char-name">刃</h2>
+                        <p class="char-type">业火锋芒 · 星核猎手</p>
+                        <div class="char-path">毁灭 · 风属性</div>
                     </div>
-                    <div class="char-info">
-                        <h2 class="char-name">刃 · 业火锋芒</h2>
-                        <p class="char-desc">5★ 毁灭命途 · 星核猎手</p>
-                        <p class="char-rarity">风属性 · 限定角色</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 抽卡控制区域 -->
+        <div class="warp-control">
+            <div class="currency-info">
+                <div class="currency-item">
+                    <div class="currency-icon stellar-icon">
+                        <i class="fas fa-gem"></i>
+                    </div>
+                    <div class="currency-detail">
+                        <div class="currency-name">星琼</div>
+                        <div class="currency-amount" id="stellarJade">3280</div>
                     </div>
                 </div>
                 
-                <!-- 概率信息 -->
-                <div class="rate-panel">
-                    <h2 class="panel-title"><i class="fas fa-chart-bar"></i> 概率详情</h2>
-                    
-                    <div class="rate-item">
-                        <div class="rate-header">
-                            <span class="rate-name">★★★★★ 限定角色</span>
-                            <span class="rate-value">0.600%</span>
-                        </div>
-                        <div class="rate-bar">
-                            <div class="rate-fill rate-5"></div>
-                        </div>
+                <div class="currency-item">
+                    <div class="currency-icon ticket-icon">
+                        <i class="fas fa-ticket-alt"></i>
                     </div>
-                    
-                    <div class="rate-item">
-                        <div class="rate-header">
-                            <span class="rate-name">★★★★ UP角色</span>
-                            <span class="rate-value">5.100%</span>
-                        </div>
-                        <div class="rate-bar">
-                            <div class="rate-fill rate-4"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="rate-item">
-                        <div class="rate-header">
-                            <span class="rate-name">★★★ 光锥</span>
-                            <span class="rate-value">94.300%</span>
-                        </div>
-                        <div class="rate-bar">
-                            <div class="rate-fill rate-3"></div>
-                        </div>
-                    </div>
-                    
-                    <!-- 保底计数 -->
-                    <div class="pity-counter">
-                        <div class="pity-box">
-                            <div class="pity-title">五星保底</div>
-                            <div class="pity-value" id="pity5Count">45</div>
-                            <div class="pity-sub">剩余 <span id="pity5Remain">45</span> 抽</div>
-                        </div>
-                        
-                        <div class="pity-box">
-                            <div class="pity-title">四星保底</div>
-                            <div class="pity-value" id="pity4Count">7</div>
-                            <div class="pity-sub">剩余 <span id="pity4Remain">3</span> 抽</div>
-                        </div>
+                    <div class="currency-detail">
+                        <div class="currency-name">星轨专票</div>
+                        <div class="currency-amount" id="specialTicket">5</div>
                     </div>
                 </div>
             </div>
             
-            <!-- 右侧面板 -->
-            <div class="right-panel">
-                <!-- 货币面板 -->
-                <div class="currency-panel">
-                    <h2 class="panel-title"><i class="fas fa-coins"></i> 抽卡资源</h2>
-                    
-                    <div class="currency-display">
-                        <div class="currency-item">
-                            <div class="currency-icon stellar-icon">
-                                <i class="fas fa-gem"></i>
-                            </div>
-                            <div class="currency-info">
-                                <div class="currency-name">星琼</div>
-                                <div class="currency-amount" id="stellarJade">3280</div>
-                            </div>
-                        </div>
-                        
-                        <div class="currency-item">
-                            <div class="currency-icon ticket-icon">
-                                <i class="fas fa-ticket-alt"></i>
-                            </div>
-                            <div class="currency-info">
-                                <div class="currency-name">星轨专票</div>
-                                <div class="currency-amount" id="specialTicket">5</div>
-                            </div>
-                        </div>
+            <div class="warp-buttons">
+                <button class="warp-button warp-single" id="singleWarp">
+                    <i class="fas fa-star"></i>
+                    单次跃迁
+                    <span style="font-size: 14px; opacity: 0.9;">160 星琼</span>
+                </button>
+                
+                <button class="warp-button warp-ten" id="tenWarp">
+                    <i class="fas fa-layer-group"></i>
+                    十连跃迁
+                    <span style="font-size: 14px; opacity: 0.9;">1600 星琼</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 详细信息区域 -->
+        <div class="details-panel">
+            <!-- 概率详情 -->
+            <div class="detail-card">
+                <h3 class="detail-title">
+                    <i class="fas fa-chart-pie"></i>
+                    概率详情
+                </h3>
+                
+                <div class="rate-item">
+                    <div class="rate-row">
+                        <span class="rate-name">★★★★★ 角色</span>
+                        <span class="rate-value">0.600%</span>
                     </div>
-                    
-                    <div class="draw-buttons">
-                        <button class="draw-btn single-draw" id="singleDraw">
-                            <i class="fas fa-star"></i>
-                            单次跃迁
-                            <span style="font-size: 14px; margin-left: auto;">160 星琼</span>
-                        </button>
-                        
-                        <button class="draw-btn ten-draw" id="tenDraw">
-                            <i class="fas fa-layer-group"></i>
-                            十连跃迁
-                            <span style="font-size: 14px; margin-left: auto;">1600 星琼</span>
-                        </button>
+                    <div class="rate-bar">
+                        <div class="rate-fill rate-5"></div>
                     </div>
                 </div>
                 
-                <!-- 卡池信息 -->
-                <div class="character-panel">
-                    <h2 class="panel-title"><i class="fas fa-users"></i> UP角色详情</h2>
+                <div class="rate-item">
+                    <div class="rate-row">
+                        <span class="rate-name">★★★★ 角色</span>
+                        <span class="rate-value">5.100%</span>
+                    </div>
+                    <div class="rate-bar">
+                        <div class="rate-fill rate-4"></div>
+                    </div>
+                </div>
+                
+                <div class="rate-item">
+                    <div class="rate-row">
+                        <span class="rate-name">★★★ 光锥</span>
+                        <span class="rate-value">94.300%</span>
+                    </div>
+                    <div class="rate-bar">
+                        <div class="rate-fill rate-3"></div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 12px; background: rgba(30, 35, 80, 0.5); border-radius: 8px;">
+                    <div style="font-size: 14px; color: #b8c1ff; line-height: 1.5;">
+                        ※ 5星角色平均出现概率为1.600%，综合概率（含保底）为1.850%
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 保底计数 -->
+            <div class="detail-card">
+                <h3 class="detail-title">
+                    <i class="fas fa-history"></i>
+                    保底计数
+                </h3>
+                
+                <div class="pity-count">
+                    <div class="pity-item">
+                        <div class="pity-header">
+                            <span class="pity-name">5星保底</span>
+                            <span class="pity-value" id="pity5Count">45</span>
+                        </div>
+                        <div style="color: #ff9e6d; font-size: 14px;">剩余 <span id="pity5Remain">45</span> 抽必定获得5星</div>
+                        <div class="pity-progress">
+                            <div class="progress-fill" style="width: 50%;"></div>
+                        </div>
+                    </div>
                     
-                    <div style="margin-top: 20px;">
-                        <div style="display: flex; align-items: center; margin-bottom: 15px; padding: 12px; background: rgba(40, 40, 80, 0.3); border-radius: 10px;">
-                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #ffd166, #ff9e6d); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-                                <i class="fas fa-crown"></i>
-                            </div>
-                            <div>
-                                <div style="font-weight: bold; color: #ffd166;">刃 · 5★ 限定角色</div>
-                                <div style="font-size: 14px; color: #b8b8ff;">获取概率大幅提升</div>
-                            </div>
+                    <div class="pity-item">
+                        <div class="pity-header">
+                            <span class="pity-name">4星保底</span>
+                            <span class="pity-value" id="pity4Count">7</span>
                         </div>
-                        
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                            <div style="text-align: center; padding: 12px; background: rgba(40, 40, 80, 0.3); border-radius: 10px;">
-                                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #b266ff, #8a2be2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;">
-                                    <i class="fas fa-user"></i>
-                                </div>
-                                <div style="font-size: 14px;">佩拉</div>
-                                <div style="font-size: 12px; color: #b8b8ff;">★★★★</div>
-                            </div>
-                            
-                            <div style="text-align: center; padding: 12px; background: rgba(40, 40, 80, 0.3); border-radius: 10px;">
-                                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #b266ff, #8a2be2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;">
-                                    <i class="fas fa-user"></i>
-                                </div>
-                                <div style="font-size: 14px;">娜塔莎</div>
-                                <div style="font-size: 12px; color: #b8b8ff;">★★★★</div>
-                            </div>
-                            
-                            <div style="text-align: center; padding: 12px; background: rgba(40, 40, 80, 0.3); border-radius: 10px;">
-                                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #b266ff, #8a2be2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;">
-                                    <i class="fas fa-user"></i>
-                                </div>
-                                <div style="font-size: 14px;">阿兰</div>
-                                <div style="font-size: 12px; color: #b8b8ff;">★★★★</div>
-                            </div>
+                        <div style="color: #b266ff; font-size: 14px;">剩余 <span id="pity4Remain">3</span> 抽必定获得4星</div>
+                        <div class="pity-progress">
+                            <div class="progress-fill" style="width: 70%;"></div>
                         </div>
-                        
-                        <div style="margin-top: 20px; padding: 15px; background: rgba(26, 26, 46, 0.8); border-radius: 10px; border-left: 4px solid #6b46c1;">
-                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                                <i class="fas fa-info-circle" style="color: #6b46c1; margin-right: 10px;"></i>
-                                <div style="font-weight: bold;">保底规则</div>
-                            </div>
-                            <div style="font-size: 14px; color: #b8b8ff; line-height: 1.5;">
-                                • 每10次跃迁必出4星或以上对象<br>
-                                • 90次内必出5星对象<br>
-                                • 本次5星角色出现概率提升
-                            </div>
-                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 12px; background: rgba(101, 110, 255, 0.1); border-radius: 8px;">
+                    <div style="font-size: 14px; color: #b8c1ff;">
+                        <i class="fas fa-info-circle" style="margin-right: 8px; color: #656eff;"></i>
+                        小保底：未获得UP角色时，下次5星必定为UP角色
+                    </div>
+                </div>
+            </div>
+            
+            <!-- UP角色 -->
+            <div class="detail-card">
+                <h3 class="detail-title">
+                    <i class="fas fa-users"></i>
+                    UP角色
+                </h3>
+                
+                <div class="up-characters">
+                    <div class="up-character">
+                        <div class="up-rarity">★★★★★</div>
+                        <div class="up-name">刃</div>
+                        <div class="up-type">毁灭 · 风属性</div>
+                    </div>
+                    
+                    <div class="up-character">
+                        <div class="up-rarity">★★★★</div>
+                        <div class="up-name">佩拉</div>
+                        <div class="up-type">虚无 · 冰属性</div>
+                    </div>
+                    
+                    <div class="up-character">
+                        <div class="up-rarity">★★★★</div>
+                        <div class="up-name">娜塔莎</div>
+                        <div class="up-type">丰饶 · 物理属性</div>
+                    </div>
+                    
+                    <div class="up-character">
+                        <div class="up-rarity">★★★★</div>
+                        <div class="up-name">阿兰</div>
+                        <div class="up-type">毁灭 · 雷属性</div>
+                    </div>
+                    
+                    <div class="up-character">
+                        <div class="up-rarity">★★★★</div>
+                        <div class="up-name">停云</div>
+                        <div class="up-type">同谐 · 雷属性</div>
+                    </div>
+                    
+                    <div class="up-character">
+                        <div class="up-rarity">★★★★</div>
+                        <div class="up-name">素裳</div>
+                        <div class="up-type">巡猎 · 物理属性</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 12px; background: rgba(255, 107, 157, 0.1); border-radius: 8px;">
+                    <div style="font-size: 14px; color: #b8c1ff; line-height: 1.5;">
+                        ※ 以上4星角色在本次跃迁中出现概率大幅提升
                     </div>
                 </div>
             </div>
@@ -739,19 +991,19 @@
     </div>
     
     <!-- 抽卡结果弹窗 -->
-    <div class="modal" id="resultModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">跃迁结果</h2>
-                <p class="modal-subtitle">本次抽卡获得以下物品</p>
+    <div class="warp-result-modal" id="warpResultModal">
+        <div class="warp-result-content">
+            <div class="result-header">
+                <h2 class="result-title">跃迁结果</h2>
+                <p class="result-subtitle">本次跃迁获得了以下角色与光锥</p>
             </div>
             
-            <div class="result-grid" id="resultGrid">
-                <!-- 结果将动态添加到这里 -->
+            <div class="result-grid" id="warpResultGrid">
+                <!-- 抽卡结果会动态添加到这里 -->
             </div>
             
-            <div class="modal-close">
-                <button class="close-btn" onclick="closeModal()">确认</button>
+            <div class="result-footer">
+                <button class="close-result" onclick="closeWarpResult()">确认</button>
             </div>
         </div>
     </div>
@@ -759,140 +1011,164 @@
     <script>
         // 游戏状态
         const gameState = {
-            stellarJade: 160000,
-            specialTicket: 0,
+            stellarJade: 3280,
+            specialTicket: 5,
             pity5: 45,
             pity4: 7,
             isGuaranteed: false,
-            totalDraws: 0
+            totalDraws: 0,
+            is5StarGuaranteed: false
         };
         
-        // 物品池
-        const itemPool = {
+        // 物品池数据
+        const warpPool = {
             5: [
-                { name: '刃', type: '角色', isUP: true, emoji: '⚔️' }
+                { name: '刃', type: '角色', isUP: true, emoji: '⚔️', path: '毁灭', element: '风' }
             ],
             4: [
-                { name: '佩拉', type: '角色', isUP: true, emoji: '❄️' },
-                { name: '娜塔莎', type: '角色', isUP: true, emoji: '💊' },
-                { name: '阿兰', type: '角色', isUP: true, emoji: '⚡' },
-                { name: '停云', type: '角色', isUP: false, emoji: '🎶' },
-                { name: '素裳', type: '角色', isUP: false, emoji: '🗡️' },
-                { name: '三月七', type: '角色', isUP: false, emoji: '🛡️' },
-                { name: '论剑', type: '光锥', isUP: false, emoji: '🔪' },
-                { name: '唯有沉默', type: '光锥', isUP: false, emoji: '🎯' }
+                { name: '佩拉', type: '角色', isUP: true, emoji: '❄️', path: '虚无', element: '冰' },
+                { name: '娜塔莎', type: '角色', isUP: true, emoji: '💊', path: '丰饶', element: '物理' },
+                { name: '阿兰', type: '角色', isUP: true, emoji: '⚡', path: '毁灭', element: '雷' },
+                { name: '停云', type: '角色', isUP: false, emoji: '🎶', path: '同谐', element: '雷' },
+                { name: '素裳', type: '角色', isUP: false, emoji: '🗡️', path: '巡猎', element: '物理' },
+                { name: '三月七', type: '角色', isUP: false, emoji: '🛡️', path: '存护', element: '冰' },
+                { name: '希露瓦', type: '角色', isUP: false, emoji: '🎸', path: '智识', element: '雷' },
+                { name: '丹恒', type: '角色', isUP: false, emoji: '🌪️', path: '巡猎', element: '风' },
+                { name: '艾丝妲', type: '角色', isUP: false, emoji: '🔥', path: '同谐', element: '火' },
+                { name: '论剑', type: '光锥', isUP: false, emoji: '🔪', path: '', element: '' },
+                { name: '唯有沉默', type: '光锥', isUP: false, emoji: '🎯', path: '', element: '' },
+                { name: '点个关注吧！', type: '光锥', isUP: false, emoji: '📸', path: '', element: '' }
             ],
             3: [
-                { name: '轮契', type: '光锥', emoji: '🔄' },
-                { name: '琥珀', type: '光锥', emoji: '🟠' },
-                { name: '天倾', type: '光锥', emoji: '🌠' },
-                { name: '离弦', type: '光锥', emoji: '🏹' },
-                { name: '嘉果', type: '光锥', emoji: '🍎' },
-                { name: '渊环', type: '光锥', emoji: '⭕' }
+                { name: '轮契', type: '光锥', emoji: '🔄', path: '', element: '' },
+                { name: '琥珀', type: '光锥', emoji: '🟠', path: '', element: '' },
+                { name: '天倾', type: '光锥', emoji: '🌠', path: '', element: '' },
+                { name: '离弦', type: '光锥', emoji: '🏹', path: '', element: '' },
+                { name: '嘉果', type: '光锥', emoji: '🍎', path: '', element: '' },
+                { name: '渊环', type: '光锥', emoji: '⭕', path: '', element: '' },
+                { name: '灵钥', type: '光锥', emoji: '🗝️', path: '', element: '' },
+                { name: '戍御', type: '光锥', emoji: '🛡️', path: '', element: '' }
             ]
         };
         
         // 初始化函数
         function init() {
             updateUI();
+            createParticles();
             
-            // 绑定单抽按钮事件
-            document.getElementById('singleDraw').addEventListener('click', function() {
+            // 单抽按钮事件
+            document.getElementById('singleWarp').addEventListener('click', function() {
                 if (gameState.stellarJade >= 160) {
-                    gameState.stellarJade -= 160;
-                    gameState.totalDraws++;
-                    gameState.pity5++;
-                    gameState.pity4++;
-                    
-                    const result = drawItem();
-                    showResult([result]);
-                    updateUI();
+                    performWarp(1);
                 } else if (gameState.specialTicket >= 1) {
                     gameState.specialTicket -= 1;
-                    gameState.totalDraws++;
-                    gameState.pity5++;
-                    gameState.pity4++;
-                    
-                    const result = drawItem();
-                    showResult([result]);
-                    updateUI();
+                    performWarp(1);
                 } else {
-                    alert('星琼和专票不足！');
+                    showMessage('星琼和专票不足！');
                 }
             });
             
-            // 绑定十连按钮事件
-            document.getElementById('tenDraw').addEventListener('click', function() {
+            // 十连按钮事件
+            document.getElementById('tenWarp').addEventListener('click', function() {
                 if (gameState.stellarJade >= 1600) {
-                    gameState.stellarJade -= 1600;
-                    
-                    const results = [];
-                    let got4Star = false;
-                    
-                    for (let i = 0; i < 10; i++) {
-                        gameState.totalDraws++;
-                        gameState.pity5++;
-                        gameState.pity4++;
-                        
-                        const result = drawItem();
-                        results.push(result);
-                        
-                        if (result.rarity >= 4) {
-                            got4Star = true;
-                        }
-                    }
-                    
-                    // 十连保底：确保至少一个四星
-                    if (!got4Star) {
-                        // 替换最后一个结果为四星
-                        gameState.pity4 = 0;
-                        results[9] = drawItem(true);
-                    }
-                    
-                    showResult(results);
-                    updateUI();
+                    performWarp(10);
                 } else {
-                    alert('星琼不足！');
+                    showMessage('星琼不足！');
                 }
+            });
+            
+            // 导航菜单事件
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                    this.classList.add('active');
+                    showMessage(`切换到${this.textContent}`);
+                });
             });
         }
         
-        // 更新界面
-        function updateUI() {
-            // 更新货币显示
-            document.getElementById('stellarJade').textContent = gameState.stellarJade;
-            document.getElementById('specialTicket').textContent = gameState.specialTicket;
+        // 执行抽卡
+        function performWarp(count) {
+            if (count === 1) {
+                gameState.stellarJade -= 160;
+            } else {
+                gameState.stellarJade -= 1600;
+            }
             
-            // 更新保底计数
-            document.getElementById('pity5Count').textContent = gameState.pity5;
-            document.getElementById('pity5Remain').textContent = 90 - gameState.pity5;
+            gameState.totalDraws += count;
             
-            document.getElementById('pity4Count').textContent = gameState.pity4;
-            document.getElementById('pity4Remain').textContent = 10 - gameState.pity4;
+            const results = [];
+            let got4Star = false;
+            let got5Star = false;
             
-            // 更新按钮状态
-            const singleBtn = document.getElementById('singleDraw');
-            const tenBtn = document.getElementById('tenDraw');
+            for (let i = 0; i < count; i++) {
+                gameState.pity5++;
+                gameState.pity4++;
+                
+                const result = warpItem();
+                results.push(result);
+                
+                if (result.rarity === 5) {
+                    got5Star = true;
+                    gameState.pity5 = 0;
+                    // 如果是UP角色，重置保底
+                    if (result.isUP) {
+                        gameState.is5StarGuaranteed = false;
+                    } else {
+                        gameState.is5StarGuaranteed = true;
+                    }
+                }
+                
+                if (result.rarity >= 4) {
+                    got4Star = true;
+                    gameState.pity4 = 0;
+                }
+            }
             
-            singleBtn.disabled = gameState.stellarJade < 160 && gameState.specialTicket < 1;
-            tenBtn.disabled = gameState.stellarJade < 1600;
+            // 十连保底：确保至少一个四星
+            if (count === 10 && !got4Star) {
+                gameState.pity4 = 0;
+                results[9] = warpItem(true);
+            }
+            
+            // 五星保底检查
+            if (gameState.pity5 >= 90 && !got5Star) {
+                gameState.pity5 = 0;
+                // 如果是小保底，随机决定是否歪
+                const isUP = !gameState.is5StarGuaranteed ? Math.random() < 0.5 : true;
+                const item = getRandomItem(5, isUP);
+                item.rarity = 5;
+                if (count === 10) {
+                    results[9] = item;
+                } else {
+                    results[results.length - 1] = item;
+                }
+                
+                if (isUP) {
+                    gameState.is5StarGuaranteed = false;
+                } else {
+                    gameState.is5StarGuaranteed = true;
+                }
+            }
+            
+            updateUI();
+            showWarpResult(results);
         }
         
         // 抽卡逻辑
-        function drawItem(force4Star = false) {
-            // 五星保底检查
-            if (gameState.pity5 >= 90) {
-                gameState.pity5 = 0;
-                const item = getRandomItem(5);
-                item.rarity = 5;
+        function warpItem(force4Star = false) {
+            // 四星保底检查
+            if (gameState.pity4 >= 10 || force4Star) {
+                const item = getRandomItem(4);
+                item.rarity = 4;
                 return item;
             }
             
-            // 四星保底检查
-            if (gameState.pity4 >= 10 || force4Star) {
-                gameState.pity4 = 0;
-                const item = getRandomItem(4);
-                item.rarity = 4;
+            // 五星保底检查
+            if (gameState.pity5 >= 90) {
+                const isUP = !gameState.is5StarGuaranteed ? Math.random() < 0.5 : true;
+                const item = getRandomItem(5, isUP);
+                item.rarity = 5;
                 return item;
             }
             
@@ -900,12 +1176,11 @@
             const rand = Math.random() * 100;
             
             if (rand < 0.6) { // 0.6% 五星
-                gameState.pity5 = 0;
-                const item = getRandomItem(5);
+                const isUP = !gameState.is5StarGuaranteed ? Math.random() < 0.5 : true;
+                const item = getRandomItem(5, isUP);
                 item.rarity = 5;
                 return item;
             } else if (rand < 0.6 + 5.1) { // 5.1% 四星
-                gameState.pity4 = 0;
                 const item = getRandomItem(4);
                 item.rarity = 4;
                 return item;
@@ -917,42 +1192,112 @@
         }
         
         // 获取随机物品
-        function getRandomItem(rarity) {
-            const pool = itemPool[rarity];
+        function getRandomItem(rarity, forceUP = false) {
+            const pool = warpPool[rarity];
+            
+            if (rarity === 5 && forceUP) {
+                // 只返回UP角色
+                const upItems = pool.filter(item => item.isUP);
+                const randomIndex = Math.floor(Math.random() * upItems.length);
+                return {...upItems[randomIndex]};
+            }
+            
+            if (rarity === 4) {
+                // 四星有50%概率是UP角色
+                const upItems = pool.filter(item => item.isUP);
+                const nonUpItems = pool.filter(item => !item.isUP);
+                
+                if (Math.random() < 0.5 && upItems.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * upItems.length);
+                    return {...upItems[randomIndex]};
+                } else {
+                    const randomIndex = Math.floor(Math.random() * nonUpItems.length);
+                    return {...nonUpItems[randomIndex]};
+                }
+            }
+            
             const randomIndex = Math.floor(Math.random() * pool.length);
-            return {...pool[randomIndex]}; // 返回副本
+            return {...pool[randomIndex]};
+        }
+        
+        // 更新界面
+        function updateUI() {
+            document.getElementById('stellarJade').textContent = gameState.stellarJade;
+            document.getElementById('specialTicket').textContent = gameState.specialTicket;
+            
+            document.getElementById('pity5Count').textContent = gameState.pity5;
+            document.getElementById('pity5Remain').textContent = 90 - gameState.pity5;
+            
+            document.getElementById('pity4Count').textContent = gameState.pity4;
+            document.getElementById('pity4Remain').textContent = 10 - gameState.pity4;
+            
+            // 更新进度条
+            const pity5Progress = document.querySelector('.pity-item:nth-child(1) .progress-fill');
+            const pity4Progress = document.querySelector('.pity-item:nth-child(2) .progress-fill');
+            
+            pity5Progress.style.width = `${(gameState.pity5 / 90) * 100}%`;
+            pity4Progress.style.width = `${(gameState.pity4 / 10) * 100}%`;
+            
+            // 更新按钮状态
+            const singleBtn = document.getElementById('singleWarp');
+            const tenBtn = document.getElementById('tenWarp');
+            
+            singleBtn.disabled = gameState.stellarJade < 160 && gameState.specialTicket < 1;
+            tenBtn.disabled = gameState.stellarJade < 1600;
+            
+            // 更新保底状态显示
+            const guaranteeBadge = document.querySelector('.pity-item:nth-child(1)');
+            if (gameState.is5StarGuaranteed) {
+                if (!guaranteeBadge.querySelector('.guarantee-tag')) {
+                    const tag = document.createElement('div');
+                    tag.className = 'guarantee-tag';
+                    tag.innerHTML = '<i class="fas fa-check-circle" style="color: #ff9e6d; margin-right: 5px;"></i>下次5星必定为UP角色';
+                    tag.style.cssText = 'margin-top: 8px; padding: 5px 10px; background: rgba(255, 107, 157, 0.2); border-radius: 5px; font-size: 12px; color: #ff9e6d;';
+                    guaranteeBadge.appendChild(tag);
+                }
+            } else {
+                const existingTag = guaranteeBadge.querySelector('.guarantee-tag');
+                if (existingTag) existingTag.remove();
+            }
         }
         
         // 显示抽卡结果
-        function showResult(results) {
-            const resultGrid = document.getElementById('resultGrid');
+        function showWarpResult(results) {
+            const resultGrid = document.getElementById('warpResultGrid');
             resultGrid.innerHTML = '';
             
-            // 清空之前的动画类
-            document.querySelectorAll('.result-item').forEach(item => {
-                item.classList.remove('revealed');
-            });
+            // 检查是否有五星
+            const has5Star = results.some(item => item.rarity === 5);
             
-            // 添加新的结果项
+            // 添加结果项
             results.forEach((item, index) => {
                 const div = document.createElement('div');
                 div.className = `result-item result-${item.rarity}star`;
                 
-                // 设置星级显示
+                // 星级显示
                 let stars = '';
                 for (let i = 0; i < item.rarity; i++) {
                     stars += '★';
+                }
+                
+                // 角色/光锥详细信息
+                let detailText = '';
+                if (item.type === '角色' && item.path && item.element) {
+                    detailText = `${item.path} · ${item.element}`;
+                } else if (item.type === '光锥') {
+                    detailText = '光锥';
                 }
                 
                 div.innerHTML = `
                     <div class="result-rarity" style="color: ${
                         item.rarity === 5 ? '#ffd166' : 
                         item.rarity === 4 ? '#b266ff' : '#66b3ff'
-                    }">
+                    };">
                         ${stars}
                     </div>
                     <div class="result-name">${item.emoji} ${item.name}</div>
-                    <div class="result-type">${item.type}${item.isUP ? ' · UP' : ''}</div>
+                    <div class="result-type">${detailText}</div>
+                    ${item.isUP ? '<div class="result-up">UP</div>' : ''}
                 `;
                 
                 resultGrid.appendChild(div);
@@ -964,64 +1309,169 @@
                     // 如果是五星，添加特殊效果
                     if (item.rarity === 5) {
                         setTimeout(() => {
+                            div.classList.add('golden-glow');
                             div.style.transform = 'scale(1.1)';
-                            div.style.boxShadow = '0 0 25px rgba(255, 209, 102, 0.7)';
+                            div.style.zIndex = '10';
+                            
+                            // 播放音效（模拟）
+                            if (has5Star) {
+                                console.log('✨ 金色传说！获得五星角色！');
+                            }
                             
                             setTimeout(() => {
                                 div.style.transform = 'scale(1)';
-                                div.style.boxShadow = '0 0 15px rgba(255, 209, 102, 0.3)';
                             }, 300);
-                        }, 500);
+                        }, 500 + index * 100);
                     }
-                }, index * 100 + 300);
+                }, index * 100 + 200);
             });
             
             // 显示弹窗
-            document.getElementById('resultModal').style.display = 'flex';
+            document.getElementById('warpResultModal').style.display = 'flex';
             
-            // 如果有五星，播放音效提示（模拟）
-            if (results.some(item => item.rarity === 5)) {
-                console.log('🎉 恭喜获得五星角色！');
+            // 如果有五星，标题变化
+            if (has5Star) {
+                document.querySelector('.result-title').textContent = '✨ 金光闪耀！✨';
+                document.querySelector('.result-subtitle').textContent = '恭喜获得五星角色！';
             }
         }
         
-        // 关闭弹窗
-        function closeModal() {
-            document.getElementById('resultModal').style.display = 'none';
+        // 关闭结果弹窗
+        function closeWarpResult() {
+            document.getElementById('warpResultModal').style.display = 'none';
+            // 重置标题
+            document.querySelector('.result-title').textContent = '跃迁结果';
+            document.querySelector('.result-subtitle').textContent = '本次跃迁获得了以下角色与光锥';
+        }
+        
+        // 创建粒子背景
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = 30;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                // 随机大小
+                const size = Math.random() * 4 + 1;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                
+                // 随机位置
+                particle.style.left = `${Math.random() * 100}%`;
+                
+                // 随机颜色
+                const colors = [
+                    'rgba(101, 110, 255, 0.5)',
+                    'rgba(255, 107, 157, 0.4)',
+                    'rgba(255, 209, 102, 0.3)',
+                    'rgba(102, 179, 255, 0.3)'
+                ];
+                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                
+                // 随机动画延迟和持续时间
+                const delay = Math.random() * 15;
+                const duration = 15 + Math.random() * 10;
+                particle.style.animationDelay = `${delay}s`;
+                particle.style.animationDuration = `${duration}s`;
+                
+                particlesContainer.appendChild(particle);
+            }
+        }
+        
+        // 显示消息提示
+        function showMessage(message) {
+            // 创建消息提示元素
+            const messageEl = document.createElement('div');
+            messageEl.textContent = message;
+            messageEl.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: rgba(18, 22, 55, 0.9);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                border: 1px solid rgba(101, 110, 255, 0.5);
+                z-index: 1000;
+                transform: translateX(100%);
+                transition: transform 0.3s;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            `;
+            
+            document.body.appendChild(messageEl);
+            
+            // 显示消息
+            setTimeout(() => {
+                messageEl.style.transform = 'translateX(0)';
+            }, 10);
+            
+            // 3秒后隐藏并移除
+            setTimeout(() => {
+                messageEl.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    document.body.removeChild(messageEl);
+                }, 300);
+            }, 3000);
         }
         
         // 点击弹窗外部关闭
-        document.getElementById('resultModal').addEventListener('click', function(e) {
+        document.getElementById('warpResultModal').addEventListener('click', function(e) {
             if (e.target === this) {
-                closeModal();
+                closeWarpResult();
             }
         });
         
         // 页面加载完成时初始化
         window.addEventListener('DOMContentLoaded', init);
         
-        // 添加一些交互效果
-        document.addEventListener('DOMContentLoaded', function() {
-            // 按钮悬停效果
-            const buttons = document.querySelectorAll('.draw-btn');
-            buttons.forEach(btn => {
-                btn.addEventListener('mouseenter', function() {
-                    if (!this.disabled) {
-                        this.style.filter = 'brightness(1.2)';
+        // 添加键盘快捷键
+        document.addEventListener('keydown', function(e) {
+            if (e.key === ' ' || e.key === 'Spacebar') {
+                e.preventDefault();
+                if (gameState.stellarJade >= 160) {
+                    document.getElementById('singleWarp').click();
+                }
+            }
+            
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (gameState.stellarJade >= 1600) {
+                    document.getElementById('tenWarp').click();
+                }
+            }
+        });
+        
+        // 添加一些视觉特效
+        function addVisualEffects() {
+            // 角色展示区域呼吸灯效果
+            const charDisplay = document.querySelector('.char-display');
+            setInterval(() => {
+                const brightness = 0.8 + Math.random() * 0.2;
+                const hue = Math.random() * 20;
+                charDisplay.style.filter = `brightness(${brightness}) hue-rotate(${hue}deg)`;
+            }, 3000);
+            
+            // 按钮闪烁效果
+            const warpButtons = document.querySelectorAll('.warp-button');
+            setInterval(() => {
+                warpButtons.forEach(btn => {
+                    if (!btn.disabled) {
+                        const random = Math.random();
+                        if (random > 0.7) {
+                            btn.style.boxShadow = `0 0 20px ${btn.classList.contains('warp-single') ? 'rgba(101, 110, 255, 0.8)' : 'rgba(255, 107, 157, 0.8)'}`;
+                            setTimeout(() => {
+                                btn.style.boxShadow = '';
+                            }, 300);
+                        }
                     }
                 });
-                
-                btn.addEventListener('mouseleave', function() {
-                    this.style.filter = 'brightness(1)';
-                });
-            });
-            
-            // 模拟角色展示区域的动态效果
-            const charImage = document.querySelector('.char-image');
-            setInterval(() => {
-                charImage.style.filter = `hue-rotate(${Math.random() * 20}deg) brightness(${0.9 + Math.random() * 0.2})`;
-            }, 3000);
-        });
+            }, 2000);
+        }
+        
+        // 页面加载后添加视觉特效
+        window.addEventListener('load', addVisualEffects);
     </script>
 </body>
 </html>
