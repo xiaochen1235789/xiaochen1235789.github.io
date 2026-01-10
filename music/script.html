@@ -1,521 +1,510 @@
-// script.js - 崩铁卡池UI功能实现
+// 完整JS文件 - 保存为script.js
 
-document.addEventListener('DOMContentLoaded', function() {
-    // 初始化状态
-    let state = {
-        stellarJade: 3280,
-        specialTicket: 5,
-        regularTicket: 23,
-        pity5: 45,
-        pity4: 7,
-        isGuaranteed: false,
-        drawHistory: []
-    };
+// 游戏配置
+const CONFIG = {
+    pity5: 90,  // 五星保底
+    pity4: 10,  // 四星保底
+    rates: {
+        5: 0.006,  // 0.6%
+        4: 0.051,  // 5.1%
+        3: 0.943   // 94.3%
+    },
+    upRate: 0.5,  // UP概率50%
+    characterCost: 160,
+    tenCost: 1600
+};
 
-    // DOM元素
-    const elements = {
-        stellarJade: document.getElementById('stellarJade'),
-        specialTicket: document.getElementById('specialTicket'),
-        regularTicket: document.getElementById('regularTicket'),
-        pity5Value: document.getElementById('pity5Value'),
-        pity4Value: document.getElementById('pity4Value'),
-        pity5Fill: document.getElementById('pity5Fill'),
-        pity4Fill: document.getElementById('pity4Fill'),
-        pity5Text: document.getElementById('pity5Text'),
-        pity4Text: document.getElementById('pity4Text'),
-        singleDraw: document.getElementById('singleDraw'),
-        tenDraw: document.getElementById('tenDraw'),
-        resultModal: document.getElementById('resultModal'),
-        resultBody: document.getElementById('resultBody'),
-        closeModal: document.getElementById('closeModal'),
-        confirmResult: document.getElementById('confirmResult'),
-        resetPity: document.getElementById('resetPity'),
-        countdown: document.getElementById('countdown')
-    };
+// 游戏状态
+let gameState = {
+    stellarJade: 3280,
+    specialTicket: 5,
+    pity5: 45,
+    pity4: 7,
+    isGuaranteed: false,
+    history: []
+};
 
-    // 初始化UI
-    function initUI() {
-        updateCurrencyDisplay();
-        updatePityDisplay();
-        startCountdown();
-        createParticles();
+// 物品池
+const itemPool = {
+    5: {
+        characters: ['刃', '姬子', '瓦尔特', '布洛妮娅', '杰帕德', '克拉拉', '彦卿', '白露'],
+        upCharacter: '刃'
+    },
+    4: {
+        characters: ['佩拉', '娜塔莎', '阿兰', '三月七', '丹恒', '黑塔', '艾丝妲'],
+        upCharacters: ['佩拉', '娜塔莎', '阿兰']
+    },
+    3: {
+        lightcones: ['轮契', '琥珀', '天倾', '俱殁', '离弦', '幽邃', '智库', '灵钥', '戍御', '开疆']
     }
+};
 
-    // 更新货币显示
-    function updateCurrencyDisplay() {
-        elements.stellarJade.textContent = state.stellarJade.toLocaleString();
-        elements.specialTicket.textContent = state.specialTicket;
-        elements.regularTicket.textContent = state.regularTicket;
-    }
+// DOM元素
+const elements = {
+    stellarJade: document.getElementById('stellar-jade'),
+    singleDraw: document.getElementById('single-draw'),
+    tenDraw: document.getElementById('ten-draw'),
+    resultModal: document.getElementById('result-modal'),
+    resultGrid: document.getElementById('result-grid'),
+    closeModal: document.getElementById('close-modal'),
+    detailsBtn: document.getElementById('details-btn'),
+    historyBtn: document.getElementById('history-btn'),
+    tabs: document.querySelectorAll('.tab'),
+    
+    // 动态创建的元素
+    probabilityList: document.querySelector('.probability-list'),
+    pityCounters: document.querySelector('.pity-counters'),
+    currencyDisplay: document.querySelector('.currency-display')
+};
 
+// 初始化函数
+function init() {
+    createStaticContent();
+    updateUI();
+    setupEventListeners();
+    
+    console.log('崩铁卡池模拟初始化完成！');
+    console.log('当前星琼:', gameState.stellarJade);
+    console.log('五星保底:', gameState.pity5, '/', CONFIG.pity5);
+}
+
+// 创建静态内容
+function createStaticContent() {
+    // 创建概率列表
+    const probabilities = [
+        { rarity: 5, rate: '0.600%', width: '6%' },
+        { rarity: 4, rate: '5.100%', width: '51%' },
+        { rarity: 3, rate: '94.300%', width: '94%' }
+    ];
+    
+    probabilities.forEach(prob => {
+        const item = document.createElement('div');
+        item.className = 'prob-item';
+        item.innerHTML = `
+            <div>
+                <span style="color: ${getRarityColor(prob.rarity)}">
+                    ${'★'.repeat(prob.rarity)}
+                </span>
+                <span> ${prob.rate}</span>
+            </div>
+            <div class="prob-bar">
+                <div class="prob-fill" style="width: ${prob.width}"></div>
+            </div>
+        `;
+        elements.probabilityList.appendChild(item);
+    });
+    
+    // 创建保底计数器
+    const pity5Remain = CONFIG.pity5 - gameState.pity5;
+    const pity4Remain = CONFIG.pity4 - gameState.pity4;
+    
+    const pity5Percent = (gameState.pity5 / CONFIG.pity5) * 100;
+    const pity4Percent = (gameState.pity4 / CONFIG.pity4) * 100;
+    
+    elements.pityCounters.innerHTML = `
+        <div class="counter">
+            <div>五星保底</div>
+            <div style="font-size: 1.2em; margin: 5px 0;">
+                <span style="color: #ff6b9d">${gameState.pity5}</span>
+                <span style="color: #a0a0d0">/</span>
+                <span>${CONFIG.pity5}</span>
+            </div>
+            <div class="counter-progress">
+                <div class="counter-fill" style="width: ${pity5Percent}%"></div>
+            </div>
+            <div style="font-size: 0.9em; color: #a0a0d0">
+                剩余 ${pity5Remain} 抽
+            </div>
+        </div>
+        
+        <div class="counter">
+            <div>四星保底</div>
+            <div style="font-size: 1.2em; margin: 5px 0;">
+                <span style="color: #9370db">${gameState.pity4}</span>
+                <span style="color: #a0a0d0">/</span>
+                <span>${CONFIG.pity4}</span>
+            </div>
+            <div class="counter-progress">
+                <div class="counter-fill" style="width: ${pity4Percent}%"></div>
+            </div>
+            <div style="font-size: 0.9em; color: #a0a0d0">
+                剩余 ${pity4Remain} 抽
+            </div>
+        </div>
+    `;
+    
+    // 创建货币显示
+    elements.currencyDisplay.innerHTML = `
+        <div class="currency-item">
+            <i class="fas fa-star" style="color: #6bd9ff;"></i>
+            <div>星琼</div>
+            <div style="font-size: 1.5em; font-weight: bold;" id="currency-jade">${gameState.stellarJade}</div>
+        </div>
+        
+        <div class="currency-item">
+            <i class="fas fa-ticket-alt" style="color: #ff6b9d;"></i>
+            <div>专票</div>
+            <div style="font-size: 1.5em; font-weight: bold;" id="currency-ticket">${gameState.specialTicket}</div>
+        </div>
+    `;
+}
+
+// 更新UI
+function updateUI() {
+    elements.stellarJade.textContent = gameState.stellarJade;
+    
+    const currencyJade = document.getElementById('currency-jade');
+    const currencyTicket = document.getElementById('currency-ticket');
+    
+    if (currencyJade) currencyJade.textContent = gameState.stellarJade;
+    if (currencyTicket) currencyTicket.textContent = gameState.specialTicket;
+    
+    // 更新按钮状态
+    elements.singleDraw.disabled = gameState.stellarJade < CONFIG.characterCost;
+    elements.tenDraw.disabled = gameState.stellarJade < CONFIG.tenCost;
+    
     // 更新保底显示
-    function updatePityDisplay() {
-        elements.pity5Value.textContent = state.pity5;
-        elements.pity4Value.textContent = state.pity4;
-        
-        const pity5Percent = (state.pity5 / CONFIG.pity5) * 100;
-        const pity4Percent = (state.pity4 / CONFIG.pity4) * 100;
-        
-        elements.pity5Fill.style.width = `${pity5Percent}%`;
-        elements.pity4Fill.style.width = `${pity4Percent}%`;
-        
-        elements.pity5Text.textContent = `剩余${CONFIG.pity5 - state.pity5}抽`;
-        elements.pity4Text.textContent = `剩余${CONFIG.pity4 - state.pity4}抽`;
-    }
+    updatePityDisplay();
+}
 
-    // 倒计时
-    function startCountdown() {
-        const endTime = new Date();
-        endTime.setDate(endTime.getDate() + 7); // 7天后结束
+// 更新保底显示
+function updatePityDisplay() {
+    const pity5Counters = document.querySelectorAll('.counter');
+    if (pity5Counters.length >= 2) {
+        const pity5Remain = CONFIG.pity5 - gameState.pity5;
+        const pity4Remain = CONFIG.pity4 - gameState.pity4;
         
-        function updateCountdown() {
-            const now = new Date();
-            const diff = endTime - now;
-            
-            if (diff <= 0) {
-                elements.countdown.textContent = "已结束";
-                return;
-            }
-            
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-            
-            elements.countdown.textContent = 
-                `${days.toString().padStart(2, '0')}:` +
-                `${hours.toString().padStart(2, '0')}:` +
-                `${minutes.toString().padStart(2, '0')}:` +
-                `${seconds.toString().padStart(2, '0')}`;
-        }
+        const pity5Percent = (gameState.pity5 / CONFIG.pity5) * 100;
+        const pity4Percent = (gameState.pity4 / CONFIG.pity4) * 100;
         
-        updateCountdown();
-        setInterval(updateCountdown, 1000);
+        // 五星保底
+        pity5Counters[0].innerHTML = `
+            <div>五星保底</div>
+            <div style="font-size: 1.2em; margin: 5px 0;">
+                <span style="color: #ff6b9d">${gameState.pity5}</span>
+                <span style="color: #a0a0d0">/</span>
+                <span>${CONFIG.pity5}</span>
+            </div>
+            <div class="counter-progress">
+                <div class="counter-fill" style="width: ${pity5Percent}%"></div>
+            </div>
+            <div style="font-size: 0.9em; color: #a0a0d0">
+                剩余 ${pity5Remain} 抽
+            </div>
+        `;
+        
+        // 四星保底
+        pity5Counters[1].innerHTML = `
+            <div>四星保底</div>
+            <div style="font-size: 1.2em; margin: 5px 0;">
+                <span style="color: #9370db">${gameState.pity4}</span>
+                <span style="color: #a0a0d0">/</span>
+                <span>${CONFIG.pity4}</span>
+            </div>
+            <div class="counter-progress">
+                <div class="counter-fill" style="width: ${pity4Percent}%"></div>
+            </div>
+            <div style="font-size: 0.9em; color: #a0a0d0">
+                剩余 ${pity4Remain} 抽
+            </div>
+        `;
     }
+}
 
-    // 卡池切换
-    document.querySelectorAll('.tab-btn').forEach(tab => {
+// 设置事件监听器
+function setupEventListeners() {
+    // 标签切换
+    elements.tabs.forEach(tab => {
         tab.addEventListener('click', function() {
-            // 移除所有激活状态
-            document.querySelectorAll('.tab-btn').forEach(t => 
-                t.classList.remove('active'));
-            document.querySelectorAll('.current-pool').forEach(p => 
-                p.classList.remove('active'));
-            
-            // 激活当前标签
+            elements.tabs.forEach(t => t.classList.remove('active'));
             this.classList.add('active');
-            const target = this.dataset.target;
-            document.getElementById(target).classList.add('active');
             
-            // 添加切换动画
-            gsap.from(`#${target}`, {
-                duration: 0.5,
-                opacity: 0,
-                y: 30,
-                ease: "power3.out"
-            });
+            const pool = this.dataset.pool;
+            switchPool(pool);
         });
     });
-
-    // 单抽功能
+    
+    // 单抽
     elements.singleDraw.addEventListener('click', function() {
-        if (state.stellarJade < 160) {
-            showMessage('星琼不足！', 'error');
+        if (gameState.stellarJade < CONFIG.characterCost) {
+            alert('星琼不足！');
             return;
         }
         
-        playDrawSound();
-        animateDrawButton(this);
+        // 扣款
+        gameState.stellarJade -= CONFIG.characterCost;
+        gameState.pity5++;
+        gameState.pity4++;
         
-        // 扣除星琼
-        state.stellarJade -= 160;
-        state.pity5++;
-        state.pity4++;
-        
-        // 模拟抽卡
-        setTimeout(() => {
-            const result = simulateDraw();
-            showDrawResult([result]);
-            updateCurrencyDisplay();
-            updatePityDisplay();
-        }, 800);
+        // 抽卡
+        const result = drawSingle();
+        showResults([result]);
+        updateUI();
     });
-
-    // 十连抽功能
+    
+    // 十连
     elements.tenDraw.addEventListener('click', function() {
-        if (state.stellarJade < 1600) {
-            showMessage('星琼不足！', 'error');
+        if (gameState.stellarJade < CONFIG.tenCost) {
+            alert('星琼不足！');
             return;
         }
         
-        playDrawSound();
-        animateDrawButton(this);
+        // 扣款
+        gameState.stellarJade -= CONFIG.tenCost;
         
-        // 扣除星琼
-        state.stellarJade -= 1600;
-        
-        // 模拟十连
+        // 抽十次
         const results = [];
         for (let i = 0; i < 10; i++) {
-            state.pity5++;
-            state.pity4++;
-            results.push(simulateDraw());
+            gameState.pity5++;
+            gameState.pity4++;
+            results.push(drawSingle());
         }
         
-        // 保底四星
-        const has4Star = results.some(r => r.rarity >= 4);
-        if (!has4Star) {
-            results[9] = generateGuaranteed4Star();
+        // 十连保底：确保至少一个四星
+        if (!results.some(r => r.rarity >= 4)) {
+            results[9] = drawItem(4); // 强制四星
         }
         
-        setTimeout(() => {
-            showDrawResult(results);
-            updateCurrencyDisplay();
-            updatePityDisplay();
-        }, 1000);
+        showResults(results);
+        updateUI();
     });
-
-    // 模拟抽卡算法
-    function simulateDraw() {
-        const rand = Math.random();
-        
-        // 保底检查
-        if (state.pity5 >= CONFIG.pity5) {
-            return generate5Star();
-        }
-        if (state.pity4 >= CONFIG.pity4) {
-            return generate4Star();
-        }
-        
-        // 概率抽卡
-        if (rand < CONFIG.rates[5]) {
-            return generate5Star();
-        } else if (rand < CONFIG.rates[5] + CONFIG.rates[4]) {
-            return generate4Star();
-        } else {
-            return generate3Star();
-        }
-    }
-
-    // 生成五星物品
-    function generate5Star() {
-        state.pity5 = 0;
-        const isUP = state.isGuaranteed || Math.random() < CONFIG.upRate[5];
-        state.isGuaranteed = !isUP;
-        
-        return {
-            name: isUP ? '刃' : ['姬子', '瓦尔特', '布洛妮娅', '杰帕德', '克拉拉', '彦卿', '白露'][Math.floor(Math.random() * 7)],
-            rarity: 5,
-            type: 'character',
-            isNew: Math.random() > 0.5,
-            isUP: isUP
-        };
-    }
-
-    // 生成四星物品
-    function generate4Star() {
-        state.pity4 = 0;
-        const isUP = Math.random() < CONFIG.upRate[4];
-        
-        const upChars = ['佩拉', '娜塔莎', '阿兰'];
-        const standardChars = ['三月七', '丹恒', '黑塔', '艾丝妲', '希露瓦', '桑博', '青雀'];
-        
-        return {
-            name: isUP ? upChars[Math.floor(Math.random() * upChars.length)] : 
-                         standardChars[Math.floor(Math.random() * standardChars.length)],
-            rarity: 4,
-            type: Math.random() > 0.7 ? 'lightcone' : 'character',
-            isNew: Math.random() > 0.7,
-            isUP: isUP
-        };
-    }
-
-    // 生成三星物品
-    function generate3Star() {
-        const lightcones = [
-            '轮契', '琥珀', '天倾', '俱殁', '离弦', 
-            '幽邃', '智库', '灵钥', '戍御', '开疆'
-        ];
-        
-        return {
-            name: lightcones[Math.floor(Math.random() * lightcones.length)],
-            rarity: 3,
-            type: 'lightcone',
-            isNew: false,
-            isUP: false
-        };
-    }
-
-    // 保底四星
-    function generateGuaranteed4Star() {
-        state.pity4 = 0;
-        return generate4Star();
-    }
-
-    // 显示抽卡结果
-    function showDrawResult(results) {
-        elements.resultBody.innerHTML = '';
-        
-        results.forEach((result, index) => {
-            const item = createResultItem(result, index);
-            elements.resultBody.appendChild(item);
+    
+    // 关闭弹窗
+    elements.closeModal.addEventListener('click', function() {
+        elements.resultModal.style.display = 'none';
+    });
+    
+    // 详情按钮
+    elements.detailsBtn.addEventListener('click', function() {
+        const details = `
+            ☆ 卡池详情 ☆
             
-            // 逐项显示动画
-            setTimeout(() => {
-                item.style.opacity = '1';
-                item.style.transform = 'translateY(0)';
-            }, index * 100);
-        });
-        
-        playResultSound();
-        showModal();
-    }
+            活动时间：长期开放（模拟）
+            
+            ★5 UP角色：刃（50%概率）
+            ★4 UP角色：佩拉、娜塔莎、阿兰
+            
+            保底机制：
+            • 90抽内必出★5角色
+            • 10抽内必出★4或以上物品
+            • 未抽中UP角色时，下次★5必为UP角色
+            
+            综合概率（含保底）：
+            • ★5角色：1.600%
+            • ★4物品：13.000%
+            • ★3光锥：85.400%
+        `;
+        alert(details);
+    });
+    
+    // 历史记录
+    elements.historyBtn.addEventListener('click', function() {
+        if (gameState.history.length === 0) {
+            alert('暂无跃迁记录');
+        } else {
+            const last10 = gameState.history.slice(-10);
+            const historyText = last10.map((item, i) => 
+                `${i + 1}. ${'★'.repeat(item.rarity)} ${item.name} (${item.type})`
+            ).join('\n');
+            
+            alert(`最近10次跃迁记录：\n\n${historyText}`);
+        }
+    });
+    
+    // 点击模态窗口外部关闭
+    elements.resultModal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.style.display = 'none';
+        }
+    });
+}
 
-    // 创建结果项
-    function createResultItem(result, index) {
-        const item = document.createElement('div');
-        item.className = 'result-item';
-        item.style.opacity = '0';
-        item.style.transform = 'translateY(20px)';
-        item.style.transition = 'all 0.3s ease';
-        item.style.transitionDelay = `${index * 0.1}s`;
+// 切换卡池
+function switchPool(poolType) {
+    console.log('切换到卡池:', poolType);
+    
+    // 这里可以根据poolType更新UI
+    const title = document.querySelector('.pool-title');
+    if (title && poolType === 'character') {
+        title.textContent = '「刃·业火锋芒」';
+    } else if (title && poolType === 'lightcone') {
+        title.textContent = '「到不了的彼岸」';
+    } else if (title && poolType === 'standard') {
+        title.textContent = '「群星跃迁」';
+    }
+}
+
+// 单抽函数
+function drawSingle() {
+    // 保底检查
+    if (gameState.pity5 >= CONFIG.pity5) {
+        gameState.pity5 = 0;
+        return drawItem(5);
+    }
+    
+    if (gameState.pity4 >= CONFIG.pity4) {
+        gameState.pity4 = 0;
+        return drawItem(4);
+    }
+    
+    // 概率抽卡
+    const rand = Math.random() * 100;
+    
+    if (rand < CONFIG.rates[5] * 100) {
+        gameState.pity5 = 0;
+        return drawItem(5);
+    } else if (rand < (CONFIG.rates[5] + CONFIG.rates[4]) * 100) {
+        gameState.pity4 = 0;
+        return drawItem(4);
+    } else {
+        return drawItem(3);
+    }
+}
+
+// 抽取指定稀有度物品
+function drawItem(rarity) {
+    let item;
+    
+    switch(rarity) {
+        case 5:
+            const isUP = gameState.isGuaranteed || Math.random() < CONFIG.upRate;
+            item = {
+                name: isUP ? itemPool[5].upCharacter : 
+                       itemPool[5].characters[Math.floor(Math.random() * itemPool[5].characters.length)],
+                type: '角色',
+                rarity: 5,
+                isUP: isUP
+            };
+            gameState.isGuaranteed = !isUP;
+            break;
+            
+        case 4:
+            const isUP4 = Math.random() < CONFIG.upRate;
+            const pool4 = isUP4 ? itemPool[4].upCharacters : itemPool[4].characters;
+            item = {
+                name: pool4[Math.floor(Math.random() * pool4.length)],
+                type: Math.random() > 0.3 ? '角色' : '光锥',
+                rarity: 4,
+                isUP: isUP4
+            };
+            break;
+            
+        case 3:
+            item = {
+                name: itemPool[3].lightcones[Math.floor(Math.random() * itemPool[3].lightcones.length)],
+                type: '光锥',
+                rarity: 3,
+                isUP: false
+            };
+            break;
+    }
+    
+    // 记录历史
+    gameState.history.push(item);
+    
+    return item;
+}
+
+// 显示结果
+function showResults(results) {
+    elements.resultGrid.innerHTML = '';
+    
+    results.forEach((item, index) => {
+        const resultItem = document.createElement('div');
+        resultItem.className = 'result-item';
+        resultItem.style.animationDelay = `${index * 0.05}s`;
         
-        const rarityClass = `rarity-${result.rarity}`;
-        const typeIcon = result.type === 'character' ? 'fas fa-user' : 'fas fa-gem';
-        const newBadge = result.isNew ? '<span class="new-badge">NEW</span>' : '';
-        const upBadge = result.isUP ? '<span class="up-badge">UP</span>' : '';
+        const rarityColor = getRarityColor(item.rarity);
+        const upBadge = item.isUP ? '<div style="color:#ff6b9d; font-size:0.7em;">UP</div>' : '';
         
-        item.innerHTML = `
-            <div class="result-rarity ${rarityClass}">
-                ${'★'.repeat(result.rarity)}
+        resultItem.innerHTML = `
+            <div style="color: ${rarityColor}; font-size: 1.2em;">
+                ${'★'.repeat(item.rarity)}
             </div>
-            <div class="result-icon">
-                <i class="${typeIcon}"></i>
-            </div>
-            <div class="result-info">
-                <div class="result-name">${result.name}</div>
-                <div class="result-type">${result.type === 'character' ? '角色' : '光锥'}</div>
-            </div>
-            ${newBadge}
+            <div style="margin: 5px 0; font-weight: bold;">${item.name}</div>
+            <div style="font-size: 0.8em; color: #a0a0d0">${item.type}</div>
             ${upBadge}
         `;
         
-        return item;
-    }
-
-    // 显示模态窗口
-    function showModal() {
-        elements.resultModal.style.display = 'flex';
-        gsap.from('.modal-container', {
-            duration: 0.3,
-            scale: 0.9,
-            opacity: 0,
-            ease: "back.out(1.7)"
-        });
-    }
-
-    // 关闭模态窗口
-    elements.closeModal.addEventListener('click', hideModal);
-    elements.confirmResult.addEventListener('click', hideModal);
-
-    function hideModal() {
-        gsap.to('.modal-container', {
-            duration: 0.2,
-            scale: 0.9,
-            opacity: 0,
-            ease: "power2.in",
-            onComplete: () => {
-                elements.resultModal.style.display = 'none';
-            }
-        });
-    }
-
-    // 重置保底
-    elements.resetPity.addEventListener('click', function() {
-        if (confirm('确定要重置保底计数吗？')) {
-            state.pity5 = 0;
-            state.pity4 = 0;
-            state.isGuaranteed = false;
-            updatePityDisplay();
-            showMessage('保底计数已重置！', 'success');
-        }
+        elements.resultGrid.appendChild(resultItem);
     });
-
-    // 按钮动画
-    function animateDrawButton(button) {
-        gsap.to(button, {
-            duration: 0.1,
-            scale: 0.95,
-            yoyo: true,
-            repeat: 1,
-            ease: "power2.inOut"
-        });
-        
-        // 粒子效果
-        createButtonParticles(button);
+    
+    // 显示弹窗
+    elements.resultModal.style.display = 'flex';
+    
+    // 如果有五星，添加庆祝效果
+    const has5Star = results.some(r => r.rarity === 5);
+    if (has5Star) {
+        celebrate();
     }
+}
 
-    // 创建按钮粒子
-    function createButtonParticles(button) {
-        const rect = button.getBoundingClientRect();
-        const x = rect.left + rect.width / 2;
-        const y = rect.top + rect.height / 2;
-        
-        for (let i = 0; i < 15; i++) {
-            const particle = document.createElement('div');
-            particle.className = 'particle';
-            particle.style.cssText = `
-                position: fixed;
-                width: 5px;
-                height: 5px;
-                background: #ffd700;
-                border-radius: 50%;
-                pointer-events: none;
-                z-index: 100;
-                left: ${x}px;
-                top: ${y}px;
-            `;
-            
-            document.body.appendChild(particle);
-            
-            const angle = Math.random() * Math.PI * 2;
-            const speed = 2 + Math.random() * 3;
-            const vx = Math.cos(angle) * speed;
-            const vy = Math.sin(angle) * speed;
-            
-            gsap.to(particle, {
-                duration: 1,
-                x: vx * 50,
-                y: vy * 50,
-                opacity: 0,
-                scale: 0,
-                ease: "power2.out",
-                onComplete: () => particle.remove()
-            });
-        }
+// 获取稀有度颜色
+function getRarityColor(rarity) {
+    switch(rarity) {
+        case 5: return '#ffd700'; // 金色
+        case 4: return '#9370db'; // 紫色
+        case 3: return '#6bd9ff'; // 蓝色
+        default: return '#ffffff';
     }
+}
 
-    // 创建背景粒子
-    function createParticles() {
-        const container = document.getElementById('particles');
-        for (let i = 0; i < 50; i++) {
-            const particle = document.createElement('div');
-            particle.className = 'floating-particle';
-            
-            const size = 1 + Math.random() * 3;
-            const duration = 10 + Math.random() * 20;
-            const delay = Math.random() * 5;
-            
-            particle.style.cssText = `
-                position: absolute;
-                width: ${size}px;
-                height: ${size}px;
-                background: rgba(255, 255, 255, ${0.3 + Math.random() * 0.7});
-                border-radius: 50%;
-                top: ${Math.random() * 100}%;
-                left: ${Math.random() * 100}%;
-                animation: float ${duration}s ${delay}s infinite linear;
-            `;
-            
-            container.appendChild(particle);
+// 庆祝效果（抽到五星时）
+function celebrate() {
+    const modalContent = document.querySelector('.modal-content');
+    
+    // 添加闪光效果
+    const sparkle = document.createElement('div');
+    sparkle.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at center, rgba(255,215,0,0.3), transparent);
+        z-index: -1;
+        animation: sparkle 1s ease-out;
+    `;
+    
+    modalContent.appendChild(sparkle);
+    
+    // 添加动画样式
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes sparkle {
+            0% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(1.5); }
         }
         
-        // 添加浮动动画到样式
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes float {
-                0% {
-                    transform: translateY(0) rotate(0deg);
-                    opacity: 0;
-                }
-                10% {
-                    opacity: 1;
-                }
-                90% {
-                    opacity: 1;
-                }
-                100% {
-                    transform: translateY(-100vh) rotate(360deg);
-                    opacity: 0;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    // 显示消息
-    function showMessage(text, type) {
-        const message = document.createElement('div');
-        message.className = `message ${type}`;
-        message.textContent = text;
-        message.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 25px;
-            border-radius: 10px;
-            background: ${type === 'error' ? '#ff4757' : '#4caf50'};
-            color: white;
-            font-weight: bold;
-            z-index: 1000;
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-        `;
-        
-        document.body.appendChild(message);
-        
-        setTimeout(() => {
-            message.style.transform = 'translateX(0)';
-        }, 10);
-        
-        setTimeout(() => {
-            message.style.transform = 'translateX(100%)';
-            setTimeout(() => message.remove(), 300);
-        }, 3000);
-    }
-
-    // 音效
-    function playDrawSound() {
-        const sound = document.getElementById('drawSound');
-        sound.currentTime = 0;
-        sound.play().catch(e => console.log('音效播放失败:', e));
-    }
-
-    function playResultSound() {
-        const sound = document.getElementById('resultSound');
-        sound.currentTime = 0;
-        sound.play().catch(e => console.log('音效播放失败:', e));
-    }
-
-    // 其他交互功能
-    document.getElementById('detailsBtn').addEventListener('click', () => {
-        showMessage('详细规则页面开发中...', 'info');
-    });
-
-    document.getElementById('historyBtn').addEventListener('click', () => {
-        showMessage('跃迁记录功能开发中...', 'info');
-    });
-
-    document.getElementById('wishSimulator').addEventListener('click', () => {
-        // 模拟100抽
-        const results = [];
-        for (let i = 0; i < 100; i++) {
-            results.push(simulateDraw());
+        .result-item {
+            animation: popIn 0.3s ease-out both;
         }
         
-        const fiveStars = results.filter(r => r.rarity === 5).length;
-        showMessage(`模拟100抽获得${fiveStars}个五星角色！`, 'info');
-    });
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+    `;
+    
+    document.head.appendChild(style);
+    
+    // 播放音效（模拟）
+    try {
+        const audio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAZGF0YQQ=');
+        audio.volume = 0.3;
+        audio.play();
+    } catch (e) {
+        // 静默失败
+    }
+    
+    // 移除闪光效果
+    setTimeout(() => {
+        if (sparkle.parentNode) {
+            sparkle.remove();
+        }
+    }, 1000);
+}
 
-    // 技能预览
-    document.querySelectorAll('.skill-item').forEach(skill => {
-        skill.addEventListener('click', function() {
-            const skillType = this.dataset.skill;
-            const skillName = this.querySelector('.skill-name').textContent;
-            showMessage(`预览技能：${skillName}`, 'info');
-        });
-    });
-
-    // 初始化
-    initUI();
-});
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', init);
