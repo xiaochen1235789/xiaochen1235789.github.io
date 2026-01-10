@@ -49,6 +49,8 @@
             --shadow: 0 4px 12px rgba(0,0,0,0.3);
             --transition-fast: 0.2s ease;
             --transition-normal: 0.3s ease;
+            --supabase-blue: #3ecf8e;
+            --supabase-purple: #8a4baf;
         }
         
         * {
@@ -181,6 +183,83 @@
             display: flex;
             align-items: center;
             gap: 12px;
+        }
+        
+        /* 用户头像样式 */
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid var(--text-highlight);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+        }
+        
+        .user-avatar:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 12px rgba(129, 199, 132, 0.4);
+        }
+        
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .avatar-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--supabase-blue), var(--supabase-purple));
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .user-info-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 6px 12px;
+            border-radius: var(--radius);
+            transition: all var(--transition-fast);
+        }
+        
+        .user-info-container:hover {
+            background: var(--card-bg-hover);
+        }
+        
+        .username {
+            color: var(--text-highlight);
+            font-weight: 600;
+            font-size: 0.95rem;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .logout-btn {
+            background: transparent;
+            color: #f87171;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            padding: 6px 12px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(248, 113, 113, 0.1);
+            border-color: #f87171;
+            transform: translateY(-1px);
         }
         
         /* ==================== 搜索功能 ==================== */
@@ -583,6 +662,26 @@
                 width: auto;
             }
             
+            .user-info-container {
+                padding: 4px 8px;
+                gap: 8px;
+            }
+            
+            .username {
+                max-width: 80px;
+                font-size: 0.85rem;
+            }
+            
+            .user-avatar {
+                width: 32px;
+                height: 32px;
+            }
+            
+            .logout-btn {
+                padding: 4px 8px;
+                font-size: 0.8rem;
+            }
+            
             body {
                 padding-bottom: 60px !important;
             }
@@ -595,6 +694,16 @@
         @media (max-width: 480px) {
             .grid-container {
                 grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            }
+            
+            .user-info-container {
+                flex-direction: column;
+                align-items: center;
+                gap: 6px;
+            }
+            
+            .username {
+                display: none;
             }
         }
         
@@ -644,9 +753,9 @@
         <a href="#character" class="nav-link" data-target="character">角色</a>
         <a href="#lightcone" class="nav-link" data-target="lightcone">光锥</a>
         <a href="#material" class="nav-link" data-target="material">养成材料</a>
-        <a href="changelog.html" class="nav-link">更新日志</a>
+        <a href="changelog.html" class="nav-link" >更新日志</a>
         
-        <!-- 用户导航部分 -->
+        <!-- 用户导航部分（由JavaScript动态生成） -->
         <div class="user-nav-section" id="userNavSection">
             <a href="login-real.html" class="nav-link">登录/注册</a>
         </div>
@@ -826,9 +935,15 @@
     <button class="back-to-top" onclick="scrollToTop()" aria-label="回到顶部">↑</button>
 
 <script>
-// ==================== 1. 全局变量定义 ====================
+// ==================== 全局变量定义 ====================
 let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
 let searchTimeout;
+let supabaseClient = null;
+let currentUser = null;
+
+// Supabase配置
+const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
 // ==================== 辅助函数 ====================
 function showNotification(message, type = 'info') {
@@ -1106,8 +1221,102 @@ function initializeMusicPlayer() {
     });
 }
 
+// ==================== 用户认证和头像显示 ====================
+async function initializeUserProfile() {
+    try {
+        // 初始化Supabase客户端
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // 检查登录状态
+        const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+        
+        if (authError || !user) {
+            // 未登录，保持默认的登录/注册按钮
+            updateNavbar(null, null);
+            return;
+        }
+        
+        currentUser = user;
+        
+        // 加载用户资料
+        const { data: profile, error: profileError } = await supabaseClient
+            .from('user_profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single();
+        
+        let username = '';
+        let avatarUrl = '';
+        
+        if (!profileError && profile) {
+            username = profile.username || currentUser.email.split('@')[0];
+            avatarUrl = profile.avatar_url || '';
+        } else {
+            username = currentUser.email.split('@')[0];
+        }
+        
+        // 更新导航栏显示
+        updateNavbar(username, avatarUrl);
+        
+    } catch (error) {
+        console.error('初始化用户资料失败:', error);
+        // 出错时显示默认登录按钮
+        updateNavbar(null, null);
+    }
+}
+
+function updateNavbar(username, avatarUrl) {
+    const userNavSection = document.getElementById('userNavSection');
+    if (!userNavSection) return;
+    
+    if (username) {
+        // 已登录状态：显示头像、用户名和退出按钮
+        const avatarLetter = username.charAt(0).toUpperCase();
+        const avatarHtml = avatarUrl 
+            ? `<img src="${avatarUrl}" alt="${username}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\"avatar-placeholder\">${avatarLetter}</div>'">`
+            : `<div class="avatar-placeholder">${avatarLetter}</div>`;
+        
+        userNavSection.innerHTML = `
+            <div class="user-info-container">
+                <div class="user-avatar" onclick="window.location.href='profile.html'" title="前往个人主页">
+                    ${avatarHtml}
+                </div>
+                <span class="username">${username}</span>
+                <button class="logout-btn" onclick="logout()" title="退出登录">
+                    <i class="fas fa-sign-out-alt"></i> 退出
+                </button>
+            </div>
+        `;
+    } else {
+        // 未登录状态：显示登录/注册按钮
+        userNavSection.innerHTML = `
+            <a href="login-real.html" class="nav-link">登录/注册</a>
+        `;
+    }
+}
+
+async function logout() {
+    if (confirm('确定要退出登录吗？')) {
+        try {
+            if (supabaseClient) {
+                await supabaseClient.auth.signOut();
+            }
+            localStorage.removeItem('user');
+            showNotification('已退出登录', 'success');
+            
+            // 刷新页面以更新状态
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } catch (error) {
+            console.error('退出登录失败:', error);
+            showNotification('退出失败，请刷新页面重试', 'error');
+        }
+    }
+}
+
 // ==================== 页面初始化 ====================
-function initializePage() {
+async function initializePage() {
     console.log('页面开始初始化...');
     
     updateLoadingProgress(30);
@@ -1119,6 +1328,10 @@ function initializePage() {
     // 初始化网站运行天数
     initializeSiteAge();
     updateLoadingProgress(50);
+    
+    // 初始化用户资料和头像
+    await initializeUserProfile();
+    updateLoadingProgress(60);
     
     // 初始化搜索功能
     initializeSearch();
@@ -1171,7 +1384,7 @@ setTimeout(hideLoading, 3000);
 
 // ==================== DOM加载完成后执行 ====================
 document.addEventListener('DOMContentLoaded', function() {
-    initializePage();
+    initializePage().catch(console.error);
 });
 
 // ==================== 全局错误处理 ====================
@@ -1187,3 +1400,4 @@ window.addEventListener('unhandledrejection', function(e) {
 </script>
 </body>
 </html>
+[file content end]
