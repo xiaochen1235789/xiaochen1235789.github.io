@@ -194,6 +194,7 @@
             border: 2px solid var(--text-highlight);
             cursor: pointer;
             transition: all var(--transition-normal);
+            flex-shrink: 0;
         }
         
         .user-avatar:hover {
@@ -254,6 +255,7 @@
             display: flex;
             align-items: center;
             gap: 4px;
+            flex-shrink: 0;
         }
         
         .logout-btn:hover {
@@ -1224,6 +1226,18 @@ function initializeMusicPlayer() {
 // ==================== 用户认证和头像显示 ====================
 async function initializeUserProfile() {
     try {
+        // 首先检查本地缓存（快速显示）
+        const cachedUsername = localStorage.getItem('cachedUsername');
+        const cachedAvatar = localStorage.getItem('cachedAvatar');
+        const lastUpdated = localStorage.getItem('profileLastUpdated');
+        
+        // 如果有缓存且较新（5分钟内），立即显示
+        if (cachedUsername && lastUpdated && (Date.now() - parseInt(lastUpdated)) < 5 * 60 * 1000) {
+            console.log('使用缓存的用户资料');
+            updateNavbar(cachedUsername, cachedAvatar);
+            return;
+        }
+        
         // 初始化Supabase客户端
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
@@ -1231,7 +1245,8 @@ async function initializeUserProfile() {
         const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
         
         if (authError || !user) {
-            // 未登录，保持默认的登录/注册按钮
+            // 未登录，清除缓存并显示默认的登录/注册按钮
+            clearUserCache();
             updateNavbar(null, null);
             return;
         }
@@ -1251,8 +1266,14 @@ async function initializeUserProfile() {
         if (!profileError && profile) {
             username = profile.username || currentUser.email.split('@')[0];
             avatarUrl = profile.avatar_url || '';
+            
+            // 更新缓存
+            cacheUserProfile(username, avatarUrl);
         } else {
             username = currentUser.email.split('@')[0];
+            // 创建用户资料
+            await createUserProfile(username);
+            cacheUserProfile(username, null);
         }
         
         // 更新导航栏显示
@@ -1260,8 +1281,14 @@ async function initializeUserProfile() {
         
     } catch (error) {
         console.error('初始化用户资料失败:', error);
-        // 出错时显示默认登录按钮
-        updateNavbar(null, null);
+        // 出错时尝试使用缓存
+        const cachedUsername = localStorage.getItem('cachedUsername');
+        const cachedAvatar = localStorage.getItem('cachedAvatar');
+        if (cachedUsername) {
+            updateNavbar(cachedUsername, cachedAvatar);
+        } else {
+            updateNavbar(null, null);
+        }
     }
 }
 
@@ -1272,14 +1299,19 @@ function updateNavbar(username, avatarUrl) {
     if (username) {
         // 已登录状态：显示头像、用户名和退出按钮
         const avatarLetter = username.charAt(0).toUpperCase();
-        const avatarHtml = avatarUrl 
-            ? `<img src="${avatarUrl}" alt="${username}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\"avatar-placeholder\">${avatarLetter}</div>'">`
-            : `<div class="avatar-placeholder">${avatarLetter}</div>`;
+        
+        let avatarHtml = '';
+        if (avatarUrl) {
+            avatarHtml = `<img src="${avatarUrl}" alt="${username}" 
+                onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                style="width: 100%; height: 100%; object-fit: cover;">`;
+        }
         
         userNavSection.innerHTML = `
             <div class="user-info-container">
                 <div class="user-avatar" onclick="window.location.href='profile.html'" title="前往个人主页">
                     ${avatarHtml}
+                    <div class="avatar-placeholder" style="${avatarUrl ? 'display: none;' : ''}">${avatarLetter}</div>
                 </div>
                 <span class="username">${username}</span>
                 <button class="logout-btn" onclick="logout()" title="退出登录">
@@ -1295,19 +1327,58 @@ function updateNavbar(username, avatarUrl) {
     }
 }
 
+function cacheUserProfile(username, avatarUrl) {
+    if (username) {
+        localStorage.setItem('cachedUsername', username);
+    }
+    if (avatarUrl) {
+        localStorage.setItem('cachedAvatar', avatarUrl);
+    } else {
+        localStorage.removeItem('cachedAvatar');
+    }
+    localStorage.setItem('profileLastUpdated', Date.now().toString());
+}
+
+function clearUserCache() {
+    localStorage.removeItem('cachedUsername');
+    localStorage.removeItem('cachedAvatar');
+    localStorage.removeItem('profileLastUpdated');
+}
+
+async function createUserProfile(username) {
+    try {
+        if (!supabaseClient || !currentUser) return;
+        
+        const { error } = await supabaseClient
+            .from('user_profiles')
+            .upsert({
+                id: currentUser.id,
+                username: username,
+                bio: '这个人很懒，什么都没有写...'
+            });
+        
+        if (error) throw error;
+        
+    } catch (error) {
+        console.error('创建用户资料失败:', error);
+    }
+}
+
 async function logout() {
     if (confirm('确定要退出登录吗？')) {
         try {
             if (supabaseClient) {
                 await supabaseClient.auth.signOut();
             }
-            localStorage.removeItem('user');
+            
+            // 清除所有缓存
+            clearUserCache();
+            
             showNotification('已退出登录', 'success');
             
-            // 刷新页面以更新状态
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
+            // 立即更新界面
+            updateNavbar(null, null);
+            
         } catch (error) {
             console.error('退出登录失败:', error);
             showNotification('退出失败，请刷新页面重试', 'error');
@@ -1329,8 +1400,7 @@ async function initializePage() {
     initializeSiteAge();
     updateLoadingProgress(50);
     
-    // 初始化用户资料和头像
-    await initializeUserProfile();
+    // 初始化用户资料和头像（立即显示缓存）
     updateLoadingProgress(60);
     
     // 初始化搜索功能
@@ -1347,7 +1417,13 @@ async function initializePage() {
     
     // 初始化音乐播放器
     initializeMusicPlayer();
-    updateLoadingProgress(97);
+    updateLoadingProgress(95);
+    
+    // 异步加载用户资料
+    setTimeout(async () => {
+        await initializeUserProfile();
+        updateLoadingProgress(98);
+    }, 100);
     
     updateLoadingProgress(99);
     
@@ -1384,6 +1460,14 @@ setTimeout(hideLoading, 3000);
 
 // ==================== DOM加载完成后执行 ====================
 document.addEventListener('DOMContentLoaded', function() {
+    // 立即显示缓存的内容
+    const cachedUsername = localStorage.getItem('cachedUsername');
+    const cachedAvatar = localStorage.getItem('cachedAvatar');
+    if (cachedUsername) {
+        updateNavbar(cachedUsername, cachedAvatar);
+    }
+    
+    // 然后继续初始化
     initializePage().catch(console.error);
 });
 
@@ -1397,7 +1481,17 @@ window.addEventListener('unhandledrejection', function(e) {
     console.error('未处理的Promise错误:', e.reason);
     showNotification('操作失败，请稍后重试', 'error');
 });
+
+// 监听来自个人主页的消息
+window.addEventListener('message', function(event) {
+    if (event.data?.type === 'PROFILE_UPDATED') {
+        console.log('收到个人主页更新消息');
+        const { username, avatarUrl } = event.data;
+        cacheUserProfile(username, avatarUrl);
+        updateNavbar(username, avatarUrl);
+        showNotification('用户资料已更新', 'success');
+    }
+});
 </script>
 </body>
 </html>
-[file content end]
