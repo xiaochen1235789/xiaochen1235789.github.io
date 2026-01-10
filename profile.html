@@ -1208,6 +1208,32 @@
             color: var(--bg);
             font-weight: 600;
         }
+        
+        /* 主页同步提示 */
+        .sync-notice {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            background: var(--text-highlight);
+            color: var(--bg);
+            padding: 10px 16px;
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+            font-weight: 600;
+            box-shadow: var(--shadow);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all var(--transition-normal);
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .sync-notice.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body>
@@ -1225,6 +1251,12 @@
             <!-- 由JavaScript动态生成 -->
         </div>
     </nav>
+
+    <!-- 主页同步提示 -->
+    <div class="sync-notice" id="syncNotice">
+        <i class="fas fa-sync-alt"></i>
+        <span>已同步到主页</span>
+    </div>
 
     <!-- 主内容区 -->
     <div class="profile-container">
@@ -1691,6 +1723,44 @@
             return document.getElementById(elementId);
         }
 
+        // ==================== 同步到主页相关函数 ====================
+        function showSyncNotice() {
+            const syncNotice = safeGetElement('syncNotice');
+            if (!syncNotice) return;
+            
+            syncNotice.classList.add('show');
+            
+            setTimeout(() => {
+                syncNotice.classList.remove('show');
+            }, 3000);
+        }
+
+        // 存储用户资料到本地缓存，供主页使用
+        function cacheUserProfile(username, avatarUrl) {
+            if (username) {
+                localStorage.setItem('cachedUsername', username);
+            }
+            if (avatarUrl) {
+                localStorage.setItem('cachedAvatar', avatarUrl);
+            }
+            localStorage.setItem('profileLastUpdated', Date.now().toString());
+            
+            // 触发主页更新
+            if (window.opener && !window.opener.closed) {
+                try {
+                    window.opener.postMessage({
+                        type: 'PROFILE_UPDATED',
+                        username: username,
+                        avatarUrl: avatarUrl
+                    }, '*');
+                } catch (e) {
+                    console.log('无法通知主页窗口');
+                }
+            }
+            
+            showSyncNotice();
+        }
+
         // ==================== 等级相关函数 ====================
         function calculateLevel(exp) {
             let level = 1;
@@ -1864,7 +1934,7 @@
             }
         }
 
-        // ==================== 签到相关函数（修复部分）====================
+        // ==================== 签到相关函数 ====================
         function updateCheckinButton(canCheckin) {
             const checkinBtn = safeGetElement('dailyCheckinBtn');
             if (!checkinBtn) return;
@@ -2390,19 +2460,24 @@
                     
                     if (updateError) throw updateError;
                     
+                    // 更新本地显示
                     updateAvatarDisplay(publicUrl);
                     
-                    // 保存到本地存储作为缓存
+                    // 缓存到本地存储，供主页使用
+                    cacheUserProfile(userProfile?.username, publicUrl);
+                    
+                    // 保存图片到本地存储作为缓存
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         localStorage.setItem('userAvatar', event.target.result);
+                        localStorage.setItem('avatarUrl', publicUrl);
                     };
                     reader.readAsDataURL(file);
                     
                     // 添加经验值
                     await addExp(10, '上传头像');
                     
-                    showNotification('头像上传成功', 'success');
+                    showNotification('头像上传成功，已同步到主页', 'success');
                     
                 } catch (error) {
                     console.error('上传头像失败:', error);
@@ -2482,6 +2557,12 @@
                 
                 if (profile.avatar_url) {
                     updateAvatarDisplay(profile.avatar_url);
+                    
+                    // 缓存到本地，供主页使用
+                    cacheUserProfile(username, profile.avatar_url);
+                    localStorage.setItem('avatarUrl', profile.avatar_url);
+                } else {
+                    cacheUserProfile(username, null);
                 }
                 
                 // 计算注册天数
@@ -2503,15 +2584,19 @@
 
         async function createUserProfile() {
             try {
+                const username = currentUser.user_metadata?.username || currentUser.email.split('@')[0];
                 const { error } = await supabaseClient
                     .from('user_profiles')
                     .upsert({
                         id: currentUser.id,
-                        username: currentUser.user_metadata?.username || currentUser.email.split('@')[0],
+                        username: username,
                         bio: '这个人很懒，什么都没有写...'
                     });
                 
                 if (error) throw error;
+                
+                // 缓存用户名
+                cacheUserProfile(username, null);
                 
             } catch (error) {
                 console.error('创建用户资料失败:', error);
@@ -2576,12 +2661,15 @@
                 safeSetText('displayUsername', newUsername);
                 safeSetText('avatarPlaceholder', newUsername.charAt(0).toUpperCase());
                 
+                // 同步到本地缓存和主页
+                cacheUserProfile(newUsername, userProfile?.avatar_url || '');
+                
                 await addExp(5, '修改用户名');
                 
                 updateNavbar();
                 
                 closeModal('usernameModal');
-                showNotification('用户名更新成功', 'success');
+                showNotification('用户名更新成功，已同步到主页', 'success');
                 
             } catch (error) {
                 console.error('更新用户名失败:', error);
@@ -2772,9 +2860,11 @@
                     
                     updateAvatarDisplay(base64Image);
                     
+                    // 缓存到本地存储，供主页使用
+                    cacheUserProfile(userProfile?.username, base64Image);
                     localStorage.setItem('userAvatar', base64Image);
                     
-                    showNotification('头像上传成功（base64格式）', 'success');
+                    showNotification('头像上传成功（base64格式），已同步到主页', 'success');
                 };
                 
                 reader.readAsDataURL(file);
@@ -2791,7 +2881,7 @@
             
             if (placeholder) placeholder.style.display = 'none';
             if (avatar) {
-                avatar.innerHTML = `<img src="${imageUrl}" alt="用户头像" style="width: 100%; height: 100%; object-fit: cover;">`;
+                avatar.innerHTML = `<img src="${imageUrl}" alt="用户头像" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.style.display='none'; document.getElementById('avatarPlaceholder').style.display='flex';">`;
             }
         }
 
@@ -2829,7 +2919,13 @@
             if (confirm('确定要退出登录吗？')) {
                 try {
                     await supabaseClient.auth.signOut();
-                    localStorage.removeItem('user');
+                    
+                    // 清除本地缓存
+                    localStorage.removeItem('cachedUsername');
+                    localStorage.removeItem('cachedAvatar');
+                    localStorage.removeItem('profileLastUpdated');
+                    localStorage.removeItem('avatarUrl');
+                    
                     showNotification('已退出登录', 'success');
                     setTimeout(() => {
                         window.location.href = 'index.html';
@@ -2989,11 +3085,13 @@
             
             window.addEventListener('load', function() {
                 const savedAvatar = localStorage.getItem('userAvatar');
-                if (savedAvatar) {
-                    updateAvatarDisplay(savedAvatar);
+                const avatarUrl = localStorage.getItem('avatarUrl');
+                if (savedAvatar || avatarUrl) {
+                    updateAvatarDisplay(avatarUrl || savedAvatar);
                 }
             });
         });
     </script>
 </body>
 </html>
+[file content end]
