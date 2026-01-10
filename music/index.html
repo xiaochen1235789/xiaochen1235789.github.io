@@ -1,105 +1,374 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <title>崩铁卡池模拟 - 极简版</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>崩铁卡池模拟 - 图片化UI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Microsoft YaHei', sans-serif;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            user-select: none;
         }
         
         body {
-            background: #0a0a1a;
-            color: white;
+            background: linear-gradient(135deg, #0c0c1e 0%, #1a1a3a 50%, #0c0c1e 100%);
+            color: #e0e0ff;
             min-height: 100vh;
-            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(74, 44, 140, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(107, 70, 193, 0.1) 0%, transparent 50%);
+            z-index: -1;
         }
         
         .container {
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
+            padding: 20px;
         }
         
-        .header {
-            text-align: center;
+        /* 顶部横幅 */
+        .header-banner {
+            position: relative;
+            height: 180px;
+            background: linear-gradient(90deg, rgba(26, 26, 46, 0.9) 0%, rgba(38, 28, 68, 0.9) 100%);
+            border-radius: 20px;
             margin-bottom: 30px;
-            padding: 20px;
-            background: linear-gradient(90deg, #4a2c8c, #6b46c1);
-            border-radius: 15px;
+            overflow: hidden;
+            border: 1px solid rgba(107, 70, 193, 0.5);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .banner-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80') center/cover no-repeat;
+            opacity: 0.2;
+            filter: brightness(0.7) saturate(1.5);
+        }
+        
+        .banner-content {
+            position: relative;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
         }
         
         .pool-title {
-            font-size: 28px;
+            font-size: 36px;
+            font-weight: bold;
+            background: linear-gradient(90deg, #ffd166, #ff9e6d);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 20px rgba(255, 209, 102, 0.3);
             margin-bottom: 10px;
         }
         
-        .character-display {
-            background: rgba(30, 30, 60, 0.8);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            text-align: center;
+        .pool-subtitle {
+            font-size: 20px;
+            color: #b8b8ff;
+            margin-bottom: 5px;
         }
         
-        .char-image {
-            width: 200px;
-            height: 300px;
-            margin: 0 auto 20px;
-            background: linear-gradient(45deg, #2c1b47, #4a2c8c);
-            border-radius: 10px;
+        .pool-time {
+            color: #8888cc;
+            font-size: 16px;
+        }
+        
+        .character-tag {
+            position: absolute;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(90deg, #4a2c8c, #6b46c1);
+            padding: 12px 25px;
+            border-radius: 12px;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(107, 70, 193, 0.4);
+        }
+        
+        /* 主内容区域 */
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .left-panel {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .right-panel {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        /* 角色展示面板 */
+        .character-panel {
+            background: rgba(26, 26, 46, 0.8);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(107, 70, 193, 0.3);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .char-image-container {
+            position: relative;
+            width: 100%;
+            height: 350px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #1a1a2e, #2d2d4e);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
         }
         
-        .info-panel {
-            background: rgba(30, 30, 60, 0.8);
-            border-radius: 15px;
-            padding: 20px;
+        .char-image {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(74, 44, 140, 0.7), rgba(107, 70, 193, 0.5)), 
+                        url('https://images.unsplash.com/photo-1518709268805-4e9042af2176?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80') center/cover no-repeat;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: #fff;
+            position: relative;
+        }
+        
+        .char-info {
+            text-align: center;
+        }
+        
+        .char-name {
+            font-size: 28px;
+            font-weight: bold;
+            color: #ffd166;
+            margin-bottom: 8px;
+        }
+        
+        .char-desc {
+            color: #b8b8ff;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        
+        .char-rarity {
+            color: #ff9e6d;
+            font-size: 16px;
+        }
+        
+        /* 概率面板 */
+        .rate-panel {
+            background: rgba(26, 26, 46, 0.8);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid rgba(107, 70, 193, 0.3);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .panel-title {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #ffd166;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .panel-title i {
+            color: #6b46c1;
+        }
+        
+        .rate-item {
             margin-bottom: 20px;
         }
         
-        .info-item {
-            margin: 15px 0;
-            padding: 10px;
-            background: rgba(40, 40, 80, 0.6);
-            border-radius: 10px;
+        .rate-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .rate-name {
+            font-size: 18px;
+        }
+        
+        .rate-value {
+            font-weight: bold;
+            color: #ff9e6d;
         }
         
         .rate-bar {
-            height: 10px;
+            height: 12px;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 5px;
-            margin-top: 5px;
+            border-radius: 6px;
             overflow: hidden;
         }
         
         .rate-fill {
             height: 100%;
-            background: linear-gradient(90deg, #4a2c8c, #6b46c1);
-            border-radius: 5px;
+            border-radius: 6px;
+        }
+        
+        .rate-5 { background: linear-gradient(90deg, #ffd166, #ff9e6d); width: 0.6%; }
+        .rate-4 { background: linear-gradient(90deg, #b266ff, #8a2be2); width: 5.1%; }
+        .rate-3 { background: linear-gradient(90deg, #66b3ff, #4682b4); width: 94.3%; }
+        
+        /* 保底计数 */
+        .pity-counter {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .pity-box {
+            flex: 1;
+            background: rgba(40, 40, 80, 0.5);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid rgba(107, 70, 193, 0.3);
+        }
+        
+        .pity-title {
+            font-size: 16px;
+            color: #b8b8ff;
+            margin-bottom: 8px;
+        }
+        
+        .pity-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #ff9e6d;
+        }
+        
+        .pity-sub {
+            font-size: 14px;
+            color: #8888cc;
+            margin-top: 5px;
+        }
+        
+        /* 货币和抽卡按钮 */
+        .currency-panel {
+            background: rgba(26, 26, 46, 0.8);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(107, 70, 193, 0.3);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .currency-display {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .currency-item {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(40, 40, 80, 0.5);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(107, 70, 193, 0.3);
+        }
+        
+        .currency-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .stellar-icon {
+            background: linear-gradient(135deg, #66b3ff, #0066cc);
+        }
+        
+        .ticket-icon {
+            background: linear-gradient(135deg, #ff6b9d, #ff4757);
+        }
+        
+        .currency-info {
+            flex: 1;
+        }
+        
+        .currency-name {
+            font-size: 14px;
+            color: #b8b8ff;
+        }
+        
+        .currency-amount {
+            font-size: 24px;
+            font-weight: bold;
         }
         
         .draw-buttons {
             display: flex;
             gap: 15px;
-            margin: 20px 0;
         }
         
         .draw-btn {
             flex: 1;
-            padding: 15px;
+            padding: 18px;
             border: none;
-            border-radius: 10px;
-            font-size: 16px;
+            border-radius: 12px;
+            font-size: 18px;
             font-weight: bold;
             cursor: pointer;
             color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .draw-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        .draw-btn:active {
+            transform: translateY(1px);
+        }
+        
+        .draw-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
         }
         
         .single-draw {
@@ -110,25 +379,7 @@
             background: linear-gradient(135deg, #ff6b9d, #ff4757);
         }
         
-        .draw-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .currency {
-            display: flex;
-            gap: 10px;
-            margin: 15px 0;
-        }
-        
-        .currency-item {
-            flex: 1;
-            text-align: center;
-            padding: 10px;
-            background: rgba(40, 40, 80, 0.6);
-            border-radius: 8px;
-        }
-        
+        /* 抽卡结果弹窗 */
         .modal {
             display: none;
             position: fixed;
@@ -136,131 +387,429 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.85);
             justify-content: center;
             align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
         }
         
         .modal-content {
-            background: #1a1a3a;
-            padding: 20px;
-            border-radius: 15px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.95), rgba(38, 28, 68, 0.95));
+            border-radius: 20px;
+            padding: 25px;
+            max-width: 800px;
+            width: 95%;
+            max-height: 85vh;
             overflow-y: auto;
+            border: 1px solid rgba(107, 70, 193, 0.5);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+            position: relative;
+        }
+        
+        .modal-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-title {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(90deg, #ffd166, #ff9e6d);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .modal-subtitle {
+            color: #b8b8ff;
+            font-size: 16px;
+        }
+        
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 25px;
         }
         
         .result-item {
-            background: rgba(30, 30, 60, 0.8);
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 8px;
+            background: rgba(40, 40, 80, 0.5);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
         }
         
-        .stars-5 { color: gold; }
-        .stars-4 { color: purple; }
-        .stars-3 { color: skyblue; }
+        .result-item.revealed {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        
+        .result-rarity {
+            font-size: 18px;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        
+        .result-name {
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .result-type {
+            font-size: 12px;
+            color: #8888cc;
+        }
+        
+        .result-5star {
+            border-color: #ffd166;
+            box-shadow: 0 0 15px rgba(255, 209, 102, 0.3);
+        }
+        
+        .result-4star {
+            border-color: #b266ff;
+            box-shadow: 0 0 10px rgba(178, 102, 255, 0.3);
+        }
+        
+        .modal-close {
+            text-align: center;
+        }
+        
+        .close-btn {
+            padding: 12px 40px;
+            background: linear-gradient(135deg, #4a2c8c, #6b46c1);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .close-btn:hover {
+            background: linear-gradient(135deg, #5a3c9c, #7b56d1);
+            transform: translateY(-2px);
+        }
+        
+        /* 动画效果 */
+        @keyframes glow {
+            0% { box-shadow: 0 0 10px rgba(255, 209, 102, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(255, 209, 102, 0.8); }
+            100% { box-shadow: 0 0 10px rgba(255, 209, 102, 0.5); }
+        }
+        
+        .glowing {
+            animation: glow 2s infinite;
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .result-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .pool-title {
+                font-size: 28px;
+            }
+            
+            .character-tag {
+                position: relative;
+                right: auto;
+                top: auto;
+                transform: none;
+                margin-top: 20px;
+                display: inline-block;
+            }
+            
+            .banner-content {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 25px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .result-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .draw-buttons {
+                flex-direction: column;
+            }
+            
+            .pity-counter {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1 class="pool-title">崩铁卡池模拟</h1>
-            <p>「刃·业火锋芒」限定卡池</p>
+        <!-- 顶部横幅 -->
+        <div class="header-banner">
+            <div class="banner-bg"></div>
+            <div class="banner-content">
+                <div>
+                    <h1 class="pool-title">「烛中翩影」限定跃迁</h1>
+                    <p class="pool-subtitle">米游记·金老君</p>
+                    <p class="pool-time">活动时间：2024-01-10 12:00 - 2024-01-31 11:59</p>
+                </div>
+                <div class="character-tag">★★★★★</div>
+            </div>
         </div>
         
-        <div class="character-display">
-            <div class="char-image">角色展示</div>
-            <h3>刃 · 5★毁灭命途</h3>
-            <p>风属性 · 星核猎手成员</p>
-        </div>
-        
-        <div class="info-panel">
-            <h2>概率详情</h2>
-            <div class="info-item">
-                <div>★★★★★: 0.600%</div>
-                <div class="rate-bar"><div class="rate-fill" style="width: 6%"></div></div>
-            </div>
-            <div class="info-item">
-                <div>★★★★: 5.100%</div>
-                <div class="rate-bar"><div class="rate-fill" style="width: 51%"></div></div>
-            </div>
-            <div class="info-item">
-                <div>★★★: 94.300%</div>
-                <div class="rate-bar"><div class="rate-fill" style="width: 94%"></div></div>
-            </div>
-            
-            <h2 style="margin-top: 20px;">保底计数</h2>
-            <div class="info-item">
-                <div>五星保底: <span id="pity5">45</span>/90</div>
-                <div style="color: #ff6b9d; margin-top: 5px;">剩余 <span id="remain5">45</span> 抽</div>
-            </div>
-            
-            <div class="currency">
-                <div class="currency-item">
-                    <div style="color: #6bd9ff;">星琼</div>
-                    <div id="stellar-jade">3280</div>
+        <!-- 主内容区域 -->
+        <div class="main-content">
+            <!-- 左侧面板 -->
+            <div class="left-panel">
+                <!-- 角色展示 -->
+                <div class="character-panel">
+                    <div class="char-image-container">
+                        <div class="char-image glowing">
+                            <div style="text-align: center; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px;">
+                                <i class="fas fa-user" style="font-size: 48px; margin-bottom: 15px; color: #ffd166;"></i>
+                                <div>角色展示</div>
+                                <div style="font-size: 16px; margin-top: 10px; color: #b8b8ff;">点击下方按钮抽卡</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="char-info">
+                        <h2 class="char-name">刃 · 业火锋芒</h2>
+                        <p class="char-desc">5★ 毁灭命途 · 星核猎手</p>
+                        <p class="char-rarity">风属性 · 限定角色</p>
+                    </div>
                 </div>
-                <div class="currency-item">
-                    <div style="color: #ff6b9d;">专票</div>
-                    <div id="special-ticket">5</div>
+                
+                <!-- 概率信息 -->
+                <div class="rate-panel">
+                    <h2 class="panel-title"><i class="fas fa-chart-bar"></i> 概率详情</h2>
+                    
+                    <div class="rate-item">
+                        <div class="rate-header">
+                            <span class="rate-name">★★★★★ 限定角色</span>
+                            <span class="rate-value">0.600%</span>
+                        </div>
+                        <div class="rate-bar">
+                            <div class="rate-fill rate-5"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="rate-item">
+                        <div class="rate-header">
+                            <span class="rate-name">★★★★ UP角色</span>
+                            <span class="rate-value">5.100%</span>
+                        </div>
+                        <div class="rate-bar">
+                            <div class="rate-fill rate-4"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="rate-item">
+                        <div class="rate-header">
+                            <span class="rate-name">★★★ 光锥</span>
+                            <span class="rate-value">94.300%</span>
+                        </div>
+                        <div class="rate-bar">
+                            <div class="rate-fill rate-3"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 保底计数 -->
+                    <div class="pity-counter">
+                        <div class="pity-box">
+                            <div class="pity-title">五星保底</div>
+                            <div class="pity-value" id="pity5Count">45</div>
+                            <div class="pity-sub">剩余 <span id="pity5Remain">45</span> 抽</div>
+                        </div>
+                        
+                        <div class="pity-box">
+                            <div class="pity-title">四星保底</div>
+                            <div class="pity-value" id="pity4Count">7</div>
+                            <div class="pity-sub">剩余 <span id="pity4Remain">3</span> 抽</div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
-            <div class="draw-buttons">
-                <button class="draw-btn single-draw" id="singleDraw">单抽 (160星琼)</button>
-                <button class="draw-btn ten-draw" id="tenDraw">十连 (1600星琼)</button>
+            <!-- 右侧面板 -->
+            <div class="right-panel">
+                <!-- 货币面板 -->
+                <div class="currency-panel">
+                    <h2 class="panel-title"><i class="fas fa-coins"></i> 抽卡资源</h2>
+                    
+                    <div class="currency-display">
+                        <div class="currency-item">
+                            <div class="currency-icon stellar-icon">
+                                <i class="fas fa-gem"></i>
+                            </div>
+                            <div class="currency-info">
+                                <div class="currency-name">星琼</div>
+                                <div class="currency-amount" id="stellarJade">3280</div>
+                            </div>
+                        </div>
+                        
+                        <div class="currency-item">
+                            <div class="currency-icon ticket-icon">
+                                <i class="fas fa-ticket-alt"></i>
+                            </div>
+                            <div class="currency-info">
+                                <div class="currency-name">星轨专票</div>
+                                <div class="currency-amount" id="specialTicket">5</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="draw-buttons">
+                        <button class="draw-btn single-draw" id="singleDraw">
+                            <i class="fas fa-star"></i>
+                            单次跃迁
+                            <span style="font-size: 14px; margin-left: auto;">160 星琼</span>
+                        </button>
+                        
+                        <button class="draw-btn ten-draw" id="tenDraw">
+                            <i class="fas fa-layer-group"></i>
+                            十连跃迁
+                            <span style="font-size: 14px; margin-left: auto;">1600 星琼</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 卡池信息 -->
+                <div class="character-panel">
+                    <h2 class="panel-title"><i class="fas fa-users"></i> UP角色详情</h2>
+                    
+                    <div style="margin-top: 20px;">
+                        <div style="display: flex; align-items: center; margin-bottom: 15px; padding: 12px; background: rgba(40, 40, 80, 0.3); border-radius: 10px;">
+                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #ffd166, #ff9e6d); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                                <i class="fas fa-crown"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: bold; color: #ffd166;">刃 · 5★ 限定角色</div>
+                                <div style="font-size: 14px; color: #b8b8ff;">获取概率大幅提升</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                            <div style="text-align: center; padding: 12px; background: rgba(40, 40, 80, 0.3); border-radius: 10px;">
+                                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #b266ff, #8a2be2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div style="font-size: 14px;">佩拉</div>
+                                <div style="font-size: 12px; color: #b8b8ff;">★★★★</div>
+                            </div>
+                            
+                            <div style="text-align: center; padding: 12px; background: rgba(40, 40, 80, 0.3); border-radius: 10px;">
+                                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #b266ff, #8a2be2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div style="font-size: 14px;">娜塔莎</div>
+                                <div style="font-size: 12px; color: #b8b8ff;">★★★★</div>
+                            </div>
+                            
+                            <div style="text-align: center; padding: 12px; background: rgba(40, 40, 80, 0.3); border-radius: 10px;">
+                                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #b266ff, #8a2be2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div style="font-size: 14px;">阿兰</div>
+                                <div style="font-size: 12px; color: #b8b8ff;">★★★★</div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px; padding: 15px; background: rgba(26, 26, 46, 0.8); border-radius: 10px; border-left: 4px solid #6b46c1;">
+                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <i class="fas fa-info-circle" style="color: #6b46c1; margin-right: 10px;"></i>
+                                <div style="font-weight: bold;">保底规则</div>
+                            </div>
+                            <div style="font-size: 14px; color: #b8b8ff; line-height: 1.5;">
+                                • 每10次跃迁必出4星或以上对象<br>
+                                • 90次内必出5星对象<br>
+                                • 本次5星角色出现概率提升
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     
+    <!-- 抽卡结果弹窗 -->
     <div class="modal" id="resultModal">
         <div class="modal-content">
-            <h2 style="text-align: center; margin-bottom: 15px;">抽卡结果</h2>
-            <div id="resultList"></div>
-            <div style="text-align: center; margin-top: 20px;">
-                <button onclick="closeModal()" style="padding: 10px 30px; background: #6b46c1; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                    关闭
-                </button>
+            <div class="modal-header">
+                <h2 class="modal-title">跃迁结果</h2>
+                <p class="modal-subtitle">本次抽卡获得以下物品</p>
+            </div>
+            
+            <div class="result-grid" id="resultGrid">
+                <!-- 结果将动态添加到这里 -->
+            </div>
+            
+            <div class="modal-close">
+                <button class="close-btn" onclick="closeModal()">确认</button>
             </div>
         </div>
     </div>
 
     <script>
         // 游戏状态
-        let gameState = {
+        const gameState = {
             stellarJade: 3280,
             specialTicket: 5,
             pity5: 45,
             pity4: 7,
-            isGuaranteed: false
+            isGuaranteed: false,
+            totalDraws: 0
         };
         
         // 物品池
         const itemPool = {
-            5: { name: '刃', type: '角色', isUP: true },
+            5: [
+                { name: '刃', type: '角色', isUP: true, emoji: '⚔️' }
+            ],
             4: [
-                { name: '佩拉', type: '角色', isUP: true },
-                { name: '娜塔莎', type: '角色', isUP: true },
-                { name: '阿兰', type: '角色', isUP: true },
-                { name: '三月七', type: '角色', isUP: false }
+                { name: '佩拉', type: '角色', isUP: true, emoji: '❄️' },
+                { name: '娜塔莎', type: '角色', isUP: true, emoji: '💊' },
+                { name: '阿兰', type: '角色', isUP: true, emoji: '⚡' },
+                { name: '停云', type: '角色', isUP: false, emoji: '🎶' },
+                { name: '素裳', type: '角色', isUP: false, emoji: '🗡️' },
+                { name: '三月七', type: '角色', isUP: false, emoji: '🛡️' },
+                { name: '论剑', type: '光锥', isUP: false, emoji: '🔪' },
+                { name: '唯有沉默', type: '光锥', isUP: false, emoji: '🎯' }
             ],
             3: [
-                { name: '轮契', type: '光锥' },
-                { name: '琥珀', type: '光锥' },
-                { name: '天倾', type: '光锥' }
+                { name: '轮契', type: '光锥', emoji: '🔄' },
+                { name: '琥珀', type: '光锥', emoji: '🟠' },
+                { name: '天倾', type: '光锥', emoji: '🌠' },
+                { name: '离弦', type: '光锥', emoji: '🏹' },
+                { name: '嘉果', type: '光锥', emoji: '🍎' },
+                { name: '渊环', type: '光锥', emoji: '⭕' }
             ]
         };
         
-        // 初始化
+        // 初始化函数
         function init() {
             updateUI();
             
-            // 绑定按钮事件
+            // 绑定单抽按钮事件
             document.getElementById('singleDraw').addEventListener('click', function() {
                 if (gameState.stellarJade >= 160) {
                     gameState.stellarJade -= 160;
+                    gameState.totalDraws++;
+                    gameState.pity5++;
+                    gameState.pity4++;
+                    
+                    const result = drawItem();
+                    showResult([result]);
+                    updateUI();
+                } else if (gameState.specialTicket >= 1) {
+                    gameState.specialTicket -= 1;
+                    gameState.totalDraws++;
                     gameState.pity5++;
                     gameState.pity4++;
                     
@@ -268,24 +817,36 @@
                     showResult([result]);
                     updateUI();
                 } else {
-                    alert('星琼不足！');
+                    alert('星琼和专票不足！');
                 }
             });
             
+            // 绑定十连按钮事件
             document.getElementById('tenDraw').addEventListener('click', function() {
                 if (gameState.stellarJade >= 1600) {
                     gameState.stellarJade -= 1600;
                     
                     const results = [];
+                    let got4Star = false;
+                    
                     for (let i = 0; i < 10; i++) {
+                        gameState.totalDraws++;
                         gameState.pity5++;
                         gameState.pity4++;
-                        results.push(drawItem());
+                        
+                        const result = drawItem();
+                        results.push(result);
+                        
+                        if (result.rarity >= 4) {
+                            got4Star = true;
+                        }
                     }
                     
                     // 十连保底：确保至少一个四星
-                    if (!results.some(r => r.rarity >= 4)) {
-                        results[9] = drawItem(true); // 强制四星
+                    if (!got4Star) {
+                        // 替换最后一个结果为四星
+                        gameState.pity4 = 0;
+                        results[9] = drawItem(true);
                     }
                     
                     showResult(results);
@@ -298,104 +859,130 @@
         
         // 更新界面
         function updateUI() {
-            document.getElementById('stellar-jade').textContent = gameState.stellarJade;
-            document.getElementById('special-ticket').textContent = gameState.specialTicket;
-            document.getElementById('pity5').textContent = gameState.pity5;
-            document.getElementById('remain5').textContent = 90 - gameState.pity5;
+            // 更新货币显示
+            document.getElementById('stellarJade').textContent = gameState.stellarJade;
+            document.getElementById('specialTicket').textContent = gameState.specialTicket;
+            
+            // 更新保底计数
+            document.getElementById('pity5Count').textContent = gameState.pity5;
+            document.getElementById('pity5Remain').textContent = 90 - gameState.pity5;
+            
+            document.getElementById('pity4Count').textContent = gameState.pity4;
+            document.getElementById('pity4Remain').textContent = 10 - gameState.pity4;
             
             // 更新按钮状态
-            document.getElementById('singleDraw').disabled = gameState.stellarJade < 160;
-            document.getElementById('tenDraw').disabled = gameState.stellarJade < 1600;
+            const singleBtn = document.getElementById('singleDraw');
+            const tenBtn = document.getElementById('tenDraw');
+            
+            singleBtn.disabled = gameState.stellarJade < 160 && gameState.specialTicket < 1;
+            tenBtn.disabled = gameState.stellarJade < 1600;
         }
         
         // 抽卡逻辑
         function drawItem(force4Star = false) {
-            // 保底检查
+            // 五星保底检查
             if (gameState.pity5 >= 90) {
                 gameState.pity5 = 0;
-                return getItem(5);
+                const item = getRandomItem(5);
+                item.rarity = 5;
+                return item;
             }
             
+            // 四星保底检查
             if (gameState.pity4 >= 10 || force4Star) {
                 gameState.pity4 = 0;
-                return getItem(4);
+                const item = getRandomItem(4);
+                item.rarity = 4;
+                return item;
             }
             
             // 随机概率
             const rand = Math.random() * 100;
-            if (rand < 0.6) { // 0.6%
+            
+            if (rand < 0.6) { // 0.6% 五星
                 gameState.pity5 = 0;
-                return getItem(5);
-            } else if (rand < 0.6 + 5.1) { // 5.1%
+                const item = getRandomItem(5);
+                item.rarity = 5;
+                return item;
+            } else if (rand < 0.6 + 5.1) { // 5.1% 四星
                 gameState.pity4 = 0;
-                return getItem(4);
-            } else { // 94.3%
-                return getItem(3);
+                const item = getRandomItem(4);
+                item.rarity = 4;
+                return item;
+            } else { // 94.3% 三星
+                const item = getRandomItem(3);
+                item.rarity = 3;
+                return item;
             }
         }
         
-        // 获取物品
-        function getItem(rarity) {
-            let item;
-            
-            switch(rarity) {
-                case 5:
-                    item = { ...itemPool[5], rarity: 5 };
-                    gameState.isGuaranteed = false;
-                    break;
-                    
-                case 4:
-                    const pool4 = itemPool[4];
-                    const random4 = pool4[Math.floor(Math.random() * pool4.length)];
-                    item = { ...random4, rarity: 4 };
-                    break;
-                    
-                case 3:
-                    const pool3 = itemPool[3];
-                    const random3 = pool3[Math.floor(Math.random() * pool3.length)];
-                    item = { ...random3, rarity: 3 };
-                    break;
-            }
-            
-            return item;
+        // 获取随机物品
+        function getRandomItem(rarity) {
+            const pool = itemPool[rarity];
+            const randomIndex = Math.floor(Math.random() * pool.length);
+            return {...pool[randomIndex]}; // 返回副本
         }
         
-        // 显示结果
+        // 显示抽卡结果
         function showResult(results) {
-            const resultList = document.getElementById('resultList');
-            resultList.innerHTML = '';
+            const resultGrid = document.getElementById('resultGrid');
+            resultGrid.innerHTML = '';
             
+            // 清空之前的动画类
+            document.querySelectorAll('.result-item').forEach(item => {
+                item.classList.remove('revealed');
+            });
+            
+            // 添加新的结果项
             results.forEach((item, index) => {
                 const div = document.createElement('div');
-                div.className = 'result-item';
-                div.style.opacity = '0';
-                div.style.transform = 'translateY(10px)';
-                div.style.transition = 'all 0.3s';
-                div.style.transitionDelay = (index * 0.1) + 's';
+                div.className = `result-item result-${item.rarity}star`;
                 
-                const stars = '★'.repeat(item.rarity);
-                const upBadge = item.isUP ? '<span style="color:#ff6b9d; margin-left:10px;">[UP]</span>' : '';
+                // 设置星级显示
+                let stars = '';
+                for (let i = 0; i < item.rarity; i++) {
+                    stars += '★';
+                }
                 
                 div.innerHTML = `
-                    <div class="stars-${item.rarity}" style="font-weight:bold;">
+                    <div class="result-rarity" style="color: ${
+                        item.rarity === 5 ? '#ffd166' : 
+                        item.rarity === 4 ? '#b266ff' : '#66b3ff'
+                    }">
                         ${stars}
                     </div>
-                    <div>
-                        <strong>${item.name}</strong> (${item.type}) ${upBadge}
-                    </div>
+                    <div class="result-name">${item.emoji} ${item.name}</div>
+                    <div class="result-type">${item.type}${item.isUP ? ' · UP' : ''}</div>
                 `;
                 
-                resultList.appendChild(div);
+                resultGrid.appendChild(div);
                 
-                // 添加动画
+                // 添加延迟显示动画
                 setTimeout(() => {
-                    div.style.opacity = '1';
-                    div.style.transform = 'translateY(0)';
-                }, index * 100 + 50);
+                    div.classList.add('revealed');
+                    
+                    // 如果是五星，添加特殊效果
+                    if (item.rarity === 5) {
+                        setTimeout(() => {
+                            div.style.transform = 'scale(1.1)';
+                            div.style.boxShadow = '0 0 25px rgba(255, 209, 102, 0.7)';
+                            
+                            setTimeout(() => {
+                                div.style.transform = 'scale(1)';
+                                div.style.boxShadow = '0 0 15px rgba(255, 209, 102, 0.3)';
+                            }, 300);
+                        }, 500);
+                    }
+                }, index * 100 + 300);
             });
             
             // 显示弹窗
             document.getElementById('resultModal').style.display = 'flex';
+            
+            // 如果有五星，播放音效提示（模拟）
+            if (results.some(item => item.rarity === 5)) {
+                console.log('🎉 恭喜获得五星角色！');
+            }
         }
         
         // 关闭弹窗
@@ -412,6 +999,29 @@
         
         // 页面加载完成时初始化
         window.addEventListener('DOMContentLoaded', init);
+        
+        // 添加一些交互效果
+        document.addEventListener('DOMContentLoaded', function() {
+            // 按钮悬停效果
+            const buttons = document.querySelectorAll('.draw-btn');
+            buttons.forEach(btn => {
+                btn.addEventListener('mouseenter', function() {
+                    if (!this.disabled) {
+                        this.style.filter = 'brightness(1.2)';
+                    }
+                });
+                
+                btn.addEventListener('mouseleave', function() {
+                    this.style.filter = 'brightness(1)';
+                });
+            });
+            
+            // 模拟角色展示区域的动态效果
+            const charImage = document.querySelector('.char-image');
+            setInterval(() => {
+                charImage.style.filter = `hue-rotate(${Math.random() * 20}deg) brightness(${0.9 + Math.random() * 0.2})`;
+            }, 3000);
+        });
     </script>
 </body>
 </html>
