@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+<meta charset="UTF-8">
+<title>猫老大 · 技能等级调节</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="猫老大技能等级调节器 - 命途: 记忆 属性: 物理 定位: 召唤输出/单独作战">
+<meta name="generator" content="技能调节器模板 v1.0">
+<link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
+<link rel="preload" href="./images/role_4_0s" as="image">
+<link rel="preconnect" href="https://xiaochen1235789.github.io">
+
+<style>
+/* ====== 基础变量与重置 ====== */
+:root {
+  /* 主题颜色 - 猫主题色（橙黑配色） */
+  --bg: #121212;
+  --surface: #1a1a1a;
+  --card: #202020;
+  --primary: #ff9933;   /* 猫主题橙 */
+  --primary-light: #ffb366;
+  --primary-dark: #cc6600;
+  --secondary: #66ccff; /* 记忆蓝 */
+  --text: #e0e0e0;
+  --sub-text: #99aabb;
+  --line: #333;
+  --radius: 6px;
+  --transition: .3s ease;
+  
+  /* 按钮颜色 */
+  --button-bg: #2d5243;
+  --button-hover: #3d725f;
+  --button-disabled: #1f2e28;
+  
+  /* 阴影效果 */
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  
+  /* 特殊效果 */
+  --legend-gradient: linear-gradient(45deg, #ff9933, #ff6600);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+  line-height: 1.5;
+  padding-bottom: 90px !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ====== 通用元素样式 ====== */
+a {
+  color: var(--secondary);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+a:hover {
+  color: var(--primary-light);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ====== 顶部导航栏 ====== */
+.top-bar {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  background-color: rgba(26, 26, 26, 0.9);
+}
+
+.top-bar .back {
+  font-size: 1.4rem;
+  margin-right: 12px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  transition: background-color var(--transition);
+}
+
+.top-bar .back:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.top-bar .title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  flex-grow: 1;
+}
+
+/* ====== 角色展示区 ====== */
+.hero-section {
+  position: relative;
+  background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+  overflow: hidden;
+}
+
+.hero-image {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  opacity: 0.95;
+}
+
+.hero-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+}
+
+.hero-name {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  margin-bottom: 8px;
+}
+
+.tag-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  background: rgba(255, 153, 51, 0.15);
+  color: var(--primary);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  border: 1px solid rgba(255, 153, 51, 0.3);
+  backdrop-filter: blur(4px);
+}
+
+/* ====== 卡片容器 ====== */
+.card {
+  background: var(--card);
+  margin: 12px 16px;
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* ====== 技能模块 ====== */
+.skill-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+}
+
+.skill-name {
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--secondary);
+  flex-grow: 1;
+}
+
+/* ====== 等级控制 ====== */
+.level-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.level-value {
+  min-width: 50px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: var(--primary);
+  transition: all var(--transition);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.level-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--button-bg);
+  color: var(--text);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  user-select: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.level-btn:hover:not(:disabled) {
+  background: var(--button-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.level-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.level-btn:disabled {
+  background: var(--button-disabled);
+  color: #666;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.level-btn.up {
+  color: var(--secondary);
+}
+
+.level-btn.down {
+  color: #ff7b7b;
+}
+
+/* ====== 技能内容 ====== */
+.skill-content {
+  font-size: 0.95rem;
+  color: var(--sub-text);
+  line-height: 1.6;
+}
+
+.skill-val {
+  color: var(--primary);
+  font-weight: 700;
+  transition: all var(--transition);
+  display: inline-block;
+  padding: 0 2px;
+}
+
+/* ====== 特殊文本样式 ====== */
+.legend-text {
+  background: var(--legend-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 800;
+}
+
+.highlight-text {
+  color: orange;
+  font-weight: 600;
+}
+
+.special-text {
+  color: #ff6666;
+  font-weight: 600;
+}
+
+.energy-text {
+  color: #66ccff;
+  font-weight: 600;
+}
+
+/* ====== 表格样式 ====== */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-top: 12px;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.data-table th, .data-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.data-table th {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* ====== 额外能力区域 ====== */
+.section-title {
+  font-size: 1.2rem;
+  color: var(--secondary);
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ability-item {
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.ability-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.ability-name {
+  color: var(--primary);
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 1rem;
+}
+
+/* ====== 命座样式 ====== */
+.constellation-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.constellation-table th, .constellation-table td {
+  padding: 12px 8px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+
+.constellation-table th {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.constellation-table td:first-child {
+  color: var(--primary);
+  font-weight: 700;
+  min-width: 60px;
+  font-size: 0.9rem;
+}
+
+.constellation-table td:nth-child(2) {
+  color: var(--secondary);
+  min-width: 80px;
+  font-weight: 600;
+}
+
+.const-val {
+  color: var(--primary);
+  font-weight: 700;
+  text-shadow: 0 0 4px rgba(255, 153, 51, 0.3);
+  transition: all var(--transition);
+  display: inline-block;
+  cursor: help;
+  position: relative;
+}
+
+.const-val:hover {
+  text-shadow: 0 0 12px rgba(255, 153, 51, 0.7);
+  transform: scale(1.05);
+}
+
+/* ====== 提示工具 ====== */
+.tooltip {
+  position: absolute;
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  width: 200px;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--line);
+  z-index: 10;
+}
+
+.const-val:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ====== 播放器容器 ====== */
+#musicPlayerContainer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  transition: height var(--transition);
+  overflow: hidden;
+}
+
+/* ====== 加载动画 ====== */
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--primary);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ====== 响应式设计 ====== */
+@media (max-width: 768px) {
+  .top-bar {
+    padding: 10px 12px;
+  }
+  
+  .hero-name {
+    font-size: 1.5rem;
+  }
+  
+  .card {
+    margin: 10px 12px;
+    padding: 16px;
+  }
+  
+  .skill-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .level-controls {
+    align-self: stretch;
+    justify-content: center;
+  }
+  
+  .constellation-table th, .constellation-table td {
+    padding: 8px 6px;
+    font-size: 0.85rem;
+  }
+  
+  .constellation-table td:nth-child(2) {
+    min-width: 70px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-name {
+    font-size: 1.3rem;
+  }
+  
+  .tag {
+    font-size: 0.7rem;
+    padding: 3px 10px;
+  }
+  
+  .skill-name {
+    font-size: 1.1rem;
+  }
+  
+  .level-value {
+    font-size: 1.2rem;
+  }
+  
+  .level-btn {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* ====== 打印样式 ====== */
+@media print {
+  #musicPlayerContainer,
+  .level-controls,
+  .top-bar .back {
+    display: none !important;
+  }
+  
+  body {
+    padding-bottom: 0 !important;
+  }
+  
+  .card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    margin: 10px 0;
+  }
+}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <a class="back" href="a主页备用.html" aria-label="返回主页">‹</a>
+  <span class="title">猫老大 · 技能等级调节</span>
+</div>
+
+<!-- 角色展示区 -->
+<section class="hero-section" aria-label="角色展示">
+  <img class="hero-image" src="[猫老大立绘路径]" alt="猫老大立绘" loading="eager">
+  <div class="hero-overlay">
+    <div class="hero-name">猫老大</div>
+    <div class="tag-container">
+      <span class="tag">命途: 记忆</span>
+      <span class="tag">属性: 物理</span>
+      <span class="tag">定位: 召唤输出/单独作战</span>
+      <span class="tag">稀有度: 限定5星</span>
+    </div>
+  </div>
+</section>
+
+<!-- 普攻 -->
+<section class="card" id="normal-attack" aria-label="普攻技能">
+  <div class="skill-header">
+    <div class="skill-name">普攻 · 肉垫拍击</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('normal', -1)" id="normal-down" aria-label="降低普攻等级">↓</button>
+      <span class="level-value" id="normal-level">1/10</span>
+      <button class="level-btn up" onclick="changeSkillLevel('normal', 1)" id="normal-up" aria-label="提高普攻等级">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    对指定敌方目标单体造成等同于猫老大 <span id="normal-val1" class="skill-val">110%</span> 攻击力的物理属性伤害。
+    <table class="data-table">
+      <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+      <tbody>
+        <tr><td>削韧</td><td>单体10点</td></tr>
+        <tr><td>战技点</td><td>+1</td></tr>
+        <tr><td>[小鱼干]变化</td><td>+1</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 强化普攻 -->
+<section class="card" id="enhanced-attack" aria-label="强化普攻技能">
+  <div class="skill-header">
+    <div class="skill-name">强化普攻 · 裂钢爪</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('enhanced', -1)" id="enhanced-down" aria-label="降低强化普攻等级">↓</button>
+      <span class="level-value" id="enhanced-level">1/10</span>
+      <button class="level-btn up" onclick="changeSkillLevel('enhanced', 1)" id="enhanced-up" aria-label="提高强化普攻等级">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    对指定敌方目标单体造成等同于猫老大 <span id="enhanced-val1" class="skill-val">250%</span> 攻击力的物理属性伤害。并获得1点<span class="energy-text">[能量]</span>。
+    <table class="data-table">
+      <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+      <tbody>
+        <tr><td>削韧</td><td>单体20点</td></tr>
+        <tr><td>战技点</td><td>+1</td></tr>
+        <tr><td>[能量]变化</td><td>+1</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 战技 -->
+<section class="card" id="skill-attack" aria-label="战技技能">
+  <div class="skill-header">
+    <div class="skill-name">战技 · 小弟集结！</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('skill', -1)" id="skill-down" aria-label="降低战技等级">↓</button>
+      <span class="level-value" id="skill-level">1/15</span>
+      <button class="level-btn up" onclick="changeSkillLevel('skill', 1)" id="skill-up" aria-label="提高战技等级">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    召唤1只忆灵<span class="special-text">[猫小弟]</span>。并使场上所有猫小弟回复等同于猫小弟 <span id="skill-val1" class="skill-val">77.5%</span> 生命上限的生命值，对敌方目标全体造成等同于猫老大 <span id="skill-val2" class="skill-val">198%</span> 攻击力的物理属性伤害，并有100%固定概率为敌方目标全体施加1层<span class="highlight-text">[畏惧]</span>，<span class="highlight-text">[畏惧]</span>：受到的伤害提高20%。最多叠加3层。并使<span class="special-text">[猫老大]</span>受到攻击的概率大幅度提高。
+    <table class="data-table">
+      <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+      <tbody>
+        <tr><td>削韧</td><td>群攻20点</td></tr>
+        <tr><td>战技点</td><td>-1</td></tr>
+        <tr><td>[小鱼干]变化</td><td>+3</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 强化战技 -->
+<section class="card" id="enhanced-skill" aria-label="强化战技技能">
+  <div class="skill-header">
+    <div class="skill-name">强化战技 · 暴力征召</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('enhanced-skill', -1)" id="enhanced-skill-down" aria-label="降低强化战技等级">↓</button>
+      <span class="level-value" id="enhanced-skill-level">1/15</span>
+      <button class="level-btn up" onclick="changeSkillLevel('enhanced-skill', 1)" id="enhanced-skill-up" aria-label="提高强化战技等级">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    若场上没有<span class="special-text">[肌肉猫小弟]</span>，则召唤1只<span class="special-text">[肌肉猫小弟]</span>。对敌方目标全体造成等同于猫老大 <span id="enhanced-skill-val1" class="skill-val">282%</span> 攻击力的物理属性伤害，获得2点<span class="energy-text">[能量]</span>。并有100%固定概率为敌方目标全体施加1层<span class="highlight-text">[回煞]</span>，<span class="highlight-text">[回煞]</span>：受到的伤害提高35%。最多叠加2层。
+    <table class="data-table">
+      <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+      <tbody>
+        <tr><td>削韧</td><td>群攻20点</td></tr>
+        <tr><td>战技点</td><td>-1</td></tr>
+        <tr><td>[能量]变化</td><td>+2</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 终结技 -->
+<section class="card" id="ultimate-attack" aria-label="终结技技能">
+  <div class="skill-header">
+    <div class="skill-name">终结技 · 终极·猫车冲击</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('ultimate', -1)" id="ultimate-down" aria-label="降低终结技等级">↓</button>
+      <span class="level-value" id="ultimate-level">1/15</span>
+      <button class="level-btn up" onclick="changeSkillLevel('ultimate', 1)" id="ultimate-up" aria-label="提高终结技等级">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    对敌方目标单体造成等同于猫老大 <span id="ultimate-val1" class="skill-val">320%</span> 攻击力的物理属性的伤害，并使场上所有忆灵<span class="special-text">[猫小弟]</span>获得强化，变为<span class="special-text">[肌肉猫小弟]</span>，该状态持续至发动3次攻击后结束变回<span class="special-text">[猫小弟]</span>。每个肌肉猫小弟初始拥有等同于猫老大 <span id="ultimate-val2" class="skill-val">188%</span> 速度的速度，拥有等同于猫老大 <span id="ultimate-val3" class="skill-val">213%</span> 生命上限的生命值，拥有等同于猫老大 <span id="ultimate-val4" class="skill-val">188%</span> 攻击力的攻击力。其余属性相同。
+    <table class="data-table">
+      <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+      <tbody>
+        <tr><td>削韧</td><td>单体30点</td></tr>
+        <tr><td>[小鱼干]变化</td><td>-12条</td></tr>
+        <tr><td>终结技结束后恢复</td><td>3条[小鱼干]</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 连携技 -->
+<section class="card" id="combo-attack" aria-label="连携技技能">
+  <div class="skill-header">
+    <div class="skill-name">连携技 · 猫群狂袭</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('combo', -1)" id="combo-down" aria-label="降低连携技等级">↓</button>
+      <span class="level-value" id="combo-level">1/15</span>
+      <button class="level-btn up" onclick="changeSkillLevel('combo', 1)" id="combo-up" aria-label="提高连携技等级">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    <span class="energy-text">[能量]</span>达到6点时激活该技能。猫老大和<span class="special-text">[肌肉猫小弟]</span>发动连携攻击。对敌方目标全体造成等同于猫老大 <span id="combo-val1" class="skill-val">265%</span> 攻击力+<span class="special-text">[肌肉猫小弟]</span> <span id="combo-val2" class="skill-val">397.5%</span> 攻击力的物理属性伤害。
+    <table class="data-table">
+      <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+      <tbody>
+        <tr><td>削韧</td><td>群攻20点</td></tr>
+        <tr><td>[能量]变化</td><td>-6点</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 天赋 -->
+<section class="card" id="talent-attack" aria-label="天赋技能">
+  <div class="skill-header">
+    <div class="skill-name">天赋 · 江湖规矩</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('talent', -1)" id="talent-down" aria-label="降低天赋等级">↓</button>
+      <span class="level-value" id="talent-level">1/15</span>
+      <button class="level-btn up" onclick="changeSkillLevel('talent', 1)" id="talent-up" aria-label="提高天赋等级">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    <span class="highlight-text">[小鱼干]</span>达到12条时激活终结技，<span class="highlight-text">[小鱼干]</span>最多叠加至17条。场上最多可拥有2只忆灵<span class="special-text">[猫小弟]</span>。每个猫小弟初始拥有等同于猫老大 <span id="talent-val1" class="skill-val">127.5%</span> 速度的速度以及等同于猫老大 <span id="talent-val2" class="skill-val">144%</span> 生命上限的生命值，其余属性相同。
+  </div>
+</section>
+
+<!-- 忆灵技 -->
+<section class="card" id="spirit-skill" aria-label="忆灵技能">
+  <div class="skill-header">
+    <div class="skill-name">忆灵技 · 处刑喵喵拳</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('spirit', -1)" id="spirit-down" aria-label="降低忆灵技等级">↓</button>
+      <span class="level-value" id="spirit-level">1/10</span>
+      <button class="level-btn up" onclick="changeSkillLevel('spirit', 1)" id="spirit-up" aria-label="提高忆灵技等级">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    自动对拥有<span class="highlight-text">[臣服]</span>状态的敌方目标单体发动3次攻击，每次造成等同于猫老大 <span id="spirit-val1" class="skill-val">190%</span> 攻击力的真实伤害，优先攻击精英怪及以上的敌方目标。
+  </div>
+</section>
+
+<!-- 忆灵天赋 -->
+<section class="card" id="spirit-talent" aria-label="忆灵天赋技能">
+  <div class="skill-header">
+    <div class="skill-name">忆灵天赋 · 义气·替身·觉醒</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('spirit-talent', -1)" id="spirit-talent-down" aria-label="降低忆灵天赋等级">↓</button>
+      <span class="level-value" id="spirit-talent-level">1/10</span>
+      <button class="level-btn up" onclick="changeSkillLevel('spirit-talent', 1)" id="spirit-talent-up" aria-label="提高忆灵天赋等级">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    猫老大以及猫小弟发动1次攻击后，使猫老大获得3层<span class="highlight-text">[努力]</span>。<span class="highlight-text">[努力]</span>：攻击力提高 <span id="spirit-talent-val1" class="skill-val">1.2%</span>，防御力提高1%，暴击伤害提高2%。最多叠加50层。当敌方目标攻击猫老大时，若<span class="special-text">[猫小弟]</span>或<span class="special-text">[肌肉猫小弟]</span>在场，自动抵挡该伤害并扣除相应血量。当<span class="special-text">[猫小弟]</span>或<span class="special-text">[肌肉猫小弟]</span>被敌方目标击败后使猫老大获得1层<span class="highlight-text">[仇恨]</span>，<span class="highlight-text">[仇恨]</span>达到2层时展开境界<span class="special-text">[杀戮战场]</span>并扣除2层<span class="highlight-text">[仇恨]</span>。当敌方目标进入此境界时防御力降低 <span id="spirit-talent-val2" class="skill-val">32%</span>。猫老大进入黑化状态并获得<span class="special-text">[喵星霸主]</span>状态，进入该状态视为使用终结技，该状态免疫敌方目标<span class="highlight-text">[控制类技能]</span>。猫老大攻击8次后退出黑化状态，其他队友以及相应忆灵暂时退出战斗，猫老大退出黑化状态后回归战斗。召唤2只<span class="special-text">[肌肉猫小弟]</span>，猫老大退出黑化状态后消失。使自身生命上限提高 <span id="spirit-talent-val3" class="skill-val">290%</span>，攻击力提高 <span id="spirit-talent-val4" class="skill-val">145%</span>，防御力提高 <span id="spirit-talent-val5" class="skill-val">63.5%</span>，<span class="highlight-text">[普攻]</span>变为<span class="highlight-text">[强化普攻]</span>，<span class="highlight-text">[战技]</span>变为<span class="highlight-text">[强化战技]</span>，终结技变为<span class="highlight-text">[连携技]</span>。当猫老大生命值低于1点时或攻击8次后退出黑化状态并回复等同于猫老大100%生命上限的生命值，最后行动提前100%。
+  </div>
+</section>
+
+<!-- 额外能力 -->
+<section class="card" aria-label="额外能力">
+  <div class="section-title">额外能力</div>
+  
+  <div class="ability-item">
+    <div class="ability-name">征服印记</div>
+    <div class="ability-desc">
+      猫老大以及猫小弟每次攻击后，给予被攻击的敌方目标陷入1层<span class="highlight-text">[臣服]</span>状态，<span class="highlight-text">[臣服]</span>：造成的伤害降低4%，全属性抗性降低2%。<span class="highlight-text">[臣服]</span>最多叠加5层。
+    </div>
+  </div>
+  
+  <div class="ability-item">
+    <div class="ability-name">猫之财宝</div>
+    <div class="ability-desc">
+      施放普攻后额外获得1条<span class="highlight-text">[小鱼干]</span>和召唤1只<span class="special-text">[猫小弟]</span>。
+    </div>
+  </div>
+  
+  <div class="ability-item">
+    <div class="ability-name">凶暴领域</div>
+    <div class="ability-desc">
+      境界<span class="special-text">[杀戮战场]</span>额外使敌方目标的攻击力降低24%。
+    </div>
+  </div>
+</section>
+
+<!-- 命座 -->
+<section class="card" aria-label="命之座">
+  <div class="section-title">命之座</div>
+  
+  <table class="constellation-table">
+    <thead>
+      <tr>
+        <th width="60">层数</th>
+        <th width="80">名称</th>
+        <th>效果</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1命</td>
+        <td>爪牙初现</td>
+        <td>
+          忆灵天赋中的每层<span class="highlight-text">[努力]</span>状态额外使猫老大暴击率提高 <span class="const-val">0.5%<span class="tooltip">每层努力增加的暴击率</span></span> ，造成的伤害提高 <span class="const-val">1%<span class="tooltip">每层努力增加的伤害</span></span>。
+        </td>
+      </tr>
+      <tr>
+        <td>2命</td>
+        <td>利爪饮血</td>
+        <td>
+          猫老大进入黑化状态后额外使自身暴击率提高 <span class="const-val">25%<span class="tooltip">黑化状态额外暴击率</span></span> ，<span class="special-text">[肌肉猫小弟]</span>获得强化，生命上限提高至等同于猫老大 <span class="const-val">300%<span class="tooltip">肌肉猫小弟生命上限百分比</span></span> 生命上限的生命值，并使猫老大和<span class="special-text">[肌肉猫小弟]</span>行动提前 <span class="const-val">100%<span class="tooltip">行动提前值</span></span>。
+        </td>
+      </tr>
+      <tr>
+        <td>3命</td>
+        <td>战技精熟</td>
+        <td>
+          普攻等级+<span class="const-val">1<span class="tooltip">普攻等级提升</span></span>，最多不超过 <span class="const-val">10<span class="tooltip">普攻等级上限</span></span> 级
+          天赋等级+<span class="const-val">2<span class="tooltip">天赋等级提升</span></span>，最多不超过 <span class="const-val">15<span class="tooltip">天赋等级上限</span></span> 级
+          忆灵技等级+<span class="const-val">1<span class="tooltip">忆灵技等级提升</span></span>，最多不超过 <span class="const-val">10<span class="tooltip">忆灵技等级上限</span></span> 级
+          连携技等级+<span class="const-val">2<span class="tooltip">连携技等级提升</span></span>，最多不超过 <span class="const-val">15<span class="tooltip">连携技等级上限</span></span> 级
+        </td>
+      </tr>
+      <tr>
+        <td>4命</td>
+        <td>忠诚盟约</td>
+        <td>
+          忆灵天赋中的<span class="highlight-text">[努力]</span>状态可叠加层数提升至 <span class="const-val">70<span class="tooltip">努力最大叠加层数</span></span> 层，进入境界<span class="special-text">[杀戮战场]</span>后队友及其忆灵不会退出战斗。
+        </td>
+      </tr>
+      <tr>
+        <td>5命</td>
+        <td>权能升华</td>
+        <td>
+          战技等级+<span class="const-val">2<span class="tooltip">战技等级提升</span></span>，最多不超过 <span class="const-val">15<span class="tooltip">战技等级上限</span></span> 级
+          终结技等级+<span class="const-val">2<span class="tooltip">终结技等级提升</span></span>，最多不超过 <span class="const-val">15<span class="tooltip">终结技等级上限</span></span> 级
+          忆灵天赋等级+<span class="const-val">1<span class="tooltip">忆灵天赋等级提升</span></span>，最多不超过 <span class="const-val">10<span class="tooltip">忆灵天赋等级上限</span></span> 级
+        </td>
+      </tr>
+      <tr>
+        <td>6命</td>
+        <td>唯我独尊</td>
+        <td>
+          猫老大进入黑化状态后不会退出黑化状态，持续到生命值低于1滴后退出黑化状态。进入战斗后立即进入黑化状态并展开境界<span class="special-text">[杀戮战场]</span>。并且猫老大额外获得强化，生命上限额外提高 <span class="const-val">100%<span class="tooltip">生命上限额外提升</span></span> ，暴击伤害提高 <span class="const-val">150%<span class="tooltip">暴击伤害提升</span></span> ，并使<span class="special-text">[猫老大]</span>获得全队攻击力总和* <span class="const-val">120%<span class="tooltip">全队攻击力转化比例</span></span> 的攻击力。
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 播放器容器 -->
+<div id="musicPlayerContainer">
+  <!-- 音乐播放器iframe -->
+</div>
+
+<script>
+// ====== 猫老大技能数据配置 ======
+const skillConfig = {
+  normal: {
+    level: 1,
+    maxLevel: 10, // 普攻最高等级
+    values: [
+      { id: 'normal-val1', base: 110, step: 10 } // 基础值110%，每级增加10%
+    ]
+  },
+  enhanced: {
+    level: 1,
+    maxLevel: 10, // 强化普攻最高等级
+    values: [
+      { id: 'enhanced-val1', base: 250, step: 25 } // 基础值250%，每级增加25%
+    ]
+  },
+  skill: {
+    level: 1,
+    maxLevel: 15, // 战技最高等级
+    values: [
+      { id: 'skill-val1', base: 77.5, step: 2.5 }, // 基础值77.5%，每级增加2.5%
+      { id: 'skill-val2', base: 198, step: 15 }    // 基础值198%，每级增加15%
+    ]
+  },
+  'enhanced-skill': {
+    level: 1,
+    maxLevel: 15, // 强化战技最高等级
+    values: [
+      { id: 'enhanced-skill-val1', base: 282, step: 12 } // 基础值282%，每级增加12%
+    ]
+  },
+  ultimate: {
+    level: 1,
+    maxLevel: 15, // 终结技最高等级
+    values: [
+      { id: 'ultimate-val1', base: 320, step: 20 }, // 基础值320%，每级增加20%
+      { id: 'ultimate-val2', base: 188, step: 5 },  // 基础值188%，每级增加5%
+      { id: 'ultimate-val3', base: 213, step: 5 },  // 基础值213%，每级增加5%
+      { id: 'ultimate-val4', base: 188, step: 8 }   // 基础值188%，每级增加8%
+    ]
+  },
+  combo: {
+    level: 1,
+    maxLevel: 15, // 连携技最高等级
+    values: [
+      { id: 'combo-val1', base: 265, step: 15 },    // 基础值265%，每级增加15%
+      { id: 'combo-val2', base: 397.5, step: 22.5 } // 基础值397.5%，每级增加22.5%
+    ]
+  },
+  talent: {
+    level: 1,
+    maxLevel: 15, // 天赋最高等级
+    values: [
+      { id: 'talent-val1', base: 127.5, step: 2.5 }, // 基础值127.5%，每级增加2.5%
+      { id: 'talent-val2', base: 144, step: 4 }      // 基础值144%，每级增加4%
+    ]
+  },
+  spirit: {
+    level: 1,
+    maxLevel: 10, // 忆灵技最高等级
+    values: [
+      { id: 'spirit-val1', base: 190, step: 15 } // 基础值190%，每级增加15%
+    ]
+  },
+  'spirit-talent': {
+    level: 1,
+    maxLevel: 10, // 忆灵天赋最高等级
+    values: [
+      { id: 'spirit-talent-val1', base: 1.2, step: 0.1 },  // 基础值1.2%，每级增加0.1%
+      { id: 'spirit-talent-val2', base: 32, step: 3.5 },   // 基础值32%，每级增加3.5%
+      { id: 'spirit-talent-val3', base: 290, step: 35 },   // 基础值290%，每级增加35%
+      { id: 'spirit-talent-val4', base: 145, step: 17.5 }, // 基础值145%，每级增加17.5%
+      { id: 'spirit-talent-val5', base: 63.5, step: 7.25 } // 基础值63.5%，每级增加7.25%
+    ]
+  }
+};
+
+// 等级颜色映射（从1级到15级的颜色渐变）
+const levelColorMap = [
+  '#ffb366', '#ffad5c', '#ffa752',
+  '#ffa148', '#ff9b3e', '#ff9534',
+  '#ff8f2a', '#ff8920', '#ff8316',
+  '#ff7d0c', '#ff7702', '#ff7100',
+  '#ff6b00', '#ff6500', '#ff5f00'
+];
+
+// ====== 核心逻辑 ======
+// 状态管理
+const state = {
+  skills: { ...skillConfig }
+};
+
+// 工具函数：获取技能数值
+function getSkillValue(base, step, level) {
+  const value = base + step * (level - 1);
+  // 保留1位小数
+  return Math.round(value * 10) / 10;
+}
+
+// 工具函数：应用等级颜色
+function applyLevelColor(element, level) {
+  if (level >= 13 && level <= 15) {
+    element.classList.add('legend-text');
+    element.classList.remove('skill-val');
+  } else {
+    element.classList.remove('legend-text');
+    element.classList.add('skill-val');
+    element.style.color = levelColorMap[level - 1] || levelColorMap[0];
+  }
+}
+
+// 改变技能等级
+function changeSkillLevel(skillType, change) {
+  const skill = state.skills[skillType];
+  const newLevel = skill.level + change;
+  
+  if (newLevel < 1 || newLevel > skill.maxLevel) return;
+  
+  skill.level = newLevel;
+  updateSkillDisplay(skillType);
+  updateButtonState(skillType);
+  
+  // 保存状态
+  saveState();
+}
+
+// 更新技能显示
+function updateSkillDisplay(skillType) {
+  const skill = state.skills[skillType];
+  const levelElement = document.getElementById(`${skillType}-level`);
+  
+  // 更新等级显示
+  levelElement.textContent = `${skill.level}/${skill.maxLevel}`;
+  applyLevelColor(levelElement, skill.level);
+  
+  // 更新技能数值
+  skill.values.forEach(valueData => {
+    const element = document.getElementById(valueData.id);
+    if (element) {
+      const newValue = getSkillValue(valueData.base, valueData.step, skill.level);
+      element.textContent = `${newValue}%`;
+      applyLevelColor(element, skill.level);
+    }
+  });
+}
+
+// 更新按钮状态
+function updateButtonState(skillType) {
+  const skill = state.skills[skillType];
+  const downButton = document.getElementById(`${skillType}-down`);
+  const upButton = document.getElementById(`${skillType}-up`);
+  
+  if (downButton) downButton.disabled = skill.level <= 1;
+  if (upButton) upButton.disabled = skill.level >= skill.maxLevel;
+}
+
+// 初始化技能
+function initSkills() {
+  Object.keys(state.skills).forEach(skillType => {
+    updateSkillDisplay(skillType);
+    updateButtonState(skillType);
+  });
+}
+
+// ====== 状态管理 ======
+function saveState() {
+  try {
+    localStorage.setItem('catBossSkillState', JSON.stringify(state.skills));
+  } catch (err) {
+    console.warn('无法保存状态:', err);
+  }
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('catBossSkillState');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      Object.keys(parsed).forEach(key => {
+        if (state.skills[key]) {
+          state.skills[key].level = parsed[key].level;
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('无法加载状态:', err);
+  }
+}
+
+// ====== 键盘快捷键 ======
+function setupKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    // Alt + 数字键控制技能等级
+    if (e.altKey) {
+      let skillType = null;
+      let direction = 0;
+      
+      switch(e.key) {
+        case '1': skillType = 'normal'; direction = 1; break;
+        case '2': skillType = 'enhanced'; direction = 1; break;
+        case '3': skillType = 'skill'; direction = 1; break;
+        case '4': skillType = 'enhanced-skill'; direction = 1; break;
+        case '5': skillType = 'ultimate'; direction = 1; break;
+        case '6': skillType = 'combo'; direction = 1; break;
+        case '7': skillType = 'talent'; direction = 1; break;
+        case '8': skillType = 'spirit'; direction = 1; break;
+        case '9': skillType = 'spirit-talent'; direction = 1; break;
+      }
+      
+      if (skillType && direction) {
+        changeSkillLevel(skillType, direction);
+        e.preventDefault();
+      }
+    }
+    
+    // Alt + 减号/等号控制当前焦点的技能
+    if (e.altKey && (e.key === '-' || e.key === '_')) {
+      const focused = document.activeElement;
+      if (focused && focused.classList.contains('level-btn')) {
+        if (focused.classList.contains('down') && !focused.disabled) {
+          const skillType = focused.id.replace('-down', '');
+          changeSkillLevel(skillType, -1);
+          e.preventDefault();
+        }
+      }
+    }
+    
+    if (e.altKey && (e.key === '=' || e.key === '+')) {
+      const focused = document.activeElement;
+      if (focused && focused.classList.contains('level-btn')) {
+        if (focused.classList.contains('up') && !focused.disabled) {
+          const skillType = focused.id.replace('-up', '');
+          changeSkillLevel(skillType, 1);
+          e.preventDefault();
+        }
+      }
+    }
+  });
+}
+
+// ====== 初始化页面 ======
+function initPage() {
+  loadState();
+  initSkills();
+  setupKeyboardShortcuts();
+  
+  // 添加页面加载完成提示
+  console.log('猫老大技能页面加载完成');
+  
+  // 添加按钮点击动画效果
+  document.querySelectorAll('.level-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      this.style.transform = 'scale(0.95)';
+      setTimeout(() => {
+        this.style.transform = '';
+      }, 150);
+    });
+  });
+}
+
+// 启动页面
+initPage();
+
+// ====== 全局API ======
+window.CatBossSkillManager = {
+  changeSkillLevel,
+  getState: () => ({ ...state.skills }),
+  resetState: () => {
+    Object.keys(state.skills).forEach(key => {
+      state.skills[key].level = 1;
+    });
+    initSkills();
+    saveState();
+  },
+  // 导出当前配置
+  exportConfig: () => {
+    return {
+      skills: state.skills,
+      timestamp: new Date().toISOString()
+    };
+  }
+};
+</script>
+</body>
+</html>
