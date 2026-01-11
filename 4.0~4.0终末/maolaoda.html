@@ -938,13 +938,9 @@ const skillConfig = {
       // 7级: 20% + 7.25%*6 = 63.5%
       { id: 'spirit-talent-val4', base: 20, step: 7.25 },
       
-      // 防御力提高的公式，文本中描述为"防御力提高 63.5%"，但没有具体公式
-      // 根据其他公式模式，假设是 [10%+5%*6]
-      // 1级: 10% + 5%*0 = 10%
-      // 7级: 10% + 5%*6 = 40%
-      // 但文本中最高级是63.5%，所以需要调整为 [13.5%+8.5%*6]
-      // 1级: 13.5%, 7级: 13.5%+8.5%*6=64.5% (接近63.5%)
-      // 根据实际文本"防御力提高 63.5%"是最高级，所以用 [10%+8.92%*6] 来近似
+      // 防御力提高的公式，文本中最高级为63.5%
+      // 根据其他公式模式，假设是 [10%+8.92%*6] 来近似63.5%
+      // 1级: 10%, 7级: 10% + 8.92%*6 = 63.5%
       { id: 'spirit-talent-val5', base: 10, step: (63.5-10)/6 }
     ]
   }
@@ -952,15 +948,16 @@ const skillConfig = {
 
 // 状态管理
 const state = {
-  skills: { ...skillConfig },
-  playerState: null
+  skills: { ...skillConfig }
 };
 
 // 工具函数：获取技能数值
 function getSkillValue(base, step, level) {
   // 使用公式: base + step * (level - 1)
   // 这样1级就是base值，最高级就是文本文件中的最大值
-  return Number((base + step * (level - 1)).toFixed(2));
+  const value = base + step * (level - 1);
+  // 保留两位小数
+  return Math.round(value * 100) / 100;
 }
 
 // 工具函数：应用等级颜色
@@ -995,15 +992,19 @@ function updateSkillDisplay(skillType) {
   const levelElement = document.getElementById(`${skillType}-level`);
   
   // 更新等级显示
-  levelElement.textContent = `${skill.level}/${skill.maxLevel}`;
-  applyLevelColor(levelElement, skill.level);
+  if (levelElement) {
+    levelElement.textContent = `${skill.level}/${skill.maxLevel}`;
+    applyLevelColor(levelElement, skill.level);
+  }
   
   // 更新技能数值
   skill.values.forEach(valueData => {
     const element = document.getElementById(valueData.id);
-    const newValue = getSkillValue(valueData.base, valueData.step, skill.level);
-    element.textContent = `${newValue}%`;
-    applyLevelColor(element, skill.level);
+    if (element) {
+      const newValue = getSkillValue(valueData.base, valueData.step, skill.level);
+      element.textContent = `${newValue}%`;
+      applyLevelColor(element, skill.level);
+    }
   });
 }
 
@@ -1013,8 +1014,13 @@ function updateButtonState(skillType) {
   const downButton = document.getElementById(`${skillType}-down`);
   const upButton = document.getElementById(`${skillType}-up`);
   
-  downButton.disabled = skill.level <= 1;
-  upButton.disabled = skill.level >= skill.maxLevel;
+  if (downButton) {
+    downButton.disabled = skill.level <= 1;
+  }
+  
+  if (upButton) {
+    upButton.disabled = skill.level >= skill.maxLevel;
+  }
 }
 
 // 初始化技能
@@ -1028,7 +1034,12 @@ function initSkills() {
 // 状态管理
 function saveState() {
   try {
-    localStorage.setItem('catBossSkillState', JSON.stringify(state.skills));
+    // 只保存等级信息
+    const saveData = {};
+    Object.keys(state.skills).forEach(key => {
+      saveData[key] = { level: state.skills[key].level };
+    });
+    localStorage.setItem('catBossSkillState', JSON.stringify(saveData));
   } catch (err) {
     console.warn('无法保存状态:', err);
   }
@@ -1053,11 +1064,16 @@ function loadState() {
 // 音乐播放器控制
 function initializeMusicPlayer() {
   const iframe = document.getElementById('musicPlayerIframe');
-  iframe.style.height = '380px';
+  if (iframe) {
+    iframe.style.height = '380px';
+  }
   
   window.addEventListener('message', (e) => {
     if (e.data?.type === 'SONG_LIST_TOGGLED') {
-      iframe.style.height = e.data.isShow ? '380px' : '110px';
+      const iframe = document.getElementById('musicPlayerIframe');
+      if (iframe) {
+        iframe.style.height = e.data.isShow ? '380px' : '110px';
+      }
     }
   });
 }
@@ -1087,6 +1103,16 @@ function setupKeyboardShortcuts() {
   });
 }
 
+// 重置所有技能等级
+function resetAllSkills() {
+  Object.keys(state.skills).forEach(key => {
+    state.skills[key].level = 1;
+  });
+  initSkills();
+  saveState();
+  alert('所有技能已重置为1级');
+}
+
 // 初始化页面
 function initPage() {
   loadState();
@@ -1094,26 +1120,38 @@ function initPage() {
   initializeMusicPlayer();
   setupKeyboardShortcuts();
   
-  // 添加页面加载完成提示
-  document.addEventListener('DOMContentLoaded', () => {
-    console.log('猫老大技能页面加载完成');
-  });
+  // 添加重置按钮
+  const resetBtn = document.createElement('button');
+  resetBtn.textContent = '重置所有技能';
+  resetBtn.style.position = 'fixed';
+  resetBtn.style.bottom = '100px';
+  resetBtn.style.right = '20px';
+  resetBtn.style.zIndex = '1000';
+  resetBtn.style.padding = '8px 16px';
+  resetBtn.style.background = '#ff6666';
+  resetBtn.style.color = '#fff';
+  resetBtn.style.border = 'none';
+  resetBtn.style.borderRadius = '4px';
+  resetBtn.style.cursor = 'pointer';
+  resetBtn.style.fontSize = '14px';
+  resetBtn.onclick = resetAllSkills;
+  document.body.appendChild(resetBtn);
+  
+  console.log('猫老大技能页面加载完成');
 }
 
-// 启动页面
-initPage();
+// 确保页面加载完成后初始化
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initPage);
+} else {
+  initPage();
+}
 
 // 导出到全局（如果需要）
 window.CatBossSkillManager = {
   changeSkillLevel,
   getState: () => ({ ...state.skills }),
-  resetState: () => {
-    Object.keys(state.skills).forEach(key => {
-      state.skills[key].level = 1;
-    });
-    initSkills();
-    saveState();
-  }
+  resetState: resetAllSkills
 };
 </script>
 </body>
