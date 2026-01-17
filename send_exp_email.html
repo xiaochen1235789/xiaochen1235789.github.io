@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+    <meta charset="UTF-8">
+    <title>发送经验邮件 - 管理员后台</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a1a2e;
+            color: #e6e6e6;
+            font-family: -apple-system, system-ui, sans-serif;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        h1 {
+            color: #4cc9f0;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 28px;
+        }
+        .form-group {
+            margin-bottom: 25px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #a9a9b8;
+            font-weight: 500;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #e6e6e6;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #4cc9f0;
+            box-shadow: 0 0 0 2px rgba(76, 201, 240, 0.2);
+        }
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #4361ee, #3a0ca3);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(67, 97, 238, 0.4);
+        }
+        .btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #4cc9f0, #3a86ff);
+        }
+        .user-selector {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .user-option {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 5px;
+        }
+        .user-option:hover {
+            background: rgba(76, 201, 240, 0.1);
+        }
+        .user-option.selected {
+            background: rgba(76, 201, 240, 0.2);
+            border-left: 3px solid #4cc9f0;
+        }
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4cc9f0, #3a86ff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-weight: bold;
+            color: white;
+        }
+        .user-info {
+            flex: 1;
+        }
+        .user-name {
+            font-weight: 500;
+        }
+        .user-email {
+            font-size: 12px;
+            color: #a9a9b8;
+        }
+        .exp-preview {
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            border-left: 4px solid #ffd700;
+        }
+        .exp-icon {
+            color: #ffd700;
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            background: #10b981;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transform: translateX(120%);
+            transition: transform 0.4s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .notification.show {
+            transform: translateX(0);
+        }
+        .notification.error {
+            background: #ef4444;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #4cc9f0;
+        }
+        .search-box {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .search-box i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #a9a9b8;
+        }
+        .search-box input {
+            padding-left: 45px;
+        }
+        .user-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        .batch-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .batch-input {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .batch-input input {
+            margin-bottom: 0;
+        }
+        .batch-btn {
+            background: #4361ee;
+            color: white;
+            border: none;
+            padding: 0 20px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .batch-list {
+            margin-top: 15px;
+        }
+        .batch-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .remove-btn {
+            color: #ef4444;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .remove-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-paper-plane"></i> 发送经验邮件</h1>
+        
+        <div class="form-group">
+            <label><i class="fas fa-search"></i> 搜索用户</label>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchUser" placeholder="输入用户名或邮箱搜索..." oninput="searchUsers()">
+            </div>
+            
+            <div class="user-list" id="userList">
+                <div class="loading" id="loadingUsers">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>加载用户列表中...</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label><i class="fas fa-user"></i> 收件人ID</label>
+            <input type="text" id="userId" placeholder="输入用户ID" readonly>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label><i class="fas fa-envelope"></i> 邮件标题</label>
+                <input type="text" id="mailTitle" placeholder="例如：经验奖励发放" value="经验奖励发放通知">
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-user-tag"></i> 发件人</label>
+                <input type="text" id="mailSender" placeholder="例如：系统管理员" value="系统管理员">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label><i class="fas fa-star"></i> 经验值奖励</label>
+            <div class="form-row">
+                <input type="number" id="expAmount" placeholder="输入经验值数量" min="1" max="10000" value="100">
+                <select id="expReason">
+                    <option value="活动奖励">活动奖励</option>
+                    <option value="bug补偿">bug补偿</option>
+                    <option value="管理员发放">管理员发放</option>
+                    <option value="签到补发">签到补发</option>
+                    <option value="成就奖励">成就奖励</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label><i class="fas fa-file-alt"></i> 邮件内容</label>
+            <textarea id="mailContent" placeholder="请输入邮件内容...">尊敬的玩家，您好！
+
+我们很高兴地通知您，您获得了经验值奖励！
+
+请点击下方的"领取奖励"按钮领取您的奖励。
+
+感谢您对我们的支持！</textarea>
+        </div>
+        
+        <div class="exp-preview" id="expPreview">
+            <div style="display: flex; align-items: center;">
+                <i class="fas fa-star exp-icon"></i>
+                <div>
+                    <h3 style="color: #ffd700; margin: 0 0 5px 0;">经验奖励预览</h3>
+                    <p style="margin: 0; color: #a9a9b8;">玩家领取此邮件后将获得 <span id="previewExp" style="color: #ffd700; font-weight: bold;">100</span> 点经验值</p>
+                </div>
+            </div>
+        </div>
+        
+        <button class="btn btn-success" onclick="sendExpEmail()" id="sendBtn">
+            <i class="fas fa-paper-plane"></i>
+            发送经验邮件
+        </button>
+        
+        <div class="batch-section">
+            <h3><i class="fas fa-users"></i> 批量发送（可选）</h3>
+            <div class="batch-input">
+                <input type="text" id="batchUserIds" placeholder="输入多个用户ID，用逗号或换行分隔">
+                <button class="batch-btn" onclick="addBatchUsers()">添加</button>
+            </div>
+            <div class="batch-list" id="batchList"></div>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification">
+        <i class="fas fa-check"></i>
+        <span id="notificationText">消息</span>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        let selectedUserId = '';
+        let batchUserIds = new Set();
+        
+        // 加载用户列表
+        async function loadUsers() {
+            try {
+                const { data: users, error } = await supabase
+                    .from('user_profiles')
+                    .select(`
+                        id,
+                        username,
+                        user_stats (exp),
+                        auth_users (email)
+                    `)
+                    .limit(50);
+                
+                if (error) throw error;
+                
+                const userListDiv = document.getElementById('userList');
+                userListDiv.innerHTML = '';
+                
+                users.forEach(user => {
+                    const userDiv = document.createElement('div');
+                    userDiv.className = 'user-option';
+                    userDiv.innerHTML = `
+                        <div class="user-avatar">${user.username?.charAt(0).toUpperCase() || 'U'}</div>
+                        <div class="user-info">
+                            <div class="user-name">${user.username || '未设置用户名'}</div>
+                            <div class="user-email">ID: ${user.id}</div>
+                        </div>
+                    `;
+                    
+                    userDiv.onclick = () => selectUser(user.id, user.username);
+                    userListDiv.appendChild(userDiv);
+                });
+                
+            } catch (error) {
+                console.error('加载用户失败:', error);
+                document.getElementById('userList').innerHTML = '<p style="color: #ef4444; text-align: center;">加载失败</p>';
+            }
+        }
+        
+        // 搜索用户
+        async function searchUsers() {
+            const searchTerm = document.getElementById('searchUser').value.trim();
+            const userListDiv = document.getElementById('userList');
+            
+            if (!searchTerm) {
+                loadUsers();
+                return;
+            }
+            
+            userListDiv.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><p>搜索中...</p></div>';
+            
+            try {
+                const { data: users, error } = await supabase
+                    .from('user_profiles')
+                    .select(`
+                        id,
+                        username,
+                        user_stats (exp),
+                        auth_users (email)
+                    `)
+                    .or(`username.ilike.%${searchTerm}%,id.ilike.%${searchTerm}%`)
+                    .limit(20);
+                
+                if (error) throw error;
+                
+                userListDiv.innerHTML = '';
+                
+                if (users.length === 0) {
+                    userListDiv.innerHTML = '<p style="color: #a9a9b8; text-align: center;">未找到用户</p>';
+                    return;
+                }
+                
+                users.forEach(user => {
+                    const userDiv = document.createElement('div');
+                    userDiv.className = 'user-option';
+                    userDiv.innerHTML = `
+                        <div class="user-avatar">${user.username?.charAt(0).toUpperCase() || 'U'}</div>
+                        <div class="user-info">
+                            <div class="user-name">${user.username || '未设置用户名'}</div>
+                            <div class="user-email">ID: ${user.id}</div>
+                        </div>
+                    `;
+                    
+                    userDiv.onclick = () => selectUser(user.id, user.username);
+                    userListDiv.appendChild(userDiv);
+                });
+                
+            } catch (error) {
+                console.error('搜索失败:', error);
+                userListDiv.innerHTML = '<p style="color: #ef4444; text-align: center;">搜索失败</p>';
+            }
+        }
+        
+        // 选择用户
+        function selectUser(userId, username) {
+            selectedUserId = userId;
+            document.getElementById('userId').value = userId;
+            
+            // 高亮选中的用户
+            document.querySelectorAll('.user-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            event.currentTarget.classList.add('selected');
+        }
+        
+        // 更新预览
+        function updatePreview() {
+            const expAmount = document.getElementById('expAmount').value || 0;
+            document.getElementById('previewExp').textContent = expAmount;
+        }
+        
+        // 添加批量用户
+        function addBatchUsers() {
+            const batchInput = document.getElementById('batchUserIds').value;
+            const batchListDiv = document.getElementById('batchList');
+            
+            // 分割输入（支持逗号、空格、换行）
+            const userIds = batchInput.split(/[,，\s\n]+/)
+                .map(id => id.trim())
+                .filter(id => id.length > 0 && isValidUUID(id));
+            
+            userIds.forEach(userId => {
+                if (!batchUserIds.has(userId)) {
+                    batchUserIds.add(userId);
+                    
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'batch-item';
+                    itemDiv.innerHTML = `
+                        <span>${userId}</span>
+                        <button class="remove-btn" onclick="removeBatchUser('${userId}', this)">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                    batchListDiv.appendChild(itemDiv);
+                }
+            });
+            
+            document.getElementById('batchUserIds').value = '';
+        }
+        
+        // 移除批量用户
+        function removeBatchUser(userId, element) {
+            batchUserIds.delete(userId);
+            element.parentElement.remove();
+        }
+        
+        // 检查是否为有效的UUID
+        function isValidUUID(uuid) {
+            const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            return regex.test(uuid);
+        }
+        
+        // 发送经验邮件
+        async function sendExpEmail() {
+            const userId = selectedUserId || document.getElementById('userId').value.trim();
+            const title = document.getElementById('mailTitle').value.trim();
+            const sender = document.getElementById('mailSender').value.trim();
+            const expAmount = parseInt(document.getElementById('expAmount').value);
+            const reason = document.getElementById('expReason').value;
+            const content = document.getElementById('mailContent').value.trim();
+            
+            if (!userId || !isValidUUID(userId)) {
+                showNotification('请输入有效的用户ID', 'error');
+                return;
+            }
+            
+            if (!title) {
+                showNotification('请输入邮件标题', 'error');
+                return;
+            }
+            
+            if (!sender) {
+                showNotification('请输入发件人', 'error');
+                return;
+            }
+            
+            if (!expAmount || expAmount <= 0) {
+                showNotification('请输入有效的经验值数量', 'error');
+                return;
+            }
+            
+            // 禁用发送按钮
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 发送中...';
+            
+            try {
+                // 1. 验证用户是否存在
+                const { data: user, error: userError } = await supabase
+                    .from('user_profiles')
+                    .select('id, username')
+                    .eq('id', userId)
+                    .single();
+                
+                if (userError) {
+                    throw new Error('用户不存在');
+                }
+                
+                // 2. 创建邮件记录
+                const mailData = {
+                    user_id: userId,
+                    title: title,
+                    sender: sender,
+                    content: content,
+                    exp_reward: expAmount,
+                    reward_type: 'experience',
+                    claimed: false,
+                    created_at: new Date().toISOString()
+                };
+                
+                const { data: mail, error: mailError } = await supabase
+                    .from('reward_mails')
+                    .insert([mailData])
+                    .select()
+                    .single();
+                
+                if (mailError) throw mailError;
+                
+                // 3. 记录发送日志
+                try {
+                    await supabase
+                        .from('exp_mail_logs')
+                        .insert({
+                            user_id: userId,
+                            mail_id: mail.id,
+                            exp_amount: expAmount,
+                            reason: reason,
+                            sent_by: 'admin', // 这里应该替换为管理员ID
+                            sent_at: new Date().toISOString()
+                        });
+                } catch (logError) {
+                    console.warn('记录日志失败:', logError);
+                }
+                
+                showNotification(`成功发送经验邮件给用户！邮件ID: ${mail.id}`, 'success');
+                
+                // 清空表单
+                document.getElementById('userId').value = '';
+                document.getElementById('mailTitle').value = '经验奖励发放通知';
+                document.getElementById('expAmount').value = '100';
+                document.getElementById('mailContent').value = `尊敬的玩家，您好！
+
+我们很高兴地通知您，您获得了经验值奖励！
+
+请点击下方的"领取奖励"按钮领取您的奖励。
+
+感谢您对我们的支持！`;
+                
+                selectedUserId = '';
+                
+            } catch (error) {
+                console.error('发送邮件失败:', error);
+                showNotification(`发送失败: ${error.message}`, 'error');
+            } finally {
+                // 恢复发送按钮
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 发送经验邮件';
+            }
+        }
+        
+        // 批量发送经验邮件
+        async function sendBatchEmails() {
+            if (batchUserIds.size === 0) {
+                showNotification('请先添加批量用户', 'error');
+                return;
+            }
+            
+            const title = document.getElementById('mailTitle').value.trim();
+            const sender = document.getElementById('mailSender').value.trim();
+            const expAmount = parseInt(document.getElementById('expAmount').value);
+            const reason = document.getElementById('expReason').value;
+            const content = document.getElementById('mailContent').value.trim();
+            
+            if (!title || !sender || !expAmount || !content) {
+                showNotification('请填写完整的邮件信息', 'error');
+                return;
+            }
+            
+            if (!confirm(`确定要给 ${batchUserIds.size} 个用户发送经验邮件吗？`)) {
+                return;
+            }
+            
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> 批量发送中 (0/${batchUserIds.size})`;
+            
+            let successCount = 0;
+            let failCount = 0;
+            
+            for (const userId of batchUserIds) {
+                try {
+                    const mailData = {
+                        user_id: userId,
+                        title: title,
+                        sender: sender,
+                        content: content,
+                        exp_reward: expAmount,
+                        reward_type: 'experience',
+                        claimed: false,
+                        created_at: new Date().toISOString()
+                    };
+                    
+                    await supabase
+                        .from('reward_mails')
+                        .insert([mailData]);
+                    
+                    successCount++;
+                } catch (error) {
+                    console.error(`发送给用户 ${userId} 失败:`, error);
+                    failCount++;
+                }
+                
+                // 更新进度
+                sendBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> 批量发送中 (${successCount + failCount}/${batchUserIds.size})`;
+            }
+            
+            showNotification(`批量发送完成！成功: ${successCount}, 失败: ${failCount}`, 'success');
+            
+            // 清空批量列表
+            batchUserIds.clear();
+            document.getElementById('batchList').innerHTML = '';
+            
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 发送经验邮件';
+        }
+        
+        // 显示通知
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const text = document.getElementById('notificationText');
+            
+            notification.className = 'notification';
+            notification.classList.add(type);
+            
+            text.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUsers();
+            
+            // 监听经验值输入变化
+            document.getElementById('expAmount').addEventListener('input', updatePreview);
+            document.getElementById('expReason').addEventListener('change', updatePreview);
+            
+            // 初始更新预览
+            updatePreview();
+            
+            // 添加批量发送功能到按钮
+            const originalSendBtn = document.getElementById('sendBtn').onclick;
+            document.getElementById('sendBtn').onclick = function() {
+                if (batchUserIds.size > 0) {
+                    sendBatchEmails();
+                } else {
+                    sendExpEmail();
+                }
+            };
+        });
+    </script>
+</body>
+</html>
