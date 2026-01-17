@@ -272,20 +272,39 @@
                 return;
             }
             
-            const html = mails.map(mail => {
-                // 处理奖励数据
-                let rewards = [];
-                try {
-                    if (mail.rewards) {
-                        if (typeof mail.rewards === 'string') {
-                            rewards = JSON.parse(mail.rewards);
-                        } else if (Array.isArray(mail.rewards)) {
-                            rewards = mail.rewards;
-                        }
-                    }
-                } catch (e) {
-                    console.warn('解析rewards失败:', e);
-                }
+            // 在 loadMails 函数中，修改数据处理部分
+const fixedMails = mails.map(mail => {
+    // 处理rewards字段
+    let rewards = [];
+    try {
+        if (mail.rewards) {
+            if (typeof mail.rewards === 'string') {
+                rewards = JSON.parse(mail.rewards);
+            } else if (Array.isArray(mail.rewards)) {
+                rewards = mail.rewards;
+            }
+        }
+    } catch (e) {
+        console.warn('解析rewards失败:', e);
+        rewards = [];
+    }
+    
+    // 添加经验奖励数据
+    if (mail.exp_reward && mail.exp_reward > 0) {
+        rewards.push({
+            type: 'experience',
+            name: '经验值',
+            amount: mail.exp_reward,
+            icon: 'fas fa-star'
+        });
+    }
+    
+    return {
+        ...mail,
+        rewards: rewards,
+        exp_reward: mail.exp_reward || 0
+    };
+});
                 
                 return `
                 <div class="mail-card ${mail.claimed ? 'claimed' : ''}" data-id="${mail.id}">
@@ -338,48 +357,143 @@
         }
         
         // ==================== 领取奖励 ====================
-        async function claimReward(mailId) {
-            try {
-                // 正确的API端点格式
-                const response = await fetch(
-                    `${SUPABASE_URL}/rest/v1/reward_mails?id=eq.${mailId}`, 
-                    {
-                        method: 'PATCH',
-                        headers: {
-                            'apikey': SUPABASE_ANON_KEY,
-                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                            'Content-Type': 'application/json',
-                            'Prefer': 'return=representation'
-                        },
-                        body: JSON.stringify({ 
-                            claimed: true,
-                            claimed_at: new Date().toISOString()
-                        })
-                    }
-                );
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`更新失败: ${response.status} - ${errorText}`);
+        // ==================== 领取奖励 ====================
+async function claimReward(mailId) {
+    try {
+        // 获取邮件详情
+        const response = await fetch(
+            `${SUPABASE_URL}/rest/v1/reward_mails?id=eq.${mailId}`, 
+            {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    'Accept': 'application/json'
                 }
-                
-                const updated = await response.json();
-                console.log('领取成功:', updated);
-                
-                // 显示成功消息
-                const mailElement = document.querySelector(`.mail-card[data-id="${mailId}"]`);
-                const title = mailElement?.querySelector('.mail-title')?.textContent || '邮件';
-                
-                showToast(`🎉 成功领取 "${title}" 的奖励`, 'success');
-                
-                // 重新加载列表
-                setTimeout(() => loadMails(), 500);
-                
-            } catch (error) {
-                console.error('领取失败:', error);
-                showToast(`领取失败: ${error.message}`, 'error');
+            }
+        );
+        
+        if (!response.ok) {
+            throw new Error(`获取邮件失败: ${response.status}`);
+        }
+        
+        const mails = await response.json();
+        const mail = mails[0];
+        
+        if (!mail) {
+            throw new Error('邮件不存在');
+        }
+        
+        // 检查是否已经领取
+        if (mail.claimed) {
+            showToast('奖励已经领取过了', 'info');
+            return;
+        }
+        
+        // 使用直接API更新邮件状态
+        const updateResponse = await fetch(
+            `${SUPABASE_URL}/rest/v1/reward_mails?id=eq.${mailId}`, 
+            {
+                method: 'PATCH',
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify({ 
+                    claimed: true,
+                    claimed_at: new Date().toISOString()
+                })
+            }
+        );
+        
+        if (!updateResponse.ok) {
+            throw new Error(`更新失败: ${response.status}`);
+        }
+        
+        // 如果邮件包含经验奖励，发放经验值
+        let expRewarded = 0;
+        if (mail.exp_reward && mail.exp_reward > 0) {
+            // 发放经验值到用户
+            const success = await addExpToUser(mail.user_id, mail.exp_reward);
+            if (success) {
+                expRewarded = mail.exp_reward;
             }
         }
+        
+        // 显示成功消息
+        const mailElement = document.querySelector(`.mail-card[data-id="${mailId}"]`);
+        const title = mailElement?.querySelector('.mail-title')?.textContent || '邮件';
+        
+        let message = `🎉 成功领取 "${title}" 的奖励`;
+        if (expRewarded > 0) {
+            message += `，获得 ${expRewarded} 经验值`;
+        }
+        
+        showToast(message, 'success');
+        
+        // 刷新列表
+        setTimeout(() => loadMails(), 500);
+        
+    } catch (error) {
+        console.error('领取失败:', error);
+        showToast(`领取失败: ${error.message}`, 'error');
+    }
+}
+
+// ==================== 为用户添加经验值 ====================
+async function addExpToUser(userId, amount) {
+    try {
+        // 方法1：尝试使用RPC函数
+        const { error: rpcError } = await supabaseClient.rpc('add_user_exp', {
+            user_id_param: userId,
+            exp_amount: amount
+        });
+        
+        if (rpcError) {
+            // 方法2：直接更新
+            const { data: stats } = await supabaseClient
+                .from('user_stats')
+                .select('exp')
+                .eq('user_id', userId)
+                .single();
+            
+            const currentExp = stats?.exp || 0;
+            const MAX_EXP = 14111; // 最高等级所需总经验
+            const newExp = Math.min(currentExp + amount, MAX_EXP);
+            
+            const { error: updateError } = await supabaseClient
+                .from('user_stats')
+                .update({ exp: newExp })
+                .eq('user_id', userId);
+            
+            if (updateError) throw updateError;
+        }
+        
+        // 记录经验获取日志
+        try {
+            await supabaseClient
+                .from('exp_logs')
+                .insert({
+                    user_id: userId,
+                    exp_amount: amount,
+                    source: '邮件奖励',
+                    created_at: new Date().toISOString()
+                });
+        } catch (logError) {
+            console.warn('记录经验日志失败:', logError);
+        }
+        
+        return true;
+        
+    } catch (error) {
+        console.error('添加经验值失败:', error);
+        return false;
+    }
+}
+        
+        
+        
         
         // ==================== UI辅助函数 ====================
         function showLoading(message = '加载中...') {
