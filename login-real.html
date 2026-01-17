@@ -75,6 +75,14 @@
         .extra-links { text-align: center; margin-top: 15px; font-size: 14px; }
         .extra-links a { color: #667eea; text-decoration: none; }
         .extra-links a:hover { text-decoration: underline; }
+        
+        /* 退出按钮容器 */
+        .logout-container { display: flex; gap: 10px; margin-top: 20px; }
+        .logout-container button { flex: 1; }
+        .btn-home { background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important; }
+        .btn-home:hover { background: linear-gradient(135deg, #5a6268 0%, #343a40 100%) !important; }
+        .btn-logout { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important; }
+        .btn-logout:hover { background: linear-gradient(135deg, #c82333 0%, #bd2130 100%) !important; }
     </style>
 </head>
 <body>
@@ -148,7 +156,16 @@
             <p><strong>邮箱：</strong><span id="user-email"></span></p>
             <p><strong>用户ID：</strong><span id="user-id"></span></p>
             <p><strong>登录时间：</strong><span id="login-time"></span></p>
-            <button id="btn-logout" style="background: #dc3545;">退出登录</button>
+            
+            <!-- 新增的退出和返回首页按钮容器 -->
+            <div class="logout-container">
+                <button id="btn-home" class="btn-home">
+                    <i class="fas fa-home"></i> 返回首页
+                </button>
+                <button id="btn-logout" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> 退出登录
+                </button>
+            </div>
         </div>
         
         <!-- 加载动画 -->
@@ -159,7 +176,21 @@
     </div>
 
     <script>
+        // =================== 重要安全警告 ===================
+        // 注意：以下Supabase凭据已暴露在公开代码中，存在安全风险！
+        // 请按照以下步骤保护你的应用：
+        // 1. 立即撤销此密钥：Supabase控制台 → Settings → API → 点击"Revoke"
+        // 2. 生成新的匿名密钥
+        // 3. 将新密钥保存在环境变量中：
+        //    - 创建 .env.local 文件
+        //    - 添加: VITE_SUPABASE_URL=你的URL
+        //    - 添加: VITE_SUPABASE_ANON_KEY=你的新密钥
+        //    - 添加 .env.local 到 .gitignore
+        // 4. 在此文件中使用：import.meta.env.VITE_SUPABASE_URL
+        // 5. 启用所有表的Row Level Security (RLS)
+
         // =================== 配置信息 ===================
+        // ⚠️ 警告：这些凭据应该存储在环境变量中，而不是硬编码在代码中！
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
         
@@ -202,8 +233,13 @@
             // 禁用/启用按钮
             const loginBtn = document.getElementById('btn-login');
             const registerBtn = document.getElementById('btn-register');
+            const logoutBtn = document.getElementById('btn-logout');
+            const homeBtn = document.getElementById('btn-home');
+            
             if (loginBtn) loginBtn.disabled = loading;
             if (registerBtn) registerBtn.disabled = loading;
+            if (logoutBtn) logoutBtn.disabled = loading;
+            if (homeBtn) homeBtn.disabled = loading;
         }
         
         function switchTab(tabName) {
@@ -308,6 +344,24 @@
             } else {
                 input.type = 'password';
                 icon.className = 'fas fa-eye';
+            }
+        }
+        
+        // 返回首页函数
+        function goToHome() {
+            // 显示确认提示
+            const confirmLeave = confirm('确定要返回首页吗？您的登录状态将保持不变。');
+            if (confirmLeave) {
+                // 跳转到index.html
+                window.location.href = 'index.html';
+            }
+        }
+        
+        // 带确认的退出登录函数
+        async function confirmLogout() {
+            const confirmLogout = confirm('确定要退出登录吗？');
+            if (confirmLogout) {
+                await logout();
             }
         }
         
@@ -502,6 +556,15 @@
                 showMessage('已退出登录', 'info');
                 hideUserInfo();
                 switchTab('login');
+                
+                // 退出后可以添加跳转到首页的选项
+                setTimeout(() => {
+                    const goHome = confirm('已成功退出登录。是否返回首页？');
+                    if (goHome) {
+                        window.location.href = 'index.html';
+                    }
+                }, 1000);
+                
             } catch (error) {
                 showMessage(`退出失败: ${error.message}`, 'error');
             } finally {
@@ -519,10 +582,35 @@
             // 清空登录表单
             document.getElementById('login-email').value = '';
             document.getElementById('login-password').value = '';
+            
+            // 更新标题
+            document.querySelector('h1').textContent = `欢迎，${user.email.split('@')[0]}！`;
+            
+            // 隐藏登录/注册表单
+            document.getElementById('form-login').style.display = 'none';
+            document.getElementById('form-register').style.display = 'none';
+            document.querySelector('.tabs').style.display = 'none';
         }
         
         function hideUserInfo() {
             document.getElementById('user-info').style.display = 'none';
+            
+            // 恢复登录/注册表单
+            document.getElementById('form-login').style.display = 'block';
+            document.getElementById('form-register').style.display = 'block';
+            document.querySelector('.tabs').style.display = 'flex';
+            
+            // 恢复标题
+            document.querySelector('h1').textContent = '用户登录系统';
+            
+            // 确保正确的标签页显示
+            if (currentPage === 'login') {
+                document.getElementById('form-login').classList.add('active');
+                document.getElementById('form-register').classList.remove('active');
+            } else {
+                document.getElementById('form-login').classList.remove('active');
+                document.getElementById('form-register').classList.add('active');
+            }
         }
         
         // 检查当前登录状态
@@ -563,7 +651,12 @@
             
             document.getElementById('btn-login').addEventListener('click', debouncedLogin);
             document.getElementById('btn-register').addEventListener('click', debouncedRegister);
-            document.getElementById('btn-logout').addEventListener('click', logout);
+            
+            // 修改退出按钮事件 - 添加确认提示
+            document.getElementById('btn-logout').addEventListener('click', confirmLogout);
+            
+            // 新增返回首页按钮事件
+            document.getElementById('btn-home').addEventListener('click', goToHome);
             
             // Enter键提交表单
             document.getElementById('login-email').addEventListener('keypress', (e) => {
@@ -615,4 +708,3 @@
     </script>
 </body>
 </html>
-         
