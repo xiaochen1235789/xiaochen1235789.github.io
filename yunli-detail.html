@@ -4,131 +4,216 @@
 <meta charset="UTF-8">
 <title>云璃 · 技能等级调节</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="云璃(魔改加强)技能等级调节器 - 究极毁灭命途角色">
+<meta name="generator" content="技能调节器模板 v1.0">
 <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
+<link rel="preload" href="https://xiaochen1235789.github.io/images/yunli.png" as="image">
+<link rel="preconnect" href="https://xiaochen1235789.github.io">
+
 <style>
+/* ====== 基础变量与重置 ====== */
 :root {
+  /* 主题颜色 - 云璃主题色（金黑配色） */
   --bg: #121212;
   --surface: #1a1a1a;
   --card: #202020;
   --primary: #d3af37;   /* 玉衡金 */
   --primary-light: #e8c96b; /* 浅金色 */
   --primary-dark: #b8941a; /* 深金色 */
-  --second: #81c784;
+  --secondary: #81c784; /* 毁灭绿 */
   --text: #e0e0e0;
-  --sub: #99aabb;
+  --sub-text: #99aabb;
   --line: #333;
   --radius: 6px;
-  --tran: .3s ease;
+  --transition: .3s ease;
+  
+  /* 按钮颜色 */
   --button-bg: #2d5243;
   --button-hover: #3d725f;
   --button-disabled: #1f2e28;
+  
+  /* 阴影效果 */
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  
+  /* 特殊效果 */
+  --legend-gradient: linear-gradient(45deg, #ffd700, #ffA500);
 }
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: "Microsoft YaHei", sans-serif;
 }
+
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
+  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+  line-height: 1.5;
   padding-bottom: 90px !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ====== 通用元素样式 ====== */
 a {
-  color: var(--second);
+  color: var(--secondary);
   text-decoration: none;
+  transition: color var(--transition);
 }
+
+a:hover {
+  color: var(--primary-light);
+}
+
 img {
   max-width: 100%;
+  height: auto;
   display: block;
 }
-/* 顶部返回栏 */
+
+/* ====== 顶部导航栏 ====== */
 .top-bar {
   display: flex;
   align-items: center;
   padding: 12px 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  background-color: rgba(26, 26, 26, 0.9);
 }
+
 .top-bar .back {
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   margin-right: 12px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  transition: background-color var(--transition);
 }
+
+.top-bar .back:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
 .top-bar .title {
   font-size: 1.1rem;
   font-weight: 600;
+  flex-grow: 1;
 }
-/* 立绘区 */
-.art-box {
+
+/* ====== 角色展示区 ====== */
+.hero-section {
   position: relative;
-  background: #2a2a2a;
+  background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+  overflow: hidden;
 }
-.art-box img {
+
+.hero-image {
   width: 100%;
   aspect-ratio: 16/9;
   object-fit: cover;
+  opacity: 0.95;
 }
-.name-tag {
+
+.hero-overlay {
   position: absolute;
-  bottom: 12px;
-  left: 16px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
 }
-.ch-name {
-  font-size: 1.6rem;
-  font-weight: 600;
+
+.hero-name {
+  font-size: 1.8rem;
+  font-weight: 700;
   color: #fff;
-  text-shadow: 0 0 4px #000;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  margin-bottom: 8px;
 }
-.tags {
+
+.tag-container {
   display: flex;
-  gap: 6px;
-  margin-top: 4px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
+
 .tag {
-  background: rgba(0,0,0,.6);
+  background: rgba(211, 175, 55, 0.15);
   color: var(--primary);
-  padding: 2px 8px;
-  border-radius: var(--radius);
-  font-size: .7rem;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  border: 1px solid rgba(211, 175, 55, 0.3);
+  backdrop-filter: blur(4px);
 }
-/* 技能等级调节模块 */
-.skill-block {
+
+/* ====== 卡片容器 ====== */
+.card {
   background: var(--card);
   margin: 12px 16px;
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 20px;
   border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  transition: transform var(--transition), box-shadow var(--transition);
 }
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* ====== 技能模块 ====== */
 .skill-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--line);
+  gap: 12px;
 }
+
 .skill-name {
-  font-weight: 500;
-  font-size: 1.1rem;
-  color: var(--second);
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--secondary);
+  flex-grow: 1;
 }
-/* 等级调节按钮组 */
+
+/* ====== 等级控制 ====== */
 .level-controls {
   display: flex;
   align-items: center;
   gap: 10px;
 }
+
 .level-value {
-  min-width: 40px;
+  min-width: 50px;
   text-align: center;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1.3rem;
   color: var(--primary);
-  transition: all var(--tran);
+  transition: all var(--transition);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
+
 .level-btn {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border: none;
   border-radius: var(--radius);
   background: var(--button-bg);
@@ -138,144 +223,203 @@ img {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--tran);
+  transition: all var(--transition);
   user-select: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
+
 .level-btn:hover:not(:disabled) {
   background: var(--button-hover);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
+
 .level-btn:active:not(:disabled) {
   transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
+
 .level-btn:disabled {
   background: var(--button-disabled);
   color: #666;
   cursor: not-allowed;
+  opacity: 0.6;
 }
+
 .level-btn.up {
-  color: var(--second);
+  color: var(--secondary);
 }
+
 .level-btn.down {
   color: #ff7b7b;
 }
-/* 技能内容 */
+
+/* ====== 技能内容 ====== */
 .skill-content {
-  font-size: .9rem;
-  color: var(--sub);
+  font-size: 0.95rem;
+  color: var(--sub-text);
   line-height: 1.6;
 }
-.skill-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: .8rem;
-  margin-top: 12px;
-}
-.skill-table th, .skill-table td {
-  padding: 6px 4px;
-  text-align: center;
-  border-bottom: 1px solid var(--line);
-}
-.skill-table th {
+
+.skill-val {
   color: var(--primary);
+  font-weight: 700;
+  transition: all var(--transition);
+  display: inline-block;
+  padding: 0 2px;
 }
-/* 12级传说色渐变样式 */
+
+/* ====== 特殊文本样式 ====== */
 .legend-text {
-  background: linear-gradient(45deg, #ffd700, #ffA500);
+  background: var(--legend-gradient);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  font-weight: 800;
+}
+
+.orange-text {
+  color: orange;
   font-weight: 600;
 }
-/* 技能数值高亮 */
-.skill-val {
-  color: var(--primary);
+
+.purple-text {
+  color: #c678dd;
   font-weight: 600;
-  transition: all var(--tran);
 }
-/* 命座数值高亮样式 */
-.const-val {
-  color: var(--primary);
-  font-weight: 700;
-  text-shadow: 0 0 3px rgba(211, 175, 55, 0.3);
-  transition: all var(--tran);
-  display: inline-block;
-}
-.const-val:hover {
-  text-shadow: 0 0 8px rgba(211, 175, 55, 0.6);
-  transform: scale(1.05);
-}
-/* 额外能力区域 */
-.extra-ability {
-  background: var(--card);
-  margin: 12px 16px;
-  padding: 20px;
+
+/* ====== 表格样式 ====== */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-top: 12px;
   border-radius: var(--radius);
-  border: 1px solid var(--line);
+  overflow: hidden;
 }
-.extra-title {
+
+.data-table th, .data-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.data-table th {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* ====== 额外能力区域 ====== */
+.section-title {
   font-size: 1.2rem;
-  color: var(--second);
+  color: var(--secondary);
   margin-bottom: 15px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--line);
 }
+
 .ability-item {
   margin-bottom: 18px;
   padding-bottom: 12px;
   border-bottom: 1px dashed var(--line);
 }
+
 .ability-item:last-child {
   border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
+
 .ability-name {
   color: var(--primary);
   font-weight: 600;
   margin-bottom: 6px;
   font-size: 1rem;
 }
-.ability-desc {
-  color: var(--sub);
-  font-size: .9rem;
-  line-height: 1.6;
-}
-/* 命座区域 */
-.constellation-section {
-  background: var(--card);
-  margin: 12px 16px;
-  padding: 20px;
-  border-radius: var(--radius);
-  border: 1px solid var(--line);
-}
+
+/* ====== 命座样式 ====== */
 .constellation-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
 }
+
 .constellation-table th, .constellation-table td {
-  padding: 10px 8px;
+  padding: 12px 8px;
   text-align: left;
   vertical-align: top;
   border-bottom: 1px solid var(--line);
 }
+
 .constellation-table th {
   color: var(--primary);
   font-weight: 600;
 }
+
 .constellation-table td:first-child {
   color: var(--primary);
-  font-weight: 600;
+  font-weight: 700;
   min-width: 60px;
+  font-size: 0.9rem;
 }
+
 .constellation-table td:nth-child(2) {
-  color: var(--second);
+  color: var(--secondary);
   min-width: 80px;
+  font-weight: 600;
 }
-/* 播放器iframe样式 */
+
+.const-val {
+  color: var(--primary);
+  font-weight: 700;
+  text-shadow: 0 0 4px rgba(211, 175, 55, 0.3);
+  transition: all var(--transition);
+  display: inline-block;
+  cursor: help;
+  position: relative;
+}
+
+.const-val:hover {
+  text-shadow: 0 0 12px rgba(211, 175, 55, 0.7);
+  transform: scale(1.05);
+}
+
+/* ====== 提示工具 ====== */
+.tooltip {
+  position: absolute;
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  width: 200px;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--line);
+  z-index: 10;
+}
+
+.const-val:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ==================== 音乐播放器 ==================== */
 #musicPlayerIframe {
   display: block !important;
   visibility: visible !important;
-  height: 400px !important;
+  height: 380px !important;
   width: 100% !important;
   z-index: 99999 !important;
   position: fixed !important;
@@ -287,56 +431,124 @@ img {
   overflow: visible !important;
   transition: height 0.3s ease !important;
 }
-/* 响应式调整 */
-@media (max-width: 480px) {
+
+/* ====== 响应式设计 ====== */
+@media (max-width: 768px) {
+  .top-bar {
+    padding: 10px 12px;
+  }
+  
+  .hero-name {
+    font-size: 1.5rem;
+  }
+  
+  .card {
+    margin: 10px 12px;
+    padding: 16px;
+  }
+  
   .skill-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
   }
+  
   .level-controls {
-    align-self: flex-end;
+    align-self: stretch;
+    justify-content: center;
   }
+  
   .constellation-table th, .constellation-table td {
-    padding: 8px 4px;
-    font-size: .85rem;
+    padding: 8px 6px;
+    font-size: 0.85rem;
+  }
+  
+  .constellation-table td:nth-child(2) {
+    min-width: 70px;
+  }
+  
+  #musicPlayerIframe {
+    height: 380px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-name {
+    font-size: 1.3rem;
+  }
+  
+  .tag {
+    font-size: 0.7rem;
+    padding: 3px 10px;
+  }
+  
+  .skill-name {
+    font-size: 1.1rem;
+  }
+  
+  .level-value {
+    font-size: 1.2rem;
+  }
+  
+  .level-btn {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* ====== 打印样式 ====== */
+@media print {
+  #musicPlayerIframe,
+  .level-controls,
+  .top-bar .back {
+    display: none !important;
+  }
+  
+  body {
+    padding-bottom: 0 !important;
+  }
+  
+  .card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    margin: 10px 0;
   }
 }
 </style>
 </head>
 <body>
 <div class="top-bar">
-  <a class="back" href="index.html">‹</a>
+  <a class="back" href="a主页备用.html" aria-label="返回主页">‹</a>
   <span class="title">云璃 · 技能等级调节</span>
 </div>
 
-<!-- 立绘 + 名字 + 标签 -->
-<div class="art-box">
-  <img src="https://xiaochen1235789.github.io/images/yunli.webp" alt="云璃立绘">
-  <div class="name-tag">
-    <div class="ch-name">云璃(魔改加强)</div>
-    <div class="tags">
+<!-- 角色展示区 -->
+<section class="hero-section" aria-label="角色展示">
+  <img class="hero-image" src="https://xiaochen1235789.github.io/images/yunli.png" alt="云璃立绘" loading="eager">
+  <div class="hero-overlay">
+    <div class="hero-name">云璃(魔改加强)</div>
+    <div class="tag-container">
       <span class="tag">命途:究极毁灭</span>
       <span class="tag">属性:魔化物理</span>
       <span class="tag">定位:究极无敌直伤主C</span>
       <span class="tag">稀有度:限定99999星</span>
     </div>
   </div>
-</div>
+</section>
 
-<!-- 普攻等级调节 -->
-<div class="skill-block" id="normal-attack">
+<!-- 普攻 -->
+<section class="card" id="normal-attack" aria-label="普攻技能">
   <div class="skill-header">
     <div class="skill-name">普攻 · 翻风转日</div>
     <div class="level-controls">
-      <button class="level-btn down" onclick="changeSkillLevel('normal', -1)" id="normal-down">↓</button>
+      <button class="level-btn down" onclick="changeSkillLevel('normal', -1)" id="normal-down" aria-label="降低普攻等级">↓</button>
       <span class="level-value" id="normal-level">1/10</span>
-      <button class="level-btn up" onclick="changeSkillLevel('normal', 1)" id="normal-up">↑</button>
+      <button class="level-btn up" onclick="changeSkillLevel('normal', 1)" id="normal-up" aria-label="提高普攻等级">↑</button>
     </div>
   </div>
   <div class="skill-content">
     对敌方单体造成等同于 <span id="normal-val1" class="skill-val">50%</span> 攻击力的物理属性伤害。
-    <table class="skill-table">
+    <table class="data-table">
       <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
       <tbody>
         <tr><td>削韧</td><td>10</td></tr>
@@ -345,21 +557,21 @@ img {
       </tbody>
     </table>
   </div>
-</div>
+</section>
 
-<!-- 战技等级调节 -->
-<div class="skill-block" id="skill-attack">
+<!-- 战技 -->
+<section class="card" id="skill-attack" aria-label="战技技能">
   <div class="skill-header">
     <div class="skill-name">战技 · 飞铗震赫</div>
     <div class="level-controls">
-      <button class="level-btn down" onclick="changeSkillLevel('skill', -1)" id="skill-down">↓</button>
+      <button class="level-btn down" onclick="changeSkillLevel('skill', -1)" id="skill-down" aria-label="降低战技等级">↓</button>
       <span class="level-value" id="skill-level">1/15</span>
-      <button class="level-btn up" onclick="changeSkillLevel('skill', 1)" id="skill-up">↑</button>
+      <button class="level-btn up" onclick="changeSkillLevel('skill', 1)" id="skill-up" aria-label="提高战技等级">↑</button>
     </div>
   </div>
   <div class="skill-content">
-    回复等同于云璃 <span id="skill-val1" class="skill-val">20%</span> 攻击力+<span style="color:orange; font-size: 16px;">200</span>固定值的生命值，并对指定敌方单体造成等同于云璃 <span id="skill-val2" class="skill-val">60%</span> 攻击力的物理属性伤害，对其相邻目标造成等同于云璃 <span id="skill-val3" class="skill-val">30%</span> 攻击力的物理属性伤害。<span style="color:purple; font-size: 16px;">(魔改加强)</span>
-    <table class="skill-table">
+    回复等同于云璃 <span id="skill-val1" class="skill-val">20%</span> 攻击力+<span class="orange-text">200</span>固定值的生命值，并对指定敌方单体造成等同于云璃 <span id="skill-val2" class="skill-val">60%</span> 攻击力的物理属性伤害，对其相邻目标造成等同于云璃 <span id="skill-val3" class="skill-val">30%</span> 攻击力的物理属性伤害。<span class="purple-text">(魔改加强)</span>
+    <table class="data-table">
       <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
       <tbody>
         <tr><td>削韧</td><td>单体20 其他10</td></tr>
@@ -368,28 +580,28 @@ img {
       </tbody>
     </table>
   </div>
-</div>
+</section>
 
-<!-- 终结技等级调节 -->
-<div class="skill-block" id="ultimate-attack">
+<!-- 终结技 -->
+<section class="card" id="ultimate-attack" aria-label="终结技技能">
   <div class="skill-header">
     <div class="skill-name">终结技 · 剑为地纪，刃惊天宗</div>
     <div class="level-controls">
-      <button class="level-btn down" onclick="changeSkillLevel('ultimate', -1)" id="ultimate-down">↓</button>
+      <button class="level-btn down" onclick="changeSkillLevel('ultimate', -1)" id="ultimate-down" aria-label="降低终结技等级">↓</button>
       <span class="level-value" id="ultimate-level">1/15</span>
-      <button class="level-btn up" onclick="changeSkillLevel('ultimate', 1)" id="ultimate-up">↑</button>
+      <button class="level-btn up" onclick="changeSkillLevel('ultimate', 1)" id="ultimate-up" aria-label="提高终结技等级">↑</button>
     </div>
   </div>
   <div class="skill-content">
-    消耗<span style="color:orange; font-size: 16px;">120</span>点能量，云璃获得【格挡】并使敌方全体陷入嘲讽状态，持续至下一个我方或敌方回合结束时。并使云璃下一次反击造成的暴击伤害提高 <span id="ultimate-val1" class="skill-val">60%</span> 。触发天赋的反击效果时，将替换为发动反击【勘破•灭】同时移除【格挡】效果。若【格挡】状态期间没有触发反击，状态结束时云璃立即对随机敌方目标发动反击【勘破•斩】。 
+    消耗<span class="orange-text">120</span>点能量，云璃获得【格挡】并使敌方全体陷入嘲讽状态，持续至下一个我方或敌方回合结束时。并使云璃下一次反击造成的暴击伤害提高 <span id="ultimate-val1" class="skill-val">60%</span> 。触发天赋的反击效果时，将替换为发动反击【勘破•灭】同时移除【格挡】效果。若【格挡】状态期间没有触发反击，状态结束时云璃立即对随机敌方目标发动反击【勘破•斩】。 
     【勘破•斩】：对目标造成等同于云璃 <span id="ultimate-val2" class="skill-val">132%</span> 攻击力的物理属性伤害，对其相邻目标造成等同于云璃 <span id="ultimate-val3" class="skill-val">66%</span> 攻击力的物理属性伤害。
-    【勘破•灭】：对目标造成等同于云璃 <span id="ultimate-val4" class="skill-val">132%</span> 攻击力的物理属性伤害，对其相邻目标造成等同于云璃 <span id="ultimate-val5" class="skill-val">66%</span> 攻击力的物理属性伤害，随后额外造成<span style="color:orange; font-size: 16px;">6</span>次伤害，每次伤害对随机敌方单体造成等同于云璃 <span id="ultimate-val6" class="skill-val">43.2%</span> 攻击力的物理伤害。
+    【勘破•灭】：对目标造成等同于云璃 <span id="ultimate-val4" class="skill-val">132%</span> 攻击力的物理属性伤害，对其相邻目标造成等同于云璃 <span id="ultimate-val5" class="skill-val">66%</span> 攻击力的物理属性伤害，随后额外造成<span class="orange-text">6</span>次伤害，每次伤害对随机敌方单体造成等同于云璃 <span id="ultimate-val6" class="skill-val">43.2%</span> 攻击力的物理伤害。
     云璃通过此技能造成伤害时，被视为造成了终结技伤害。
-    【勘破•灭】造成的弹射伤害，每段的削韧值为此技能中心目标削韧值的<span style="color:orange; font-size: 16px;">50%</span><span style="color:purple; font-size: 16px;">(魔改加强)</span> 。
-    <br><span style="color:orange;">特性反击：
+    【勘破•灭】造成的弹射伤害，每段的削韧值为此技能中心目标削韧值的<span class="orange-text">50%</span><span class="purple-text">(魔改加强)</span> 。
+    <br><span class="orange-text">特性反击：
     当目标受到攻击后自动触发的效果，对攻击者施放1次额外的攻击。
     反击也属于追加攻击。</span>
-    <table class="skill-table">
+    <table class="data-table">
       <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
       <tbody>
         <tr><td>削韧</td><td>群体10，随机单体10*6</td></tr>
@@ -397,22 +609,22 @@ img {
       </tbody>
     </table>
   </div>
-</div>
+</section>
 
-<!-- 天赋等级调节 -->
-<div class="skill-block" id="talent-attack">
+<!-- 天赋 -->
+<section class="card" id="talent-attack" aria-label="天赋技能">
   <div class="skill-header">
     <div class="skill-name">天赋 · 闪铄</div>
     <div class="level-controls">
-      <button class="level-btn down" onclick="changeSkillLevel('talent', -1)" id="talent-down">↓</button>
+      <button class="level-btn down" onclick="changeSkillLevel('talent', -1)" id="talent-down" aria-label="降低天赋等级">↓</button>
       <span class="level-value" id="talent-level">1/15</span>
-      <button class="level-btn up" onclick="changeSkillLevel('talent', 1)" id="talent-up">↑</button>
+      <button class="level-btn up" onclick="changeSkillLevel('talent', 1)" id="talent-up" aria-label="提高天赋等级">↑</button>
     </div>
   </div>
   <div class="skill-content">
-    当云璃受到敌方目标攻击后，额外恢复<span style="color:orange; font-size: 16px;">20</span>点能量，并立即向攻击者发起反击，对其造成等同于云璃 <span id="talent-val1" class="skill-val">60%</span> 攻击力的物理属性伤害，对其相邻目标造成等同于云璃 <span id="talent-val2" class="skill-val">30%</span> 攻击力的物理属性伤害。
-    若不存在可反击的目标，则反击敌方随机目标。<span style="color:purple; font-size: 16px;">(魔改加强)</span>
-    <table class="skill-table">
+    当云璃受到敌方目标攻击后，额外恢复<span class="orange-text">20</span>点能量，并立即向攻击者发起反击，对其造成等同于云璃 <span id="talent-val1" class="skill-val">60%</span> 攻击力的物理属性伤害，对其相邻目标造成等同于云璃 <span id="talent-val2" class="skill-val">30%</span> 攻击力的物理属性伤害。
+    若不存在可反击的目标，则反击敌方随机目标。<span class="purple-text">(魔改加强)</span>
+    <table class="data-table">
       <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
       <tbody>
         <tr><td>削韧</td><td>0</td></tr>
@@ -420,286 +632,342 @@ img {
       </tbody>
     </table>
   </div>
-</div>
+</section>
 
 <!-- 额外能力 -->
-<div class="extra-ability">
-  <div class="extra-title">额外能力</div>
+<section class="card" aria-label="额外能力">
+  <div class="section-title">额外能力</div>
+  
   <div class="ability-item">
     <div class="ability-name">毁灭意志</div>
     <div class="ability-desc">
-      云璃每反击<span style="color:orange; font-size: 16px;">1</span>次，使自身攻击力提高<span style="color:orange; font-size: 16px;">10%</span>，最多提高<span style="color:orange; font-size: 16px;">100%</span>，生命值低于<span style="color:orange; font-size: 16px;">50%</span>时额外获得<span style="color:orange; font-size: 16px;">20%</span>暴击率。<span style="color:purple; font-size: 16px;">(魔改加强)</span>
+      云璃每反击<span class="orange-text">1</span>次，使自身攻击力提高<span class="orange-text">10%</span>，最多提高<span class="orange-text">100%</span>，生命值低于<span class="orange-text">50%</span>时额外获得<span class="orange-text">20%</span>暴击率。<span class="purple-text">(魔改加强)</span>
     </div>
   </div>
+  
   <div class="ability-item">
     <div class="ability-name">反击强化</div>
     <div class="ability-desc">
-      云璃的反击伤害额外附带<span style="color:orange; font-size: 16px;">30%</span>物理属性抗性穿透，且反击时无视目标<span style="color:orange; font-size: 16px;">15%</span>防御力。<span style="color:purple; font-size: 16px;">(魔改加强)</span>
+      云璃的反击伤害额外附带<span class="orange-text">30%</span>物理属性抗性穿透，且反击时无视目标<span class="orange-text">15%</span>防御力。<span class="purple-text">(魔改加强)</span>
     </div>
   </div>
+  
   <div class="ability-item">
     <div class="ability-name">终结连斩</div>
     <div class="ability-desc">
-      施放终结技后，暴击伤害提高<span style="color:orange; font-size: 16px;">100%</span>，持续<span style="color:orange; font-size: 16px;">1</span>回合。<span style="color:purple; font-size: 16px;">(魔改加强)</span>
+      施放终结技后，暴击伤害提高<span class="orange-text">100%</span>，持续<span class="orange-text">1</span>回合。<span class="purple-text">(魔改加强)</span>
     </div>
   </div>
-</div>
+</section>
 
 <!-- 命座 -->
-<div class="constellation-section">
-  <div class="extra-title">命之座</div>
+<section class="card" aria-label="命之座">
+  <div class="section-title">命之座</div>
+  
   <table class="constellation-table">
-    <thead><tr><th width="60">层数</th><th width="80">名称</th><th>效果</th></tr></thead>
+    <thead>
+      <tr>
+        <th width="60">层数</th>
+        <th width="80">名称</th>
+        <th>效果</th>
+      </tr>
+    </thead>
     <tbody>
       <tr>
         <td>1命</td>
         <td>沉锋离垢</td>
         <td>
-          【勘破•斩】与【勘破•灭】造成的伤害提高 <span class="const-val" data-lv="1">60%</span> ，【勘破•灭】的额外伤害次数增加<span style="color:orange; font-size: 16px;">4</span>次。<span style="color:purple; font-size: 16px;">(魔改加强)</span>
+          【勘破•斩】与【勘破•灭】造成的伤害提高 <span class="const-val">60%<span class="tooltip">1命效果：大幅提升核心技能伤害</span></span> ，【勘破•灭】的额外伤害次数增加<span class="orange-text">4</span>次。<span class="purple-text">(魔改加强)</span>
         </td>
       </tr>
       <tr>
         <td>2命</td>
         <td>初芒破生</td>
         <td>
-          发动反击造成的伤害无视敌方<span class="const-val" data-lv="2">24%</span>防御力，该效果可叠加，最多叠加至<span class="const-val" data-lv="2">48%</span><span style="color:purple; font-size: 16px;">(魔改加强)</span>
-          <br><span style="color:orange;">反击：当目标受到攻击后自动触发的效果，对攻击者施放1次额外的攻击。反击也属于追加攻击。</span>
+          发动反击造成的伤害无视敌方<span class="const-val">24%<span class="tooltip">基础无视防御值</span></span>防御力，该效果可叠加，最多叠加至<span class="const-val">48%<span class="tooltip">最大无视防御值</span></span><span class="purple-text">(魔改加强)</span>
+          <br><span class="orange-text">反击：当目标受到攻击后自动触发的效果，对攻击者施放1次额外的攻击。反击也属于追加攻击。</span>
         </td>
       </tr>
       <tr>
         <td>3命</td>
         <td>九尺运斤</td>
         <td>
-          普攻等级+<span class="const-val" data-lv="3">1</span>，最多不超过<span class="const-val" data-lv="3">10</span>级
-          天赋等级+<span class="const-val" data-lv="3">2</span>，最多不超过<span class="const-val" data-lv="3">15</span>级
+          普攻等级+<span class="const-val">1<span class="tooltip">普攻等级提升</span></span>，最多不超过<span class="const-val">10<span class="tooltip">等级上限</span></span>级
+          天赋等级+<span class="const-val">2<span class="tooltip">天赋等级提升</span></span>，最多不超过<span class="const-val">15<span class="tooltip">等级上限</span></span>级
         </td>
       </tr>
       <tr>
         <td>4命</td>
         <td>大匠击橐</td>
         <td>
-          发动【勘破•斩】或【勘破•灭】后使自身效果抵抗提高<span class="const-val" data-lv="4">100%</span>，持续<span class="const-val" data-lv="4">1</span>回合并使本次造成伤害时暴击伤害提高<span class="const-val" data-lv="4">200%</span><span style="color:purple; font-size: 16px;">(魔改加强)</span>
+          发动【勘破•斩】或【勘破•灭】后使自身效果抵抗提高<span class="const-val">100%<span class="tooltip">效果抵抗提升</span></span>，持续<span class="const-val">1<span class="tooltip">持续时间</span></span>回合并使本次造成伤害时暴击伤害提高<span class="const-val">200%<span class="tooltip">暴击伤害提升</span></span><span class="purple-text">(魔改加强)</span>
         </td>
       </tr>
       <tr>
         <td>5命</td>
         <td>恒兵匪石</td>
         <td>
-          战技等级+<span class="const-val" data-lv="5">2</span>，最多不超过<span class="const-val" data-lv="5">15</span>级
-          终结技等级+<span class="const-val" data-lv="5">2</span>，最多不超过<span class="const-val" data-lv="5">15</span>级
+          战技等级+<span class="const-val">2<span class="tooltip">战技等级提升</span></span>，最多不超过<span class="const-val">15<span class="tooltip">等级上限</span></span>级
+          终结技等级+<span class="const-val">2<span class="tooltip">终结技等级提升</span></span>，最多不超过<span class="const-val">15<span class="tooltip">等级上限</span></span>级
         </td>
       </tr>
       <tr>
         <td>6命</td>
         <td>剑胆琴心</td>
         <td>
-          【格挡】状态期间，敌方主动施放技能时无论是否攻击云璃，都会触发【勘破•灭】同时移除【格挡】效果，发动【勘破•斩】或【勘破•灭】造成伤害时暴击率提高 <span class="const-val" data-lv="6">35%</span>，物理属性抗性穿透提高<span class="const-val" data-lv="6">24%</span>。<span style="color:purple; font-size: 16px;">(魔改加强)</span>
+          【格挡】状态期间，敌方主动施放技能时无论是否攻击云璃，都会触发【勘破•灭】同时移除【格挡】效果，发动【勘破•斩】或【勘破•灭】造成伤害时暴击率提高 <span class="const-val">35%<span class="tooltip">暴击率提升</span></span>，物理属性抗性穿透提高<span class="const-val">24%<span class="tooltip">抗性穿透提升</span></span>。<span class="purple-text">(魔改加强)</span>
         </td>
       </tr>
     </tbody>
   </table>
-</div>
+</section>
 
-<!-- 播放器iframe -->
+<!-- 音乐播放器 -->
 <iframe 
-    id="musicPlayerIframe"
-    src="music-player.html"
-    style="
-        display: block !important;
-        visibility: visible !important;
-        height: 400px !important;
-        width: 100% !important;
-        z-index: 99999 !important;
-        position: fixed !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        border: none !important;
-        background: transparent !important;
-        overflow: visible !important;
-        transition: height 0.3s ease !important;
-    "
-    frameborder="0"
-    scrolling="no"
-    onload="resizePlayerIframe(this)"
+  id="musicPlayerIframe"
+  src="https://xiaochen1235789.github.io/music-player.html"
+  frameborder="0"
+  scrolling="no"
+  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+  loading="lazy"
+  title="音乐播放器"
+  aria-label="音乐播放器"
 ></iframe>
 
 <script>
-// 技能倍率数据
-const skillData = {
+// ====== 云璃技能数据配置 ======
+const skillConfig = {
   normal: {
     level: 1,
     maxLevel: 10,
     values: [
-      { id: 'normal-val1', base: 50, step: 10 }  // 普攻伤害
+      { id: 'normal-val1', base: 50, step: 10 }
     ]
   },
   skill: {
     level: 1,
     maxLevel: 15,
     values: [
-      { id: 'skill-val1', base: 20, step: 3 },   // 生命回复倍率
-      { id: 'skill-val2', base: 60, step: 12 },  // 单体伤害
-      { id: 'skill-val3', base: 30, step: 6 }    // 相邻伤害
+      { id: 'skill-val1', base: 20, step: 3 },
+      { id: 'skill-val2', base: 60, step: 12 },
+      { id: 'skill-val3', base: 30, step: 6 }
     ]
   },
   ultimate: {
     level: 1,
     maxLevel: 15,
     values: [
-      { id: 'ultimate-val1', base: 60, step: 8 },   // 暴击伤害提升
-      { id: 'ultimate-val2', base: 132, step: 15 }, // 勘破·斩单体
-      { id: 'ultimate-val3', base: 66, step: 8 },   // 勘破·斩相邻
-      { id: 'ultimate-val4', base: 132, step: 15 }, // 勘破·灭单体
-      { id: 'ultimate-val5', base: 66, step: 8 },   // 勘破·灭相邻
-      { id: 'ultimate-val6', base: 43.2, step: 5 }  // 弹射伤害
+      { id: 'ultimate-val1', base: 60, step: 8 },
+      { id: 'ultimate-val2', base: 132, step: 15 },
+      { id: 'ultimate-val3', base: 66, step: 8 },
+      { id: 'ultimate-val4', base: 132, step: 15 },
+      { id: 'ultimate-val5', base: 66, step: 8 },
+      { id: 'ultimate-val6', base: 43.2, step: 5 }
     ]
   },
   talent: {
     level: 1,
     maxLevel: 15,
     values: [
-      { id: 'talent-val1', base: 60, step: 8 },   // 单体反击伤害
-      { id: 'talent-val2', base: 30, step: 5 }    // 相邻反击伤害
+      { id: 'talent-val1', base: 60, step: 8 },
+      { id: 'talent-val2', base: 30, step: 5 }
     ]
   }
 };
 
-// 优化颜色等级数组，创建真正的金色渐变效果
-const levelColors = [
-  '#e8c96b', '#e6c463', '#e4bf5b',           // 1-3 浅金
-  '#e2ba53', '#e0b54b', '#deb043',           // 4-6 中等金
-  '#dcab3b', '#daa633', '#d8a12b',           // 7-9 标准金
-  '#d69c23', '#d4971b', '#d29213',           // 10-12 深金
-  '#d38d0b', '#d18803', '#d18300'            // 13-15 传说金（越来越深）
-];
+// 状态管理
+const state = {
+  skills: { ...skillConfig },
+  playerState: null
+};
+
+// 工具函数：获取技能数值
+function getSkillValue(base, step, level) {
+  return base + step * (level - 1);
+}
+
+// 工具函数：应用等级颜色
+function applyLevelColor(element, level) {
+  if (level >= 13 && level <= 15) {
+    element.classList.add('legend-text');
+    element.classList.remove('skill-val');
+  } else {
+    element.classList.remove('legend-text');
+    element.classList.add('skill-val');
+  }
+}
 
 // 改变技能等级
 function changeSkillLevel(skillType, change) {
-  const skill = skillData[skillType];
+  console.log(`尝试修改技能: ${skillType}, 变化: ${change}`);
+  
+  const skill = state.skills[skillType];
+  
+  if (!skill) {
+    console.error(`错误: 未找到技能类型 "${skillType}"`);
+    console.log('可用的技能类型:', Object.keys(state.skills));
+    return;
+  }
+  
   const newLevel = skill.level + change;
   
-  // 检查等级范围
   if (newLevel < 1 || newLevel > skill.maxLevel) return;
   
   skill.level = newLevel;
-  
-  // 更新UI
   updateSkillDisplay(skillType);
-  
-  // 更新按钮状态
   updateButtonState(skillType);
+  
+  // 保存状态
+  saveState();
 }
 
 // 更新技能显示
 function updateSkillDisplay(skillType) {
-  const skill = skillData[skillType];
+  const skill = state.skills[skillType];
   const levelElement = document.getElementById(`${skillType}-level`);
+  
+  if (!levelElement) {
+    console.error(`错误: 未找到等级元素 #${skillType}-level`);
+    return;
+  }
   
   // 更新等级显示
   levelElement.textContent = `${skill.level}/${skill.maxLevel}`;
-  
-  // 设置等级颜色
-  if (skill.level >= 13 && skill.level <= 15) {
-    levelElement.className = 'level-value legend-text';
-    levelElement.style.color = ''; // 清除内联样式
-  } else {
-    levelElement.className = 'level-value';
-    levelElement.style.color = levelColors[skill.level - 1] || levelColors[0];
-  }
+  applyLevelColor(levelElement, skill.level);
   
   // 更新技能数值
   skill.values.forEach(valueData => {
     const element = document.getElementById(valueData.id);
-    const newValue = valueData.base + valueData.step * (skill.level - 1);
-    element.textContent = `${newValue}%`;
-    
-    // 设置数值颜色
-    if (skill.level >= 13 && skill.level <= 15) {
-      element.className = 'skill-val legend-text';
-      element.style.color = ''; // 清除内联样式
-    } else {
-      element.className = 'skill-val';
-      element.style.color = levelColors[skill.level - 1] || levelColors[0];
+    if (!element) {
+      console.error(`错误: 未找到数值元素 #${valueData.id}`);
+      return;
     }
+    const newValue = getSkillValue(valueData.base, valueData.step, skill.level);
+    element.textContent = `${newValue.toFixed(1)}%`;
+    applyLevelColor(element, skill.level);
   });
 }
 
 // 更新按钮状态
 function updateButtonState(skillType) {
-  const skill = skillData[skillType];
+  const skill = state.skills[skillType];
   const downButton = document.getElementById(`${skillType}-down`);
   const upButton = document.getElementById(`${skillType}-up`);
+  
+  if (!downButton || !upButton) {
+    console.error(`错误: 未找到按钮元素 #${skillType}-down 或 #${skillType}-up`);
+    return;
+  }
   
   downButton.disabled = skill.level <= 1;
   upButton.disabled = skill.level >= skill.maxLevel;
 }
 
-// 初始化命座数值高亮效果
-function initConstellationValues() {
-  const constVals = document.querySelectorAll('.const-val');
-  constVals.forEach(val => {
-    // 为每个命座数值添加悬停效果
-    val.addEventListener('mouseenter', function() {
-      this.style.textShadow = '0 0 8px rgba(211, 175, 55, 0.6)';
-      this.style.transform = 'scale(1.05)';
-    });
-    
-    val.addEventListener('mouseleave', function() {
-      this.style.textShadow = '0 0 3px rgba(211, 175, 55, 0.3)';
-      this.style.transform = 'scale(1)';
-    });
-  });
-}
-
-// 初始化所有技能
-function initAllSkills() {
-  Object.keys(skillData).forEach(skillType => {
+// 初始化技能
+function initSkills() {
+  console.log('正在初始化技能...');
+  Object.keys(state.skills).forEach(skillType => {
+    console.log(`初始化: ${skillType}`);
     updateSkillDisplay(skillType);
     updateButtonState(skillType);
   });
 }
 
-// 播放器高度自适应
-function resizePlayerIframe(iframe) {
+// 状态管理
+function saveState() {
   try {
-    const playerHeight = iframe.contentWindow.document.querySelector('.mini-music-player')?.offsetHeight || 90;
-    const progressHeight = iframe.contentWindow.document.querySelector('.player-progress')?.offsetHeight || 0;
-    iframe.style.height = (playerHeight + progressHeight + 10) + 'px';
+    localStorage.setItem('yunliSkillState', JSON.stringify(state.skills));
   } catch (err) {
-    iframe.style.height = '110px';
+    console.warn('无法保存状态:', err);
   }
 }
 
-// 监听播放器消息
-window.addEventListener('message', (e) => {
-  if (e.data?.type === 'SONG_LIST_TOGGLED') {
-    const iframe = document.getElementById('musicPlayerIframe');
-    iframe.style.height = e.data.isShow ? '400px' : '110px';
-  }
-});
-
-// 页面加载完成
-window.addEventListener('DOMContentLoaded', () => {
-  initAllSkills();
-  initConstellationValues();
-  
-  // 初始化音乐播放器状态
-  setTimeout(() => {
-    try {
-      const savedState = localStorage.getItem('musicPlayerState');
-      if (savedState) {
-        const iframe = document.getElementById('musicPlayerIframe');
-        iframe.contentWindow.postMessage({ 
-          type: 'INIT_STATE', 
-          state: JSON.parse(savedState) 
-        }, '*');
-      }
-    } catch (err) {
-      console.log('播放器状态同步失败:', err);
+function loadState() {
+  try {
+    const saved = localStorage.getItem('yunliSkillState');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      Object.keys(parsed).forEach(key => {
+        if (state.skills[key]) {
+          state.skills[key].level = parsed[key].level;
+        }
+      });
     }
-  }, 300);
-});
+  } catch (err) {
+    console.warn('无法加载状态:', err);
+  }
+}
+
+// 音乐播放器控制
+function initializeMusicPlayer() {
+  const iframe = document.getElementById('musicPlayerIframe');
+  if (iframe) {
+    iframe.style.height = '380px';
+    
+    window.addEventListener('message', (e) => {
+      if (e.data?.type === 'SONG_LIST_TOGGLED') {
+        iframe.style.height = e.data.isShow ? '380px' : '110px';
+      }
+    });
+  }
+}
+
+// 键盘快捷键
+function setupKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    // Alt + 方向键控制技能等级
+    if (e.altKey) {
+      let skillType = null;
+      let direction = 0;
+      
+      switch(e.key) {
+        case 'ArrowUp': direction = 1; break;
+        case 'ArrowDown': direction = -1; break;
+        case '1': skillType = 'normal'; direction = 1; break;
+        case '2': skillType = 'skill'; direction = 1; break;
+        case '3': skillType = 'ultimate'; direction = 1; break;
+        case '4': skillType = 'talent'; direction = 1; break;
+      }
+      
+      if (skillType && direction) {
+        changeSkillLevel(skillType, direction);
+        e.preventDefault();
+      }
+    }
+  });
+}
+
+// 初始化页面
+function initPage() {
+  console.log('正在初始化页面...');
+  loadState();
+  initSkills();
+  initializeMusicPlayer();
+  setupKeyboardShortcuts();
+  console.log('页面初始化完成');
+}
+
+// 等待DOM加载完成后再初始化
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initPage);
+} else {
+  // DOM已经加载完成
+  initPage();
+}
+
+// 导出到全局（如果需要）
+window.YunliSkillManager = {
+  changeSkillLevel,
+  getState: () => ({ ...state.skills }),
+  resetState: () => {
+    Object.keys(state.skills).forEach(key => {
+      state.skills[key].level = 1;
+    });
+    initSkills();
+    saveState();
+    console.log('状态已重置');
+  }
+};
 </script>
 </body>
 </html>
