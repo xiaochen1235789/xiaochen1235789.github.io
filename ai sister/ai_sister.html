@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>✨ AI妹妹聊天室</title>
     <style>
+        /* [保持所有样式不变] */
         * {
             margin: 0;
             padding: 0;
@@ -158,7 +159,7 @@
         
         .api-input {
             width: 100%;
-            padding: 14px 45px 14px 15px;
+            padding: 14px 15px;
             border: 2px solid #e0e7ff;
             border-radius: 12px;
             font-size: 14px;
@@ -391,6 +392,12 @@
             background: white;
         }
         
+        .message-input:disabled {
+            background: #f5f5f5;
+            color: #999;
+            cursor: not-allowed;
+        }
+        
         .send-button {
             padding: 0 35px;
             height: 60px;
@@ -580,7 +587,7 @@
                 <div class="api-section">
                     <h3>🔑 API密钥配置</h3>
                     <div class="api-input-group">
-                        <input type="password" id="api-key" class="api-input" 
+                        <input type="text" id="api-key" class="api-input" 
                                placeholder="输入你的DeepSeek API密钥 (sk-...)">
                     </div>
                     <div id="api-status" class="api-status status-disconnected">
@@ -646,9 +653,9 @@
                     <div class="input-area">
                         <div class="input-wrapper">
                             <textarea id="message-input" class="message-input" 
-                                      placeholder="和AI妹妹聊些什么吧... (Enter发送，Shift+Enter换行)"
+                                      placeholder="输入API密钥并测试连接后，在这里输入聊天内容... (Enter发送，Shift+Enter换行)"
                                       onkeydown="handleKeyPress(event)"></textarea>
-                            <button id="send-button" class="send-button" onclick="sendMessage()" disabled>
+                            <button id="send-button" class="send-button" onclick="sendMessage()">
                                 <span>发送</span>
                                 <span>🚀</span>
                             </button>
@@ -740,18 +747,20 @@
                 if (message) {
                     apiStatus.innerHTML += `<span style="margin-left: 10px; font-size: 12px;">${message}</span>`;
                 }
-                sendButton.disabled = false;
+                // 启用聊天输入框
                 messageInput.placeholder = "和AI妹妹聊些什么吧... (Enter发送，Shift+Enter换行)";
                 messageInput.disabled = false;
+                sendButton.disabled = false;
             } else {
                 apiStatus.className = 'api-status status-disconnected';
                 apiStatus.innerHTML = '<span class="status-indicator disconnected"></span><span>未连接</span>';
                 if (message) {
                     apiStatus.innerHTML += `<span style="margin-left: 10px; font-size: 12px;">${message}</span>`;
                 }
-                sendButton.disabled = true;
-                messageInput.placeholder = "请先输入API密钥并测试连接...";
+                // 禁用聊天输入框
+                messageInput.placeholder = "请输入API密钥并测试连接...";
                 messageInput.disabled = true;
+                sendButton.disabled = true;
             }
         }
 
@@ -785,7 +794,7 @@
                     
                     // 恢复API密钥显示
                     if (userState.apiKey) {
-                        apiKeyInput.value = '•'.repeat(Math.min(userState.apiKey.length, 16));
+                        apiKeyInput.value = userState.apiKey;
                     }
                     
                     // 恢复聊天记录
@@ -834,12 +843,6 @@
                     updateConnectionStatus(true, '连接成功！');
                     addMessageToChat('ai', '🎉 连接成功！现在我们可以开始聊天啦～<br><br>试试对我说："你好！" 或者点击"赞美妹妹"按钮～');
                     saveToLocalStorage();
-                    
-                    // 如果是第一次连接，设置密码显示
-                    if (apiKeyInput.value !== '•'.repeat(16)) {
-                        apiKeyInput.type = 'password';
-                        apiKeyInput.value = '•'.repeat(Math.min(key.length, 16));
-                    }
                 } else {
                     updateConnectionStatus(false, `连接失败: ${response.status}`);
                     addMessageToChat('ai', `连接失败（错误代码: ${response.status}）<br>请检查你的API密钥是否正确，或者账户是否有余额～`);
@@ -895,7 +898,6 @@
                 }
                 
                 const data = await response.json();
-                updateConnectionStatus(true);
                 
                 // 增加好感度和信任值
                 if (userMessage.length > 3) {
@@ -930,7 +932,12 @@
         // 发送消息
         async function sendMessage() {
             const message = messageInput.value.trim();
-            if (!message || !userState.isConnected) return;
+            if (!message) return;
+            
+            if (!userState.isConnected) {
+                addMessageToChat('ai', '请先连接API密钥才能聊天哦～');
+                return;
+            }
             
             // 添加用户消息
             addMessageToChat('user', message);
@@ -1011,35 +1018,26 @@
             }
         }
 
-        // API密钥输入事件
-        apiKeyInput.addEventListener('focus', function() {
-            if (this.value === '•'.repeat(16) && userState.apiKey) {
-                this.value = userState.apiKey;
-                this.type = 'text';
-            }
-        });
-        
-        apiKeyInput.addEventListener('blur', function() {
-            if (userState.apiKey && this.value === userState.apiKey) {
-                this.value = '•'.repeat(Math.min(userState.apiKey.length, 16));
-                this.type = 'password';
-            }
-        });
-
         // 输入框内容变化时启用/禁用发送按钮
         messageInput.addEventListener('input', function() {
-            sendButton.disabled = !this.value.trim() || !userState.isConnected;
+            sendButton.disabled = !this.value.trim();
         });
 
         // 初始化
         window.onload = function() {
             loadFromLocalStorage();
             
+            // 默认启用输入框
+            messageInput.disabled = false;
+            sendButton.disabled = true; // 初始禁用，等待有输入
+            
             // 检查是否已保存API密钥
             if (userState.apiKey) {
                 updateConnectionStatus(true, '已加载保存的密钥');
                 // 自动测试连接
-                setTimeout(testConnection, 1000);
+                setTimeout(testConnection, 500);
+            } else {
+                updateConnectionStatus(false, '未连接');
             }
         };
     </script>
