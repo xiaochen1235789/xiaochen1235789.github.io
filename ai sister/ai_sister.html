@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>✨ AI妹妹聊天室</title>
@@ -196,6 +195,11 @@
             color: #721c24;
         }
         
+        .status-testing {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
         .status-indicator {
             width: 8px;
             height: 8px;
@@ -205,6 +209,7 @@
         
         .connected { background: #28a745; }
         .disconnected { background: #dc3545; }
+        .testing { background: #ffc107; }
         
         /* 功能按钮 */
         .function-buttons {
@@ -421,6 +426,56 @@
             margin-top: 10px;
         }
         
+        /* API密钥提示 */
+        .api-tips {
+            background: #e7f3ff;
+            border-left: 4px solid #2196f3;
+            padding: 12px 15px;
+            margin-top: 15px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        
+        .api-tips h4 {
+            color: #2196f3;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+        
+        .api-tips ul {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+        
+        .api-tips li {
+            margin: 3px 0;
+        }
+        
+        .api-tips a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .api-tips a:hover {
+            text-decoration: underline;
+        }
+        
+        /* 加载动画 */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
         /* 响应式设计 */
         @media (max-width: 768px) {
             .main-content {
@@ -532,9 +587,19 @@
                         <span class="status-indicator disconnected"></span>
                         <span>未连接</span>
                     </div>
-                    <p style="font-size: 12px; color: #666; margin-top: 10px; text-align: center;">
-                        密钥仅保存在浏览器本地，确保安全
-                    </p>
+                    
+                    <div class="api-tips">
+                        <h4>如何获取API密钥？</h4>
+                        <ul>
+                            <li>访问 <a href="https://platform.deepseek.com/" target="_blank">DeepSeek平台</a></li>
+                            <li>注册并登录账号</li>
+                            <li>在API Keys页面创建新密钥</li>
+                            <li>复制以"sk-"开头的密钥到这里</li>
+                        </ul>
+                        <p style="margin-top: 8px; color: #666;">
+                            ⚠️ 密钥仅保存在浏览器本地，确保安全
+                        </p>
+                    </div>
                 </div>
                 
                 <div class="function-buttons">
@@ -548,6 +613,9 @@
                     </button>
                     <button class="func-btn func-btn-secondary" onclick="clearChat()">
                         <span>🗑️ 清空对话</span>
+                    </button>
+                    <button class="func-btn func-btn-secondary" onclick="testConnection()">
+                        <span>🔗 测试连接</span>
                     </button>
                 </div>
             </div>
@@ -564,7 +632,12 @@
                             </div>
                             <div class="message-content">
                                 嗨～我是你的AI妹妹！✨<br>
-                                请先在左侧输入你的DeepSeek API密钥，然后我们就可以开始聊天啦～
+                                请先在左侧输入你的DeepSeek API密钥，然后我们就可以开始聊天啦～<br>
+                                <br>
+                                💡 <strong>使用说明：</strong><br>
+                                1. 获取DeepSeek API密钥（免费注册）<br>
+                                2. 在左侧输入密钥并测试连接<br>
+                                3. 开始和AI妹妹聊天！
                             </div>
                             <div class="message-time">刚刚</div>
                         </div>
@@ -627,25 +700,65 @@
             const name = role === 'ai' ? 'AI妹妹' : '你';
             const avatarClass = role === 'ai' ? 'ai-avatar-small' : 'user-avatar-small';
             
+            // 安全转义HTML
+            const escapedContent = content
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\n/g, '<br>');
+            
             messageDiv.innerHTML = `
                 <div class="message-header">
                     <div class="message-avatar ${avatarClass}">${avatar}</div>
                     <strong>${name}</strong>
                 </div>
-                <div class="message-content">${content.replace(/\n/g, '<br>')}</div>
+                <div class="message-content">${escapedContent}</div>
                 <div class="message-time">${timeString}</div>
             `;
             
             chatMessages.appendChild(messageDiv);
             
-            // 保存到历史记录
-            if (role !== 'system') {
+            // 保存到历史记录（不保存系统消息）
+            if (role === 'user' || role === 'ai') {
                 userState.messageHistory.push({ role, content });
                 saveToLocalStorage();
             }
             
             // 滚动到底部
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            setTimeout(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 100);
+        }
+
+        // 显示连接状态
+        function updateConnectionStatus(connected, message = '') {
+            userState.isConnected = connected;
+            
+            if (connected) {
+                apiStatus.className = 'api-status status-connected';
+                apiStatus.innerHTML = '<span class="status-indicator connected"></span><span>已连接</span>';
+                if (message) {
+                    apiStatus.innerHTML += `<span style="margin-left: 10px; font-size: 12px;">${message}</span>`;
+                }
+                sendButton.disabled = false;
+                messageInput.placeholder = "和AI妹妹聊些什么吧... (Enter发送，Shift+Enter换行)";
+                messageInput.disabled = false;
+            } else {
+                apiStatus.className = 'api-status status-disconnected';
+                apiStatus.innerHTML = '<span class="status-indicator disconnected"></span><span>未连接</span>';
+                if (message) {
+                    apiStatus.innerHTML += `<span style="margin-left: 10px; font-size: 12px;">${message}</span>`;
+                }
+                sendButton.disabled = true;
+                messageInput.placeholder = "请先输入API密钥并测试连接...";
+                messageInput.disabled = true;
+            }
+        }
+
+        // 显示测试中状态
+        function showTestingStatus() {
+            apiStatus.className = 'api-status status-testing';
+            apiStatus.innerHTML = '<span class="status-indicator testing"></span><span>测试连接中...</span>';
         }
 
         // 保存到本地存储
@@ -661,53 +774,89 @@
 
         // 从本地存储加载
         function loadFromLocalStorage() {
-            const saved = localStorage.getItem('aiSisterChat');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                userState.apiKey = parsed.apiKey || '';
-                userState.affection = parsed.affection || 85;
-                userState.trust = parsed.trust || 72;
-                userState.messageHistory = parsed.messageHistory || [];
-                
-                // 恢复API密钥显示
-                if (userState.apiKey) {
-                    apiKeyInput.value = '•'.repeat(8);
-                    updateConnectionStatus(true);
+            try {
+                const saved = localStorage.getItem('aiSisterChat');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    userState.apiKey = parsed.apiKey || '';
+                    userState.affection = parsed.affection || 85;
+                    userState.trust = parsed.trust || 72;
+                    userState.messageHistory = parsed.messageHistory || [];
+                    
+                    // 恢复API密钥显示
+                    if (userState.apiKey) {
+                        apiKeyInput.value = '•'.repeat(Math.min(userState.apiKey.length, 16));
+                    }
+                    
+                    // 恢复聊天记录
+                    if (userState.messageHistory.length > 0) {
+                        chatMessages.innerHTML = '';
+                        userState.messageHistory.forEach(msg => addMessageToChat(msg.role, msg.content));
+                    }
                 }
-                
-                // 恢复聊天记录
-                userState.messageHistory.forEach(msg => addMessageToChat(msg.role, msg.content));
+                updateStatsDisplay();
+            } catch (e) {
+                console.error('加载本地存储失败:', e);
             }
-            updateStatsDisplay();
         }
 
-        // 更新连接状态
-        function updateConnectionStatus(connected) {
-            userState.isConnected = connected;
+        // 测试API连接
+        async function testConnection() {
+            const key = apiKeyInput.value.trim();
             
-            if (connected) {
-                apiStatus.className = 'api-status status-connected';
-                apiStatus.innerHTML = '<span class="status-indicator connected"></span><span>已连接</span>';
-                sendButton.disabled = false;
-                messageInput.placeholder = "和AI妹妹聊些什么吧... (Enter发送，Shift+Enter换行)";
-                messageInput.disabled = false;
-            } else {
-                apiStatus.className = 'api-status status-disconnected';
-                apiStatus.innerHTML = '<span class="status-indicator disconnected"></span><span>未连接</span>';
-                sendButton.disabled = true;
-                messageInput.placeholder = "请先输入API密钥...";
-                messageInput.disabled = true;
+            if (!key) {
+                updateConnectionStatus(false, '请输入API密钥');
+                addMessageToChat('ai', '请先输入API密钥哦～');
+                return;
+            }
+            
+            if (!key.startsWith('sk-')) {
+                updateConnectionStatus(false, '密钥格式不正确');
+                addMessageToChat('ai', 'API密钥应该以"sk-"开头哦，请检查一下～');
+                return;
+            }
+            
+            showTestingStatus();
+            addMessageToChat('ai', '正在测试连接...');
+            
+            try {
+                // 测试请求 - 只发送一个简单的请求来验证密钥
+                const response = await fetch('https://api.deepseek.com/v1/models', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    userState.apiKey = key;
+                    updateConnectionStatus(true, '连接成功！');
+                    addMessageToChat('ai', '🎉 连接成功！现在我们可以开始聊天啦～<br><br>试试对我说："你好！" 或者点击"赞美妹妹"按钮～');
+                    saveToLocalStorage();
+                    
+                    // 如果是第一次连接，设置密码显示
+                    if (apiKeyInput.value !== '•'.repeat(16)) {
+                        apiKeyInput.type = 'password';
+                        apiKeyInput.value = '•'.repeat(Math.min(key.length, 16));
+                    }
+                } else {
+                    updateConnectionStatus(false, `连接失败: ${response.status}`);
+                    addMessageToChat('ai', `连接失败（错误代码: ${response.status}）<br>请检查你的API密钥是否正确，或者账户是否有余额～`);
+                }
+            } catch (error) {
+                console.error('连接测试失败:', error);
+                updateConnectionStatus(false, '网络错误');
+                addMessageToChat('ai', '网络连接失败，请检查网络设置后重试～');
             }
         }
 
-        // 调用DeepSeek API
+        // 调用DeepSeek API进行聊天
         async function callDeepSeekAPI(userMessage) {
             if (!userState.apiKey) {
-                addMessageToChat('ai', '请先在左侧输入你的DeepSeek API密钥哦～');
+                addMessageToChat('ai', '请先在左侧输入并测试你的API密钥哦～');
                 return null;
             }
-            
-            apiStatus.innerHTML = '<span class="status-indicator disconnected"></span><span>连接中...</span>';
             
             try {
                 const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -724,7 +873,8 @@
                                 content: `你是一个可爱的AI妹妹，性格活泼开朗，喜欢撒娇，偶尔会卖萌。
                                 当前用户好感度: ${userState.affection}/100
                                 当前用户信任值: ${userState.trust}/100
-                                请根据数值调整语气：好感度高时更亲昵，信任值高时可以分享更多小秘密。`
+                                请根据数值调整语气：好感度高时更亲昵，信任值高时可以分享更多小秘密。
+                                保持回答简洁自然，不要过长。`
                             },
                             ...userState.messageHistory.slice(-10).map(msg => ({
                                 role: msg.role,
@@ -748,7 +898,7 @@
                 updateConnectionStatus(true);
                 
                 // 增加好感度和信任值
-                if (userMessage.length > 5) {
+                if (userMessage.length > 3) {
                     userState.affection = Math.min(userState.affection + 1, 100);
                     userState.trust = Math.min(userState.trust + 0.5, 100);
                     updateStatsDisplay();
@@ -763,16 +913,16 @@
                 let errorMsg = '哎呀，出错了～ ';
                 if (error.message.includes('401')) {
                     errorMsg += 'API密钥好像不对哦，检查一下吧～';
+                    updateConnectionStatus(false, '密钥无效');
                 } else if (error.message.includes('429')) {
                     errorMsg += '聊得太快啦，稍微休息一下再聊吧～';
-                } else if (error.message.includes('network')) {
+                } else if (error.message.includes('network') || error.message.includes('Failed')) {
                     errorMsg += '网络好像不太稳定呢～';
                 } else {
                     errorMsg += '发生了点小意外，再试一次吧～';
                 }
                 
                 addMessageToChat('ai', errorMsg);
-                updateConnectionStatus(false);
                 return null;
             }
         }
@@ -843,7 +993,7 @@
 
         // 清空对话
         function clearChat() {
-            if (confirm('确定要清空所有对话记录吗？')) {
+            if (confirm('确定要清空所有对话记录吗？这个操作不可撤销。')) {
                 chatMessages.innerHTML = '';
                 userState.messageHistory = [];
                 
@@ -862,23 +1012,8 @@
         }
 
         // API密钥输入事件
-        apiKeyInput.addEventListener('input', function() {
-            const key = this.value.trim();
-            if (key.startsWith('sk-')) {
-                userState.apiKey = key;
-                updateConnectionStatus(true);
-                saveToLocalStorage();
-                
-                // 添加连接成功消息
-                addMessageToChat('ai', 'API连接成功！现在我们可以愉快地聊天啦～🎉');
-            } else if (key.length > 0) {
-                updateConnectionStatus(false);
-            }
-        });
-
-        // 切换显示/隐藏API密钥
         apiKeyInput.addEventListener('focus', function() {
-            if (this.value === '•'.repeat(8)) {
+            if (this.value === '•'.repeat(16) && userState.apiKey) {
                 this.value = userState.apiKey;
                 this.type = 'text';
             }
@@ -886,9 +1021,14 @@
         
         apiKeyInput.addEventListener('blur', function() {
             if (userState.apiKey && this.value === userState.apiKey) {
-                this.value = '•'.repeat(8);
+                this.value = '•'.repeat(Math.min(userState.apiKey.length, 16));
                 this.type = 'password';
             }
+        });
+
+        // 输入框内容变化时启用/禁用发送按钮
+        messageInput.addEventListener('input', function() {
+            sendButton.disabled = !this.value.trim() || !userState.isConnected;
         });
 
         // 初始化
@@ -897,7 +1037,9 @@
             
             // 检查是否已保存API密钥
             if (userState.apiKey) {
-                updateConnectionStatus(true);
+                updateConnectionStatus(true, '已加载保存的密钥');
+                // 自动测试连接
+                setTimeout(testConnection, 1000);
             }
         };
     </script>
