@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>六哥荣耀 - 战斗</title>
+    <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
+    
+    <!-- 引入游戏数据 -->
+    <script src="https://xiaochen1235789.github.io/ai sister/game-data.js"></script>
+    <!-- 引入战斗逻辑 -->
+    <script src="https://xiaochen1235789.github.io/ai sister/battle-logic.js"></script>
+    
+    <style>
+        :root {
+            /* 崩铁主题变量 */
+            --hsr-bg: #0a0a14;
+            --hsr-surface: #151525;
+            --hsr-card: #1e1e2e;
+            --hsr-primary: #00d4ff;
+            --hsr-text: #ffffff;
+            --hsr-subtext: #a0b4c6;
+            --hsr-danger: #ff4757;
+            --hsr-warning: #ff9f43;
+            --hsr-success: #1dd1a1;
+            --hsr-energy: #4488ff;
+            --hsr-hp: #ff6b81;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'HYWenHei-85W', 'Microsoft YaHei', sans-serif;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: var(--hsr-bg);
+            color: var(--hsr-text);
+            position: fixed;
+        }
+
+        /* 返回按钮 */
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: var(--hsr-text);
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        .back-button:hover {
+            border-color: var(--hsr-primary);
+            background: rgba(0, 212, 255, 0.1);
+            transform: translateX(-5px);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+        }
+
+        /* 主容器 */
+        .battle-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: 
+                radial-gradient(circle at 20% 10%, #1a1a3a 0%, transparent 40%),
+                radial-gradient(circle at 80% 90%, #0f1a2e 0%, transparent 40%),
+                var(--hsr-bg);
+        }
+
+        /* ========== 敌人区域 ========== */
+        .enemy-area {
+            flex: 1;
+            padding: 20px 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            min-height: 0;
+            overflow: auto;
+        }
+
+        .enemy-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 120px;
+            position: relative;
+        }
+
+        .enemy-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #553333 0%, #220000 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            margin-bottom: 12px;
+            border: 2px solid var(--hsr-danger);
+            box-shadow: 0 0 30px rgba(255, 71, 87, 0.3);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .enemy-avatar.selected {
+            border-color: var(--hsr-primary);
+            box-shadow: 0 0 40px rgba(0, 212, 255, 0.4);
+        }
+
+        .enemy-name {
+            font-size: 1rem;
+            color: var(--hsr-danger);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .enemy-hp-bar {
+            width: 120px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+
+        .enemy-hp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--hsr-danger), #ff6b81);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .enemy-hp-text {
+            font-size: 0.9rem;
+            color: var(--hsr-subtext);
+        }
+
+        .enemy-debuff {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 22px;
+            height: 22px;
+            background: var(--hsr-warning);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        /* ========== 信息栏 ========== */
+        .info-bar {
+            height: 50px;
+            background: rgba(15, 20, 35, 0.9);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .turn-display {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .turn-badge {
+            background: linear-gradient(135deg, var(--hsr-primary), #0088cc);
+            padding: 5px 14px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .turn-badge.enemy-turn {
+            background: linear-gradient(135deg, var(--hsr-danger), #cc3344);
+        }
+
+        .turn-number {
+            color: var(--hsr-subtext);
+            font-size: 0.85rem;
+        }
+
+        .skill-points {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .skill-point {
+            width: 16px;
+            height: 24px;
+            background: rgba(29, 209, 161, 0.3);
+            border-radius: 4px;
+            border: 1px solid rgba(29, 209, 161, 0.5);
+        }
+
+        .skill-point.active {
+            background: var(--hsr-success);
+            box-shadow: 0 0 8px rgba(29, 209, 161, 0.5);
+        }
+
+        /* 伤害统计 - 移动到右上角 */
+        .damage-stats {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            border-radius: 10px;
+            padding: 8px 16px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            display: none;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        /* 怪物伤害统计 - 红色主题 */
+        .damage-stats.enemy-damage {
+            background: rgba(255, 71, 87, 0.85);
+            border: 1px solid var(--hsr-danger);
+            color: white;
+            box-shadow: 0 0 20px rgba(255, 71, 87, 0.4);
+        }
+
+        /* 角色伤害统计 - 蓝色主题 */
+        .damage-stats.player-damage {
+            background: rgba(0, 212, 255, 0.85);
+            border: 1px solid var(--hsr-primary);
+            color: white;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+        }
+
+        .damage-stats.show {
+            display: block;
+            animation: fadeInOut 1.5s ease;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(-10px) scale(0.9); }
+            20% { opacity: 1; transform: translateY(0) scale(1); }
+            70% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-10px) scale(0.9); }
+        }
+
+        /* ========== 角色区域 ========== */
+        .party-area {
+            height: 180px;
+            background: rgba(21, 25, 40, 0.9);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 12px 16px;
+            display: flex;
+            gap: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .character-card {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            min-width: 0;
+            position: relative;
+        }
+
+        .character-card.active {
+            border-color: var(--hsr-primary);
+            background: rgba(0, 212, 255, 0.1);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+        }
+
+        .character-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .character-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--hsr-primary), #0066aa);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .character-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .character-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--hsr-text);
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .character-path {
+            font-size: 0.75rem;
+            color: var(--hsr-primary);
+            background: rgba(0, 212, 255, 0.15);
+            padding: 2px 8px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .character-status {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bar-container {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .hp-bar {
+            background: linear-gradient(90deg, var(--hsr-danger), #ff6b81);
+        }
+
+        .energy-bar {
+            background: linear-gradient(90deg, var(--hsr-energy), #88aaff);
+        }
+
+        .bar-text {
+            font-size: 0.75rem;
+            color: var(--hsr-subtext);
+            min-width: 45px;
+            text-align: right;
+        }
+
+        /* ========== 技能区域 ========== */
+        .action-area {
+            height: 140px;
+            background: rgba(10, 15, 25, 0.95);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            backdrop-filter: blur(20px);
+        }
+
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            flex: 1;
+        }
+
+        .skill-button {
+            background: rgba(30, 30, 46, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .skill-button:active:not(.disabled) {
+            transform: scale(0.96);
+        }
+
+        .skill-button:hover:not(.disabled) {
+            border-color: var(--hsr-primary);
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .skill-button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .skill-icon {
+            font-size: 1.5rem;
+            margin-bottom: 4px;
+        }
+
+        .skill-name {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--hsr-text);
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        .skill-cost {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            font-size: 0.7rem;
+            color: var(--hsr-energy);
+        }
+
+        .skill-hotkey {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            width: 18px;
+            height: 18px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: var(--hsr-subtext);
+        }
+
+        /* 控制按钮 */
+        .control-buttons {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            height: 40px;
+        }
+
+        .control-btn {
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--hsr-primary), #0066aa);
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .control-btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ========== 特效 ========== */
+        .damage-popup {
+            position: absolute;
+            font-weight: bold;
+            font-size: 1.2rem;
+            pointer-events: none;
+            z-index: 1000;
+            text-shadow: 0 0 6px currentColor;
+            animation: damageFloat 1s ease-out forwards;
+        }
+
+        @keyframes damageFloat {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            50% { opacity: 1; transform: translateY(-25px) scale(1.1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(0.8); }
+        }
+
+        .damage-critical {
+            color: #ffdd00;
+            font-size: 1.4rem;
+        }
+
+        /* ========== 响应式 ========== */
+        @media (max-height: 700px) {
+            .party-area {
+                height: 150px;
+            }
+            
+            .action-area {
+                height: 120px;
+                padding: 10px 16px;
+            }
+            
+            .enemy-avatar {
+                width: 80px;
+                height: 80px;
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .enemy-area {
+                gap: 20px;
+                padding: 15px 12px;
+            }
+            
+            .enemy-card {
+                min-width: 100px;
+            }
+            
+            .enemy-avatar {
+                width: 80px;
+                height: 80px;
+                font-size: 2.5rem;
+            }
+            
+            .damage-stats {
+                top: 10px;
+                right: 10px;
+                padding: 6px 12px;
+                font-size: 1rem;
+                min-width: 100px;
+            }
+            
+            .skills-grid {
+                gap: 8px;
+            }
+            
+            .skill-button {
+                padding: 8px 4px;
+            }
+            
+            .skill-name {
+                font-size: 0.75rem;
+            }
+        }
+
+        @media (min-width: 768px) and (orientation: landscape) {
+            .battle-container {
+                flex-direction: row;
+            }
+            
+            .enemy-area {
+                flex: 2;
+                order: 2;
+            }
+            
+            .info-bar {
+                order: 1;
+                width: 100%;
+                height: 50px;
+            }
+            
+            .party-area {
+                order: 3;
+                flex-direction: column;
+                width: 200px;
+                height: auto;
+            }
+            
+            .action-area {
+                order: 4;
+                width: 200px;
+                height: auto;
+                flex-direction: row;
+            }
+            
+            .skills-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: repeat(4, 1fr);
+            }
+            
+            .control-buttons {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 返回按钮 -->
+    <a href="https://xiaochen1235789.github.io/ai sister/index.html" class="back-button">
+        ← 返回主菜单
+    </a>
+    
+    <div class="battle-container" id="battleContainer">
+        <!-- 伤害统计 -->
+        <div class="damage-stats" id="damageStats"></div>
+
+        <!-- 敌人区域 -->
+        <div class="enemy-area" id="enemyArea">
+            <!-- 动态生成 -->
+        </div>
+
+        <!-- 信息栏 -->
+        <div class="info-bar" id="infoBar">
+            <div class="turn-display">
+                <div class="turn-badge" id="turnBadge">
+                    <span>⚡</span>
+                    <span id="turnText">玩家回合</span>
+                </div>
+                <div class="turn-number" id="turnNumber">回合 0</div>
+            </div>
+            <div class="skill-points" id="skillPoints">
+                <!-- 动态生成 -->
+            </div>
+        </div>
+
+        <!-- 角色区域 -->
+        <div class="party-area" id="partyArea">
+            <!-- 动态生成 -->
+        </div>
+
+        <!-- 技能区域 -->
+        <div class="action-area" id="actionArea">
+            <div class="skills-grid" id="skillsGrid">
+                <!-- 动态生成 -->
+            </div>
+            <div class="control-buttons">
+                <button class="control-btn" onclick="endTurn()" id="endTurnBtn">
+                    <span>⏩</span>
+                    <span>结束回合</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===================== 初始化战斗框架 =====================
+        function initBattleFramework() {
+            console.log('战斗框架初始化...');
+            
+            // 读取保存的队伍
+            const savedTeam = localStorage.getItem('hsr-selected-team');
+            let selectedTeam = null;
+            
+            if (savedTeam) {
+                try {
+                    selectedTeam = JSON.parse(savedTeam);
+                    console.log('加载选择的队伍:', selectedTeam);
+                } catch (e) {
+                    console.error('解析队伍数据失败:', e);
+                }
+            } else {
+                console.log('没有找到保存的队伍，使用默认队伍');
+            }
+            
+            // 监听游戏数据加载
+            if (typeof GameData !== 'undefined') {
+                console.log('游戏数据加载成功:', GameData);
+                
+                // 获取初始状态
+                const initialState = GameData.getInitialState();
+                
+                // 如果选择了队伍，使用选择的角色
+                let partyCharacters = initialState.party;
+                if (selectedTeam && selectedTeam.characters && selectedTeam.characters.length === 4) {
+                    console.log('使用选择的队伍替换默认队伍');
+                    
+                    // 将选择的角色数据转换为战斗格式
+                    partyCharacters = selectedTeam.characters.map((char, index) => {
+                        // 从角色选择数据转换为战斗角色数据
+                        const baseCharacter = initialState.party[index % initialState.party.length];
+                        
+                        return {
+                            ...baseCharacter,
+                            // 使用选择的角色信息
+                            name: char.name,
+                            avatar: char.avatar,
+                            path: char.path,
+                            
+                            // 使用选择角色的属性（如果有）
+                            maxHp: char.hp || baseCharacter.maxHp,
+                            hp: char.hp || baseCharacter.maxHp,
+                            attack: char.attack || baseCharacter.attack,
+                            defense: char.defense || baseCharacter.defense,
+                            speed: char.speed || baseCharacter.speed,
+                            
+                            // 保持其他战斗属性
+                            maxEnergy: baseCharacter.maxEnergy,
+                            energy: 0,
+                            skills: baseCharacter.skills,
+                            element: char.element || baseCharacter.element
+                        };
+                    });
+                    
+                    console.log('转换后的队伍:', partyCharacters);
+                }
+                
+                // 初始化游戏状态
+                window.gameState = {
+                    ...initialState,
+                    party: partyCharacters, // 使用选择的队伍或默认队伍
+                    turn: 0,
+                    isPlayerTurn: true,
+                    gameOver: false,
+                    selectedEnemy: 0,
+                    activeCharacter: 0,
+                    lastDamage: 0,
+                    lastDamageTaken: 0,
+                    skillPoints: Math.floor(initialState.maxSkillPoints / 2) // 星铁标准开局
+                };
+                
+                // 显示队伍信息
+                console.log('当前队伍:', window.gameState.party);
+                showMessage('队伍信息', `已加载 ${window.gameState.party.length} 名角色`);
+                
+                // 初始化UI
+                renderBattleUI();
+                updateBattleUI();
+                setupEventListeners();
+                
+            } else {
+                console.error('游戏数据未加载！');
+                // 1秒后重试
+                setTimeout(initBattleFramework, 1000);
+            }
+        }
+
+        // ===================== 渲染UI =====================
+        function renderBattleUI() {
+            const gameState = window.gameState;
+            if (!gameState) return;
+
+            // 渲染敌人
+            renderEnemies();
+            
+            // 渲染角色
+            renderCharacters();
+            
+            // 渲染技能
+            renderSkills();
+            
+            // 渲染战技点
+            renderSkillPoints();
+        }
+
+        function renderEnemies() {
+            const enemyArea = document.getElementById('enemyArea');
+            if (!enemyArea) return;
+            
+            enemyArea.innerHTML = gameState.enemies.map((enemy, index) => `
+                <div class="enemy-card" onclick="selectEnemy(${index})">
+                    <div class="enemy-avatar ${index === gameState.selectedEnemy ? 'selected' : ''}">
+                        ${enemy.emoji || '👹'}
+                    </div>
+                    <div class="enemy-name">${enemy.name}</div>
+                    <div class="enemy-hp-bar">
+                        <div class="enemy-hp-fill" style="width: ${(enemy.hp / enemy.maxHp) * 100}%"></div>
+                    </div>
+                    <div class="enemy-hp-text">${enemy.hp}/${enemy.maxHp}</div>
+                    ${enemy.debuffs && enemy.debuffs.length > 0 ? 
+                        '<div class="enemy-debuff">⚠️</div>' : ''}
+                </div>
+            `).join('');
+        }
+
+        function renderCharacters() {
+            const partyArea = document.getElementById('partyArea');
+            if (!partyArea) return;
+            
+            partyArea.innerHTML = gameState.party.map((character, index) => `
+                <div class="character-card ${index === gameState.activeCharacter ? 'active' : ''}">
+                    <div class="character-header">
+                        <div class="character-avatar">${character.avatar}</div>
+                        <div class="character-info">
+                            <div class="character-name">${character.name}</div>
+                            <div class="character-path">${character.path}</div>
+                        </div>
+                    </div>
+                    <div class="character-status">
+                        <div class="status-bar">
+                            <div class="bar-container">
+                                <div class="bar-fill hp-bar" style="width: ${(character.hp / character.maxHp) * 100}%"></div>
+                            </div>
+                            <div class="bar-text">${character.hp}/${character.maxHp}</div>
+                        </div>
+                        <div class="status-bar">
+                            <div class="bar-container">
+                                <div class="bar-fill energy-bar" style="width: ${(character.energy / character.maxEnergy) * 100}%"></div>
+                            </div>
+                            <div class="bar-text">${character.energy}/${character.maxEnergy}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderSkills() {
+            const skillsGrid = document.getElementById('skillsGrid');
+            if (!skillsGrid) return;
+            
+            const character = gameState.party[gameState.activeCharacter];
+            const characterSkills = character.skills || gameState.skills;
+            
+            skillsGrid.innerHTML = characterSkills.map((skill, index) => {
+                const isDisabled = isSkillDisabled(skill, index);
+                return `
+                    <div class="skill-button ${isDisabled ? 'disabled' : ''}" 
+                         onclick="useSkill(${index})" 
+                         title="${skill.description || ''}">
+                        <div class="skill-hotkey">${index + 1}</div>
+                        <div class="skill-icon">${skill.icon}</div>
+                        <div class="skill-name">${skill.name}</div>
+                        ${skill.cost ? `<div class="skill-cost">${skill.cost}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderSkillPoints() {
+            const skillPointsEl = document.getElementById('skillPoints');
+            if (!skillPointsEl) return;
+            
+            skillPointsEl.innerHTML = Array(gameState.maxSkillPoints).fill().map((_, i) => 
+                `<div class="skill-point ${i < gameState.skillPoints ? 'active' : ''}"></div>`
+            ).join('');
+        }
+
+        // ===================== UI更新 =====================
+        function updateBattleUI() {
+            if (!window.gameState) return;
+            
+            const gameState = window.gameState;
+            
+            // 更新回合信息
+            const turnBadge = document.getElementById('turnBadge');
+            const turnText = document.getElementById('turnText');
+            const turnNumber = document.getElementById('turnNumber');
+            
+            if (turnBadge) {
+                turnBadge.className = gameState.isPlayerTurn ? 'turn-badge' : 'turn-badge enemy-turn';
+                turnText.textContent = gameState.isPlayerTurn ? '玩家回合' : '敌人回合';
+            }
+            
+            if (turnNumber) {
+                turnNumber.textContent = `回合 ${gameState.turn}`;
+            }
+            
+            // 更新按钮状态
+            const endTurnBtn = document.getElementById('endTurnBtn');
+            if (endTurnBtn) {
+                endTurnBtn.disabled = !gameState.isPlayerTurn || gameState.gameOver;
+            }
+            
+            // 更新技能按钮
+            renderSkills();
+            renderSkillPoints();
+            
+            // 更新敌人和角色
+            renderEnemies();
+            renderCharacters();
+        }
+
+        // ===================== 工具函数 =====================
+        function isSkillDisabled(skill, skillIndex) {
+            if (!window.gameState) return true;
+            
+            const character = gameState.party[gameState.activeCharacter];
+            
+            switch(skill.type) {
+                case 'normal':
+                    // 普攻永远不会禁用
+                    return false;
+                case 'skill':
+                    return gameState.skillPoints < (skill.skillPointCost || 1);
+                case 'ultimate':
+                    return character.energy < (skill.energyCost || 120);
+                default:
+                    return false;
+            }
+        }
+
+        function selectEnemy(index) {
+            if (!window.gameState || !window.gameState.isPlayerTurn) return;
+            window.gameState.selectedEnemy = index;
+            renderEnemies();
+        }
+
+        // ===================== 事件监听 =====================
+        function setupEventListeners() {
+            // 键盘控制
+            document.addEventListener('keydown', handleKeyDown);
+            
+            // 触摸滑动
+            let touchStartY = 0;
+            document.addEventListener('touchstart', (e) => {
+                touchStartY = e.touches[0].clientY;
+            });
+            
+            document.addEventListener('touchend', (e) => {
+                if (!window.gameState || !window.gameState.isPlayerTurn) return;
+                
+                const touchEndY = e.changedTouches[0].clientY;
+                const deltaY = touchEndY - touchStartY;
+                
+                if (Math.abs(deltaY) > 50) {
+                    const newIndex = deltaY > 0 ? 
+                        (gameState.activeCharacter + 1) % gameState.party.length :
+                        (gameState.activeCharacter - 1 + gameState.party.length) % gameState.party.length;
+                    
+                    gameState.activeCharacter = newIndex;
+                    updateBattleUI();
+                }
+            });
+        }
+
+        function handleKeyDown(e) {
+            if (!window.gameState || window.gameState.gameOver) return;
+            
+            switch(e.key) {
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                    useSkill(parseInt(e.key) - 1);
+                    break;
+                case ' ':
+                    if (window.gameState.isPlayerTurn) {
+                        endTurn();
+                    }
+                    break;
+                case 'Escape':
+                    // 可以添加暂停菜单
+                    console.log('游戏暂停');
+                    break;
+            }
+        }
+
+        // ===================== 公开接口 =====================
+        window.useSkill = function(skillIndex) {
+            // 调用游戏逻辑中的函数
+            if (typeof window.useSkillLogic === 'function') {
+                window.useSkillLogic(skillIndex);
+            }
+            updateBattleUI();
+        };
+
+        window.endTurn = function() {
+            // 调用游戏逻辑中的函数
+            if (typeof window.endTurnLogic === 'function') {
+                window.endTurnLogic();
+            }
+            updateBattleUI();
+        };
+
+        // 显示伤害统计（供游戏逻辑调用）
+        window.showDamageEffect = function(targetIndex, damage, isCritical, isEnemy = false) {
+            if (!window.gameState) return;
+            
+            // 记录单次伤害
+            if (isEnemy) {
+                window.gameState.lastDamageTaken = damage;
+            } else {
+                window.gameState.lastDamage = damage;
+            }
+            
+            // 显示单次伤害统计
+            showDamageStats(damage, isEnemy, isCritical);
+            
+            // 显示伤害数字特效
+            showDamagePopup(targetIndex, damage, isCritical, isEnemy);
+        };
+
+        // 显示伤害统计提示 - 改为显示单次伤害
+        function showDamageStats(damage, isEnemy, isCritical) {
+            const damageStats = document.getElementById('damageStats');
+            if (!damageStats) return;
+            
+            // 清除现有定时器
+            if (damageStats.timeoutId) {
+                clearTimeout(damageStats.timeoutId);
+            }
+            
+            // 设置样式和内容 - 显示单次伤害
+            const damageType = isEnemy ? 'enemy-damage' : 'player-damage';
+            const prefix = isEnemy ? '受到伤害' : '造成伤害';
+            
+            damageStats.className = `damage-stats ${damageType}`;
+            damageStats.textContent = `${prefix}: ${damage}`;
+            
+            // 如果是暴击，添加特殊效果
+            if (isCritical) {
+                damageStats.style.animation = 'fadeInOut 1.5s ease, pulse 0.3s ease 2';
+            } else {
+                damageStats.style.animation = 'fadeInOut 1.5s ease';
+            }
+            
+            // 显示并设置定时隐藏
+            damageStats.classList.add('show');
+            
+            damageStats.timeoutId = setTimeout(() => {
+                damageStats.classList.remove('show');
+            }, 1500);
+        }
+
+        // 显示伤害数字特效
+        function showDamagePopup(targetIndex, damage, isCritical, isEnemy) {
+            const targetSelector = isEnemy ? 
+                `.character-card:nth-child(${targetIndex + 1}) .character-avatar` :
+                `.enemy-card:nth-child(${targetIndex + 1}) .enemy-avatar`;
+            
+            const target = document.querySelector(targetSelector);
+            if (!target) return;
+            
+            const rect = target.getBoundingClientRect();
+            const x = rect.left + rect.width / 2;
+            const y = rect.top + rect.height / 2;
+            
+            const damageElement = document.createElement('div');
+            damageElement.className = `damage-popup ${isCritical ? 'damage-critical' : ''}`;
+            damageElement.textContent = isCritical ? `💥${damage}` : damage;
+            damageElement.style.left = `${x}px`;
+            damageElement.style.top = `${y}px`;
+            damageElement.style.color = isEnemy ? '#ff4757' : '#00d4ff';
+            
+            document.getElementById('battleContainer').appendChild(damageElement);
+            setTimeout(() => damageElement.remove(), 1000);
+        }
+
+        // 脉冲动画
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        window.showMessage = function(title, text) {
+            // 可以添加消息显示逻辑
+            console.log(`[${title}] ${text}`);
+            
+            // 暂时用console.log显示，你可以扩展为UI提示
+            const message = `[${title}] ${text}`;
+            
+            // 简单地在右上角显示临时消息
+            const tempMessage = document.createElement('div');
+            tempMessage.style.cssText = `
+                position: fixed;
+                top: 60px;
+                right: 20px;
+                background: rgba(0, 212, 255, 0.1);
+                backdrop-filter: blur(10px);
+                border: 1px solid var(--hsr-primary);
+                border-radius: 10px;
+                padding: 10px 15px;
+                color: var(--hsr-text);
+                font-size: 0.9rem;
+                z-index: 99;
+                animation: fadeInOut 2s ease;
+            `;
+            tempMessage.textContent = message;
+            document.body.appendChild(tempMessage);
+            
+            setTimeout(() => {
+                tempMessage.remove();
+            }, 2000);
+        };
+
+        // ===================== 初始化 =====================
+        window.addEventListener('DOMContentLoaded', initBattleFramework);
+    </script>
+</body>
+</html>
