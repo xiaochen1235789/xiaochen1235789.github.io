@@ -69,18 +69,6 @@
         }
         
         /* ==================== 加载相关样式 ==================== */
-        .loading-progress {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 0%;
-            height: 3px;
-            background: var(--text-highlight);
-            z-index: 9999999;
-            transition: width 0.3s ease, opacity 0.5s ease;
-            opacity: 1;
-        }
-        
         #global-loading {
             position: fixed;
             top: 0;
@@ -93,7 +81,7 @@
             align-items: center;
             justify-content: center;
             z-index: 999999;
-            transition: opacity 0.5s ease;
+            transition: opacity 0.3s ease;
         }
         
         .loading-spinner {
@@ -113,15 +101,25 @@
         
         /* 骨架屏效果 */
         .skeleton {
-            background: linear-gradient(90deg, #2a3a35 25%, #354540 50%, #2a3a35 75%);
-            background-size: 200% 100%;
-            animation: skeleton-loading 1.5s infinite;
-            border-radius: var(--radius);
+            background: #2a3a35;
+            position: relative;
+            overflow: hidden;
         }
         
-        @keyframes skeleton-loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+        .skeleton::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
         
         /* ==================== 顶部导航栏 ==================== */
@@ -295,45 +293,6 @@
             transform: translateY(-50%);
             color: var(--text-secondary);
             pointer-events: none;
-        }
-        
-        .search-history {
-            position: absolute;
-            top: 100%;
-            left: 8px;
-            right: 8px;
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            margin-top: 4px;
-            box-shadow: var(--shadow);
-            display: none;
-            z-index: 100;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        
-        .search-history.show {
-            display: block;
-        }
-        
-        .history-item {
-            padding: 10px 16px;
-            cursor: pointer;
-            transition: background var(--transition-fast);
-            border-bottom: 1px solid var(--border-color);
-        }
-        
-        .history-item:last-child {
-            border-bottom: none;
-        }
-        
-        .history-clear {
-            padding: 8px 16px;
-            text-align: center;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 0.85rem;
-            border-top: 1px solid var(--border-color);
         }
         
         /* 空结果提示 */
@@ -705,9 +664,6 @@
     </style>
 </head>
 <body>
-    <!-- 加载进度条 -->
-    <div class="loading-progress" id="loadingProgress"></div>
-    
     <!-- 全局加载动画 -->
     <div id="global-loading">
         <div style="text-align: center;">
@@ -742,9 +698,6 @@
     <div class="search-container">
         <input type="text" id="search-input" placeholder="搜索角色/光锥/材料（支持关键词模糊匹配）" aria-label="搜索内容">
         <div class="search-icon">🔍</div>
-        <div class="search-history" id="searchHistory">
-            <div class="history-clear" id="clearHistory">清空搜索历史</div>
-        </div>
     </div>
 
     <!-- 网站运行天数 -->
@@ -909,10 +862,9 @@
 
 <script>
 // ==================== 全局变量定义 ====================
-let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
-let searchTimeout;
 let supabaseClient = null;
 let currentUser = null;
+let searchTimeout;
 
 // Supabase配置
 const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
@@ -932,13 +884,6 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-function updateLoadingProgress(percent) {
-    const progressBar = document.getElementById('loadingProgress');
-    if (progressBar) {
-        progressBar.style.width = `${percent}%`;
-    }
-}
-
 // ==================== 图片处理函数 ====================
 function imageLoaded(img) {
     img.classList.add('loaded');
@@ -949,9 +894,7 @@ function imageLoaded(img) {
 }
 
 function imageError(img) {
-    const placeholder = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="188" viewBox="0 0 150 188"><rect width="100%" height="100%" fill="%232d5243"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%2381c784" font-family="sans-serif">图片加载失败</text></svg>`;
-    img.src = placeholder;
-    img.alt = '图片加载失败';
+    img.style.display = 'none';
     const parent = img.closest('.skeleton');
     if (parent) {
         parent.classList.remove('skeleton');
@@ -995,94 +938,25 @@ function initializeSiteAge() {
 // ==================== 搜索功能 ====================
 function initializeSearch() {
     const searchInput = document.getElementById('search-input');
-    const searchHistoryElem = document.getElementById('searchHistory');
     const allCards = document.querySelectorAll('.content-card');
     const emptyResult = document.querySelector('.empty-result');
-    
-    function renderSearchHistory() {
-        if (searchHistory.length === 0) {
-            searchHistoryElem.innerHTML = '<div class="history-item" style="color: var(--text-secondary);">暂无搜索历史</div>';
-            return;
-        }
-        
-        searchHistoryElem.innerHTML = '';
-        
-        searchHistory.forEach(item => {
-            const historyItem = document.createElement('div');
-            historyItem.className = 'history-item';
-            historyItem.textContent = item;
-            historyItem.addEventListener('click', () => {
-                searchInput.value = item;
-                performSearch(item);
-                searchHistoryElem.classList.remove('show');
-            });
-            searchHistoryElem.appendChild(historyItem);
-        });
-        
-        const clearBtn = document.createElement('div');
-        clearBtn.className = 'history-clear';
-        clearBtn.textContent = '清空搜索历史';
-        clearBtn.addEventListener('click', () => {
-            if (confirm('确定要清空搜索历史吗？')) {
-                searchHistory = [];
-                localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
-                renderSearchHistory();
-                showNotification('搜索历史已清空', 'success');
-            }
-        });
-        searchHistoryElem.appendChild(clearBtn);
-    }
-    
-    function performSearch(keyword) {
-        let matchCount = 0;
-        
-        if (!keyword) {
-            allCards.forEach(card => card.style.display = 'block');
-            emptyResult.style.display = 'none';
-            return;
-        }
-        
-        if (keyword && !searchHistory.includes(keyword)) {
-            searchHistory.unshift(keyword);
-            if (searchHistory.length > 10) searchHistory.pop();
-            localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
-            renderSearchHistory();
-        }
-        
-        allCards.forEach(card => {
-            const name = card.dataset.name?.toLowerCase() || '';
-            const desc = card.dataset.desc?.toLowerCase() || '';
-            const type = card.dataset.type?.toLowerCase() || '';
-            
-            const isMatch = name.includes(keyword) || 
-                           desc.includes(keyword) || 
-                           type.includes(keyword);
-            
-            card.style.display = isMatch ? 'block' : 'none';
-            if (isMatch) matchCount++;
-        });
-        
-        emptyResult.style.display = matchCount === 0 ? 'block' : 'none';
-    }
-    
-    renderSearchHistory();
-    
-    searchInput.addEventListener('focus', () => {
-        if (searchHistory.length > 0) {
-            searchHistoryElem.classList.add('show');
-        }
-    });
-    
-    document.addEventListener('click', (e) => {
-        if (!searchInput.contains(e.target) && !searchHistoryElem.contains(e.target)) {
-            searchHistoryElem.classList.remove('show');
-        }
-    });
     
     searchInput.addEventListener('input', function() {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
-            performSearch(this.value.trim().toLowerCase());
+            const keyword = this.value.trim().toLowerCase();
+            let matchCount = 0;
+            
+            allCards.forEach(card => {
+                const name = card.dataset.name?.toLowerCase() || '';
+                const desc = card.dataset.desc?.toLowerCase() || '';
+                
+                const isMatch = !keyword || name.includes(keyword) || desc.includes(keyword);
+                card.style.display = isMatch ? 'block' : 'none';
+                if (isMatch) matchCount++;
+            });
+            
+            emptyResult.style.display = matchCount === 0 && keyword ? 'block' : 'none';
         }, 200);
     });
 }
@@ -1125,9 +999,8 @@ function initializeNavigation() {
                 const targetId = this.getAttribute('href').substring(1);
                 const target = document.getElementById(targetId);
                 if (target) {
-                    const targetPosition = target.offsetTop - 80;
                     window.scrollTo({
-                        top: targetPosition,
+                        top: target.offsetTop - 80,
                         behavior: 'smooth'
                     });
                     history.pushState(null, null, `#${targetId}`);
@@ -1142,113 +1015,38 @@ function initializeNavigation() {
             return;
         }
         
-        const loadingDiv = document.createElement('div');
-        loadingDiv.style.cssText = `
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: var(--card-bg); padding: 16px 24px; border-radius: var(--radius);
-            z-index: 999999; color: var(--text-highlight); display: flex; align-items: center; gap: 8px;
-            box-shadow: var(--shadow); border: 1px solid var(--border-color);
-        `;
-        loadingDiv.innerHTML = `<span class="loading-spinner" style="width: 20px; height: 20px;"></span> 前往【${charName}】详情页...`;
-        document.body.appendChild(loadingDiv);
-        
-        setTimeout(() => {
-            window.location.href = targetUrl;
-        }, 300);
+        window.location.href = targetUrl;
     };
-}
-
-// ==================== 图片懒加载 ====================
-function initializeLazyLoad() {
-    const images = document.querySelectorAll('img[loading="lazy"]');
-    
-    if ('IntersectionObserver' in window) {
-        const imageObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    if (img.dataset.src && img.dataset.src !== img.src) {
-                        img.src = img.dataset.src;
-                    }
-                    imageObserver.unobserve(img);
-                }
-            });
-        });
-        
-        images.forEach(img => {
-            if (!img.src && img.dataset.src) {
-                imageObserver.observe(img);
-            }
-        });
-    }
 }
 
 // ==================== 用户认证和头像显示 ====================
 async function initializeUserProfile() {
     try {
-        // 首先检查本地缓存（快速显示）
-        const cachedUsername = localStorage.getItem('cachedUsername');
-        const cachedAvatar = localStorage.getItem('cachedAvatar');
-        const lastUpdated = localStorage.getItem('profileLastUpdated');
-        
-        // 如果有缓存且较新（5分钟内），立即显示
-        if (cachedUsername && lastUpdated && (Date.now() - parseInt(lastUpdated)) < 5 * 60 * 1000) {
-            console.log('使用缓存的用户资料');
-            updateNavbar(cachedUsername, cachedAvatar);
-            return;
-        }
-        
-        // 初始化Supabase客户端
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        // 检查登录状态
-        const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+        const { data: { user }, error } = await supabaseClient.auth.getUser();
         
-        if (authError || !user) {
-            // 未登录，清除缓存并显示默认的登录/注册按钮
-            clearUserCache();
+        if (error || !user) {
             updateNavbar(null, null);
             return;
         }
         
         currentUser = user;
         
-        // 加载用户资料
-        const { data: profile, error: profileError } = await supabaseClient
+        const { data: profile } = await supabaseClient
             .from('user_profiles')
-            .select('*')
-            .eq('id', currentUser.id)
+            .select('username, avatar_url')
+            .eq('id', user.id)
             .single();
-        
-        let username = '';
-        let avatarUrl = '';
-        
-        if (!profileError && profile) {
-            username = profile.username || currentUser.email.split('@')[0];
-            avatarUrl = profile.avatar_url || '';
             
-            // 更新缓存
-            cacheUserProfile(username, avatarUrl);
-        } else {
-            username = currentUser.email.split('@')[0];
-            // 创建用户资料
-            await createUserProfile(username);
-            cacheUserProfile(username, null);
-        }
-        
-        // 更新导航栏显示
-        updateNavbar(username, avatarUrl);
+        updateNavbar(
+            profile?.username || user.email.split('@')[0],
+            profile?.avatar_url || null
+        );
         
     } catch (error) {
-        console.error('初始化用户资料失败:', error);
-        // 出错时尝试使用缓存
-        const cachedUsername = localStorage.getItem('cachedUsername');
-        const cachedAvatar = localStorage.getItem('cachedAvatar');
-        if (cachedUsername) {
-            updateNavbar(cachedUsername, cachedAvatar);
-        } else {
-            updateNavbar(null, null);
-        }
+        console.error('用户初始化失败:', error);
+        updateNavbar(null, null);
     }
 }
 
@@ -1257,14 +1055,11 @@ function updateNavbar(username, avatarUrl) {
     if (!userNavSection) return;
     
     if (username) {
-        // 已登录状态：显示头像、用户名和退出按钮
         const avatarLetter = username.charAt(0).toUpperCase();
         
         let avatarHtml = '';
         if (avatarUrl) {
-            avatarHtml = `<img src="${avatarUrl}" alt="${username}" 
-                onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                style="width: 100%; height: 100%; object-fit: cover;">`;
+            avatarHtml = `<img src="${avatarUrl}" alt="${username}">`;
         }
         
         userNavSection.innerHTML = `
@@ -1280,175 +1075,54 @@ function updateNavbar(username, avatarUrl) {
             </div>
         `;
     } else {
-        // 未登录状态：显示登录/注册按钮
         userNavSection.innerHTML = `
             <a href="login-real.html" class="nav-link">登录/注册</a>
         `;
     }
 }
 
-function cacheUserProfile(username, avatarUrl) {
-    if (username) {
-        localStorage.setItem('cachedUsername', username);
+async function logout() {
+    if (!confirm('确定要退出登录吗？')) return;
+    
+    if (supabaseClient) {
+        await supabaseClient.auth.signOut();
     }
-    if (avatarUrl) {
-        localStorage.setItem('cachedAvatar', avatarUrl);
-    } else {
-        localStorage.removeItem('cachedAvatar');
-    }
-    localStorage.setItem('profileLastUpdated', Date.now().toString());
-}
-
-function clearUserCache() {
+    
     localStorage.removeItem('cachedUsername');
     localStorage.removeItem('cachedAvatar');
-    localStorage.removeItem('profileLastUpdated');
-}
-
-async function createUserProfile(username) {
-    try {
-        if (!supabaseClient || !currentUser) return;
-        
-        const { error } = await supabaseClient
-            .from('user_profiles')
-            .upsert({
-                id: currentUser.id,
-                username: username,
-                bio: '这个人很懒，什么都没有写...'
-            });
-        
-        if (error) throw error;
-        
-    } catch (error) {
-        console.error('创建用户资料失败:', error);
-    }
-}
-
-async function logout() {
-    if (confirm('确定要退出登录吗？')) {
-        try {
-            if (supabaseClient) {
-                await supabaseClient.auth.signOut();
-            }
-            
-            // 清除所有缓存
-            clearUserCache();
-            
-            showNotification('已退出登录', 'success');
-            
-            // 立即更新界面
-            updateNavbar(null, null);
-            
-        } catch (error) {
-            console.error('退出登录失败:', error);
-            showNotification('退出失败，请刷新页面重试', 'error');
-        }
-    }
+    
+    updateNavbar(null, null);
+    showNotification('已退出登录', 'success');
 }
 
 // ==================== 页面初始化 ====================
 async function initializePage() {
-    console.log('页面开始初始化...');
-    
-    updateLoadingProgress(30);
-    
-    // 初始化年份
+    // 基础初始化
     document.getElementById('year').textContent = new Date().getFullYear();
-    updateLoadingProgress(40);
-    
-    // 初始化网站运行天数
     initializeSiteAge();
-    updateLoadingProgress(50);
-    
-    // 初始化用户资料和头像（立即显示缓存）
-    updateLoadingProgress(60);
-    
-    // 初始化搜索功能
     initializeSearch();
-    updateLoadingProgress(70);
-    
-    // 初始化导航功能
     initializeNavigation();
-    updateLoadingProgress(80);
     
-    // 初始化图片懒加载
-    initializeLazyLoad();
-    updateLoadingProgress(90);
+    // 异步初始化用户资料
+    setTimeout(() => initializeUserProfile(), 100);
     
-    updateLoadingProgress(95);
-    
-    // 异步加载用户资料
-    setTimeout(async () => {
-        await initializeUserProfile();
-        updateLoadingProgress(98);
-    }, 100);
-    
-    updateLoadingProgress(99);
-    
-    // 页面加载完成
+    // 隐藏加载动画
     setTimeout(() => {
-        updateLoadingProgress(100);
-        hideLoading();
-        showNotification('页面加载完成！', 'success');
-        console.log('页面初始化完成');
-    }, 300);
+        document.getElementById('global-loading').style.display = 'none';
+    }, 800);
 }
-
-function hideLoading() {
-    const loading = document.getElementById('global-loading');
-    const progress = document.getElementById('loadingProgress');
-    
-    if (loading) {
-        loading.style.opacity = '0';
-        setTimeout(() => {
-            loading.style.display = 'none';
-        }, 500);
-    }
-    
-    if (progress) {
-        progress.style.opacity = '0';
-        setTimeout(() => {
-            progress.style.display = 'none';
-        }, 500);
-    }
-}
-
-// 强制3秒后隐藏加载动画
-setTimeout(hideLoading, 3000);
 
 // ==================== DOM加载完成后执行 ====================
 document.addEventListener('DOMContentLoaded', function() {
-    // 立即显示缓存的内容
+    // 显示缓存的用户信息
     const cachedUsername = localStorage.getItem('cachedUsername');
     const cachedAvatar = localStorage.getItem('cachedAvatar');
     if (cachedUsername) {
         updateNavbar(cachedUsername, cachedAvatar);
     }
     
-    // 然后继续初始化
-    initializePage().catch(console.error);
-});
-
-// ==================== 全局错误处理 ====================
-window.addEventListener('error', function(e) {
-    console.error('页面错误:', e.error);
-    showNotification('页面出现错误，请刷新重试', 'error');
-});
-
-window.addEventListener('unhandledrejection', function(e) {
-    console.error('未处理的Promise错误:', e.reason);
-    showNotification('操作失败，请稍后重试', 'error');
-});
-
-// 监听来自个人主页的消息
-window.addEventListener('message', function(event) {
-    if (event.data?.type === 'PROFILE_UPDATED') {
-        console.log('收到个人主页更新消息');
-        const { username, avatarUrl } = event.data;
-        cacheUserProfile(username, avatarUrl);
-        updateNavbar(username, avatarUrl);
-        showNotification('用户资料已更新', 'success');
-    }
+    // 初始化页面
+    initializePage();
 });
 </script>
 </body>
