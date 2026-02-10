@@ -27,19 +27,10 @@
             --supabase-blue: #3ecf8e;
             --supabase-purple: #8a4baf;
             
-            /* 等级颜色 - 12级 */
-            --level-1: #a0a0a0;    /* 灰色 - 1级 */
-            --level-2: #4CAF50;    /* 绿色 - 2-4级 */
-            --level-3: #2196F3;    /* 蓝色 - 3-5级 */
-            --level-4: #9C27B0;    /* 紫色 - 4-6级 */
-            --level-5: #FF9800;    /* 橙色 - 5-7级 */
-            --level-6: #F44336;    /* 红色 - 6-8级 */
-            --level-7: #E91E63;    /* 粉红 - 7-9级 */
-            --level-8: #00BCD4;    /* 青色 - 8-10级 */
-            --level-9: #673AB7;    /* 深紫 - 9-11级 */
-            --level-10: #3F51B5;   /* 靛蓝 - 10-12级 */
-            --level-11: #FF5722;   /* 深橙 - 11级 */
-            --level-12: #FFD700;   /* 金色 - 12级 */
+            /* 头像框颜色 */
+            --frame-color-primary: #FFD700;
+            --frame-color-secondary: #FF8C00;
+            --frame-color-glow: rgba(255, 215, 0, 0.3);
         }
         
         * {
@@ -138,40 +129,82 @@
             50% { transform: translateY(-10px); }
         }
         
+        /* 头像框 */
+        .avatar-frame {
+            position: absolute;
+            top: -15px;
+            left: -15px;
+            width: calc(100% + 30px);
+            height: calc(100% + 30px);
+            border-radius: 50%;
+            background: linear-gradient(45deg, 
+                var(--frame-color-primary), 
+                var(--frame-color-secondary),
+                var(--frame-color-primary),
+                var(--frame-color-secondary));
+            background-size: 400% 400%;
+            animation: frameRotate 8s linear infinite;
+            z-index: 1;
+            pointer-events: none;
+            box-shadow: 
+                0 0 20px var(--frame-color-glow),
+                inset 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+        
+        @keyframes frameRotate {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .avatar-frame::before {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            right: 3px;
+            bottom: 3px;
+            background: var(--bg);
+            border-radius: 50%;
+            z-index: 1;
+        }
+        
+        .avatar-frame::after {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            right: 6px;
+            bottom: 6px;
+            background: linear-gradient(45deg, 
+                transparent, 
+                rgba(255, 255, 255, 0.1), 
+                transparent);
+            border-radius: 50%;
+            z-index: 2;
+        }
+        
+        /* 头像主体 */
         .avatar {
             width: 140px;
             height: 140px;
             border-radius: 50%;
-            border: 4px solid rgba(255, 255, 255, 0.8);
+            border: 4px solid rgba(255, 255, 255, 0.9);
             background: linear-gradient(135deg, var(--supabase-blue), var(--supabase-purple));
             overflow: hidden;
             position: relative;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            box-shadow: 
+                0 8px 32px rgba(0,0,0,0.3),
+                inset 0 0 20px rgba(255, 255, 255, 0.1);
             transition: var(--transition-normal);
+            z-index: 3;
         }
         
         .avatar:hover {
             transform: scale(1.05) rotate(5deg);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.4);
-        }
-        
-        .avatar::before {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            background: linear-gradient(45deg, #3ecf8e, #8a4baf, #3ecf8e);
-            border-radius: 50%;
-            z-index: -1;
-            animation: rotate 3s linear infinite;
-            opacity: 0.5;
-        }
-        
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            box-shadow: 
+                0 12px 40px rgba(0,0,0,0.4),
+                inset 0 0 25px rgba(255, 255, 255, 0.15);
         }
         
         .avatar img {
@@ -179,6 +212,8 @@
             height: 100%;
             object-fit: cover;
             transition: var(--transition-normal);
+            position: relative;
+            z-index: 2;
         }
         
         .avatar-placeholder {
@@ -191,6 +226,8 @@
             font-size: 3.5rem;
             font-weight: bold;
             background: linear-gradient(135deg, #3ecf8e, #8a4baf);
+            position: relative;
+            z-index: 2;
         }
         
         .avatar-upload {
@@ -208,49 +245,13 @@
             cursor: pointer;
             border: 3px solid white;
             transition: all var(--transition-fast);
-            z-index: 3;
+            z-index: 4;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
         
         .avatar-upload:hover {
             transform: scale(1.15) rotate(15deg);
             background: var(--supabase-purple);
-        }
-        
-        /* 等级徽章 */
-        .level-badge {
-            position: absolute;
-            bottom: -10px;
-            right: -10px;
-            background: var(--level-1);
-            color: white;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1rem;
-            border: 3px solid white;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-            z-index: 2;
-            transition: var(--transition-normal);
-        }
-        
-        .level-badge:hover {
-            transform: scale(1.1);
-        }
-        
-        .level-badge.max-level-badge {
-            animation: pulseGold 2s infinite;
-            box-shadow: 0 0 20px var(--level-12);
-        }
-        
-        .level-text {
-            font-size: 0.7rem;
-            opacity: 0.9;
         }
         
         /* 用户信息 */
@@ -321,92 +322,6 @@
         
         .edit-bio:hover {
             background: rgba(129, 199, 132, 0.1);
-        }
-        
-        /* 等级进度条 */
-        .level-progress-container {
-            margin-top: 30px;
-            width: 100%;
-            max-width: 500px;
-        }
-        
-        .level-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-        
-        .level-current {
-            font-weight: 600;
-        }
-        
-        .level-next {
-            font-weight: 600;
-        }
-        
-        .level-progress-bar {
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            overflow: hidden;
-            position: relative;
-        }
-        
-        .level-progress-fill {
-            height: 100%;
-            border-radius: 4px;
-            background: linear-gradient(90deg, var(--level-1), var(--level-2));
-            width: 0%;
-            transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .level-progress-fill.level-progress-full {
-            background: linear-gradient(90deg, 
-                var(--level-12), 
-                #ff9500, 
-                var(--level-12));
-            background-size: 200% 100%;
-            animation: shimmerFull 2s infinite linear;
-        }
-        
-        .level-progress-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, 
-                transparent, 
-                rgba(255, 255, 255, 0.3), 
-                transparent);
-            animation: shimmer 2s infinite;
-        }
-        
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        
-        @keyframes shimmerFull {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-        
-        @keyframes pulseGold {
-            0%, 100% { 
-                transform: scale(1);
-                box-shadow: 0 0 20px var(--level-12);
-            }
-            50% { 
-                transform: scale(1.05);
-                box-shadow: 0 0 30px var(--level-12);
-            }
         }
         
         /* 统计卡片 */
@@ -481,27 +396,43 @@
             letter-spacing: 0.5px;
         }
         
-        /* 签到区域 */
-        .daily-section {
-            background: linear-gradient(135deg, rgba(30, 58, 47, 0.8), rgba(46, 125, 50, 0.6));
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            background: var(--card-bg);
             border-radius: var(--radius);
-            padding: 30px;
+            border: 2px dashed var(--border-color);
+            margin-bottom: 40px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { border-color: var(--border-color); }
+            50% { border-color: var(--text-highlight); }
+        }
+        
+        .empty-icon {
+            font-size: 4rem;
+            color: var(--text-secondary);
+            margin-bottom: 25px;
+            opacity: 0.5;
+        }
+        
+        .empty-text {
+            color: var(--text-secondary);
+            margin-bottom: 25px;
+            font-size: 1.1rem;
+        }
+        
+        /* 设置区域 */
+        .settings-section {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 35px;
             margin-bottom: 40px;
             border: 1px solid var(--border-color);
             box-shadow: var(--shadow);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .daily-section::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255, 215, 0, 0.1) 0%, transparent 70%);
-            animation: rotate 20s linear infinite;
         }
         
         .section-header {
@@ -576,192 +507,6 @@
         .btn-primary:hover {
             background: #6ab56f;
             transform: translateY(-2px);
-        }
-        
-        /* 签到按钮 */
-        .daily-checkin-btn {
-            background: linear-gradient(135deg, #ffd700, #ff9800);
-            color: #121212;
-            padding: 20px 40px;
-            font-size: 1.3rem;
-            font-weight: 700;
-            border: none;
-            border-radius: var(--radius);
-            cursor: pointer;
-            transition: all var(--transition-normal);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            margin: 0 auto;
-            width: 100%;
-            max-width: 300px;
-            box-shadow: 0 8px 24px rgba(255, 215, 0, 0.3);
-            position: relative;
-        }
-        
-        .daily-checkin-btn:hover:not(:disabled):not(.checkin-disabled) {
-            transform: translateY(-5px) scale(1.05);
-            box-shadow: 0 12px 32px rgba(255, 215, 0, 0.4);
-        }
-        
-        .daily-checkin-btn:disabled,
-        .daily-checkin-btn.checkin-disabled {
-            background: #666;
-            color: #999;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        
-        .daily-checkin-btn.checkin-disabled:hover {
-            transform: none;
-            box-shadow: none;
-        }
-        
-        .streak-reward {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            background: #ff4757;
-            color: white;
-            font-size: 0.7rem;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-weight: bold;
-            animation: bounce 1s infinite;
-            z-index: 1;
-        }
-        
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-3px); }
-        }
-        
-        /* 签到信息 */
-        .checkin-info {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-top: 25px;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: var(--radius);
-            border-left: 4px solid var(--text-highlight);
-        }
-        
-        .checkin-info-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .checkin-info-row:last-child {
-            border-bottom: none;
-        }
-        
-        .checkin-label {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-        }
-        
-        .checkin-value {
-            color: var(--text-highlight);
-            font-weight: 600;
-            font-size: 1.1rem;
-        }
-        
-        /* 等级详情 */
-        .level-details {
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            padding: 35px;
-            margin-bottom: 40px;
-            border: 1px solid var(--border-color);
-            box-shadow: var(--shadow);
-        }
-        
-        .level-info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-top: 25px;
-        }
-        
-        .level-info-card {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 20px;
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
-            transition: var(--transition-normal);
-        }
-        
-        .level-info-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--text-highlight);
-            box-shadow: var(--shadow);
-        }
-        
-        .level-info-title {
-            color: var(--text-highlight);
-            font-weight: 600;
-            margin-bottom: 15px;
-            font-size: 1.2rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .level-info-content {
-            color: var(--text-secondary);
-            line-height: 1.8;
-        }
-        
-        .level-info-number {
-            color: var(--special-color);
-            font-weight: 700;
-            font-size: 1.3rem;
-        }
-        
-        /* 空状态 */
-        .empty-state {
-            text-align: center;
-            padding: 80px 20px;
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            border: 2px dashed var(--border-color);
-            margin-bottom: 40px;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { border-color: var(--border-color); }
-            50% { border-color: var(--text-highlight); }
-        }
-        
-        .empty-icon {
-            font-size: 4rem;
-            color: var(--text-secondary);
-            margin-bottom: 25px;
-            opacity: 0.5;
-        }
-        
-        .empty-text {
-            color: var(--text-secondary);
-            margin-bottom: 25px;
-            font-size: 1.1rem;
-        }
-        
-        /* 设置区域 */
-        .settings-section {
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            padding: 35px;
-            margin-bottom: 40px;
-            border: 1px solid var(--border-color);
-            box-shadow: var(--shadow);
         }
         
         .settings-item {
@@ -862,6 +607,13 @@
                 height: 120px;
             }
             
+            .avatar-frame {
+                top: -12px;
+                left: -12px;
+                width: calc(100% + 24px);
+                height: calc(100% + 24px);
+            }
+            
             .username {
                 font-size: 2rem;
             }
@@ -893,12 +645,11 @@
                 height: 100px;
             }
             
-            .level-badge {
-                width: 50px;
-                height: 50px;
-                font-size: 0.9rem;
-                bottom: -8px;
-                right: -8px;
+            .avatar-frame {
+                top: -10px;
+                left: -10px;
+                width: calc(100% + 20px);
+                height: calc(100% + 20px);
             }
             
             .username {
@@ -913,11 +664,6 @@
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 20px;
-            }
-            
-            .daily-checkin-btn {
-                padding: 15px 30px;
-                font-size: 1.1rem;
             }
         }
         
@@ -940,10 +686,6 @@
             .btn {
                 padding: 8px 16px;
                 font-size: 0.9rem;
-            }
-            
-            .level-info-grid {
-                grid-template-columns: 1fr;
             }
         }
         
@@ -1031,60 +773,6 @@
             transform: translateY(-5px) scale(1.1);
             box-shadow: 0 10px 25px rgba(0,0,0,0.4);
             animation: none;
-        }
-        
-        /* 经验值提示 */
-        .exp-tooltip {
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            white-space: nowrap;
-            opacity: 0;
-            visibility: hidden;
-            transition: all var(--transition-fast);
-            pointer-events: none;
-            z-index: 1000;
-            border: 1px solid var(--border-color);
-        }
-        
-        .exp-tooltip::after {
-            content: '';
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            border: 6px solid transparent;
-            border-top-color: rgba(0, 0, 0, 0.9);
-        }
-        
-        .level-progress-bar:hover .exp-tooltip {
-            opacity: 1;
-            visibility: visible;
-            transform: translateX(-50%) translateY(-10px);
-        }
-        
-        /* 等级特效 */
-        .level-glow {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            animation: pulseGlow 2s infinite;
-            z-index: -1;
-        }
-        
-        @keyframes pulseGlow {
-            0%, 100% { box-shadow: 0 0 20px 0 var(--level-color); }
-            50% { box-shadow: 0 0 40px 10px var(--level-color); }
         }
         
         /* 卡片动画延迟 */
@@ -1291,54 +979,6 @@
             transform: translateY(0);
         }
         
-        /* 签到记录表格 */
-        .checkin-history-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        
-        .checkin-history-table th {
-            background: rgba(255,255,255,0.05);
-            padding: 12px;
-            text-align: left;
-            border-bottom: 2px solid var(--border-color);
-            font-weight: 600;
-            color: var(--text-highlight);
-        }
-        
-        .checkin-history-table td {
-            padding: 10px 12px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        
-        .checkin-history-table tr:hover {
-            background: rgba(255,255,255,0.02);
-        }
-        
-        .checkin-history-table .today {
-            background: rgba(129, 199, 132, 0.1);
-            border-left: 3px solid var(--text-highlight);
-        }
-        
-        .checkin-history-table .streak-7 {
-            color: #ffd700;
-            font-weight: bold;
-        }
-        
-        .checkin-history-table .streak-30 {
-            color: var(--level-12);
-            font-weight: bold;
-        }
-        
-        /* 满级特殊样式 */
-        .max-level {
-            background: linear-gradient(135deg, var(--level-12), #ff9500) !important;
-            color: #121212 !important;
-            font-weight: 900 !important;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-        
         /* 通知样式 */
         #notification {
             position: fixed;
@@ -1394,12 +1034,10 @@
                 <div class="banner-content">
                     <div class="avatar-section">
                         <div class="avatar-container">
+                            <!-- 头像框 -->
+                            <div class="avatar-frame"></div>
                             <div class="avatar" id="userAvatar">
                                 <div class="avatar-placeholder" id="avatarPlaceholder">U</div>
-                            </div>
-                            <div class="level-badge" id="levelBadge" title="当前等级">
-                                <span id="levelText">Lv.1</span>
-                                <span class="level-text" id="levelName">一级</span>
                             </div>
                             <div class="avatar-upload" onclick="openAvatarUpload()" title="上传头像">
                                 <i class="fas fa-camera"></i>
@@ -1419,18 +1057,6 @@
                             <span id="userBio">这个人很懒，什么都没有写...</span>
                             <button class="edit-bio" onclick="openBioModal()">编辑</button>
                         </div>
-                        
-                        <!-- 等级进度条 -->
-                        <div class="level-progress-container">
-                            <div class="level-info">
-                                <span class="level-current" id="levelCurrent">Lv.1 一级</span>
-                                <span class="level-next" id="levelNext"></span>
-                            </div>
-                            <div class="level-progress-bar">
-                                <div class="level-progress-fill" id="levelProgressFill"></div>
-                                <div class="exp-tooltip" id="expTooltip">0/20 经验</div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -1447,113 +1073,26 @@
                 
                 <div class="stat-card">
                     <div class="stat-icon">
-                        <i class="fas fa-calendar-check"></i>
+                        <i class="fas fa-heart"></i>
                     </div>
-                    <div class="stat-value" id="checkinDays">0</div>
-                    <div class="stat-label">连续签到</div>
+                    <div class="stat-value" id="favoriteCount">0</div>
+                    <div class="stat-label">收藏数量</div>
                 </div>
                 
                 <div class="stat-card">
                     <div class="stat-icon">
-                        <i class="fas fa-star"></i>
+                        <i class="fas fa-eye"></i>
                     </div>
-                    <div class="stat-value" id="totalExp">0</div>
-                    <div class="stat-label">总经验值</div>
+                    <div class="stat-value" id="viewCount">0</div>
+                    <div class="stat-label">浏览次数</div>
                 </div>
                 
                 <div class="stat-card">
                     <div class="stat-icon">
-                        <i class="fas fa-chart-line"></i>
+                        <i class="fas fa-clock"></i>
                     </div>
-                    <div class="stat-value" id="expMultiplier">1.0x</div>
-                    <div class="stat-label">经验加成</div>
-                </div>
-            </div>
-
-            <!-- 每日签到区域 -->
-            <div class="daily-section">
-                <div class="section-header">
-                    <div class="section-title">
-                        <i class="fas fa-calendar-day"></i>
-                        <span>每日签到</span>
-                        <span class="badge" id="checkinStreak">0</span>
-                    </div>
-                    <div class="section-actions">
-                        <button class="btn" onclick="viewCheckinHistory()">
-                            <i class="fas fa-history"></i> 签到记录
-                        </button>
-                    </div>
-                </div>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                    <button class="daily-checkin-btn" id="dailyCheckinBtn" onclick="dailyCheckin()">
-                        <i class="fas fa-gift"></i>
-                        <span>每日签到</span>
-                    </button>
-                </div>
-                
-                <div class="checkin-info">
-                    <div class="checkin-info-row">
-                        <span class="checkin-label">今日签到奖励</span>
-                        <span class="checkin-value" id="dailyReward">15 经验</span>
-                    </div>
-                    <div class="checkin-info-row">
-                        <span class="checkin-label">经验加成</span>
-                        <span class="checkin-value" id="expBonus">+20% (1.2倍)</span>
-                    </div>
-                    <div class="checkin-info-row">
-                        <span class="checkin-label">实际获得经验</span>
-                        <span class="checkin-value" id="actualExp">18 经验</span>
-                    </div>
-                    <div class="checkin-info-row">
-                        <span class="checkin-label">距下一级还需</span>
-                        <span class="checkin-value" id="expToNext">20 经验</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 等级详情区域 -->
-            <div class="level-details">
-                <div class="section-header">
-                    <div class="section-title">
-                        <i class="fas fa-trophy"></i>
-                        <span>等级详情</span>
-                    </div>
-                </div>
-                
-                <div class="level-info-grid">
-                    <div class="level-info-card">
-                        <div class="level-info-title">
-                            <i class="fas fa-medal"></i>
-                            当前等级：<span class="level-info-number" id="currentLevelNumber">1</span>
-                        </div>
-                        <div class="level-info-content">
-                            <div style="margin-bottom: 10px;">当前经验值：<strong id="currentExpNumber">0</strong></div>
-                            <div>升级所需总经验：<strong id="totalExpRequired">20</strong></div>
-                        </div>
-                    </div>
-                    
-                    <div class="level-info-card">
-                        <div class="level-info-title">
-                            <i class="fas fa-gift"></i>
-                            签到奖励
-                        </div>
-                        <div class="level-info-content">
-                            <div style="margin-bottom: 10px;">基础签到经验：<strong id="baseCheckinExp">15</strong></div>
-                            <div>加成后经验：<strong id="finalCheckinExp">18</strong></div>
-                        </div>
-                    </div>
-                    
-                    <div class="level-info-card">
-                        <div class="level-info-title">
-                            <i class="fas fa-bolt"></i>
-                            经验加成
-                        </div>
-                        <div class="level-info-content">
-                            <div style="margin-bottom: 10px;">当前加成：<strong id="currentExpBonus">20% (1.2倍)</strong></div>
-                            <div>下阶段加成：<strong id="nextExpBonus">40% (1.4倍)</strong></div>
-                        </div>
-                    </div>
+                    <div class="stat-value" id="lastActive">0</div>
+                    <div class="stat-label">最后活跃</div>
                 </div>
             </div>
 
@@ -1719,107 +1258,9 @@
         let currentUser = null;
         let userProfile = null;
         let userStats = null;
-        let userExp = 0;
-        let userLevel = 1;
-        let expToNextLevel = 20;
-        let currentExpInLevel = 0;
-        let canCheckinToday = true;
-        let checkinStreak = 0;
-        let expMultiplier = 1.2;
 
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-
-        // ==================== 等级系统配置 ====================
-        const LEVEL_CONFIG = {
-            1: { 
-                name: '龙渊', 
-                expRequired: 20, 
-                color: 'var(--level-1)',
-                checkinExp: 15,
-                expMultiplier: 1.2
-            },
-            2: { 
-                name: '虎魄', 
-                expRequired: 40, 
-                color: 'var(--level-2)',
-                checkinExp: 30,
-                expMultiplier: 1.2
-            },
-            3: { 
-                name: '破军', 
-                expRequired: 80, 
-                color: 'var(--level-3)',
-                checkinExp: 30,
-                expMultiplier: 1.4
-            },
-            4: { 
-                name: '斩神', 
-                expRequired: 160, 
-                color: 'var(--level-4)',
-                checkinExp: 30,
-                expMultiplier: 1.4
-            },
-            5: { 
-                name: '天煞', 
-                expRequired: 320, 
-                color: 'var(--level-5)',
-                checkinExp: 60,
-                expMultiplier: 1.4
-            },
-            6: { 
-                name: '帝星', 
-                expRequired: 640, 
-                color: 'var(--level-6)',
-                checkinExp: 60,
-                expMultiplier: 1.6
-            },
-            7: { 
-                name: '冥皇', 
-                expRequired: 768, 
-                color: 'var(--level-7)',
-                checkinExp: 60,
-                expMultiplier: 1.6
-            },
-            8: { 
-                name: '罗睺', 
-                expRequired: 1075, 
-                color: 'var(--level-8)',
-                checkinExp: 60,
-                expMultiplier: 1.6
-            },
-            9: { 
-                name: '噬界', 
-                expRequired: 1720, 
-                color: 'var(--level-9)',
-                checkinExp: 120,
-                expMultiplier: 1.6
-            },
-            10: { 
-                name: '无灭', 
-                expRequired: 3096, 
-                color: 'var(--level-10)',
-                checkinExp: 120,
-                expMultiplier: 2.0
-            },
-            11: { 
-                name: '绝巅', 
-                expRequired: 6192, 
-                color: 'var(--level-11)',
-                checkinExp: 240,
-                expMultiplier: 2.0
-            },
-            12: { 
-                name: '至高', 
-                expRequired: 14111, 
-                color: 'var(--level-12)',
-                checkinExp: 240,
-                expMultiplier: 2.0,
-                isMaxLevel: true
-            }
-        };
-
-        const MAX_LEVEL = 12;
 
         // ==================== DOM操作函数 ====================
         function safeSetText(elementId, text, defaultValue = '') {
@@ -1884,239 +1325,6 @@
             showSyncNotice();
         }
 
-        // ==================== 等级相关函数 ====================
-        function calculateLevel(exp) {
-            let level = 1;
-            let currentExp = exp;
-            let totalExpToNextLevel = LEVEL_CONFIG[1].expRequired;
-            
-            for (let lvl = 1; lvl <= MAX_LEVEL; lvl++) {
-                const config = LEVEL_CONFIG[lvl];
-                
-                if (lvl < MAX_LEVEL) {
-                    if (currentExp >= config.expRequired) {
-                        currentExp -= config.expRequired;
-                        level = lvl + 1;
-                        totalExpToNextLevel = LEVEL_CONFIG[level].expRequired || 0;
-                    } else {
-                        break;
-                    }
-                } else {
-                    totalExpToNextLevel = 0;
-                    break;
-                }
-            }
-            
-            return { 
-                level, 
-                currentExp, 
-                expToNext: totalExpToNextLevel 
-            };
-        }
-
-        // 获取达到指定等级所需的最大经验值
-        function getMaxExpForLevel(level) {
-            let totalExp = 0;
-            for (let i = 1; i < level; i++) {
-                totalExp += LEVEL_CONFIG[i].expRequired;
-            }
-            return totalExp;
-        }
-
-        function getLevelColor(level) {
-            return LEVEL_CONFIG[level].color;
-        }
-
-        function getCheckinExp(level) {
-            return LEVEL_CONFIG[level].checkinExp;
-        }
-
-        function getExpMultiplier(level) {
-            return LEVEL_CONFIG[level].expMultiplier;
-        }
-
-        function getNextLevelMultiplier(level) {
-            if (level >= MAX_LEVEL) return 2.0;
-            if (level <= 2) return 1.4;
-            if (level <= 5) return 1.6;
-            if (level <= 9) return 2.0;
-            return 2.0;
-        }
-
-        function updateLevelDisplay() {
-            const config = LEVEL_CONFIG[userLevel];
-            const nextLevel = userLevel < MAX_LEVEL ? userLevel + 1 : null;
-            const progress = expToNextLevel > 0 ? (currentExpInLevel / expToNextLevel) * 100 : 100;
-            
-            // 更新等级徽章
-            const levelBadge = safeGetElement('levelBadge');
-            if (levelBadge) {
-                levelBadge.style.background = config.color;
-                if (userLevel >= MAX_LEVEL) {
-                    levelBadge.classList.add('max-level-badge');
-                    levelBadge.innerHTML = `
-                        <span style="color: var(--level-12); font-size: 1.1rem;">至高</span>
-                        <span class="level-text">满级</span>
-                    `;
-                } else {
-                    levelBadge.classList.remove('max-level-badge');
-                    levelBadge.innerHTML = `
-                        <span>Lv.${userLevel}</span>
-                        <span class="level-text">${config.name}</span>
-                    `;
-                }
-            }
-            
-            // 更新进度条
-            const levelCurrent = safeGetElement('levelCurrent');
-            const levelNext = safeGetElement('levelNext');
-            const levelProgressFill = safeGetElement('levelProgressFill');
-            const expTooltip = safeGetElement('expTooltip');
-            
-            if (levelCurrent) {
-                if (userLevel >= MAX_LEVEL) {
-                    levelCurrent.textContent = `至高之境 - 满级成就`;
-                    levelCurrent.style.color = config.color;
-                    levelCurrent.style.fontWeight = 'bold';
-                } else {
-                    levelCurrent.textContent = `Lv.${userLevel} ${config.name}`;
-                    levelCurrent.style.color = config.color;
-                }
-            }
-            
-            if (levelNext) {
-                if (nextLevel) {
-                    const nextConfig = LEVEL_CONFIG[nextLevel];
-                    levelNext.textContent = `Lv.${nextLevel} ${nextConfig.name}`;
-                    levelNext.style.color = nextConfig.color;
-                } else {
-                    levelNext.textContent = '已达最高等级';
-                    levelNext.style.color = 'var(--level-12)';
-                }
-            }
-            
-            if (levelProgressFill) {
-                if (userLevel >= MAX_LEVEL) {
-                    levelProgressFill.classList.add('level-progress-full');
-                    levelProgressFill.style.width = '100%';
-                } else {
-                    levelProgressFill.classList.remove('level-progress-full');
-                    levelProgressFill.style.width = `${progress}%`;
-                    if (nextLevel) {
-                        const nextConfig = LEVEL_CONFIG[nextLevel];
-                        levelProgressFill.style.background = `linear-gradient(90deg, ${config.color}, ${nextConfig.color})`;
-                    } else {
-                        levelProgressFill.style.background = config.color;
-                    }
-                }
-            }
-            
-            if (expTooltip) {
-                if (userLevel >= MAX_LEVEL) {
-                    expTooltip.textContent = '已达最高等级，无法获得更多经验';
-                    expTooltip.style.background = 'rgba(255, 215, 0, 0.9)';
-                    expTooltip.style.color = '#121212';
-                } else {
-                    expTooltip.textContent = `${currentExpInLevel}/${expToNextLevel} 经验`;
-                    expTooltip.style.background = '';
-                    expTooltip.style.color = '';
-                }
-                expTooltip.style.borderColor = config.color;
-            }
-            
-            // 更新总经验显示
-            safeSetText('totalExp', userExp.toString(), '0');
-            
-            // 更新距下一级经验显示
-            const expToNextElement = safeGetElement('expToNext');
-            if (expToNextElement) {
-                if (userLevel >= MAX_LEVEL) {
-                    expToNextElement.textContent = '已满级';
-                    expToNextElement.style.color = 'var(--level-12)';
-                } else {
-                    expToNextElement.textContent = `${expToNextLevel - currentExpInLevel} 经验`;
-                    expToNextElement.style.color = '';
-                }
-            }
-            
-            // 更新经验加成显示
-            expMultiplier = getExpMultiplier(userLevel);
-            const expMultiplierElement = safeGetElement('expMultiplier');
-            if (expMultiplierElement) {
-                if (userLevel >= MAX_LEVEL) {
-                    expMultiplierElement.textContent = 'MAX';
-                    expMultiplierElement.style.color = 'var(--level-12)';
-                } else {
-                    expMultiplierElement.textContent = `${expMultiplier.toFixed(1)}x`;
-                    expMultiplierElement.style.color = '';
-                }
-            }
-            
-            updateLevelDetails();
-            
-            if (userLevel >= 5) {
-                addLevelGlowEffect(userLevel);
-            }
-        }
-
-        function updateLevelDetails() {
-            const config = LEVEL_CONFIG[userLevel];
-            
-            if (userLevel >= MAX_LEVEL) {
-                // 最高等级的特殊显示
-                safeSetText('currentLevelNumber', '至高');
-                safeSetText('currentExpNumber', '满级');
-                safeSetText('totalExpRequired', '∞');
-                safeSetText('baseCheckinExp', '240 经验');
-                safeSetText('finalCheckinExp', '已满级');
-                safeSetText('currentExpBonus', 'MAX');
-                safeSetText('nextExpBonus', '已无更高等级');
-                
-                safeSetText('dailyReward', '240 经验');
-                safeSetText('expBonus', 'MAX (2.0倍)');
-                safeSetText('actualExp', '经验已满');
-                
-                // 修改签到按钮显示
-                const dailyRewardElement = safeGetElement('dailyReward');
-                if (dailyRewardElement) {
-                    dailyRewardElement.innerHTML = '<span style="color: var(--level-12)">240 经验</span><br><small style="font-size: 0.8em; color: #ccc;">(已达最高等级)</small>';
-                }
-            } else {
-                const checkinExp = getCheckinExp(userLevel);
-                const actualExp = Math.round(checkinExp * expMultiplier);
-                const nextBonus = getNextLevelMultiplier(userLevel);
-                
-                safeSetText('currentLevelNumber', userLevel.toString());
-                safeSetText('currentExpNumber', currentExpInLevel.toString());
-                safeSetText('totalExpRequired', expToNextLevel.toString());
-                safeSetText('baseCheckinExp', `${checkinExp} 经验`);
-                safeSetText('finalCheckinExp', `${actualExp} 经验`);
-                
-                const bonusPercent = Math.round((expMultiplier - 1) * 100);
-                safeSetText('currentExpBonus', `${bonusPercent}% (${expMultiplier.toFixed(1)}倍)`);
-                
-                const nextBonusPercent = Math.round((nextBonus - 1) * 100);
-                safeSetText('nextExpBonus', `${nextBonusPercent}% (${nextBonus.toFixed(1)}倍)`);
-                
-                safeSetText('dailyReward', `${checkinExp} 经验`);
-                safeSetText('expBonus', `+${bonusPercent}% (${expMultiplier.toFixed(1)}倍)`);
-                safeSetText('actualExp', `${actualExp} 经验`);
-            }
-        }
-
-        function addLevelGlowEffect(level) {
-            const levelBadge = safeGetElement('levelBadge');
-            if (!levelBadge) return;
-            
-            const oldGlow = levelBadge.querySelector('.level-glow');
-            if (oldGlow) oldGlow.remove();
-            
-            const glow = document.createElement('div');
-            glow.className = 'level-glow';
-            glow.style.setProperty('--level-color', getLevelColor(level));
-            levelBadge.appendChild(glow);
-        }
-
         // ==================== 模态框控制函数 ====================
         function openModal(modalId) {
             const modal = safeGetElement(modalId);
@@ -2132,693 +1340,6 @@
                 modal.classList.remove('show');
                 document.body.style.overflow = '';
             }
-        }
-
-        // ==================== 签到相关函数 ====================
-        function updateCheckinButton(canCheckin) {
-            const checkinBtn = safeGetElement('dailyCheckinBtn');
-            if (!checkinBtn) return;
-            
-            if (userLevel >= MAX_LEVEL) {
-                if (canCheckin) {
-                    checkinBtn.disabled = false;
-                    checkinBtn.classList.remove('checkin-disabled');
-                    checkinBtn.innerHTML = '<i class="fas fa-crown"></i> 满级签到';
-                    checkinBtn.style.background = 'linear-gradient(135deg, var(--level-12), #ff9500)';
-                    checkinBtn.style.color = '#121212';
-                } else {
-                    checkinBtn.disabled = true;
-                    checkinBtn.classList.add('checkin-disabled');
-                    checkinBtn.innerHTML = '<i class="fas fa-crown"></i> 今日已签到';
-                    checkinBtn.style.background = 'linear-gradient(135deg, #666, #444)';
-                    checkinBtn.style.color = '#999';
-                }
-            } else {
-                if (canCheckin) {
-                    checkinBtn.disabled = false;
-                    checkinBtn.classList.remove('checkin-disabled');
-                    checkinBtn.innerHTML = '<i class="fas fa-gift"></i> 每日签到';
-                    checkinBtn.style.background = 'linear-gradient(135deg, #ffd700, #ff9800)';
-                    checkinBtn.style.color = '#121212';
-                    
-                    // 显示连续签到奖励提示
-                    if (checkinStreak >= 7) {
-                        let rewardBadge = checkinBtn.querySelector('.streak-reward');
-                        if (!rewardBadge) {
-                            rewardBadge = document.createElement('div');
-                            rewardBadge.className = 'streak-reward';
-                            rewardBadge.textContent = '7天奖励';
-                            checkinBtn.appendChild(rewardBadge);
-                        }
-                    } else if (checkinStreak >= 3) {
-                        let rewardBadge = checkinBtn.querySelector('.streak-reward');
-                        if (!rewardBadge) {
-                            rewardBadge = document.createElement('div');
-                            rewardBadge.className = 'streak-reward';
-                            rewardBadge.textContent = '3天奖励';
-                            checkinBtn.appendChild(rewardBadge);
-                        }
-                    } else {
-                        const rewardBadge = checkinBtn.querySelector('.streak-reward');
-                        if (rewardBadge) {
-                            rewardBadge.remove();
-                        }
-                    }
-                } else {
-                    checkinBtn.disabled = true;
-                    checkinBtn.classList.add('checkin-disabled');
-                    checkinBtn.innerHTML = '<i class="fas fa-check"></i> 今日已签到';
-                    checkinBtn.style.background = '#666';
-                    checkinBtn.style.color = '#999';
-                    
-                    const rewardBadge = checkinBtn.querySelector('.streak-reward');
-                    if (rewardBadge) {
-                        rewardBadge.remove();
-                    }
-                }
-            }
-        }
-
-        function updateCheckinDisplay() {
-            const checkinStreakElement = safeGetElement('checkinStreak');
-            const checkinDaysElement = safeGetElement('checkinDays');
-            
-            if (checkinStreakElement) {
-                checkinStreakElement.textContent = checkinStreak.toString();
-                if (checkinStreak >= 7) {
-                    checkinStreakElement.style.background = 'var(--level-12)';
-                } else if (checkinStreak >= 3) {
-                    checkinStreakElement.style.background = '#ff9800';
-                }
-            }
-            
-            if (checkinDaysElement) {
-                checkinDaysElement.textContent = checkinStreak.toString();
-            }
-        }
-
-        async function checkDailyCheckin() {
-            try {
-                if (!currentUser || !supabaseClient) return;
-                
-                const today = new Date().toISOString().split('T')[0];
-                
-                // 1. 先查询数据库中的签到记录
-                try {
-                    const { data: checkins, error } = await supabaseClient
-                        .from('user_checkins')
-                        .select('*')
-                        .eq('user_id', currentUser.id)
-                        .eq('checkin_date', today)
-                        .single();
-                    
-                    if (error && error.code !== 'PGRST116') {
-                        console.error('查询签到记录失败:', error);
-                    }
-                    
-                    // 数据库中有今天的记录 = 已签到
-                    if (checkins) {
-                        canCheckinToday = false;
-                        checkinStreak = checkins.streak_days || 0;
-                        
-                        updateCheckinButton(false);
-                        updateCheckinDisplay();
-                        return;
-                    }
-                } catch (dbError) {
-                    console.warn('数据库查询失败，使用本地存储:', dbError);
-                }
-                
-                // 2. 数据库没有记录，检查本地存储
-                const lastCheckinDate = localStorage.getItem('lastCheckinDate');
-                if (lastCheckinDate === today) {
-                    canCheckinToday = false;
-                    checkinStreak = parseInt(localStorage.getItem('checkinStreak') || '0');
-                    
-                    updateCheckinButton(false);
-                    
-                    // 检查连续签到是否中断
-                    const yesterday = new Date();
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    const yesterdayStr = yesterday.toISOString().split('T')[0];
-                    
-                    // 如果昨天没签到，重置连续签到
-                    if (lastCheckinDate !== yesterdayStr) {
-                        checkinStreak = 1;
-                        localStorage.setItem('checkinStreak', '1');
-                    }
-                } else {
-                    canCheckinToday = true;
-                    checkinStreak = parseInt(localStorage.getItem('checkinStreak') || '0');
-                    
-                    // 检查是否连续签到中断
-                    const yesterday = new Date();
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    const yesterdayStr = yesterday.toISOString().split('T')[0];
-                    
-                    if (localStorage.getItem('lastCheckinDate') !== yesterdayStr) {
-                        checkinStreak = 0;
-                        localStorage.setItem('checkinStreak', '0');
-                    }
-                    
-                    updateCheckinButton(true);
-                }
-                
-                updateCheckinDisplay();
-                
-            } catch (error) {
-                console.error('检查签到状态失败:', error);
-                canCheckinToday = true;
-                updateCheckinButton(true);
-            }
-        }
-
-        async function dailyCheckin() {
-            try {
-                // 检查是否已达到最高等级
-                if (userLevel >= MAX_LEVEL) {
-                    showNotification('您已达到最高等级，签到将无法获得经验', 'info');
-                    
-                    // 仍然执行签到流程，但不获得经验
-                    const checkinBtn = safeGetElement('dailyCheckinBtn');
-                    if (checkinBtn) {
-                        checkinBtn.disabled = true;
-                        checkinBtn.classList.add('checkin-disabled');
-                        checkinBtn.innerHTML = '<i class="fas fa-check"></i> 今日已签到';
-                        checkinBtn.style.background = 'linear-gradient(135deg, #666, #444)';
-                        checkinBtn.style.color = '#999';
-                    }
-                    
-                    await saveCheckinRecord(0);
-                    updateCheckinDisplay();
-                    showNotification('签到成功（已达最高等级）', 'success');
-                    return;
-                }
-                
-                if (!canCheckinToday) {
-                    showNotification('今天已经签到过了，明天再来吧！', 'info');
-                    return;
-                }
-                
-                const checkinBtn = safeGetElement('dailyCheckinBtn');
-                if (checkinBtn) {
-                    checkinBtn.disabled = true;
-                    checkinBtn.classList.add('checkin-disabled');
-                    checkinBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 签到中...';
-                }
-                
-                // 计算签到奖励
-                let baseExp = getCheckinExp(userLevel);
-                
-                // 连续签到奖励
-                let streakBonus = 0;
-                if (checkinStreak >= 7) streakBonus = Math.floor(baseExp * 0.5); // 连续7天额外50%
-                else if (checkinStreak >= 3) streakBonus = Math.floor(baseExp * 0.2); // 连续3天额外20%
-                
-                // 计算最终经验
-                const actualExp = Math.round((baseExp + streakBonus) * expMultiplier);
-                
-                // 添加经验值
-                const success = await addExp(actualExp, '每日签到');
-                
-                if (success) {
-                    // 更新签到状态
-                    canCheckinToday = false;
-                    
-                    // 保存签到记录（包含额外奖励信息）
-                    await saveCheckinRecord(actualExp);
-                    
-                    // 更新UI
-                    updateCheckinDisplay();
-                    
-                    // 更新按钮状态
-                    updateCheckinButton(false);
-                    
-                    // 显示签到成功通知
-                    let message = `签到成功！获得 ${actualExp} 经验值`;
-                    if (streakBonus > 0) {
-                        message += ` (含连续签到奖励 ${streakBonus} 经验)`;
-                    }
-                    showNotification(message, 'success');
-                    
-                    // 播放签到动画
-                    playCheckinAnimation();
-                    
-                    // 特殊连续签到成就
-                    if (checkinStreak === 7 || checkinStreak === 30 || checkinStreak === 100) {
-                        showStreakAchievement(checkinStreak);
-                    }
-                } else {
-                    throw new Error('添加经验值失败');
-                }
-                
-            } catch (error) {
-                console.error('签到失败:', error);
-                showNotification('签到失败，请重试', 'error');
-                
-                const checkinBtn = safeGetElement('dailyCheckinBtn');
-                if (checkinBtn) {
-                    checkinBtn.disabled = false;
-                    checkinBtn.classList.remove('checkin-disabled');
-                    checkinBtn.innerHTML = '<i class="fas fa-gift"></i> 每日签到';
-                }
-            }
-        }
-
-        async function saveCheckinRecord(expGained) {
-            try {
-                const today = new Date().toISOString().split('T')[0];
-                
-                // 1. 保存到数据库
-                if (supabaseClient && currentUser) {
-                    const yesterday = new Date();
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    const yesterdayStr = yesterday.toISOString().split('T')[0];
-                    
-                    let newStreak = 1;
-                    
-                    try {
-                        // 查询昨天是否签到
-                        const { data: yesterdayCheckin } = await supabaseClient
-                            .from('user_checkins')
-                            .select('streak_days')
-                            .eq('user_id', currentUser.id)
-                            .eq('checkin_date', yesterdayStr)
-                            .single();
-                        
-                        if (yesterdayCheckin) {
-                            newStreak = yesterdayCheckin.streak_days + 1;
-                        }
-                    } catch (e) {
-                        console.log('昨天未签到，开始新的连续签到');
-                    }
-                    
-                    try {
-                        // 插入今天的签到记录
-                        const { error } = await supabaseClient
-                            .from('user_checkins')
-                            .insert({
-                                user_id: currentUser.id,
-                                checkin_date: today,
-                                exp_gained: expGained,
-                                streak_days: newStreak,
-                                level_at_checkin: userLevel
-                            });
-                        
-                        if (error) {
-                            console.warn('保存签到记录到数据库失败:', error);
-                            // 尝试更新已有记录
-                            const { error: updateError } = await supabaseClient
-                                .from('user_checkins')
-                                .update({
-                                    exp_gained: expGained,
-                                    streak_days: newStreak,
-                                    level_at_checkin: userLevel
-                                })
-                                .eq('user_id', currentUser.id)
-                                .eq('checkin_date', today);
-                            
-                            if (updateError) {
-                                console.error('更新签到记录失败:', updateError);
-                                throw updateError;
-                            }
-                        }
-                        
-                        checkinStreak = newStreak;
-                        
-                    } catch (dbError) {
-                        console.warn('数据库保存失败，使用本地存储:', dbError);
-                    }
-                }
-                
-                // 2. 保存到本地存储（作为备份）
-                const lastCheckinDate = localStorage.getItem('lastCheckinDate');
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
-                const yesterdayStr = yesterday.toISOString().split('T')[0];
-                
-                if (lastCheckinDate === yesterdayStr) {
-                    // 昨天签到了，连续签到+1
-                    checkinStreak = parseInt(localStorage.getItem('checkinStreak') || '0') + 1;
-                } else if (lastCheckinDate !== today) {
-                    // 昨天没签到，重新开始
-                    checkinStreak = 1;
-                }
-                
-                localStorage.setItem('lastCheckinDate', today);
-                localStorage.setItem('checkinStreak', checkinStreak.toString());
-                localStorage.setItem(`checkin_${today}`, JSON.stringify({
-                    date: today,
-                    exp: expGained,
-                    streak: checkinStreak,
-                    level: userLevel
-                }));
-                
-                updateCheckinDisplay();
-                
-                // 3. 更新用户统计
-                try {
-                    const { data: currentStats } = await supabaseClient
-                        .from('user_stats')
-                        .select('total_checkins')
-                        .eq('user_id', currentUser.id)
-                        .single();
-                    
-                    const newTotal = (currentStats?.total_checkins || 0) + 1;
-                    
-                    await supabaseClient
-                        .from('user_stats')
-                        .update({
-                            total_checkins: newTotal,
-                            streak_days: checkinStreak,
-                            updated_at: new Date().toISOString()
-                        })
-                        .eq('user_id', currentUser.id);
-                        
-                } catch (statsError) {
-                    console.warn('更新用户统计失败:', statsError);
-                }
-                
-            } catch (error) {
-                console.error('保存签到记录失败:', error);
-                
-                // 保底方案：仅使用本地存储
-                const today = new Date().toISOString().split('T')[0];
-                localStorage.setItem('lastCheckinDate', today);
-                checkinStreak = parseInt(localStorage.getItem('checkinStreak') || '0') + 1;
-                localStorage.setItem('checkinStreak', checkinStreak.toString());
-                updateCheckinDisplay();
-            }
-        }
-
-        function playCheckinAnimation() {
-            const dailySection = document.querySelector('.daily-section');
-            if (!dailySection) return;
-            
-            const animation = document.createElement('div');
-            animation.style.cssText = `
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%);
-                z-index: 1;
-                animation: fadeOut 1s forwards;
-                pointer-events: none;
-            `;
-            
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes fadeOut {
-                    0% { opacity: 1; }
-                    100% { opacity: 0; }
-                }
-            `;
-            
-            document.head.appendChild(style);
-            dailySection.appendChild(animation);
-            
-            setTimeout(() => {
-                if (animation.parentNode) {
-                    animation.remove();
-                }
-                if (style.parentNode) {
-                    style.remove();
-                }
-            }, 1000);
-        }
-
-        // 显示连续签到成就
-        function showStreakAchievement(streak) {
-            const achievement = document.createElement('div');
-            achievement.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: linear-gradient(135deg, var(--level-12), #ff6b35);
-                padding: 15px 25px;
-                border-radius: 12px;
-                color: white;
-                font-weight: bold;
-                z-index: 10004;
-                animation: slideInRight 0.5s ease, slideOutRight 0.5s ease 3s forwards;
-                box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
-                border-left: 5px solid var(--level-12);
-                min-width: 200px;
-            `;
-            
-            let message = '';
-            let icon = '';
-            
-            if (streak === 7) {
-                message = '连续签到7天！坚持就是力量！';
-                icon = '🏆';
-            } else if (streak === 30) {
-                message = '连续签到30天！持之以恒的勇者！';
-                icon = '👑';
-            } else if (streak === 100) {
-                message = '连续签到100天！传奇般的坚持！';
-                icon = '⭐';
-            }
-            
-            achievement.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="font-size: 1.5rem;">${icon}</div>
-                    <div>
-                        <div style="font-size: 1rem; margin-bottom: 2px;">成就达成！</div>
-                        <div style="font-size: 0.9rem; opacity: 0.9;">${message}</div>
-                    </div>
-                </div>
-            `;
-            
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes slideInRight {
-                    from { transform: translateX(100%); opacity: 0; }
-                    to { transform: translateX(0); opacity: 1; }
-                }
-                @keyframes slideOutRight {
-                    from { transform: translateX(0); opacity: 1; }
-                    to { transform: translateX(100%); opacity: 0; }
-                }
-            `;
-            
-            document.head.appendChild(style);
-            document.body.appendChild(achievement);
-            
-            setTimeout(() => {
-                if (achievement.parentNode) {
-                    achievement.remove();
-                }
-                if (style.parentNode) {
-                    style.remove();
-                }
-            }, 3500);
-        }
-
-        // ==================== 经验值相关函数 ====================
-        async function addExp(amount, source = '') {
-            try {
-                // 检查是否已达到最高等级
-                if (userLevel >= MAX_LEVEL) {
-                    showNotification('您已达到最高等级（至高），无法获得更多经验', 'info');
-                    return false;
-                }
-                
-                if (!currentUser) return false;
-                
-                // 检查添加经验后是否会超过下一等级所需经验
-                const totalExpAfterAdd = userExp + amount;
-                const levelDataAfterAdd = calculateLevel(totalExpAfterAdd);
-                
-                // 如果升级后超过最高等级，只加到刚好满级
-                if (levelDataAfterAdd.level > MAX_LEVEL) {
-                    const maxExp = getMaxExpForLevel(MAX_LEVEL);
-                    amount = maxExp - userExp;
-                    
-                    if (amount <= 0) {
-                        showNotification('您已达到最高等级（至高），无法获得更多经验', 'info');
-                        return false;
-                    }
-                }
-                
-                // 更新数据库中的经验值
-                const { error } = await supabaseClient.rpc('add_user_exp', {
-                    user_id_param: currentUser.id,
-                    exp_amount: amount
-                });
-                
-                if (error) {
-                    // 如果RPC函数不存在，使用直接更新
-                    console.warn('RPC函数不存在，使用直接更新:', error);
-                    
-                    // 先获取当前经验值
-                    const { data: stats } = await supabaseClient
-                        .from('user_stats')
-                        .select('exp')
-                        .eq('user_id', currentUser.id)
-                        .single();
-                    
-                    const currentExp = stats?.exp || 0;
-                    const newExp = Math.min(currentExp + amount, getMaxExpForLevel(MAX_LEVEL));
-                    
-                    const { error: updateError } = await supabaseClient
-                        .from('user_stats')
-                        .update({ exp: newExp })
-                        .eq('user_id', currentUser.id);
-                    
-                    if (updateError) throw updateError;
-                }
-                
-                // 更新本地经验值
-                userExp += amount;
-                
-                // 重新计算等级
-                const levelData = calculateLevel(userExp);
-                const oldLevel = userLevel;
-                userLevel = levelData.level;
-                currentExpInLevel = levelData.currentExp;
-                expToNextLevel = levelData.expToNext;
-                
-                // 更新显示
-                updateLevelDisplay();
-                
-                // 检查是否升级
-                if (userLevel > oldLevel) {
-                    showLevelUpAnimation(oldLevel, userLevel);
-                    
-                    // 检查是否达到最高等级
-                    if (userLevel >= MAX_LEVEL) {
-                        showMaxLevelAnimation();
-                    }
-                }
-                
-                // 显示获得经验的通知
-                if (source) {
-                    showNotification(`获得 ${amount} 经验 (${source})`, 'success');
-                } else {
-                    showNotification(`获得 ${amount} 经验`, 'success');
-                }
-                
-                return true;
-                
-            } catch (error) {
-                console.error('添加经验值失败:', error);
-                
-                // 保底方案：仅更新本地状态
-                if (userLevel < MAX_LEVEL) {
-                    userExp += amount;
-                    const levelData = calculateLevel(userExp);
-                    userLevel = levelData.level;
-                    currentExpInLevel = levelData.currentExp;
-                    expToNextLevel = levelData.expToNext;
-                    
-                    updateLevelDisplay();
-                    showNotification(`获得 ${amount} 经验 (离线模式)`, 'success');
-                    
-                    return true;
-                } else {
-                    showNotification('您已达到最高等级，无法获得更多经验', 'info');
-                    return false;
-                }
-            }
-        }
-
-        // 显示达到最高等级的特殊动画
-        function showMaxLevelAnimation() {
-            const animation = document.createElement('div');
-            animation.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.95);
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                z-index: 10002;
-                animation: fadeIn 0.5s forwards;
-            `;
-            
-            animation.innerHTML = `
-                <div style="
-                    background: linear-gradient(135deg, var(--level-12), #ff9500);
-                    padding: 50px;
-                    border-radius: 25px;
-                    text-align: center;
-                    box-shadow: 0 0 80px var(--level-12);
-                    animation: pulseGold 2s infinite;
-                    border: 4px solid var(--level-12);
-                ">
-                    <div style="font-size: 5rem; margin-bottom: 30px; color: var(--level-12);">
-                        <i class="fas fa-crown"></i>
-                    </div>
-                    <div style="font-size: 3rem; font-weight: bold; margin-bottom: 20px; color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">
-                        恭喜！已达最高等级
-                    </div>
-                    <div style="font-size: 2.2rem; margin-bottom: 30px; color: var(--level-12); font-weight: bold;">
-                        至高之境
-                    </div>
-                    <div style="font-size: 1.3rem; color: rgba(255, 255, 255, 0.9); margin-bottom: 40px; max-width: 500px; line-height: 1.6;">
-                        您已达成所有等级成就，成为服务器中的顶尖玩家！<br>
-                        感谢您的一路陪伴与支持！
-                    </div>
-                    <button onclick="this.parentElement.parentElement.remove()" style="
-                        background: var(--level-12);
-                        color: #121212;
-                        border: none;
-                        padding: 15px 40px;
-                        border-radius: 12px;
-                        font-size: 1.2rem;
-                        font-weight: bold;
-                        cursor: pointer;
-                        transition: transform 0.2s;
-                        box-shadow: 0 8px 20px rgba(255, 215, 0, 0.4);
-                    ">
-                        朕已阅
-                    </button>
-                </div>
-            `;
-            
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes pulseGold {
-                    0%, 100% { 
-                        transform: scale(1);
-                        box-shadow: 0 0 80px var(--level-12);
-                    }
-                    50% { 
-                        transform: scale(1.02);
-                        box-shadow: 0 0 120px var(--level-12);
-                    }
-                }
-            `;
-            
-            document.head.appendChild(style);
-            document.body.appendChild(animation);
-            
-            setTimeout(() => {
-                if (animation.parentNode) {
-                    animation.remove();
-                }
-                if (style.parentNode) {
-                    style.remove();
-                }
-            }, 5000);
-            
-            // 播放特殊音效
-            try {
-                const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3');
-                audio.volume = 0.5;
-                audio.play().catch(() => {});
-            } catch (e) {}
         }
 
         // ==================== 初始化函数 ====================
@@ -2848,22 +1369,11 @@
                 // 加载所有用户数据
                 await Promise.all([
                     loadUserProfile(),
-                    loadUserStats(),
-                    loadUserExp(),
-                    checkDailyCheckin()
+                    loadUserStats()
                 ]);
                 
                 // 更新导航栏
                 updateNavbar();
-                
-                // 计算等级
-                const levelData = calculateLevel(userExp);
-                userLevel = levelData.level;
-                currentExpInLevel = levelData.currentExp;
-                expToNextLevel = levelData.expToNext;
-                
-                // 更新显示
-                updateLevelDisplay();
                 
                 // 显示内容，隐藏加载动画
                 const loadingElement = safeGetElement('loading');
@@ -3019,9 +1529,6 @@
                     };
                     reader.readAsDataURL(file);
                     
-                    // 添加经验值
-                    await addExp(10, '上传头像');
-                    
                     showNotification('头像上传成功，已同步到主页', 'success');
                     
                 } catch (error) {
@@ -3041,200 +1548,7 @@
             input.click();
         };
 
-        window.viewCheckinHistory = async function() {
-            try {
-                showNotification('加载签到记录中...', 'info');
-                
-                const { data: checkins, error } = await supabaseClient
-                    .from('user_checkins')
-                    .select('*')
-                    .eq('user_id', currentUser.id)
-                    .order('checkin_date', { ascending: false })
-                    .limit(30);
-                
-                if (error) throw error;
-                
-                // 如果没有数据库记录，尝试从本地存储获取
-                let localCheckins = [];
-                if (!checkins || checkins.length === 0) {
-                    for (let i = 0; i < 30; i++) {
-                        const date = new Date();
-                        date.setDate(date.getDate() - i);
-                        const dateStr = date.toISOString().split('T')[0];
-                        const checkinData = localStorage.getItem(`checkin_${dateStr}`);
-                        
-                        if (checkinData) {
-                            localCheckins.push(JSON.parse(checkinData));
-                        }
-                    }
-                }
-                
-                const allCheckins = checkins && checkins.length > 0 ? checkins : localCheckins;
-                
-                // 创建模态框显示签到历史
-                const modal = document.createElement('div');
-                modal.className = 'modal-overlay show';
-                modal.style.zIndex = '10003';
-                modal.innerHTML = `
-                    <div class="modal" style="max-width: 800px; max-height: 85vh;">
-                        <div class="modal-header">
-                            <div class="modal-title">
-                                <i class="fas fa-history"></i>
-                                签到记录
-                                <span style="font-size: 0.9rem; color: var(--text-secondary); margin-left: 10px;">
-                                    共 ${allCheckins.length} 条记录
-                                </span>
-                            </div>
-                            <button class="modal-close" onclick="this.parentElement.parentElement.parentElement.remove()">&times;</button>
-                        </div>
-                        <div style="margin-top: 20px; max-height: 60vh; overflow-y: auto;">
-                            <table class="checkin-history-table">
-                                <thead>
-                                    <tr>
-                                        <th>日期</th>
-                                        <th>等级</th>
-                                        <th>获得经验</th>
-                                        <th>连续签到</th>
-                                        <th>状态</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${allCheckins.map((checkin, index) => {
-                                        const date = new Date(checkin.checkin_date || checkin.date);
-                                        const isToday = date.toDateString() === new Date().toDateString();
-                                        const isYesterday = new Date(date.getTime() + 86400000).toDateString() === new Date().toDateString();
-                                        
-                                        let dateText = date.toLocaleDateString('zh-CN');
-                                        if (isToday) dateText += ' (今天)';
-                                        if (isYesterday) dateText += ' (昨天)';
-                                        
-                                        const streak = checkin.streak_days || checkin.streak || 1;
-                                        const streakClass = streak >= 30 ? 'streak-30' : streak >= 7 ? 'streak-7' : '';
-                                        
-                                        return `
-                                            <tr ${isToday ? 'class="today"' : ''}>
-                                                <td>${dateText}</td>
-                                                <td>Lv.${checkin.level_at_checkin || checkin.level || userLevel}</td>
-                                                <td style="color: ${(checkin.exp_gained || checkin.exp || 0) > 0 ? 'var(--text-highlight)' : 'var(--text-secondary)'}">
-                                                    ${checkin.exp_gained || checkin.exp || 0} 经验
-                                                </td>
-                                                <td class="${streakClass}">${streak} 天</td>
-                                                <td>
-                                                    <span style="color: ${(checkin.exp_gained || checkin.exp || 0) > 0 ? 'var(--text-highlight)' : '#81c784'}">
-                                                        ${(checkin.exp_gained || checkin.exp || 0) > 0 ? '已签到' : '已签到(满级)'}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        `;
-                                    }).join('')}
-                                    ${allCheckins.length === 0 ? `
-                                        <tr>
-                                            <td colspan="5" style="padding: 40px; text-align: center; color: var(--text-secondary);">
-                                                <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 15px; display: block;"></i>
-                                                暂无签到记录
-                                            </td>
-                                        </tr>
-                                    ` : ''}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="form-actions" style="margin-top: 20px;">
-                            <button class="btn btn-cancel" onclick="this.parentElement.parentElement.parentElement.remove()">关闭</button>
-                            ${allCheckins.length > 0 ? `
-                                <button class="btn btn-primary" onclick="exportCheckinHistory()">
-                                    <i class="fas fa-download"></i> 导出记录
-                                </button>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-                
-                modal.addEventListener('click', function(e) {
-                    if (e.target === this) {
-                        this.remove();
-                    }
-                });
-                
-                document.body.appendChild(modal);
-                
-            } catch (error) {
-                console.error('加载签到记录失败:', error);
-                showNotification('加载签到记录失败', 'error');
-            }
-        };
-
-        // 导出签到记录
-        window.exportCheckinHistory = function() {
-            try {
-                let csvContent = "data:text/csv;charset=utf-8,日期,等级,获得经验,连续签到\n";
-                
-                // 收集本地存储的签到记录
-                const checkins = [];
-                for (let i = 0; i < 365; i++) {
-                    const date = new Date();
-                    date.setDate(date.getDate() - i);
-                    const dateStr = date.toISOString().split('T')[0];
-                    const checkinData = localStorage.getItem(`checkin_${dateStr}`);
-                    
-                    if (checkinData) {
-                        const data = JSON.parse(checkinData);
-                        checkins.push({
-                            date: dateStr,
-                            level: data.level || userLevel,
-                            exp: data.exp || 0,
-                            streak: data.streak || 1
-                        });
-                    }
-                }
-                
-                checkins.forEach(checkin => {
-                    csvContent += `${checkin.date},Lv.${checkin.level},${checkin.exp},${checkin.streak}\n`;
-                });
-                
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", `签到记录_${new Date().toISOString().split('T')[0]}.csv`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                showNotification('签到记录已导出', 'success');
-                
-            } catch (error) {
-                console.error('导出签到记录失败:', error);
-                showNotification('导出失败', 'error');
-            }
-        };
-
         // ==================== 用户资料相关函数 ====================
-        async function loadUserExp() {
-            try {
-                const { data: stats, error } = await supabaseClient
-                    .from('user_stats')
-                    .select('exp')
-                    .eq('user_id', currentUser.id)
-                    .single();
-                
-                if (error) {
-                    if (error.code === 'PGRST116') {
-                        await createUserStats();
-                        userExp = 0;
-                        return;
-                    }
-                    throw error;
-                }
-                
-                userExp = stats.exp || 0;
-                return userExp;
-                
-            } catch (error) {
-                console.error('加载经验值失败:', error);
-                userExp = 0;
-                return 0;
-            }
-        }
-
         async function loadUserProfile() {
             try {
                 const { data: profile, error } = await supabaseClient
@@ -3319,7 +1633,6 @@
                         user_id: currentUser.id,
                         view_count: 0,
                         favorite_count: 0,
-                        exp: 0,
                         last_login: new Date().toISOString(),
                         total_checkins: 0,
                         streak_days: 0
@@ -3373,8 +1686,6 @@
                 // 同步到本地缓存和主页
                 cacheUserProfile(newUsername, userProfile?.avatar_url || '');
                 
-                await addExp(5, '修改用户名');
-                
                 updateNavbar();
                 
                 closeModal('usernameModal');
@@ -3402,10 +1713,6 @@
                 
                 userProfile.bio = newBio;
                 safeSetText('userBio', newBio);
-                
-                if (newBio.length > 20) {
-                    await addExp(5, '完善个人资料');
-                }
                 
                 closeModal('bioModal');
                 showNotification('个人简介更新成功', 'success');
@@ -3462,8 +1769,6 @@
                 if (updateError) throw updateError;
                 
                 closeModal('passwordModal');
-                
-                await addExp(15, '修改密码');
                 
                 showNotification('密码更新成功', 'success');
                 
@@ -3523,6 +1828,29 @@
                 }
                 
                 userStats = stats;
+                
+                // 更新统计卡片
+                safeSetText('favoriteCount', stats.favorite_count || '0');
+                safeSetText('viewCount', stats.view_count || '0');
+                
+                // 计算最后活跃时间
+                if (stats.last_login) {
+                    const lastLogin = new Date(stats.last_login);
+                    const now = new Date();
+                    const hoursDiff = Math.floor((now - lastLogin) / (1000 * 60 * 60));
+                    
+                    let lastActiveText = '';
+                    if (hoursDiff < 1) {
+                        lastActiveText = '刚刚';
+                    } else if (hoursDiff < 24) {
+                        lastActiveText = `${hoursDiff}小时前`;
+                    } else {
+                        const daysDiff = Math.floor(hoursDiff / 24);
+                        lastActiveText = `${daysDiff}天前`;
+                    }
+                    
+                    safeSetText('lastActive', lastActiveText);
+                }
                 
                 return stats;
                 
@@ -3681,91 +2009,6 @@
             setTimeout(() => {
                 notification.style.transform = 'translateX(120%)';
             }, 3000);
-        }
-
-        function showLevelUpAnimation(oldLevel, newLevel) {
-            const animation = document.createElement('div');
-            animation.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.8);
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                z-index: 10001;
-                animation: fadeIn 0.3s forwards;
-            `;
-            
-            animation.innerHTML = `
-                <div style="
-                    background: linear-gradient(135deg, ${getLevelColor(oldLevel)}, ${getLevelColor(newLevel)});
-                    padding: 40px;
-                    border-radius: 20px;
-                    text-align: center;
-                    box-shadow: 0 0 50px ${getLevelColor(newLevel)};
-                    animation: scaleIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-                ">
-                    <div style="font-size: 4rem; margin-bottom: 20px;">
-                        <i class="fas fa-trophy"></i>
-                    </div>
-                    <div style="font-size: 2.5rem; font-weight: bold; margin-bottom: 10px; color: white;">
-                        等级提升！
-                    </div>
-                    <div style="font-size: 1.8rem; margin-bottom: 30px; color: white;">
-                        Lv.${oldLevel} → <span style="color: ${getLevelColor(newLevel)}; font-weight: bold;">Lv.${newLevel}</span>
-                    </div>
-                    <div style="font-size: 1.2rem; color: rgba(255, 255, 255, 0.9); margin-bottom: 30px;">
-                        恭喜您升到 ${LEVEL_CONFIG[newLevel].name}
-                    </div>
-                    <button onclick="this.parentElement.parentElement.remove()" style="
-                        background: white;
-                        color: #121212;
-                        border: none;
-                        padding: 12px 30px;
-                        border-radius: 10px;
-                        font-size: 1.1rem;
-                        font-weight: bold;
-                        cursor: pointer;
-                        transition: transform 0.2s;
-                    ">
-                        确认
-                    </button>
-                </div>
-            `;
-            
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes scaleIn {
-                    from { transform: scale(0.5); opacity: 0; }
-                    to { transform: scale(1); opacity: 1; }
-                }
-            `;
-            
-            document.head.appendChild(style);
-            document.body.appendChild(animation);
-            
-            setTimeout(() => {
-                if (animation.parentNode) {
-                    animation.remove();
-                }
-                if (style.parentNode) {
-                    style.remove();
-                }
-            }, 3000);
-            
-            try {
-                const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3');
-                audio.volume = 0.3;
-                audio.play().catch(() => {});
-            } catch (e) {}
         }
 
         function handleInitializationError(error) {
