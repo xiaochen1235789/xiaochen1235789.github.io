@@ -750,6 +750,227 @@
         ::-webkit-scrollbar-thumb:hover {
             background: var(--text-highlight);
         }
+        
+        /* ==================== 弹窗样式 ==================== */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: modalFadeIn 0.2s ease;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(5px);
+    cursor: pointer;
+}
+
+.modal-content {
+    position: relative;
+    width: 90%;
+    max-width: 1100px;
+    height: 85vh;
+    background: var(--bg);
+    border-radius: 12px;
+    border: 2px solid var(--border-color);
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.8),
+        0 0 0 1px rgba(129, 199, 132, 0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: contentSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes contentSlideIn {
+    from { 
+        opacity: 0;
+        transform: translateY(-30px) scale(0.95);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header {
+    padding: 16px 24px;
+    background: var(--card-bg);
+    border-bottom: 2px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header h3 {
+    color: var(--text-highlight);
+    font-size: 1.4rem;
+    margin: 0;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.3rem;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.modal-close:hover {
+    background: rgba(248, 113, 113, 0.15);
+    color: #f87171;
+    border-color: rgba(248, 113, 113, 0.3);
+    transform: rotate(90deg);
+}
+
+.modal-close:active {
+    transform: rotate(90deg) scale(0.95);
+}
+
+.modal-body {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    background: var(--bg);
+}
+
+/* iframe 样式 */
+#changelog-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
+
+/* 弹窗加载状态指示器 */
+.modal-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: var(--text-highlight);
+    z-index: 1;
+}
+
+.modal-loading .loading-spinner {
+    margin-bottom: 16px;
+}
+
+/* 适配移动端 */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        height: 90vh;
+        max-width: 100%;
+        margin: 0 10px;
+        border-radius: 8px;
+    }
+    
+    .modal-header {
+        padding: 12px 16px;
+    }
+    
+    .modal-header h3 {
+        font-size: 1.2rem;
+    }
+    
+    .modal-close {
+        width: 36px;
+        height: 36px;
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-content {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+        margin: 0;
+        border: none;
+    }
+    
+    .modal-header {
+        padding: 10px 12px;
+    }
+    
+    .modal-header h3 {
+        font-size: 1.1rem;
+    }
+}
+
+/* 弹窗进入动画 */
+@keyframes modalSlideIn {
+    0% {
+        transform: translateY(-100px) scale(0.9);
+        opacity: 0;
+    }
+    70% {
+        transform: translateY(10px) scale(1.02);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+/* 弹窗退出动画 */
+@keyframes modalSlideOut {
+    0% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+    30% {
+        transform: translateY(10px) scale(1.02);
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(-100px) scale(0.9);
+        opacity: 0;
+    }
+}
+
+.modal-content {
+    animation: modalSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.modal.closing .modal-content {
+    animation: modalSlideOut 0.3s ease forwards;
+}
+
     </style>
 </head>
 <body>
@@ -775,7 +996,9 @@
         <a href="#character" class="nav-link" data-target="character">角色</a>
         <a href="#lightcone" class="nav-link" data-target="lightcone">光锥</a>
         <a href="#material" class="nav-link" data-target="material">养成材料</a>
-        <a href="changelog.html" class="nav-link" >更新日志</a>
+        <a href="javascript:void(0)" class="nav-link" onclick="openChangelogModal()" id="changelog-link" title="查看更新日志">
+    <i class="fas fa-history" style="margin-right: 6px;"></i>更新日志
+</a>
         
         <!-- 用户导航部分（由JavaScript动态生成） -->
         <div class="user-nav-section" id="userNavSection">
@@ -949,6 +1172,31 @@
     <!-- 回到顶部按钮 -->
     <button class="back-to-top" onclick="scrollToTop()" aria-label="回到顶部">↑</button>
 
+<!-- 更新日志弹窗 -->
+<div id="changelog-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeChangelogModal()"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-history" style="margin-right: 8px;"></i>更新日志 - 六哥荣耀WIKI</h3>
+            <button class="modal-close" onclick="closeChangelogModal()" aria-label="关闭弹窗">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <iframe 
+                id="changelog-iframe" 
+                src="changelog.html" 
+                frameborder="0" 
+                allow="fullscreen"
+                loading="lazy"
+                title="六哥荣耀WIKI更新日志"
+                style="width: 100%; height: 100%;">
+            </iframe>
+        </div>
+    </div>
+</div>
+
+
 <script>
 // ==================== 全局变量定义 ====================
 let supabaseClient = null;
@@ -1112,6 +1360,125 @@ function initializeNavigation() {
         window.location.href = targetUrl;
     };
 }
+
+// ==================== 更新日志弹窗功能 ====================
+function openChangelogModal() {
+    const modal = document.getElementById('changelog-modal');
+    const iframe = document.getElementById('changelog-iframe');
+    
+    if (!modal || !iframe) return;
+    
+    // 显示弹窗
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    
+    // 显示加载状态
+    showNotification('正在加载更新日志...', 'info');
+    
+    // 添加时间戳防止缓存
+    iframe.src = 'changelog.html?t=' + Date.now();
+    
+    // 监听iframe加载完成
+    iframe.onload = function() {
+        console.log('更新日志页面加载完成');
+        
+        // 尝试与iframe通信，设置适配模式
+        try {
+            const iframeWindow = iframe.contentWindow;
+            if (iframeWindow) {
+                // 通知iframe页面处于弹窗模式
+                iframeWindow.postMessage({ type: 'setIframeMode', mode: true }, '*');
+                
+                // 设置iframe页面高度适配
+                setTimeout(() => {
+                    if (iframe.contentDocument && iframe.contentDocument.body) {
+                        const bodyHeight = iframe.contentDocument.body.scrollHeight;
+                        iframe.style.height = Math.min(bodyHeight, window.innerHeight * 0.8) + 'px';
+                    }
+                }, 500);
+            }
+        } catch (e) {
+            console.log('跨域通信受限，但仍可正常显示');
+        }
+        
+        showNotification('更新日志已加载', 'success');
+    };
+    
+    iframe.onerror = function() {
+        console.error('加载更新日志失败');
+        showNotification('加载更新日志失败，请稍后重试', 'error');
+    };
+}
+
+function closeChangelogModal() {
+    const modal = document.getElementById('changelog-modal');
+    if (!modal) return;
+    
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+    
+    // 可选：重置iframe src
+    const iframe = document.getElementById('changelog-iframe');
+    if (iframe) {
+        iframe.src = 'about:blank';
+    }
+}
+
+// ESC键关闭弹窗
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeChangelogModal();
+    }
+});
+
+// 点击遮罩层关闭
+document.addEventListener('click', function(event) {
+    if (event.target.classList.contains('modal-overlay')) {
+        closeChangelogModal();
+    }
+});
+
+// 监听来自iframe的消息（用于双向通信）
+window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'iframeReady') {
+        console.log('更新日志页面iframe已就绪');
+    }
+    
+    // 如果iframe中的返回主页按钮被点击，关闭弹窗
+    if (event.data && event.data.type === 'closeModal') {
+        closeChangelogModal();
+    }
+    
+    // 处理iframe发送的高度信息
+    if (event.data && event.data.type === 'heightUpdate') {
+        const iframe = document.getElementById('changelog-iframe');
+        if (iframe && event.data.height) {
+            iframe.style.height = Math.min(event.data.height, window.innerHeight * 0.8) + 'px';
+        }
+    }
+});
+
+//弹窗动作关闭函数
+function closeChangelogModal() {
+    const modal = document.getElementById('changelog-modal');
+    if (!modal) return;
+    
+    // 添加关闭动画
+    modal.classList.add('closing');
+    
+    setTimeout(() => {
+        modal.style.display = 'none';
+        modal.classList.remove('closing');
+        document.body.style.overflow = 'auto';
+        
+        // 可选：重置iframe src
+        const iframe = document.getElementById('changelog-iframe');
+        if (iframe) {
+            iframe.src = 'about:blank';
+        }
+    }, 300); // 动画持续时间
+}
+
 
 // ==================== 同步消息监听 ====================
 function initializeMessageListener() {
