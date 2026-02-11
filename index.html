@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-cmn-Hans">
 <head>
@@ -51,6 +52,17 @@
             --transition-normal: 0.3s ease;
             --supabase-blue: #3ecf8e;
             --supabase-purple: #8a4baf;
+            
+            /* 头像框颜色 */
+            --frame-color-primary: #FFD700;
+            --frame-color-secondary: #FF8C00;
+            --frame-color-glow: rgba(255, 215, 0, 0.3);
+            
+            /* 马年头像框颜色 */
+            --horse-red: #C41E3A;
+            --horse-gold: #FFD700;
+            --horse-bronze: #CD7F32;
+            --horse-luck: #FF6B35;
         }
         
         * {
@@ -182,24 +194,67 @@
             gap: 12px;
         }
         
-        /* 用户头像样式 */
-        .user-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            overflow: hidden;
-            border: 2px solid var(--text-highlight);
+        /* 用户头像带头像框样式 */
+        .user-avatar-with-frame {
+            position: relative;
+            width: 40px;
+            height: 40px;
             cursor: pointer;
             transition: all var(--transition-normal);
             flex-shrink: 0;
         }
         
-        .user-avatar:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 12px rgba(129, 199, 132, 0.4);
+        .user-avatar-frame {
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            width: calc(100% + 8px);
+            height: calc(100% + 8px);
+            border-radius: 50%;
+            z-index: 10;
+            pointer-events: none;
+            box-sizing: border-box;
+            border: 4px solid transparent;
         }
         
-        .user-avatar img {
+        /* 默认头像框样式 */
+        .default-frame {
+            border-image: linear-gradient(45deg, 
+                var(--frame-color-primary), 
+                var(--frame-color-secondary),
+                var(--frame-color-primary),
+                var(--frame-color-secondary)) 1;
+            background-size: 400% 400%;
+            animation: frameRotate 8s linear infinite;
+            box-shadow: 0 0 10px var(--frame-color-glow);
+        }
+        
+        /* 马年头像框样式 */
+        .horse-frame {
+            border-image: linear-gradient(45deg,
+                var(--horse-red),
+                var(--horse-gold),
+                var(--horse-bronze),
+                var(--horse-gold),
+                var(--horse-red)) 1;
+            background-size: 300% 300%;
+            animation: horseFrameRotate 6s linear infinite;
+            box-shadow: 
+                inset 0 0 15px rgba(255, 215, 0, 0.4),
+                0 0 15px rgba(196, 30, 58, 0.5);
+        }
+        
+        .user-avatar-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid var(--text-highlight);
+            position: relative;
+            z-index: 2;
+        }
+        
+        .user-avatar-img img {
             width: 100%;
             height: 100%;
             object-fit: cover;
@@ -215,6 +270,8 @@
             color: white;
             font-weight: 600;
             font-size: 1.1rem;
+            border: 2px solid var(--text-highlight);
+            border-radius: 50%;
         }
         
         .user-info-container {
@@ -347,6 +404,22 @@
             to { 
                 opacity: 0.9; 
                 text-shadow: 0 0 15px rgba(255,215,0,0.8); 
+            }
+        }
+        
+        /* 头像框动画定义 */
+        @keyframes frameRotate {
+            0% { border-image-slice: 1; }
+            50% { border-image-slice: 2; }
+            100% { border-image-slice: 1; }
+        }
+        
+        @keyframes horseFrameRotate {
+            0% {
+                background-position: 0% 0%;
+            }
+            100% {
+                background-position: 300% 300%;
             }
         }
         
@@ -617,9 +690,17 @@
                 font-size: 0.85rem;
             }
             
-            .user-avatar {
-                width: 32px;
-                height: 32px;
+            .user-avatar-with-frame {
+                width: 36px;
+                height: 36px;
+            }
+            
+            .user-avatar-frame {
+                top: -3px;
+                left: -3px;
+                width: calc(100% + 6px);
+                height: calc(100% + 6px);
+                border-width: 3px;
             }
             
             .logout-btn {
@@ -1032,6 +1113,44 @@ function initializeNavigation() {
     };
 }
 
+// ==================== 同步消息监听 ====================
+function initializeMessageListener() {
+    // 监听来自其他页面的消息
+    window.addEventListener('message', function(event) {
+        // 确保消息来自同源
+        if (event.origin !== window.location.origin) return;
+        
+        const data = event.data;
+        
+        if (data.type === 'PROFILE_UPDATED') {
+            // 更新本地缓存
+            if (data.username) {
+                localStorage.setItem('cachedUsername', data.username);
+            }
+            if (data.avatarUrl) {
+                localStorage.setItem('cachedAvatar', data.avatarUrl);
+            }
+            if (data.avatarFrame) {
+                localStorage.setItem('avatarFrame', data.avatarFrame);
+            }
+            
+            // 立即更新导航栏
+            updateNavbarFromCache();
+            
+            // 显示同步提示
+            showNotification('个人资料已同步', 'success');
+        }
+    });
+    
+    // 监听storage事件（当其他页面修改localStorage时）
+    window.addEventListener('storage', function(event) {
+        if (event.key === 'cachedUsername' || event.key === 'cachedAvatar' || event.key === 'avatarFrame') {
+            // 延迟一点确保数据已经写入
+            setTimeout(updateNavbarFromCache, 100);
+        }
+    });
+}
+
 // ==================== 用户认证和头像显示 ====================
 async function initializeUserProfile() {
     try {
@@ -1040,47 +1159,85 @@ async function initializeUserProfile() {
         const { data: { user }, error } = await supabaseClient.auth.getUser();
         
         if (error || !user) {
-            updateNavbar(null, null);
+            // 如果未登录，使用缓存数据（如果有）
+            updateNavbarFromCache();
             return;
         }
         
         currentUser = user;
         
+        // 获取用户资料
         const { data: profile } = await supabaseClient
             .from('user_profiles')
-            .select('username, avatar_url')
+            .select('username, avatar_url, avatar_frame')
             .eq('id', user.id)
             .single();
+        
+        if (profile) {
+            // 更新缓存
+            const username = profile.username || user.email.split('@')[0];
+            localStorage.setItem('cachedUsername', username);
             
-        updateNavbar(
-            profile?.username || user.email.split('@')[0],
-            profile?.avatar_url || null
-        );
+            if (profile.avatar_url) {
+                localStorage.setItem('cachedAvatar', profile.avatar_url);
+            }
+            
+            if (profile.avatar_frame) {
+                localStorage.setItem('avatarFrame', profile.avatar_frame);
+            }
+            
+            // 更新导航栏
+            updateNavbar(username, profile.avatar_url, profile.avatar_frame);
+        } else {
+            // 如果没有profile，使用缓存
+            updateNavbarFromCache();
+        }
         
     } catch (error) {
         console.error('用户初始化失败:', error);
-        updateNavbar(null, null);
+        updateNavbarFromCache();
     }
 }
 
-function updateNavbar(username, avatarUrl) {
+// 从缓存更新导航栏
+function updateNavbarFromCache() {
+    const cachedUsername = localStorage.getItem('cachedUsername');
+    const cachedAvatar = localStorage.getItem('cachedAvatar');
+    const avatarFrame = localStorage.getItem('avatarFrame') || 'default';
+    
+    if (cachedUsername) {
+        updateNavbar(cachedUsername, cachedAvatar, avatarFrame);
+    }
+}
+
+function updateNavbar(username, avatarUrl, avatarFrame = 'default') {
     const userNavSection = document.getElementById('userNavSection');
     if (!userNavSection) return;
     
     if (username) {
         const avatarLetter = username.charAt(0).toUpperCase();
         
-        let avatarHtml = '';
+        // 构建带头像框的头像HTML
+        let avatarHtml = `
+            <div class="user-avatar-with-frame" onclick="window.location.href='profile.html'" title="前往个人主页">
+                <div class="user-avatar-frame ${avatarFrame === 'horse' ? 'horse-frame' : 'default-frame'}"></div>
+                <div class="user-avatar-img">
+        `;
+        
         if (avatarUrl) {
-            avatarHtml = `<img src="${avatarUrl}" alt="${username}">`;
+            avatarHtml += `<img src="${avatarUrl}" alt="${username}" onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML='<div class=\\'avatar-placeholder\\'>${avatarLetter}</div>';">`;
+        } else {
+            avatarHtml += `<div class="avatar-placeholder">${avatarLetter}</div>`;
         }
+        
+        avatarHtml += `
+                </div>
+            </div>
+        `;
         
         userNavSection.innerHTML = `
             <div class="user-info-container">
-                <div class="user-avatar" onclick="window.location.href='profile.html'" title="前往个人主页">
-                    ${avatarHtml}
-                    <div class="avatar-placeholder" style="${avatarUrl ? 'display: none;' : ''}">${avatarLetter}</div>
-                </div>
+                ${avatarHtml}
                 <span class="username">${username}</span>
                 <button class="logout-btn" onclick="logout()" title="退出登录">
                     <i class="fas fa-sign-out-alt"></i> 退出
@@ -1101,8 +1258,11 @@ async function logout() {
         await supabaseClient.auth.signOut();
     }
     
+    // 清除所有缓存
     localStorage.removeItem('cachedUsername');
     localStorage.removeItem('cachedAvatar');
+    localStorage.removeItem('avatarFrame');
+    localStorage.removeItem('profileLastUpdated');
     
     updateNavbar(null, null);
     showNotification('已退出登录', 'success');
@@ -1115,8 +1275,12 @@ async function initializePage() {
     initializeSiteAge();
     initializeSearch();
     initializeNavigation();
+    initializeMessageListener(); // 添加消息监听
     
-    // 异步初始化用户资料
+    // 从缓存初始化导航栏
+    updateNavbarFromCache();
+    
+    // 异步初始化用户资料（从Supabase）
     setTimeout(() => initializeUserProfile(), 100);
     
     // 测试通知系统
@@ -1132,12 +1296,8 @@ async function initializePage() {
 
 // ==================== DOM加载完成后执行 ====================
 document.addEventListener('DOMContentLoaded', function() {
-    // 显示缓存的用户信息
-    const cachedUsername = localStorage.getItem('cachedUsername');
-    const cachedAvatar = localStorage.getItem('cachedAvatar');
-    if (cachedUsername) {
-        updateNavbar(cachedUsername, cachedAvatar);
-    }
+    // 从缓存初始化导航栏
+    updateNavbarFromCache();
     
     // 初始化页面
     initializePage();
