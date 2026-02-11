@@ -2,9 +2,9 @@
 <html lang="zh-cmn-Hans">
 <head>
 <meta charset="UTF-8">
-<title>云璃 · 技能等级调节</title>
+<title>云璃 · 毁灭物理</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="云璃(魔改加强)技能等级调节器 - 究极毁灭命途角色">
+<meta name="description" content="云璃(魔改加强) - 毁灭命途角色">
 <meta name="generator" content="技能调节器模板 v1.0">
 <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
 <link rel="preload" href="https://xiaochen1235789.github.io/images/yunli.png" as="image">
@@ -54,7 +54,7 @@ body {
   color: var(--text);
   font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
   line-height: 1.5;
-  padding-bottom: 90px !important;
+  padding-bottom: 30px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -415,23 +415,6 @@ img {
   visibility: visible;
 }
 
-/* ==================== 音乐播放器 ==================== */
-#musicPlayerIframe {
-  display: block !important;
-  visibility: visible !important;
-  height: 380px !important;
-  width: 100% !important;
-  z-index: 99999 !important;
-  position: fixed !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  border: none !important;
-  background: transparent !important;
-  overflow: visible !important;
-  transition: height 0.3s ease !important;
-}
-
 /* ====== 响应式设计 ====== */
 @media (max-width: 768px) {
   .top-bar {
@@ -466,10 +449,6 @@ img {
   .constellation-table td:nth-child(2) {
     min-width: 70px;
   }
-  
-  #musicPlayerIframe {
-    height: 380px !important;
-  }
 }
 
 @media (max-width: 480px) {
@@ -498,7 +477,6 @@ img {
 
 /* ====== 打印样式 ====== */
 @media print {
-  #musicPlayerIframe,
   .level-controls,
   .top-bar .back {
     display: none !important;
@@ -514,24 +492,44 @@ img {
     margin: 10px 0;
   }
 }
+
+/* ====== 键盘快捷键提示 ====== */
+.keyboard-hint {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  color: var(--sub-text);
+  border: 1px solid var(--line);
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.keyboard-hint span {
+  color: var(--primary);
+  font-weight: bold;
+}
 </style>
 </head>
 <body>
 <div class="top-bar">
-  <a class="back" href="a主页备用.html" aria-label="返回主页">‹</a>
+  <a class="back" href="https://xiaochen1235789.github.io/index.html" aria-label="返回主页">‹</a>
   <span class="title">云璃 · 技能等级调节</span>
 </div>
 
 <!-- 角色展示区 -->
 <section class="hero-section" aria-label="角色展示">
-  <img class="hero-image" src="https://xiaochen1235789.github.io/images/yunli.png" alt="云璃立绘" loading="eager">
+  <img class="hero-image" src="https://xiaochen1235789.github.io/images/yunli.webp" alt="云璃立绘" loading="eager">
   <div class="hero-overlay">
-    <div class="hero-name">云璃(魔改加强)</div>
+    <div class="hero-name">云璃(魔改)</div>
     <div class="tag-container">
-      <span class="tag">命途:究极毁灭</span>
-      <span class="tag">属性:魔化物理</span>
-      <span class="tag">定位:究极无敌直伤主C</span>
-      <span class="tag">稀有度:限定99999星</span>
+      <span class="tag">命途:毁灭</span>
+      <span class="tag">属性:物理</span>
+      <span class="tag">定位:直伤主C</span>
+      <span class="tag">稀有度:限定5星</span>
     </div>
   </div>
 </section>
@@ -722,32 +720,14 @@ img {
   </table>
 </section>
 
-<!-- 音乐播放器 -->
-<iframe 
-    id="musicPlayerIframe"
-    src="music-player.html"
-    frameborder="0"
-    scrolling="no"
-    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-    loading="lazy"
-    title="音乐播放器"
-    aria-label="音乐播放器"
-    style="
-        position: fixed !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        width: 100% !important;
-        height: 120px !important;
-        border: none !important;
-        background: transparent !important;
-        z-index: 999999 !important;
-        pointer-events: auto !important;
-    "
-></iframe>
+<!-- 键盘快捷键提示 -->
+<div class="keyboard-hint">
+  快捷键: <span>Alt+↑/↓</span>调节等级 | <span>Alt+1-4</span>快速选择技能
+</div>
 
 <script>
 // ====== 云璃技能数据配置 ======
-const skillConfig = {
+const SKILL_CONFIG = {
   normal: {
     level: 1,
     maxLevel: 10,
@@ -787,198 +767,278 @@ const skillConfig = {
 };
 
 // 状态管理
-const state = {
-  skills: { ...skillConfig },
-  playerState: null
-};
-
-// 工具函数：获取技能数值
-function getSkillValue(base, step, level) {
-  return base + step * (level - 1);
-}
-
-// 工具函数：应用等级颜色
-function applyLevelColor(element, level) {
-  if (level >= 13 && level <= 15) {
-    element.classList.add('legend-text');
-    element.classList.remove('skill-val');
-  } else {
-    element.classList.remove('legend-text');
-    element.classList.add('skill-val');
+class SkillManager {
+  constructor() {
+    this.skills = JSON.parse(JSON.stringify(SKILL_CONFIG)); // 深拷贝
+    this.init();
   }
-}
 
-// 改变技能等级
-function changeSkillLevel(skillType, change) {
-  console.log(`尝试修改技能: ${skillType}, 变化: ${change}`);
-  
-  const skill = state.skills[skillType];
-  
-  if (!skill) {
-    console.error(`错误: 未找到技能类型 "${skillType}"`);
-    console.log('可用的技能类型:', Object.keys(state.skills));
-    return;
+  init() {
+    this.loadState();
+    this.updateAllDisplays();
+    this.setupEventListeners();
+    this.setupKeyboardShortcuts();
   }
-  
-  const newLevel = skill.level + change;
-  
-  if (newLevel < 1 || newLevel > skill.maxLevel) return;
-  
-  skill.level = newLevel;
-  updateSkillDisplay(skillType);
-  updateButtonState(skillType);
-  
-  // 保存状态
-  saveState();
-}
 
-// 更新技能显示
-function updateSkillDisplay(skillType) {
-  const skill = state.skills[skillType];
-  const levelElement = document.getElementById(`${skillType}-level`);
-  
-  if (!levelElement) {
-    console.error(`错误: 未找到等级元素 #${skillType}-level`);
-    return;
+  // 获取技能数值
+  getSkillValue(base, step, level) {
+    return base + step * (level - 1);
   }
-  
-  // 更新等级显示
-  levelElement.textContent = `${skill.level}/${skill.maxLevel}`;
-  applyLevelColor(levelElement, skill.level);
-  
-  // 更新技能数值
-  skill.values.forEach(valueData => {
-    const element = document.getElementById(valueData.id);
-    if (!element) {
-      console.error(`错误: 未找到数值元素 #${valueData.id}`);
+
+  // 应用等级颜色效果
+  applyLevelColor(element, level) {
+    const isLegendary = level >= 13 && level <= 15;
+    
+    if (isLegendary) {
+      element.classList.add('legend-text');
+      element.classList.remove('skill-val');
+    } else {
+      element.classList.remove('legend-text');
+      element.classList.add('skill-val');
+    }
+  }
+
+  // 改变技能等级
+  changeSkillLevel(skillType, change) {
+    const skill = this.skills[skillType];
+    
+    if (!skill) {
+      console.error(`错误: 未找到技能类型 "${skillType}"`);
       return;
     }
-    const newValue = getSkillValue(valueData.base, valueData.step, skill.level);
-    element.textContent = `${newValue.toFixed(1)}%`;
-    applyLevelColor(element, skill.level);
-  });
-}
-
-// 更新按钮状态
-function updateButtonState(skillType) {
-  const skill = state.skills[skillType];
-  const downButton = document.getElementById(`${skillType}-down`);
-  const upButton = document.getElementById(`${skillType}-up`);
-  
-  if (!downButton || !upButton) {
-    console.error(`错误: 未找到按钮元素 #${skillType}-down 或 #${skillType}-up`);
-    return;
-  }
-  
-  downButton.disabled = skill.level <= 1;
-  upButton.disabled = skill.level >= skill.maxLevel;
-}
-
-// 初始化技能
-function initSkills() {
-  console.log('正在初始化技能...');
-  Object.keys(state.skills).forEach(skillType => {
-    console.log(`初始化: ${skillType}`);
-    updateSkillDisplay(skillType);
-    updateButtonState(skillType);
-  });
-}
-
-// 状态管理
-function saveState() {
-  try {
-    localStorage.setItem('yunliSkillState', JSON.stringify(state.skills));
-  } catch (err) {
-    console.warn('无法保存状态:', err);
-  }
-}
-
-function loadState() {
-  try {
-    const saved = localStorage.getItem('yunliSkillState');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      Object.keys(parsed).forEach(key => {
-        if (state.skills[key]) {
-          state.skills[key].level = parsed[key].level;
-        }
-      });
-    }
-  } catch (err) {
-    console.warn('无法加载状态:', err);
-  }
-}
-
-// 音乐播放器控制
-function initializeMusicPlayer() {
-  const iframe = document.getElementById('musicPlayerIframe');
-  if (iframe) {
-    iframe.style.height = '380px';
     
-    window.addEventListener('message', (e) => {
-      if (e.data?.type === 'SONG_LIST_TOGGLED') {
-        iframe.style.height = e.data.isShow ? '380px' : '110px';
+    const newLevel = skill.level + change;
+    
+    if (newLevel < 1 || newLevel > skill.maxLevel) return;
+    
+    skill.level = newLevel;
+    this.updateSkillDisplay(skillType);
+    this.updateButtonState(skillType);
+    this.saveState();
+    
+    // 视觉反馈
+    const levelElement = document.getElementById(`${skillType}-level`);
+    if (levelElement) {
+      levelElement.style.transform = 'scale(1.1)';
+      setTimeout(() => {
+        levelElement.style.transform = 'scale(1)';
+      }, 150);
+    }
+  }
+
+  // 更新技能显示
+  updateSkillDisplay(skillType) {
+    const skill = this.skills[skillType];
+    const levelElement = document.getElementById(`${skillType}-level`);
+    
+    if (!levelElement) return;
+    
+    // 更新等级显示
+    levelElement.textContent = `${skill.level}/${skill.maxLevel}`;
+    this.applyLevelColor(levelElement, skill.level);
+    
+    // 更新技能数值
+    skill.values.forEach(valueData => {
+      const element = document.getElementById(valueData.id);
+      if (!element) return;
+      
+      const newValue = this.getSkillValue(valueData.base, valueData.step, skill.level);
+      element.textContent = `${newValue.toFixed(1)}%`;
+      this.applyLevelColor(element, skill.level);
+    });
+  }
+
+  // 更新所有技能显示
+  updateAllDisplays() {
+    Object.keys(this.skills).forEach(skillType => {
+      this.updateSkillDisplay(skillType);
+      this.updateButtonState(skillType);
+    });
+  }
+
+  // 更新按钮状态
+  updateButtonState(skillType) {
+    const skill = this.skills[skillType];
+    const downButton = document.getElementById(`${skillType}-down`);
+    const upButton = document.getElementById(`${skillType}-up`);
+    
+    if (!downButton || !upButton) return;
+    
+    downButton.disabled = skill.level <= 1;
+    upButton.disabled = skill.level >= skill.maxLevel;
+  }
+
+  // 状态管理
+  saveState() {
+    try {
+      const state = {};
+      Object.keys(this.skills).forEach(key => {
+        state[key] = { level: this.skills[key].level };
+      });
+      localStorage.setItem('yunliSkillState', JSON.stringify(state));
+    } catch (err) {
+      console.warn('无法保存状态:', err);
+    }
+  }
+
+  loadState() {
+    try {
+      const saved = localStorage.getItem('yunliSkillState');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        Object.keys(parsed).forEach(key => {
+          if (this.skills[key] && parsed[key].level) {
+            this.skills[key].level = parsed[key].level;
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('无法加载状态:', err);
+    }
+  }
+
+  // 重置所有技能等级
+  resetAllSkills() {
+    Object.keys(this.skills).forEach(key => {
+      this.skills[key].level = 1;
+    });
+    this.updateAllDisplays();
+    this.saveState();
+  }
+
+  // 设置事件监听器
+  setupEventListeners() {
+    // 为所有等级按钮添加点击事件
+    document.querySelectorAll('.level-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.currentTarget.blur(); // 移除焦点，避免键盘快捷键冲突
+      });
+    });
+  }
+
+  // 键盘快捷键
+  setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      // 防止在输入框中触发快捷键
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      
+      // Alt + 方向键控制技能等级
+      if (e.altKey) {
+        let skillType = null;
+        let direction = 0;
+        
+        switch(e.key) {
+          case 'ArrowUp':
+            direction = 1;
+            skillType = this.getCurrentlyFocusedSkill();
+            break;
+          case 'ArrowDown':
+            direction = -1;
+            skillType = this.getCurrentlyFocusedSkill();
+            break;
+          case '1': skillType = 'normal'; direction = 1; break;
+          case '2': skillType = 'skill'; direction = 1; break;
+          case '3': skillType = 'ultimate'; direction = 1; break;
+          case '4': skillType = 'talent'; direction = 1; break;
+        }
+        
+        if (skillType && direction) {
+          this.changeSkillLevel(skillType, direction);
+          e.preventDefault();
+          
+          // 显示快捷键反馈
+          this.showKeyboardFeedback(skillType, direction);
+        }
+      }
+      
+      // 重置快捷键 (Alt + R)
+      if (e.altKey && e.key === 'r') {
+        if (confirm('确定要重置所有技能等级吗？')) {
+          this.resetAllSkills();
+          e.preventDefault();
+        }
       }
     });
   }
-}
 
-// 键盘快捷键
-function setupKeyboardShortcuts() {
-  document.addEventListener('keydown', (e) => {
-    // Alt + 方向键控制技能等级
-    if (e.altKey) {
-      let skillType = null;
-      let direction = 0;
-      
-      switch(e.key) {
-        case 'ArrowUp': direction = 1; break;
-        case 'ArrowDown': direction = -1; break;
-        case '1': skillType = 'normal'; direction = 1; break;
-        case '2': skillType = 'skill'; direction = 1; break;
-        case '3': skillType = 'ultimate'; direction = 1; break;
-        case '4': skillType = 'talent'; direction = 1; break;
-      }
-      
-      if (skillType && direction) {
-        changeSkillLevel(skillType, direction);
-        e.preventDefault();
+  // 获取当前聚焦的技能
+  getCurrentlyFocusedSkill() {
+    const focusedElement = document.activeElement;
+    if (focusedElement.closest('.card')) {
+      const cardId = focusedElement.closest('.card').id;
+      switch(cardId) {
+        case 'normal-attack': return 'normal';
+        case 'skill-attack': return 'skill';
+        case 'ultimate-attack': return 'ultimate';
+        case 'talent-attack': return 'talent';
       }
     }
-  });
+    return null;
+  }
+
+  // 显示键盘快捷键反馈
+  showKeyboardFeedback(skillType, direction) {
+    const skillNames = {
+      normal: '普攻',
+      skill: '战技',
+      ultimate: '终结技',
+      talent: '天赋'
+    };
+    
+    const hint = document.createElement('div');
+    hint.className = 'keyboard-feedback';
+    hint.textContent = `${skillNames[skillType]} ${direction > 0 ? '提升' : '降低'}`;
+    hint.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: var(--primary);
+      padding: 12px 24px;
+      border-radius: var(--radius);
+      font-size: 1.2rem;
+      z-index: 10000;
+      animation: fadeOut 1s forwards;
+      border: 2px solid var(--primary);
+    `;
+    
+    document.body.appendChild(hint);
+    
+    // 添加动画样式
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fadeOut {
+        0% { opacity: 1; }
+        70% { opacity: 1; }
+        100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    setTimeout(() => {
+      hint.remove();
+      style.remove();
+    }, 1000);
+  }
+}
+
+// 全局函数，供HTML内联onclick调用
+function changeSkillLevel(skillType, change) {
+  window.skillManager.changeSkillLevel(skillType, change);
 }
 
 // 初始化页面
-function initPage() {
-  console.log('正在初始化页面...');
-  loadState();
-  initSkills();
-  initializeMusicPlayer();
-  setupKeyboardShortcuts();
-  console.log('页面初始化完成');
-}
-
-// 等待DOM加载完成后再初始化
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initPage);
-} else {
-  // DOM已经加载完成
-  initPage();
-}
-
-// 导出到全局（如果需要）
-window.YunliSkillManager = {
-  changeSkillLevel,
-  getState: () => ({ ...state.skills }),
-  resetState: () => {
-    Object.keys(state.skills).forEach(key => {
-      state.skills[key].level = 1;
-    });
-    initSkills();
-    saveState();
-    console.log('状态已重置');
-  }
-};
+document.addEventListener('DOMContentLoaded', () => {
+  window.skillManager = new SkillManager();
+  
+  // 导出到全局（如果需要）
+  window.YunliSkillManager = {
+    changeSkillLevel: (type, change) => window.skillManager.changeSkillLevel(type, change),
+    getState: () => ({ ...window.skillManager.skills }),
+    resetState: () => window.skillManager.resetAllSkills()
+  };
+});
 </script>
 </body>
 </html>
