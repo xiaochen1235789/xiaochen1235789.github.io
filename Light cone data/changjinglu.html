@@ -5,218 +5,511 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="快乐的路一天 - 光锥详情。巡猎路径，鹿将军专武。">
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
-    <title>快乐的路一天 - 六哥荣耀WIKI</title>
+    <title>快乐的路一天 · 六哥荣耀WIKI</title>
+
     <style>
+        /* ----- 设计系统（与主页统一，增强可维护性）----- */
         :root {
             --bg: #121212;
             --card-bg: #1e3a2f;
             --card-bg-hover: #284a3c;
             --text-main: #e0e0e0;
-            --text-highlight: #81c784;
+            --text-highlight: #81c784;   /* 六哥绿 */
             --text-secondary: #99aabb;
+            --special-color: #ffd700;     /* 荣耀金 */
+            --border-color: #3d725f;
             --radius: 6px;
             --gap: 12px;
-            --special-color: #ffd700;
-            --border-color: #3d725f;
             --shadow: 0 4px 12px rgba(0,0,0,0.3);
             --transition-fast: 0.2s ease;
             --transition-normal: 0.3s ease;
+            
+            /* 同步清风碎片 · 色彩扩展 */
+            --divider-green: #8FBC8F;
+            --divider-gold: #FFD700;
+            --footer-text: #7f9e8c;
+            --watermark-text: #5f7a6b;
+            --border-deep: #4a705f;
+            
+            /* 星星专用 */
+            --star-gold: #FFD700;
+            --star-glow: rgba(255, 215, 0, 0.6);
+            --star-empty: #7F8C8D;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+        }
+
         body {
             background: var(--bg);
             color: var(--text-main);
             line-height: 1.5;
             min-height: 100vh;
-            padding-bottom: 120px;
+            padding-bottom: 30px;
         }
-        /* 加载进度条与动画 (与主页一致) */
+
+        /* ===== 全局加载 & 进度条 ===== */
         .loading-progress {
-            position: fixed; top: 0; left: 0; width: 0%; height: 3px;
-            background: var(--text-highlight); z-index: 9999999;
-            transition: width 0.3s ease, opacity 0.5s ease; opacity: 1;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 3px;
+            background: var(--text-highlight);
+            z-index: 9999999;
+            transition: width 0.3s ease, opacity 0.5s ease;
+            opacity: 1;
         }
+
         #global-loading {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: var(--bg); display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 999999;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
             transition: opacity 0.5s ease;
         }
+
         .loading-spinner {
-            display: inline-block; width: 50px; height: 50px;
-            border: 4px solid rgba(129, 199, 132, 0.3); border-radius: 50%;
-            border-top-color: var(--text-highlight); animation: spin 1s ease-in-out infinite;
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(129, 199, 132, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--text-highlight);
+            animation: spin 1s ease-in-out infinite;
             margin-bottom: 20px;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         .skeleton {
             background: linear-gradient(90deg, #2a3a35 25%, #354540 50%, #2a3a35 75%);
-            background-size: 200% 100%; animation: skeleton-loading 1.5s infinite;
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
             border-radius: var(--radius);
         }
+
         @keyframes skeleton-loading {
-            0% { background-position: 200% 0; } 100% { background-position: -200% 0; }
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
 
-        /* 顶部返回导航 (风格与主页导航统一) */
+        /* ===== 顶部导航 ===== */
         .top-nav {
-            background: var(--card-bg); border-radius: var(--radius);
-            padding: 12px 20px; margin: 16px auto;
-            display: flex; align-items: center; max-width: 800px;
-            box-shadow: var(--shadow); border: 1px solid transparent;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 12px 20px;
+            margin: 16px auto;
+            display: flex;
+            align-items: center;
+            max-width: 800px;
+            box-shadow: var(--shadow);
+            border: 1px solid transparent;
             transition: border-color var(--transition-normal);
         }
-        .top-nav:hover { border-color: var(--border-color); }
+
+        .top-nav:hover {
+            border-color: var(--border-color);
+        }
+
         .back-btn {
-            color: var(--text-highlight); text-decoration: none; font-size: 1.1rem;
-            display: flex; align-items: center; gap: 8px; transition: all var(--transition-fast);
+            color: var(--text-highlight);
+            text-decoration: none;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all var(--transition-fast);
             font-weight: 500;
         }
-        .back-btn:hover { color: var(--special-color); transform: translateX(-2px); }
-        .page-title { margin-left: auto; font-size: 1.2rem; color: var(--text-highlight); font-weight: 600; }
 
-        /* 主内容容器 */
+        .back-btn:hover {
+            color: var(--special-color);
+            transform: translateX(-2px);
+        }
+
+        .page-title {
+            margin-left: auto;
+            font-size: 1.2rem;
+            color: var(--text-highlight);
+            font-weight: 600;
+        }
+
+        /* ===== 主容器：光锥详情卡片区 ===== */
         .detail-container {
-            max-width: 800px; margin: 0 auto; padding: 0 16px;
-            display: flex; flex-direction: column; gap: var(--gap);
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 16px;
+            display: flex;
+            flex-direction: column;
+            gap: var(--gap);
         }
-        /* 光锥核心卡片 (继承主页卡片交互) */
+
+        /* ----- 光锥英雄卡 ----- */
         .lightcone-hero-card {
-            background: var(--card-bg); border-radius: var(--radius); padding: 24px;
-            text-align: center; border: 1px solid transparent;
-            transition: all var(--transition-normal); box-shadow: var(--shadow);
-            display: flex; flex-direction: column; align-items: center;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 24px;
+            text-align: center;
+            border: 1px solid transparent;
+            transition: all var(--transition-normal);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
+
         .lightcone-hero-card:hover {
-            transform: translateY(-4px); border-color: var(--text-highlight);
-            background: var(--card-bg-hover); box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            transform: translateY(-4px);
+            border-color: var(--text-highlight);
+            background: var(--card-bg-hover);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
         }
+
         .lightcone-img-container {
-            width: 70%; max-width: 280px; margin-bottom: 20px;
-            border-radius: var(--radius); overflow: hidden; position: relative;
-            aspect-ratio: 3/4; border: 1px solid var(--border-color);
+            width: 70%;
+            max-width: 280px;
+            margin-bottom: 20px;
+            border-radius: var(--radius);
+            overflow: hidden;
+            position: relative;
+            aspect-ratio: 3/4;
+            border: 1px solid var(--border-color);
         }
-        .lightcone-img-container.skeleton { background: #2d5243; }
+
+        .lightcone-img-container.skeleton {
+            background: #2d5243;
+        }
+
         .lightcone-img {
-            width: 100%; height: 100%; object-fit: cover; display: block;
-            transition: transform var(--transition-normal); opacity: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform var(--transition-normal);
+            opacity: 0;
         }
-        .lightcone-img.loaded { opacity: 1; }
-        .lightcone-hero-card:hover .lightcone-img { transform: scale(1.05); }
+
+        .lightcone-img.loaded {
+            opacity: 1;
+        }
+
+        .lightcone-hero-card:hover .lightcone-img {
+            transform: scale(1.05);
+        }
+
         .lightcone-name {
-            font-size: 1.8rem; color: var(--text-highlight); margin-bottom: 8px;
-            font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            font-size: 1.8rem;
+            color: var(--text-highlight);
+            margin-bottom: 8px;
+            font-weight: 700;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         }
-        .lightcone-path { color: var(--text-secondary); margin-bottom: 20px; font-size: 1rem; }
+
+        .lightcone-path {
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            font-size: 1rem;
+        }
+
+        /* ===== 星级评级（完全移植清风碎片 · 可拓展）===== */
+        .lightcone-rating {
+            margin: 0 0 20px 0;  /* 与下方stats保持间距 */
+            font-size: 32px;      /* 星星大小，与清风碎片一致 */
+            letter-spacing: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .star-filled {
+            color: var(--star-gold);
+            text-shadow: 0 0 16px var(--star-gold), 0 0 30px var(--star-glow);
+        }
+
+        .star-empty {
+            color: var(--star-empty);
+            text-shadow: 0 0 6px rgba(0,0,0,0.5);
+        }
+
+        /* 光锥属性区 */
         .lightcone-stats {
-            display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;
-            margin-top: 16px; width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+            width: 100%;
         }
+
         .stat-item {
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
         }
+
         .stat-emoji { font-size: 1.5rem; }
         .stat-label { font-size: 0.9rem; color: var(--text-secondary); }
         .stat-value { font-size: 1.1rem; color: var(--text-highlight); font-weight: 600; }
 
-        /* 效果与故事模块 (样式与主页更新日志等模块协调) */
+        /* ----- 效果与故事模块 ----- */
         .detail-module {
-            background: var(--card-bg); border-radius: var(--radius); padding: 24px;
-            border: 1px solid var(--border-color); box-shadow: var(--shadow);
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
         }
+
         .module-header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 16px; padding-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
             border-bottom: 1px solid var(--border-color);
         }
+
         .module-title {
-            font-size: 1.4rem; color: var(--text-highlight); font-weight: 600;
-            display: flex; align-items: center; gap: 8px;
+            font-size: 1.4rem;
+            color: var(--text-highlight);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        .module-title::before { content: "✨"; }
+
+        .module-title::before {
+            content: "✨";
+        }
+
         .version-select {
-            background: var(--card-bg-hover); color: var(--text-main);
-            border: 1px solid var(--border-color); padding: 6px 12px;
-            border-radius: var(--radius); cursor: pointer; font-size: 0.9rem;
-            transition: all var(--transition-fast); outline: none;
+            background: var(--card-bg-hover);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all var(--transition-fast);
+            outline: none;
         }
-        .version-select:hover, .version-select:focus {
-            border-color: var(--text-highlight); background: #2d5243;
+
+        .version-select:hover,
+        .version-select:focus {
+            border-color: var(--text-highlight);
+            background: #2d5243;
         }
+
         .module-content {
-            line-height: 1.7; color: var(--text-main); font-size: 0.95rem;
+            line-height: 1.7;
+            color: var(--text-main);
+            font-size: 0.95rem;
         }
+
         .module-content .highlight {
-            color: var(--special-color); font-weight: 700; background: rgba(255,215,0,0.08);
-            padding: 0 2px; border-radius: 2px;
+            color: var(--special-color);
+            font-weight: 700;
+            background: rgba(255,215,0,0.08);
+            padding: 0 2px;
+            border-radius: 2px;
         }
+
         .version-log {
-            margin-top: 16px; padding: 10px 14px; background: rgba(129, 199, 132, 0.05);
-            border-radius: var(--radius); font-size: 0.85rem; color: var(--text-highlight);
+            margin-top: 16px;
+            padding: 10px 14px;
+            background: rgba(129, 199, 132, 0.05);
+            border-radius: var(--radius);
+            font-size: 0.85rem;
+            color: var(--text-highlight);
             border-left: 3px solid var(--text-highlight);
         }
+
         .lore-content {
-            white-space: pre-line; line-height: 1.8;
-        }
-        .lore-content::first-letter {
-            font-size: 1.5em; color: var(--special-color); font-weight: bold;
-            float: left; line-height: 1; margin-right: 4px;
+            white-space: pre-line;
+            line-height: 1.8;
         }
 
-        /* 回到顶部按钮 (与主页一致) */
+        .lore-content::first-letter {
+            font-size: 1.5em;
+            color: var(--special-color);
+            font-weight: bold;
+            float: left;
+            line-height: 1;
+            margin-right: 4px;
+        }
+
+        /* ===== 回到顶部按钮 ===== */
         .back-to-top {
-            position: fixed; bottom: 140px; right: 20px; width: 46px; height: 46px;
-            background: var(--card-bg-hover); color: var(--text-highlight);
-            border-radius: 50%; display: flex; align-items: center;
-            justify-content: center; font-size: 1.2rem; cursor: pointer;
-            box-shadow: var(--shadow); opacity: 0; visibility: hidden;
-            transition: all var(--transition-normal); z-index: 9999;
+            position: fixed;
+            bottom: 30px;
+            right: 20px;
+            width: 46px;
+            height: 46px;
+            background: var(--card-bg-hover);
+            color: var(--text-highlight);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            opacity: 0;
+            visibility: hidden;
+            transition: all var(--transition-normal);
+            z-index: 9999;
             border: 1px solid var(--text-highlight);
         }
-        .back-to-top.show { opacity: 1; visibility: visible; }
-        .back-to-top:hover { background: var(--text-highlight); color: var(--bg); transform: translateY(-2px); }
 
-        /* 通知消息 (与主页一致) */
+        .back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .back-to-top:hover {
+            background: var(--text-highlight);
+            color: var(--bg);
+            transform: translateY(-2px);
+        }
+
+        /* ===== 通知消息 ===== */
         .notification {
-            position: fixed; top: 20px; right: 20px; background: var(--card-bg);
-            color: var(--text-highlight); padding: 12px 20px; border-radius: var(--radius);
-            box-shadow: var(--shadow); z-index: 10000; transform: translateX(120%);
-            transition: transform 0.4s ease; border-left: 4px solid var(--text-highlight);
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            color: var(--text-highlight);
+            padding: 12px 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            z-index: 10000;
+            transform: translateX(120%);
+            transition: transform 0.4s ease;
+            border-left: 4px solid var(--text-highlight);
             max-width: 300px;
         }
-        .notification.show { transform: translateX(0); }
-        .notification.success { border-left-color: #4ade80; color: #4ade80; }
 
-        /* 响应式优化 */
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            border-left-color: #4ade80;
+            color: #4ade80;
+        }
+
+        /* ========== 同步·清风碎片风格 ========== */
+        /* 金色分割线（荣耀余韵） */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--divider-green), var(--divider-gold), var(--divider-green), transparent);
+            margin: 28px 0;
+            opacity: 0.6;
+            border: none;
+            width: 100%;
+        }
+
+        /* WIKI 水印（虚构声明） */
+        .wiki-watermark {
+            text-align: center;
+            margin-top: 30px;
+            margin-bottom: 10px;
+            color: var(--watermark-text);
+            font-size: 12px;
+            opacity: 0.7;
+            letter-spacing: 1px;
+            font-style: normal;
+        }
+
+        /* 页脚（完整移植） */
+        .wiki-footer {
+            text-align: center;
+            margin-top: 30px;
+            color: var(--footer-text);
+            font-size: 13px;
+            opacity: 0.9;
+            padding: 20px 0 10px;
+            border-top: 1px solid var(--border-deep);
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            width: 100%;
+            transition: all var(--transition-fast);
+        }
+
+        .wiki-footer a {
+            color: var(--divider-green);
+            text-decoration: none;
+        }
+
+        .wiki-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ===== 响应式优化 ===== */
         @media (max-width: 768px) {
             .detail-container { padding: 0 12px; }
             .lightcone-img-container { width: 85%; }
             .lightcone-name { font-size: 1.5rem; }
             .module-header { flex-direction: column; align-items: flex-start; gap: 10px; }
             .version-select { align-self: flex-start; }
-            .back-to-top { bottom: 120px; right: 15px; width: 42px; height: 42px; }
-            body { padding-bottom: 100px; }
+            .back-to-top {
+                bottom: 20px;
+                right: 15px;
+                width: 42px;
+                height: 42px;
+            }
+            body { padding-bottom: 20px; }
+            
+            .lightcone-rating {
+                font-size: 28px;   /* 移动端略缩 */
+                letter-spacing: 6px;
+            }
+
+            .wiki-footer {
+                max-width: 100%;
+                padding: 16px 12px 8px;
+                font-size: 12px;
+            }
+            .wiki-watermark {
+                margin-top: 24px;
+                font-size: 11px;
+            }
         }
+
         @media (max-width: 480px) {
             .lightcone-stats { gap: 16px; }
             .stat-item { min-width: 80px; }
             .top-nav { padding: 10px 16px; margin: 12px auto; }
             .detail-module { padding: 18px; }
+            .lightcone-rating {
+                font-size: 26px;
+                letter-spacing: 5px;
+            }
         }
 
-        /* 音乐播放器 (样式与主页完全同步) */
-        #musicPlayerIframe {
-            display: block !important; visibility: visible !important;
-            height: 400px !important; width: 100% !important;
-            z-index: 99999 !important; position: fixed !important;
-            bottom: 0 !important; left: 0 !important; right: 0 !important;
-            border: none !important; background: transparent !important;
-            overflow: visible !important; transition: height 0.3s ease !important;
-            will-change: height;
-        }
+        /* 完全移除音乐播放器相关，保持纯净 */
     </style>
 </head>
 <body>
+
     <!-- 加载进度条 -->
     <div class="loading-progress" id="loadingProgress"></div>
     <!-- 全局加载动画 -->
@@ -226,10 +519,10 @@
             <p style="color: var(--text-highlight); margin-top: 16px; font-size: 1.1rem;">加载资源中...</p>
         </div>
     </div>
-    <!-- 通知消息 -->
+    <!-- 通知消息容器 -->
     <div class="notification" id="notification"></div>
 
-    <!-- 顶部导航 -->
+    <!-- ===== 顶部导航 ===== -->
     <nav class="top-nav" aria-label="页面导航">
         <a href="https://xiaochen1235789.github.io/index.html" class="back-btn" id="backBtn">
             ‹ <span>返回主页</span>
@@ -237,7 +530,7 @@
         <div class="page-title">光锥详情</div>
     </nav>
 
-    <!-- 主内容区 -->
+    <!-- ===== 主内容区：光锥信息、效果、故事 ===== -->
     <main class="detail-container">
         <!-- 光锥核心信息卡片 -->
         <section class="lightcone-hero-card" aria-labelledby="lcName">
@@ -251,14 +544,31 @@
             </div>
             <h1 id="lcName" class="lightcone-name">快乐的路一天</h1>
             <p class="lightcone-path">巡猎 | 鹿将军专武</p>
+            
+            <!-- ===== 星级评级 · 1星居中（完全移植清风碎片风格）===== -->
+            <!-- 根据需求：如果是1⭐则只显示一颗星且居中，以此类推。当前示例为1星，如需调整星级，增减★即可。 -->
+            <div class="lightcone-rating">
+                <span class="star-filled">★★★★★</span>
+                <!-- 如需显示2星：再加一个<span class="star-filled">★</span>；如需空星，使用star-empty类 -->
+            </div>
+
             <div class="lightcone-stats">
-                <div class="stat-item"><span class="stat-emoji">❤️</span><span class="stat-label">生命值</span><span class="stat-value">1058</span></div>
-                <div class="stat-item"><span class="stat-emoji">⚔️</span><span class="stat-label">攻击力</span><span class="stat-value">582</span></div>
-                <div class="stat-item"><span class="stat-emoji">🛡️</span><span class="stat-label">防御力</span><span class="stat-value">463</span></div>
+                <div class="stat-item">
+                    <span class="stat-emoji"><img src="https://xiaochen1235789.github.io/attribute_image/HP.webp" style="width:48px; height:48px; vertical-align:middle;" alt="HP"></span>
+                    <span class="stat-value">1058</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-emoji"><img src="https://xiaochen1235789.github.io/attribute_image/ATK.webp" style="width:48px; height:48px; vertical-align:middle;" alt="ATK"></span>
+                    <span class="stat-value">582</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-emoji"><img src="https://xiaochen1235789.github.io/attribute_image/DEF.webp" style="width:48px; height:48px; vertical-align:middle;" alt="DEF"></span>
+                    <span class="stat-value">463</span>
+                </div>
             </div>
         </section>
 
-        <!-- 光锥效果模块 -->
+        <!-- 光锥效果模块（版本切换） -->
         <section class="detail-module" aria-labelledby="effectTitle">
             <div class="module-header">
                 <h2 id="effectTitle" class="module-title">光锥效果：越蛇越多</h2>
@@ -267,10 +577,8 @@
                     <option value="v2" selected>V2 正式版</option>
                 </select>
             </div>
-            <div class="module-content" id="skillDesc">
-                <!-- 内容由JS动态填充 -->
-            </div>
-            <div class="version-log" id="versionLog"><!-- 更新日志由JS动态填充 --></div>
+            <div class="module-content" id="skillDesc"></div>
+            <div class="version-log" id="versionLog"></div>
         </section>
 
         <!-- 光锥背景故事模块 -->
@@ -289,30 +597,31 @@
                 <br>
             </div>
         </section>
+
+        <!-- ===== 同步·清风碎片：金色分割线 + WIKI水印 ===== -->
+        <div class="divider" aria-hidden="true"></div>
+        <div class="wiki-watermark">六哥荣耀WIKI · 虚构材料</div>
     </main>
 
-    <!-- 音乐播放器 -->
-    <iframe 
-        id="musicPlayerIframe"
-        src="https://xiaochen1235789.github.io/music-player.html"
-        frameborder="0"
-        scrolling="no"
-        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-        loading="lazy"
-        title="音乐播放器"
-        aria-label="音乐播放器"
-    ></iframe>
+    <!-- ===== 页脚·同步清风碎片 ===== -->
+    <footer class="wiki-footer">
+        © <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.<br>
+        本WIKI所有图片均由AI生成，不存在侵权行为，请仔细辨别.
+    </footer>
 
     <!-- 回到顶部按钮 -->
     <button class="back-to-top" onclick="scrollToTop()" aria-label="回到顶部">↑</button>
 
     <script>
-        // 从主页集成的核心工具函数
+        // ========== 全局工具函数（优化可读性，保留原核心） ==========
+        /** 图片加载成功：移除骨架、淡入 */
         function imageLoaded(img) {
             img.classList.add('loaded');
             const parent = img.closest('.skeleton');
             if (parent) parent.classList.remove('skeleton');
         }
+
+        /** 图片加载失败：替换占位图、移除骨架 */
         function imageError(img) {
             console.error('图片加载失败:', img.src);
             img.src = `https://via.placeholder.com/280x373/2d5243/81c784?text=图片加载失败`;
@@ -320,6 +629,8 @@
             const parent = img.closest('.skeleton');
             if (parent) parent.classList.remove('skeleton');
         }
+
+        /** 显示顶部通知 (自动消失) */
         function showNotification(message, type = 'info') {
             const notification = document.getElementById('notification');
             notification.textContent = message;
@@ -327,16 +638,38 @@
             notification.classList.add('show');
             setTimeout(() => notification.classList.remove('show'), 3000);
         }
+
+        /** 平滑回到顶部 */
         function scrollToTop() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // 页面核心逻辑
+        /** 更新加载进度条宽度 */
+        function updateLoadingProgress(percent) {
+            const progressBar = document.getElementById('loadingProgress');
+            if (progressBar) progressBar.style.width = `${percent}%`;
+        }
+
+        /** 隐藏全局加载动画 & 进度条 */
+        function hideLoadingOverlay() {
+            const loadingEl = document.getElementById('global-loading');
+            const progressBar = document.getElementById('loadingProgress');
+            if (loadingEl && loadingEl.style.display !== 'none') {
+                loadingEl.style.opacity = '0';
+                setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
+            }
+            if (progressBar) {
+                progressBar.style.opacity = '0';
+                setTimeout(() => { progressBar.style.display = 'none'; }, 500);
+            }
+        }
+
+        // ========== 页面核心初始化 ==========
         document.addEventListener('DOMContentLoaded', () => {
             const loadStartTime = Date.now();
             updateLoadingProgress(30);
 
-            // 1. 初始化版本切换功能
+            // --- 光锥版本切换数据 (V1/V2) ---
             const versionData = {
                 v1: {
                     desc: `使装备者的暴击率提高 <span class="highlight">20%/22%/24%/26%/28%</span>，暴击伤害提高<span class="highlight">36%/45%/54%/63%/72%</span>，速度提高<span class="highlight">18%/21%/24%/27%/30%</span>，对生命值≤90%的敌方目标单体额外造成等同于装备者<span class="highlight">60%/80%/100%/120%/140%</span>攻击力的风属性的附加伤害。`,
@@ -347,20 +680,24 @@
                     log: "V2 正式版：当前生效版本"
                 }
             };
+
             const versionSelect = document.getElementById('versionSelect');
             const skillDescEl = document.getElementById('skillDesc');
             const versionLogEl = document.getElementById('versionLog');
+
             function updateVersionDisplay() {
                 const ver = versionSelect.value;
                 skillDescEl.innerHTML = versionData[ver].desc;
                 versionLogEl.textContent = versionData[ver].log;
             }
+
+            // 初始化版本显示并监听切换
+            updateVersionDisplay();
             versionSelect.addEventListener('change', updateVersionDisplay);
-            updateVersionDisplay(); // 初始化显示
 
             updateLoadingProgress(60);
 
-            // 2. 初始化滚动相关功能
+            // --- 回到顶部按钮显隐控制 ---
             const backToTopBtn = document.querySelector('.back-to-top');
             window.addEventListener('scroll', () => {
                 backToTopBtn.classList.toggle('show', window.scrollY > 300);
@@ -368,49 +705,33 @@
 
             updateLoadingProgress(80);
 
-            // 3. 页面加载完成
+            // --- 模拟加载完成（400ms后关闭加载层）---
             setTimeout(() => {
                 updateLoadingProgress(100);
                 const loadTime = Date.now() - loadStartTime;
                 console.log(`详情页加载完成，耗时 ${loadTime}ms`);
-                // 隐藏加载动画
-                const loadingEl = document.getElementById('global-loading');
-                const progressBar = document.getElementById('loadingProgress');
-                if (loadingEl) {
-                    loadingEl.style.opacity = '0';
-                    setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
-                }
-                if (progressBar) {
-                    progressBar.style.opacity = '0';
-                    setTimeout(() => { progressBar.style.display = 'none'; }, 500);
-                }
+                hideLoadingOverlay();
                 showNotification('光锥详情加载完成！', 'success');
             }, 400);
+
+            // --- 同步清风碎片：自动更新页脚版权年份 ---
+            const yearSpan = document.getElementById('year');
+            if (yearSpan) yearSpan.textContent = new Date().getFullYear();
         });
 
-        // 辅助函数：更新加载进度
-        function updateLoadingProgress(percent) {
+        // ========== 保险：window load时再次确保加载层关闭 ==========
+        window.addEventListener('load', () => {
+            hideLoadingOverlay();
             const progressBar = document.getElementById('loadingProgress');
-            if (progressBar) progressBar.style.width = `${percent}%`;
-        }
-        // 确保加载动画最终会隐藏（兜底）
-        setTimeout(() => {
-            const loadingEl = document.getElementById('global-loading');
-            if (loadingEl && loadingEl.style.display !== 'none') {
-                loadingEl.style.opacity = '0';
-                setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
+            if (progressBar && progressBar.style.width !== '100%') {
+                progressBar.style.width = '100%';
             }
-            const progressBar = document.getElementById('loadingProgress');
-            if (progressBar) progressBar.style.display = 'none';
-        }, 3000);
-
-        // 音乐播放器高度同步（与主页逻辑一致）
-        window.addEventListener('message', (e) => {
-            if (e.data?.type === 'SONG_LIST_TOGGLED') {
-                const iframe = document.getElementById('musicPlayerIframe');
-                iframe.style.height = e.data.isShow ? '400px' : '110px';
-            }
+            // 再次确保年份
+            const yearSpan = document.getElementById('year');
+            if (yearSpan) yearSpan.textContent = new Date().getFullYear();
         });
+
+        // ========== 已完全移除音乐播放器相关代码 ==========
     </script>
 </body>
 </html>
