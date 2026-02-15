@@ -1,1662 +1,936 @@
 <!DOCTYPE html>
 <html lang="zh-cmn-Hans">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="keywords" content="六哥荣耀WIKI,角色,光锥,养成材料,游戏攻略">
-    <meta name="description" content="六哥荣耀WIKI，整理游戏内角色、光锥、养成材料等信息，为玩家提供详细参考，纯属虚构娱乐。">
-    
-    <!-- Open Graph 和 Twitter 卡片优化 -->
-    <meta property="og:title" content="六哥荣耀WIKI">
-    <meta property="og:description" content="整理游戏内角色、光锥、养成材料等信息，为玩家提供详细参考">
-    <meta property="og:image" content="https://xiaochen1235789.github.io/images/wangzhantupian.png">
-    <meta property="og:type" content="website">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="六哥荣耀WIKI">
-    <meta name="twitter:description" content="整理游戏内角色、光锥、养成材料等信息，为玩家提供详细参考">
-    
-    <!-- 结构化数据 -->
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "六哥荣耀WIKI",
-        "description": "整理游戏内角色、光锥、养成材料等信息，为玩家提供详细参考",
-        "url": "https://xiaochen1235789.github.io"
-    }
-    </script>
-    
-    <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <title>六哥荣耀WIKI</title>
-    
-    <!-- Font Awesome 图标 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        /* ==================== 基础变量 ==================== */
-        :root {
-            --bg: #121212;
-            --card-bg: #1e3a2f;
-            --card-bg-hover: #284a3c;
-            --text-main: #e0e0e0;
-            --text-highlight: #81c784;
-            --text-secondary: #99aabb;
-            --radius: 6px;
-            --gap: 12px;
-            --special-color: #ffd700;
-            --border-color: #3d725f;
-            --shadow: 0 4px 12px rgba(0,0,0,0.3);
-            --transition-fast: 0.2s ease;
-            --transition-normal: 0.3s ease;
-            --supabase-blue: #3ecf8e;
-            --supabase-purple: #8a4baf;
-            
-            /* 头像框颜色 */
-            --frame-color-primary: #FFD700;
-            --frame-color-secondary: #FF8C00;
-            --frame-color-glow: rgba(255, 215, 0, 0.3);
-            
-            /* 马年头像框颜色 */
-            --horse-red: #C41E3A;
-            --horse-gold: #FFD700;
-            --horse-bronze: #CD7F32;
-            --horse-luck: #FF6B35;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-        }
-        
-        body {
-            overflow-x: hidden;
-            background: var(--bg) !important;
-            color: var(--text-main);
-            line-height: 1.5;
-            min-height: 100vh;
-        }
-        
-        /* ==================== 加载相关样式 ==================== */
-        #global-loading {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: var(--bg);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 999999;
-            transition: opacity 0.3s ease;
-        }
-        
-        .loading-spinner {
-            display: inline-block;
-            width: 50px;
-            height: 50px;
-            border: 4px solid rgba(129, 199, 132, 0.3);
-            border-radius: 50%;
-            border-top-color: var(--text-highlight);
-            animation: spin 1s ease-in-out infinite;
-            margin-bottom: 20px;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        /* 骨架屏效果 */
-        .skeleton {
-            background: #2a3a35;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .skeleton::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
-            animation: loading 1.5s infinite;
-        }
-        
-        @keyframes loading {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        
-        /* ==================== 顶部导航栏 ==================== */
-        .top-nav {
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            padding: 12px 16px;
-            margin: 16px auto;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: center;
-            max-width: 1200px;
-            box-shadow: var(--shadow);
-            position: sticky;
-            top: 0;
-            z-index: 9999;
-        }
-        
-        .nav-title {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: var(--text-highlight);
-            margin-right: auto;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .nav-link {
-            color: var(--text-main);
-            text-decoration: none;
-            padding: 8px 16px;
-            border-radius: var(--radius);
-            font-size: 0.95rem;
-            transition: all var(--transition-fast);
-            white-space: nowrap;
-            position: relative;
-        }
-        
-        .nav-link:hover {
-            background: var(--card-bg-hover);
-            color: var(--text-highlight);
-            transform: translateY(-1px);
-        }
-        
-        .nav-link.active {
-            background: var(--card-bg-hover);
-            color: var(--special-color);
-            font-weight: 600;
-            border: 1px solid var(--special-color);
-        }
-        
-        /* ==================== 用户信息区域 ==================== */
-        .user-nav-section {
-            margin-left: auto;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        /* 用户头像带头像框样式 */
-        .user-avatar-with-frame {
-            position: relative;
-            width: 40px;
-            height: 40px;
-            cursor: pointer;
-            transition: all var(--transition-normal);
-            flex-shrink: 0;
-        }
-        
-        .user-avatar-frame {
-            position: absolute;
-            top: -4px;
-            left: -4px;
-            width: calc(100% + 8px);
-            height: calc(100% + 8px);
-            border-radius: 50%;
-            z-index: 10;
-            pointer-events: none;
-            box-sizing: border-box;
-            border: 4px solid transparent;
-        }
-        
-        /* 默认头像框样式 */
-        .default-frame {
-            border-image: linear-gradient(45deg, 
-                var(--frame-color-primary), 
-                var(--frame-color-secondary),
-                var(--frame-color-primary),
-                var(--frame-color-secondary)) 1;
-            background-size: 400% 400%;
-            animation: frameRotate 8s linear infinite;
-            box-shadow: 0 0 10px var(--frame-color-glow);
-        }
-        
-        /* 马年头像框样式 */
-        .horse-frame {
-            border-image: linear-gradient(45deg,
-                var(--horse-red),
-                var(--horse-gold),
-                var(--horse-bronze),
-                var(--horse-gold),
-                var(--horse-red)) 1;
-            background-size: 300% 300%;
-            animation: horseFrameRotate 6s linear infinite;
-            box-shadow: 
-                inset 0 0 15px rgba(255, 215, 0, 0.4),
-                0 0 15px rgba(196, 30, 58, 0.5);
-        }
-        
-        .user-avatar-img {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            overflow: hidden;
-            border: 2px solid var(--text-highlight);
-            position: relative;
-            z-index: 2;
-        }
-        
-        .user-avatar-img img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .avatar-placeholder {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, var(--supabase-blue), var(--supabase-purple));
-            color: white;
-            font-weight: 600;
-            font-size: 1.1rem;
-            border: 2px solid var(--text-highlight);
-            border-radius: 50%;
-        }
-        
-        .user-info-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 6px 12px;
-            border-radius: var(--radius);
-            transition: all var(--transition-fast);
-        }
-        
-        .user-info-container:hover {
-            background: var(--card-bg-hover);
-        }
-        
-        .username {
-            color: var(--text-highlight);
-            font-weight: 600;
-            font-size: 0.95rem;
-            max-width: 120px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        
-        .logout-btn {
-            background: transparent;
-            color: #f87171;
-            border: 1px solid rgba(248, 113, 113, 0.3);
-            padding: 6px 12px;
-            border-radius: var(--radius);
-            cursor: pointer;
-            transition: all var(--transition-fast);
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            flex-shrink: 0;
-        }
-        
-        .logout-btn:hover {
-            background: rgba(248, 113, 113, 0.1);
-            border-color: #f87171;
-            transform: translateY(-1px);
-        }
-        
-        /* ==================== 搜索功能 ==================== */
-        .search-container {
-            max-width: 1200px;
-            margin: 0 auto 16px;
-            padding: 0 8px;
-            position: relative;
-        }
-        
-        #search-input {
-            width: 100%;
-            padding: 12px 48px 12px 16px;
-            background: #2d3748;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius);
-            color: var(--text-main);
-            font-size: 0.95rem;
-            outline: none;
-            transition: all var(--transition-fast);
-        }
-        
-        #search-input:focus {
-            border-color: var(--text-highlight);
-            box-shadow: 0 0 0 2px rgba(129, 199, 132, 0.2);
-        }
-        
-        .search-icon {
-            position: absolute;
-            right: 24px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-secondary);
-            pointer-events: none;
-        }
-        
-        /* 空结果提示 */
-        .empty-result {
-            max-width: 1200px;
-            margin: 40px auto;
-            padding: 40px 30px;
-            text-align: center;
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            color: var(--text-secondary);
-            display: none;
-            border: 1px dashed var(--border-color);
-        }
-        
-        /* ==================== 网站运行天数 ==================== */
-        .site-age-container {
-            max-width: 1200px;
-            margin: 0 auto 16px;
-            padding: 12px 16px;
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border: 1px solid transparent;
-        }
-        
-        #site-age {
-            color: var(--text-highlight);
-            font-size: 0.95rem;
-            font-weight: 500;
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            background: rgba(129, 199, 132, 0.1);
-        }
-        
-        #site-age.special {
-            color: var(--special-color);
-            animation: flash 1.5s infinite alternate;
-            background: rgba(255, 215, 0, 0.1);
-            padding: 8px 16px;
-            font-weight: 600;
-            box-shadow: 0 0 10px rgba(255,215,0,0.3);
-        }
-        
-        @keyframes flash {
-            from { 
-                opacity: 1; 
-                text-shadow: 0 0 5px rgba(255,215,0,0.5); 
-            }
-            to { 
-                opacity: 0.9; 
-                text-shadow: 0 0 15px rgba(255,215,0,0.8); 
-            }
-        }
-        
-        /* 头像框动画定义 */
-        @keyframes frameRotate {
-            0% { border-image-slice: 1; }
-            50% { border-image-slice: 2; }
-            100% { border-image-slice: 1; }
-        }
-        
-        @keyframes horseFrameRotate {
-            0% {
-                background-position: 0% 0%;
-            }
-            100% {
-                background-position: 300% 300%;
-            }
-        }
-        
-        /* ==================== 内容卡片网格 ==================== */
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: var(--gap);
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 8px;
-        }
-        
-        .content-card {
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            padding: 12px;
-            text-align: center;
-            cursor: pointer;
-            transition: all var(--transition-normal);
-            width: 100% !important;
-            height: auto !important;
-            border: 1px solid transparent;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .content-card::before {
-            content: attr(data-type);
-            position: absolute;
-            top: 6px;
-            left: 6px;
-            padding: 2px 8px;
-            background: var(--text-highlight);
-            color: var(--bg);
-            font-size: 0.7rem;
-            border-radius: 4px;
-            font-weight: 600;
-            z-index: 1;
-            opacity: 0.9;
-        }
-        
-        .content-card.lightcone-card::before {
-            background: #8197c7;
-        }
-        
-        .content-card.material-card::before {
-            background: #c781a6;
-        }
-        
-        .content-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow);
-            background: var(--card-bg-hover);
-            border-color: var(--text-highlight);
-        }
+<meta charset="UTF-8">
+<title>莹 · 六哥荣耀WIKI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+<meta name="description" content="莹(火·同谐·Promax) 技能等级调节器 + 基础属性滑动等级 · 全图片占位">
+<meta name="generator" content="技能调节器模板 v1.0 · 莹最终版">
+<link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
+<!-- 预加载占位图片(使用同源风格) -->
+<link rel="preconnect" href="https://xiaochen1235789.github.io">
 
-        /* 新增：4种养成材料卡片渐变背景样式 - 注释清晰，不影响原有样式 */
-        .material-green {background: linear-gradient(to bottom, #81c784, #284a3c);} /* 淡绿-风系材料/清风碎片专用 */
-        .material-blue {background: linear-gradient(to bottom, #81b7c7, #283c4a);} /* 淡蓝-水系材料专用 */
-        .material-purple {background: linear-gradient(to bottom, #b781c7, #3c284a);} /* 淡紫-雷系/暗系材料专用 */
-        .material-gold {background: linear-gradient(to bottom, #c7c081, #4a4728);} /* 淡金-光系/通用材料专用 */
-        
-        /* 图片容器 */
-        .card-img {
-            width: 100%;
-            background: #2d5243;
-            border-radius: var(--radius);
-            margin-bottom: 12px;
-            padding: 0 !important;
-            overflow: hidden !important;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            flex-shrink: 0;
-        }
-        
-        .content-card:not(.lightcone-card):not(.material-card) .card-img {
-            aspect-ratio: 4/5;
-        }
-        
-        .lightcone-card .card-img {
-            aspect-ratio: 3/4;
-            transform: rotate(-5deg);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-        
-        .material-card .card-img {
-            aspect-ratio: 1/1;
-            border: 1px solid var(--border-color);
-        }
-        
-        .card-img img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform var(--transition-normal), opacity var(--transition-normal);
-            opacity: 0;
-        }
-        
-        .card-img img.loaded {
-            opacity: 1;
-        }
-        
-        /* 卡片文字样式 */
-        .card-name {
-            font-size: 1rem;
-            color: var(--text-highlight);
-            margin-bottom: 6px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding: 0 4px;
-            font-weight: 600;
-        }
-        
-        .card-desc {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            min-height: 36px;
-            line-height: 1.4;
-        }
-        
-        /* 标题样式 */
-        .section-header {
-            max-width: 1200px;
-            margin: 32px auto 16px;
-            font-size: 1.4rem;
-            color: var(--text-highlight);
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 8px;
-            padding-left: 8px;
-            scroll-margin-top: 100px;
-        }
-        
-        /* ==================== 页脚 ==================== */
-        footer {
-            text-align: center;
-            padding: 30px 0;
-            font-size: 0.9rem;
-            color: #888;
-            margin-top: 60px;
-            border-top: 1px solid var(--border-color);
-            max-width: 1200px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        
-        /* ==================== 回到顶部按钮 ==================== */
-        .back-to-top {
-            position: fixed;
-            bottom: 30px;
-            right: 20px;
-            width: 46px;
-            height: 46px;
-            background: var(--card-bg-hover);
-            color: var(--text-highlight);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            cursor: pointer;
-            box-shadow: var(--shadow);
-            opacity: 0;
-            visibility: hidden;
-            transition: all var(--transition-normal);
-            z-index: 9999;
-            border: 1px solid var(--text-highlight);
-        }
-        
-        .back-to-top.show {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        /* ==================== 通知消息 ==================== */
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--card-bg);
-            color: var(--text-highlight);
-            padding: 12px 20px;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            z-index: 10000;
-            transform: translateY(-100px);
-            opacity: 0;
-            transition: transform 0.4s ease, opacity 0.4s ease;
-            border-left: 4px solid var(--text-highlight);
-            max-width: 300px;
-        }
-        
-        .notification.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        
-        .notification.success {
-            border-left-color: #4ade80;
-            color: #4ade80;
-        }
-        
-        .notification.error {
-            border-left-color: #f87171;
-            color: #f87171;
-        }
-        
-        .notification.warning {
-            border-left-color: #fbbf24;
-            color: #fbbf24;
-        }
-        
-        /* ==================== 响应式设计 ==================== */
-        @media (max-width: 768px) {
-            .grid-container {
-                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            }
-            
-            .top-nav {
-                flex-direction: row;
-                flex-wrap: nowrap;
-                overflow-x: auto;
-                overflow-y: hidden;
-                white-space: nowrap;
-                scrollbar-width: none;
-                align-items: center;
-                padding: 10px 12px;
-                gap: 8px;
-                -ms-overflow-style: none;
-            }
-            
-            .top-nav::-webkit-scrollbar {
-                display: none;
-            }
-            
-            .nav-title {
-                margin-right: 12px;
-                position: sticky;
-                left: 0;
-                background: var(--card-bg);
-                z-index: 2;
-                padding-right: 8px;
-            }
-            
-            .nav-link {
-                flex-shrink: 0;
-            }
-            
-            .user-nav-section {
-                margin-left: auto;
-                flex-shrink: 0;
-                border-top: none;
-                padding-top: 0;
-                margin-top: 0;
-                width: auto;
-            }
-            
-            .user-info-container {
-                padding: 4px 8px;
-                gap: 8px;
-            }
-            
-            .username {
-                max-width: 80px;
-                font-size: 0.85rem;
-            }
-            
-            .user-avatar-with-frame {
-                width: 36px;
-                height: 36px;
-            }
-            
-            .user-avatar-frame {
-                top: -3px;
-                left: -3px;
-                width: calc(100% + 6px);
-                height: calc(100% + 6px);
-                border-width: 3px;
-            }
-            
-            .logout-btn {
-                padding: 4px 8px;
-                font-size: 0.8rem;
-            }
-            
-            .notification {
-                right: 10px;
-                left: 10px;
-                max-width: none;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .grid-container {
-                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            }
-            
-            .user-info-container {
-                flex-direction: column;
-                align-items: center;
-                gap: 6px;
-            }
-            
-            .username {
-                display: none;
-            }
-        }
-        
-        /* ==================== 滚动条优化 ==================== */
-        ::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #2d3748;
-            border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #4a5568;
-            border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-highlight);
-        }
-        
-        /* ==================== 弹窗样式 ==================== */
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: modalFadeIn 0.2s ease;
+<style>
+/* ====== 基础变量与重置 (完全继承云璃风格，配色改为火属性) ====== */
+:root {
+  --bg: #121212;
+  --surface: #1a1a1a;
+  --card: #202020;
+  --primary: #ff7f4f;      /* 火橙 */
+  --primary-light: #ffa270;
+  --primary-dark: #cc5c3a;
+  --secondary: #ffb347;    /* 暖黄 */
+  --text: #e0e0e0;
+  --sub-text: #99aabb;
+  --line: #333;
+  --radius: 6px;
+  --transition: .3s ease;
+  --button-bg: #9b5e2e;
+  --button-hover: #c47c44;
+  --button-disabled: #4d3a2a;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --legend-gradient: linear-gradient(45deg, #ffaa33, #ff6b4a);
 }
-@keyframes modalFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
-.modal-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.9);
-    backdrop-filter: blur(5px);
-    cursor: pointer;
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+  line-height: 1.5;
+  padding-bottom: 30px;
+  -webkit-font-smoothing: antialiased;
 }
-.modal-content {
-    position: relative;
-    width: 90%;
-    max-width: 1100px;
-    height: 85vh;
-    background: var(--bg);
-    border-radius: 12px;
-    border: 2px solid var(--border-color);
-    box-shadow: 
-        0 20px 60px rgba(0, 0, 0, 0.8),
-        0 0 0 1px rgba(129, 199, 132, 0.1);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    animation: contentSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+a {
+  color: var(--secondary);
+  text-decoration: none;
+  transition: color var(--transition);
 }
-@keyframes contentSlideIn {
-    from { 
-        opacity: 0;
-        transform: translateY(-30px) scale(0.95);
-    }
-    to { 
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+a:hover { color: var(--primary-light); }
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }
-.modal-header {
-    padding: 16px 24px;
-    background: var(--card-bg);
-    border-bottom: 2px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+
+/* ====== 顶部导航栏 ====== */
+.top-bar {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  background-color: rgba(26, 26, 26, 0.9);
 }
-.modal-header h3 {
-    color: var(--text-highlight);
-    font-size: 1.4rem;
-    margin: 0;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+.top-bar .title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  flex-grow: 1;
+  text-align: center;
+  color: #ffb347;
 }
-.modal-close {
-    background: transparent;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 1.3rem;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    border: 1px solid transparent;
+
+/* ====== 角色展示区 (真正的图片占位) ====== */
+.hero-section {
+  position: relative;
+  background: linear-gradient(135deg, #4a1e1e 0%, #2a0f0f 100%);
+  overflow: hidden;
 }
-.modal-close:hover {
-    background: rgba(248, 113, 113, 0.15);
-    color: #f87171;
-    border-color: rgba(248, 113, 113, 0.3);
-    transform: rotate(90deg);
+.hero-image {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  opacity: 0.95;
+  display: block;
 }
-.modal-close:active {
-    transform: rotate(90deg) scale(0.95);
+.hero-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
 }
-.modal-body {
-    flex: 1;
-    overflow: hidden;
-    position: relative;
-    background: var(--bg);
+.hero-name {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  margin-bottom: 8px;
 }
-/* iframe 样式 */
-#changelog-iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
-    display: block;
+.tag-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
-/* 弹窗加载状态指示器 */
-.modal-loading {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    color: var(--text-highlight);
-    z-index: 1;
+.tag {
+  background: rgba(255, 127, 79, 0.15);
+  color: var(--primary);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  border: 1px solid rgba(255, 127, 79, 0.3);
+  backdrop-filter: blur(4px);
 }
-.modal-loading .loading-spinner {
-    margin-bottom: 16px;
+
+/* ====== 卡片容器 ====== */
+.card {
+  background: var(--card);
+  margin: 12px 16px;
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  transition: transform var(--transition), box-shadow var(--transition);
 }
-/* 适配移动端 */
-@media (max-width: 768px) {
-    .modal-content {
-        width: 95%;
-        height: 90vh;
-        max-width: 100%;
-        margin: 0 10px;
-        border-radius: 8px;
-    }
-    
-    .modal-header {
-        padding: 12px 16px;
-    }
-    
-    .modal-header h3 {
-        font-size: 1.2rem;
-    }
-    
-    .modal-close {
-        width: 36px;
-        height: 36px;
-        font-size: 1.1rem;
-    }
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
+
+/* ====== 技能模块 ====== */
+.skill-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+}
+.skill-name {
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--secondary);
+  flex-grow: 1;
+}
+
+/* ====== 等级控制 ====== */
+.level-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.level-value {
+  min-width: 50px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: var(--primary);
+  transition: all var(--transition);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+.level-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--button-bg);
+  color: var(--text);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  user-select: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.level-btn:hover:not(:disabled) {
+  background: var(--button-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+.level-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+.level-btn:disabled {
+  background: var(--button-disabled);
+  color: #666;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.level-btn.up { color: #ffb86b; }
+.level-btn.down { color: #ff8a7a; }
+
+/* ====== 滑块自定义 ====== */
+.base-slider {
+  width: 160px;
+  height: 6px;
+  -webkit-appearance: none;
+  background: var(--line);
+  border-radius: 3px;
+  outline: none;
+  margin: 0 4px;
+}
+.base-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(255,127,79,0.6);
+  border: 1px solid rgba(255,255,255,0.3);
+  transition: 0.1s;
+}
+.base-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  background: var(--primary-light);
+}
+.base-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: var(--primary);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(255,127,79,0.6);
+}
+
+/* ====== 技能内容 ====== */
+.skill-content {
+  font-size: 0.95rem;
+  color: var(--sub-text);
+  line-height: 1.6;
+}
+.skill-val {
+  color: var(--primary);
+  font-weight: 700;
+  transition: all var(--transition);
+  display: inline-block;
+  padding: 0 2px;
+}
+.legend-text {
+  background: var(--legend-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 800;
+}
+.highlight-text {
+  color: orange;
+  font-weight: 600;
+}
+.special-text {
+  color: #ffae70;
+  font-weight: 600;
+}
+.energy-text {
+  color: #66ccff;
+  font-weight: 600;
+}
+
+/* ====== 属性显示区域 (全图片占位) ====== */
+.attr-container { margin-bottom: 20px; }
+.attr-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+.attr-icon {
+  background: var(--card);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  min-width: 60px;
+  flex: 1;
+  max-width: 100px;
+  border: 1px solid rgba(255,127,79,0.1);
+}
+.attr-icon img {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 4px;
+  object-fit: contain;
+}
+.attr-value {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+  word-break: break-word;
+}
+.attr-label {
+  color: var(--sub-text);
+  font-size: 12px;
+  text-align: center;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+/* ====== 表格样式 ====== */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-top: 12px;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.data-table th, .data-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.data-table th {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* ====== 额外能力/行迹 ====== */
+.section-title {
+  font-size: 1.2rem;
+  color: var(--secondary);
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.ability-item {
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--line);
+}
+.ability-item:last-child {
+  border-bottom: none;
+}
+.ability-name {
+  color: var(--primary);
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 1rem;
+}
+
+/* ====== 命座样式 ====== */
+.constellation-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+.constellation-table th, .constellation-table td {
+  padding: 12px 8px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+.constellation-table th {
+  color: var(--primary);
+  font-weight: 600;
+}
+.constellation-table td:first-child {
+  color: var(--primary);
+  font-weight: 700;
+  min-width: 60px;
+}
+.constellation-table td:nth-child(2) {
+  color: var(--secondary);
+  min-width: 80px;
+  font-weight: 600;
+}
+.const-val {
+  color: var(--primary);
+  font-weight: 700;
+  text-shadow: 0 0 4px rgba(255,127,79,0.3);
+  transition: all var(--transition);
+  display: inline-block;
+  cursor: help;
+  position: relative;
+}
+.const-val:hover {
+  text-shadow: 0 0 12px rgba(255,127,79,0.7);
+  transform: scale(1.05);
+}
+.tooltip {
+  position: absolute;
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  width: 200px;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--line);
+  z-index: 10;
+}
+.const-val:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ====== 响应式 ====== */
 @media (max-width: 480px) {
-    .modal-content {
-        width: 100%;
-        height: 100vh;
-        border-radius: 0;
-        margin: 0;
-        border: none;
-    }
-    
-    .modal-header {
-        padding: 10px 12px;
-    }
-    
-    .modal-header h3 {
-        font-size: 1.1rem;
-    }
+  .hero-name { font-size: 1.5rem; }
+  .card { margin: 10px 12px; padding: 16px; }
+  .skill-header { flex-direction: column; align-items: flex-start; }
+  .level-controls { align-self: stretch; justify-content: center; flex-wrap: wrap; }
+  .base-slider { width: 100%; max-width: 200px; }
+  .attr-icon { min-width: calc(50% - 6px); flex: 0 0 calc(50% - 6px); }
+  .attr-value { font-size: 13px; }
 }
-/* 弹窗进入动画 */
-@keyframes modalSlideIn {
-    0% {
-        transform: translateY(-100px) scale(0.9);
-        opacity: 0;
-    }
-    70% {
-        transform: translateY(10px) scale(1.02);
-        opacity: 1;
-    }
-    100% {
-        transform: translateY(0) scale(1);
-        opacity: 1;
-    }
+@media (min-width: 481px) and (max-width: 768px) {
+  .attr-icon { min-width: calc(33.333% - 8px); flex: 0 0 calc(33.333% - 8px); }
 }
-/* 弹窗退出动画 */
-@keyframes modalSlideOut {
-    0% {
-        transform: translateY(0) scale(1);
-        opacity: 1;
-    }
-    30% {
-        transform: translateY(10px) scale(1.02);
-        opacity: 0.8;
-    }
-    100% {
-        transform: translateY(-100px) scale(0.9);
-        opacity: 0;
-    }
+@media (min-width: 769px) {
+  .attr-icon { min-width: 80px; }
 }
-.modal-content {
-    animation: modalSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+
+/* ====== 页脚 ====== */
+.wiki-footer {
+  text-align: center;
+  margin-top: 20px;
+  color: #7f9e8c;
+  font-size: 13px;
+  opacity: 0.9;
+  padding: 20px 0 10px;
+  border-top: 1px solid #4a705f;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
 }
-.modal.closing .modal-content {
-    animation: modalSlideOut 0.3s ease forwards;
-}
-    </style>
+.wiki-footer a { color: #8FBC8F; text-decoration: none; }
+.wiki-footer a:hover { text-decoration: underline; }
+</style>
 </head>
 <body>
-    <!-- 全局加载动画 -->
-    <div id="global-loading">
-        <div style="text-align: center;">
-            <div class="loading-spinner"></div>
-            <p style="color: var(--text-highlight); margin-top: 16px; font-size: 1.1rem;">加载资源中...</p>
-        </div>
-    </div>
-    <!-- 通知消息容器 -->
-    <div class="notification" id="notification"></div>
-    <!-- 导航栏 -->
-    <nav class="top-nav" aria-label="主要导航">
-        <div class="nav-title">
-            <span>六哥荣耀WIKI</span>
-        </div>
-        <a href="profile.html" class="nav-link">个人主页</a>
-        <a href="#character" class="nav-link" data-target="character">角色</a>
-        <a href="#lightcone" class="nav-link" data-target="lightcone">光锥</a>
-        <a href="#material" class="nav-link" data-target="material">养成材料</a>
-        <a href="javascript:void(0)" class="nav-link" onclick="openChangelogModal()" id="changelog-link" title="查看更新日志">
-    <i class="fas fa-history" style="margin-right: 6px;"></i>更新日志
-</a>
-        
-        <!-- 用户导航部分（由JavaScript动态生成） -->
-        <div class="user-nav-section" id="userNavSection">
-            <a href="login-real.html" class="nav-link">登录/注册</a>
-        </div>
-    </nav>
-    <!-- 搜索框 -->
-    <div class="search-container">
-        <input type="text" id="search-input" placeholder="搜索角色/光锥/材料（支持关键词模糊匹配）" aria-label="搜索内容">
-        <div class="search-icon">🔍</div>
-    </div>
-    <!-- 网站运行天数 -->
-    <div class="site-age-container">
-        <span id="site-age"><span class="loading-spinner" style="display: inline-block; width: 16px; height: 16px; margin-right: 6px;"></span>加载中...</span>
-    </div>
-    <!-- 空结果提示 -->
-    <div class="empty-result">
-        <i>🔍</i>
-        <h3>未找到匹配结果</h3>
-        <p>试试更换关键词或检查拼写~</p>
-    </div>
-    <!-- 角色列表 -->
-    <h2 class="section-header" id="character">角色列表</h2>
-    <div class="grid-container" data-category="character">
-        <div class="content-card" onclick="jumpToDetail('yunli-detail.html', '云璃')" data-type="角色" data-name="云璃" data-desc="毁灭 · 物理 | 魔改五星 | 无版本">
-            <div class="card-img skeleton">
-                <img src="./images/yunli.webp" alt="云璃角色卡片 - 毁灭物理系角色" loading="lazy" width="150" height="188" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">云璃</div>
-            <div class="card-desc">毁灭 · 物理 | 魔改五星 | 无版本</div>
-        </div>
-        
-        <div class="content-card" onclick="jumpToDetail('luguan-detail.html', '鹿将军')" data-type="角色" data-name="鹿将军" data-desc="巡猎 · 风 | 限定五星 | 1.0上半">
-            <div class="card-img skeleton">
-                <img src="./images/changjinglu.webp" alt="鹿将军角色卡片 - 巡猎风系角色" loading="lazy" width="150" height="188" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">鹿将军</div>
-            <div class="card-desc">巡猎 · 风 | 限定五星 | 1.0上半</div>
-        </div>
-        
-        <div class="content-card" onclick="jumpToDetail('pige-detail.html', '皮哥')" data-type="角色" data-name="皮哥" data-desc="存护 · 物理 | 限定五星 | 1.0下半">
-            <div class="card-img skeleton">
-                <img src="./images/pige.webp" alt="皮哥角色卡片 - 存护物理系角色" loading="lazy" width="150" height="188" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">皮哥</div>
-            <div class="card-desc">存护 · 物理 | 限定五星 | 1.0下半</div>
-        </div>    
-        
-        <div class="content-card" onclick="jumpToDetail('jiazijie-detail.html', '夹子姐')" data-type="角色" data-name="夹子姐" data-desc="智识 · 雷 | 限定五星 | 1.1上半">
-            <div class="card-img skeleton">
-                <img src="./images/jiazijie.webp" alt="夹子姐角色卡片 - 智识雷系角色" loading="lazy" width="150" height="188" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">夹子姐</div>
-            <div class="card-desc">智识 · 雷 | 限定五星 | 1.1上半</div>
-        </div>
-        
-        <div class="content-card" onclick="jumpToDetail('han-detail.html', '涵')" data-type="角色" data-name="涵" data-desc="同谐 · 物理 | 限定五星 | 1.1下半">
-            <div class="card-img skeleton">
-                <img src="./images/han.webp" alt="涵角色卡片 - 同谐物理系角色" loading="lazy" width="150" height="188" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">涵</div>
-            <div class="card-desc">同谐 · 物理 | 限定五星 | 1.1下半</div>
-        </div>
-        
-        <div class="content-card" onclick="jumpToDetail('yuzhiboyan-detail.html', '宇智波.言')" data-type="角色" data-name="宇智波.言" data-desc="毁灭 · 雷 | 限定五星 | 1.2上半">
-            <div class="card-img skeleton">
-                <img src="./images/yuzhiboyan.webp" alt="宇智波.言角色卡片 - 毁灭雷系角色" loading="lazy" width="150" height="188" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">宇智波.言</div>
-            <div class="card-desc">毁灭 · 雷 | 限定五星 | 1.2上半</div>
-        </div>
-        
-        <div class="content-card" onclick="jumpToDetail('banxierencheng-detail.html', '半械人.成')" data-type="角色" data-name="半械人.成" data-desc="毁灭 · 物理 | 限定五星 | 1.2下半">
-            <div class="card-img skeleton">
-                <img src="./images/banxierencheng.webp" alt="半械人.成角色卡片 - 毁灭物理系角色" loading="lazy" width="150" height="188" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">半械人.成</div>
-            <div class="card-desc">毁灭 · 物理 | 限定五星 | 1.2下半</div>
-        </div>
-    
-        <div class="content-card" onclick="jumpToDetail('meng-detail.html', '梦')" data-type="角色" data-name="梦" data-desc="虚无 · 风 | 限定五星 | 1.3上半">
-            <div class="card-img skeleton">
-                <img src="./images/meng.webp" alt="梦角色卡片 - 虚无风系角色" loading="lazy" width="150" height="188" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">梦</div>
-            <div class="card-desc">虚无 · 风 | 限定五星 | 1.3上半</div>
-        </div>
-        
-        <div class="content-card" onclick="jumpToDetail('shenshengpige-detail.html', '神圣.皮哥')" data-type="角色" data-name="神圣.皮哥" data-desc="丰饶 · 虚数 | 限定五星 | 1.3下半">
-            <div class="card-img skeleton">
-                <img src="./images/shenshengpige.webp" alt="神圣.皮哥角色卡片 - 丰饶虚数系角色" loading="lazy" width="150" height="188" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">神圣.皮哥</div>
-            <div class="card-desc">丰饶 · 虚数 | 限定五星 | 1.3下半</div>
-        </div>
-        
-        <div class="content-card" onclick="jumpToDetail('tianmingrenhouge-detail.html', '天命人.猴哥')" data-type="角色" data-name="天命人.猴哥" data-desc="繁育 · 量子 | 限定五星 | 2.0上半">
-            <div class="card-img skeleton">
-                <img src="./images/tianmingrenhouge.webp" alt="天命人.猴哥角色卡片 - 繁育量子系角色" loading="lazy" width="150" height="188" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">天命人.猴哥</div>
-            <div class="card-desc">繁育 · 量子 | 限定五星 | 2.0上半</div>
-        </div>
-        
-        <div class="content-card" onclick="jumpToDetail('./2.0下~2.0终末/ying.html', '莹')" data-type="角色" data-name="莹" data-desc="同谐 · 火 | 限定五星 | 2.0下半">
-            <div class="card-img skeleton">
-                <img src="./images/ying.webp" alt="莹角色卡片 - 同谐火系角色" loading="lazy" width="150" height="188" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">莹</div>
-            <div class="card-desc">同谐 · 火 | 限定五星 | 2.0下半</div>
-        </div>
-        
-        <div class="content-card" onclick="jumpToDetail('./4.0~4.0终末/maolaoda.html', '猫老大')" data-type="角色" data-name="猫老大" data-desc="记忆 · 物理 | 限定五星 | 4.0上半">
-            <div class="card-img skeleton">
-                <img src="./images/role_4_0s.webp" alt="猫老大角色卡片 - 记忆物理系角色" loading="lazy" width="150" height="188" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">猫老大</div>
-            <div class="card-desc">记忆 · 物理 | 限定五星 | 4.0上半</div>
-        </div>
-        
-    </div>
-    
-    
-    
-    
-    
-    <!-- 光锥列表 -->
-    <h2 class="section-header" id="lightcone">光锥列表</h2>
-    <div class="grid-container" data-category="lightcone">
-    
-        <div class="content-card lightcone-card" onclick="jumpToDetail('Light cone data/changjinglu.html','快乐的路一天')" data-type="光锥" data-name="快乐的路一天" data-desc="巡猎 | 鹿将军专武">
-            <div class="card-img skeleton">
-                <img src="./guangzhui.images/changjinglu.jpg" alt="快乐的路一天光锥 - 巡猎类型" loading="lazy" width="150" height="200" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">快乐的路一天</div>
-            <div class="card-desc">巡猎 | 鹿将军专武</div>
-        </div>
-        
-        <div class="content-card lightcone-card" data-type="光锥" data-name="幻灵猫魅" data-desc="欢愉 | 魔法猫咪.小咪专武">
-            <div class="card-img skeleton">
-                <img src="./guangzhui.images/xiaomi.jpg" alt="幻灵猫魅光锥 - 欢愉类型" loading="lazy" width="150" height="200" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">幻灵猫魅</div>
-            <div class="card-desc">欢愉 | 魔法猫咪.小咪专武</div>
-        </div>
-        
-        <div class="content-card lightcone-card" data-type="光锥" data-name="未知光锥" data-desc="？？？">
-            <div class="card-img skeleton">
-                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d.jpeg~tplv-a9rns2rl98-24:720:720.jpeg" alt="未知光锥" loading="lazy" width="150" height="200" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">未知光锥</div>
-            <div class="card-desc">？？？</div>
-        </div>
-    </div>
-    
-    
-    
-    
-    <h2 class="section-header" id="material">养成材料</h2>
-    <div class="grid-container" data-category="material">
-        <!-- 淡绿渐变 - 清风碎片 -->
-        <div class="content-card material-card material-green" onclick="jumpToDetail('https://xiaochen1235789.github.io/materials_html/清风碎片.html', '清风碎片')" data-type="材料" data-name="清风碎片" data-desc="风系 | 角色突破核心材料">
-            <div class="card-img skeleton">
-                <img src="https://xiaochen1235789.github.io/materials/清风碎片.webp" alt="清风碎片 - 风系突破材料" loading="lazy" width="150" height="150" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">清风碎片</div>
-            <div class="card-desc">风属性 | 风属性角色技能升级材料</div>
-        </div>
-        <!-- 淡蓝渐变 - 御风晶片 -->
-        <div class="content-card material-card material-blue" onclick="jumpToDetail('https://xiaochen1235789.github.io/materials_html/御风晶片.html', '御风晶片')" data-type="材料" data-name="御风晶片" data-desc="风系 | 角色突破材料">
-            <div class="card-img skeleton">
-                <img src="https://xiaochen1235789.github.io/materials/御风晶片.webp" alt="御风晶片 - 风系突破材料" loading="lazy" width="150" height="150" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">御风晶片</div>
-            <div class="card-desc">风属性 | 风属性角色技能升级材料</div>
-        </div>
-        <!-- 淡紫渐变 - 万风核心 -->
-        <div class="content-card material-card material-purple" onclick="jumpToDetail('https://xiaochen1235789.github.io/materials_html/万风核心.html', '万风核心')" data-type="材料" data-name="万风核心" data-desc="风系 | 角色突破材料">
-            <div class="card-img skeleton">
-                <img src="https://xiaochen1235789.github.io/materials/万风核心.webp" alt="万风核心 - 风系突破材料" loading="lazy" width="150" height="150" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">万风核心</div>
-            <div class="card-desc">风属性 | 风属性角色技能升级材料</div>
-        </div>
-        <!-- 淡金渐变 - 纯白祈愿结晶 -->
-        <div class="content-card material-card material-gold" onclick="jumpToDetail('https://xiaochen1235789.github.io/materials_html/纯白祈愿结晶.html', '纯白祈愿结晶')" data-type="材料" data-name="纯白祈愿结晶" data-desc="通用 | 角色升级核心材料">
-            <div class="card-img skeleton">
-                <img src="https://xiaochen1235789.github.io/materials/纯白祈愿结晶.webp" alt="纯白祈愿结晶 - 角色升级核心材料" loading="lazy" width="150" height="150" onload="imageLoaded(this)" onerror="imageError(this)">
-            </div>
-            <div class="card-name">纯白祈愿结晶</div>
-            <div class="card-desc">无属性 | 通用突破等级材料</div>
-        </div>
-    </div>
-    <!-- 页脚 -->
-    <footer>
-        © <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.<br>
-        本WIKI所有图片均是由AI生图生成的.不存在侵权行为.请仔细辨别.
-    </footer>
-    <!-- 回到顶部按钮 -->
-    <button class="back-to-top" onclick="scrollToTop()" aria-label="回到顶部">↑</button>
-<!-- 更新日志弹窗 -->
-<div id="changelog-modal" class="modal" style="display: none;">
-    <div class="modal-overlay" onclick="closeChangelogModal()"></div>
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3><i class="fas fa-history" style="margin-right: 8px;"></i>更新日志 - 六哥荣耀WIKI</h3>
-            <button class="modal-close" onclick="closeChangelogModal()" aria-label="关闭弹窗">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="modal-body">
-            <iframe 
-                id="changelog-iframe" 
-                src="changelog.html" 
-                frameborder="0" 
-                allow="fullscreen"
-                loading="lazy"
-                title="六哥荣耀WIKI更新日志"
-                style="width: 100%; height: 100%;">
-            </iframe>
-        </div>
-    </div>
+
+<div class="top-bar">
+  <span class="title">莹 · 六哥荣耀WIKI</span>
 </div>
+
+<!-- ===== 角色展示区 ===== -->
+<section class="hero-section" aria-label="角色展示">
+  <img class="hero-image" src="https://xiaochen1235789.github.io/images/ying.webp" alt="莹占位图">
+  <div class="hero-overlay">
+    <div class="hero-name">莹</div>
+    <div class="tag-container">
+      <span class="tag">稀有度: ✮✮✮✮✮</span>
+      <span class="tag">加强系统：已加强</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 基础属性模块 (等级滑动 + 全图片占位) ===== -->
+<section class="card" id="base-attr" aria-label="基础属性">
+  <div class="skill-header">
+    <div class="skill-name" id="base-level-label">基础属性</div>
+    <div class="level-controls" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      <button class="level-btn down" id="base-level-down" aria-label="降低基础等级">↓</button>
+      <span class="level-value" id="base-level-display">90</span>
+      <button class="level-btn up" id="base-level-up" aria-label="提高基础等级">↑</button>
+      <span style="color: var(--sub-text); font-size: 0.9rem;">滑动</span>
+      <input type="range" id="base-level-slider" class="base-slider" min="1" max="90" value="90" step="1">
+    </div>
+  </div>
+  <div class="skill-content">
+    <!-- 第一行：命途 + 属性 (使用真实图片链接，同云璃风格) -->
+    <div class="attr-container">
+      <div class="attr-row">
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/Harmony.webp" alt="同谐" loading="lazy">
+          <div class="attr-label">同谐</div>
+        </div>
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/Fire.webp" alt="火" loading="lazy">
+          <div class="attr-label">火</div>
+        </div>
+        <div class="attr-icon">
+          <div class="attr-label">限定角色</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 核心数值行 HP/ATK/DEF/SPD/ENERGY (全部使用图片) -->
+    <div class="attr-container">
+      <div class="attr-row">
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/HP.webp" alt="生命">
+          <div class="attr-value" id="base-hp">1397</div>
+          <div class="attr-label">生命</div>
+        </div>
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/ATK.webp" alt="攻击">
+          <div class="attr-value" id="base-atk">523</div>
+          <div class="attr-label">攻击</div>
+        </div>
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/DEF.webp" alt="防御">
+          <div class="attr-value" id="base-def">485</div>
+          <div class="attr-label">防御</div>
+        </div>
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/SPD.webp" alt="速度">
+          <div class="attr-value" id="base-spd">101</div>
+          <div class="attr-label">速度</div>
+        </div>
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/ENERGY.webp" alt="能量">
+          <div class="attr-value" id="base-energy">110</div>
+          <div class="attr-label">能量</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 普攻 ===== -->
+<section class="card" id="normal-attack" aria-label="普攻技能">
+  <div class="skill-header">
+    <div class="skill-name">普攻 · 星火指引</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('normal', -1)" id="normal-down">↓</button>
+      <span class="level-value" id="normal-level">1/7</span>
+      <button class="level-btn up" onclick="changeSkillLevel('normal', 1)" id="normal-up">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    对指定敌方单体造成等同于 <span id="normal-val1" class="skill-val">50%</span> 攻击力的火属性伤害。
+    <table class="data-table">
+      <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+      <tbody>
+        <tr><td>削韧</td><td>单体10</td></tr>
+        <tr><td>战技点</td><td>+1</td></tr>
+        <tr><td>能量变化</td><td>20</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 战技 ===== -->
+<section class="card" id="skill-attack" aria-label="战技技能">
+  <div class="skill-header">
+    <div class="skill-name">战技 · 流光助推</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('skill', -1)" id="skill-down">↓</button>
+      <span class="level-value" id="skill-level">1/12</span>
+      <button class="level-btn up" onclick="changeSkillLevel('skill', 1)" id="skill-up">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    使指定我方单体的暴击伤害提高，提高数值等同于莹 <span id="skill-val1" class="skill-val">20.0%</span> 暴击伤害 + <span id="skill-val2" class="skill-val">20.0%</span> 固定暴击伤害，持续1回合，并使该目标行动提前75%。<br>
+    当莹对自身施放该技能时，无法触发行动提前效果。
+    <table class="data-table">
+      <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+      <tbody>
+        <tr><td>战技点</td><td>-1</td></tr>
+        <tr><td>能量变化</td><td>+40</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 终结技 ===== -->
+<section class="card" id="ultimate-attack" aria-label="终结技技能">
+  <div class="skill-header">
+    <div class="skill-name">终结技 · 时隙祈愿</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('ultimate', -1)" id="ultimate-down">↓</button>
+      <span class="level-value" id="ultimate-level">1/12</span>
+      <button class="level-btn up" onclick="changeSkillLevel('ultimate', 1)" id="ultimate-up">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    为我方恢复4个战技点，并使我方全体获得【等待】：使天赋效果每层额外提高 <span id="ultimate-val1" class="skill-val">3.0%</span>，全属性抗性穿透提高10%，持续2回合。
+    <table class="data-table">
+      <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+      <tbody>
+        <tr><td>能量消耗</td><td>110</td></tr>
+        <tr><td>回能</td><td>15</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 天赋 ===== -->
+<section class="card" id="talent-attack" aria-label="天赋技能">
+  <div class="skill-header">
+    <div class="skill-name">天赋 · 积势迸发</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('talent', -1)" id="talent-down">↓</button>
+      <span class="level-value" id="talent-level">1/12</span>
+      <button class="level-btn up" onclick="changeSkillLevel('talent', 1)" id="talent-up">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    莹在场时，战技点上限提高3点。我方目标每消耗1点战技点，使我方全体造成的伤害提高 <span id="talent-val1" class="skill-val">3.0%</span>，持续2回合，最多叠加4层。<span style="color:orange; font-size: 16px;">(加强)</span>
+    <table class="data-table">
+      <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+      <tbody>
+        <tr><td>战技点上限提升</td><td>3</td></tr>
+        <tr><td>最高增伤</td><td>34%(12级叠满)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 行迹统计 ===== -->
+<section class="card" aria-label="行迹加成">
+  <div class="section-title">✨ 行迹加成(总)</div>
+  <div class="attr-row" style="justify-content: flex-start;">
+    <div class="attr-icon" style="max-width:120px">
+      <img src="https://xiaochen1235789.github.io/attribute_image/IconCriticalDamage.webp" alt="暴伤加成">
+      <div class="attr-value">41.05%</div><div class="attr-label">暴击伤害</div>
+    </div>
+    <div class="attr-icon" style="max-width:120px">
+      <img src="https://xiaochen1235789.github.io/attribute_image/IconStatusResistance.webp" alt="抵抗加成">
+      <div class="attr-value">19.8%</div><div class="attr-label">效果抵抗</div>
+    </div>
+    <div class="attr-icon" style="max-width:120px">
+      <img src="https://xiaochen1235789.github.io/attribute_image/SPD.webp" alt="速度加成">
+      <div class="attr-value">11</div><div class="attr-label">速度</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 额外能力 ===== -->
+<section class="card" aria-label="额外能力">
+  <div class="section-title">额外能力</div>
+  <div class="ability-item">
+    <div class="ability-name">能量回流</div>
+    <div class="ability-desc">普攻/战技释放时额外恢复15点能量。</div>
+  </div>
+  <div class="ability-item">
+    <div class="ability-name">极速</div>
+    <div class="ability-desc">战技提供的行动提前效果提高至100% 。</div>
+  </div>
+  <div class="ability-item">
+    <div class="ability-name">增幅</div>
+    <div class="ability-desc">战技的暴击伤害提高效果延长1回合，战技增加一个效果：全属性抗性穿透提高20%。且可以解除指定我方目标1个负面效果。<span style="color:orange; font-size: 16px;">(加强)</span></div>
+  </div>
+</section>
+
+<!-- ===== 命座 ===== -->
+<section class="card" aria-label="命之座">
+  <div class="section-title">命之座 · 星魂</div>
+  <table class="constellation-table">
+    <thead><tr><th>层数</th><th>名称</th><th>效果</th></tr></thead>
+    <tbody>
+      <tr><td>1命</td><td>爆发</td><td>被战技施加的我方目标造成的伤害额外提高<span class="const-val">50%<span class="tooltip">持续到该角色回合结束</span></span>。</td></tr>
+      <tr><td>2命</td><td>破防</td><td>天赋效果额外使我方目标无视敌方目标<span class="const-val">10%<span class="tooltip">防御，最多30%</span></span>防御，最多30%。</td></tr>
+      <tr><td>3命</td><td>精进</td><td>普攻等级+1，最多不超过10级<br>天赋等级+2，最多不超过15级。</td></tr>
+      <tr><td>4命</td><td>扩容</td><td>终结技额外恢复1个战技点；天赋的战技点上限提高效果额外提高1点。</td></tr>
+      <tr><td>5命</td><td>解放</td><td>战技等级+2，最多不超过15级<br>终结技等级+2，最多不超过15级。</td></tr>
+      <tr><td>6命</td><td>增幅</td><td>战技的暴击伤害提高效果也对拥有【等待】的我方目标生效，且被战技施加的目标下一次造成的伤害提高<span class="const-val">150%<span class="tooltip">恐怖如斯</span></span>。</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ===== 页脚 ===== -->
+<footer class="wiki-footer">
+  © <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.<br>
+  本WIKI所有图片均由AI生成，不存在侵权行为，请仔细辨别.
+</footer>
+
 <script>
-// ==================== 全局变量定义 ====================
-let supabaseClient = null;
-let currentUser = null;
-let searchTimeout;
-// Supabase配置
-const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-// ==================== 辅助函数 ====================
-function showNotification(message, type = 'info') {
-    const notification = document.getElementById('notification');
-    if (!notification) return;
-    
-    notification.textContent = message;
-    notification.className = `notification ${type}`;
-    
-    // 显示通知
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 10);
-    
-    // 自动隐藏
-    setTimeout(() => {
-        notification.classList.remove('show');
-    }, 3000);
+// ====== 莹技能数据配置 ======
+const skillConfig = {
+  normal: { level: 1, maxLevel: 7, values: [ { id: 'normal-val1', base: 50, step: 10 } ] },
+  skill: { level: 1, maxLevel: 12, values: [ 
+      { id: 'skill-val1', base: 20.0, step: 1.1 },
+      { id: 'skill-val2', base: 20.0, step: 1.5 }
+  ] },
+  ultimate: { level: 1, maxLevel: 12, values: [ { id: 'ultimate-val1', base: 3.0, step: 0.4 } ] },
+  talent: { level: 1, maxLevel: 12, values: [ { id: 'talent-val1', base: 3.0, step: 0.5 } ] }
+};
+
+// ====== 基础属性预设 (硬编码莹的各等级数值，避免计算错误) ======
+const baseLevelPresets = [1, 20, 30, 40, 50, 60, 70, 80, 90];
+const baseStats = {
+  1:   { hp: 168, atk: 87, def: 72 },   // 根据比例估算，保证90级与设定一致
+  20:  { hp: 397, atk: 204, def: 107 },
+  30:  { hp: 549, atk: 283, def: 253 },
+  40:  { hp: 701, atk: 361, def: 301 },
+  50:  { hp: 853, atk: 439, def: 366 },
+  60:  { hp: 1005, atk: 518, def: 431 },
+  70:  { hp: 1157, atk: 596, def: 497 },
+  80:  { hp: 1141, atk: 640, def: 533 },
+  90:  { hp: 1370, atk: 628, def: 582 }
+};
+
+// ====== 全局状态 ======
+const state = {
+  skills: JSON.parse(JSON.stringify(skillConfig)),
+  baseLevel: 90
+};
+
+// ---------- 通用技能函数 ----------
+function getSkillValue(base, step, level) {
+  return (base + step * (level - 1)).toFixed(1);
 }
-// ==================== 图片处理函数 ====================
-function imageLoaded(img) {
-    img.classList.add('loaded');
-    const parent = img.closest('.skeleton');
-    if (parent) {
-        parent.classList.remove('skeleton');
-    }
+function applyLevelColor(element, level, max) {
+  if (level >= 10 && level <= max) {
+    element.classList.add('legend-text');
+    element.classList.remove('skill-val');
+  } else {
+    element.classList.remove('legend-text');
+    element.classList.add('skill-val');
+  }
 }
-function imageError(img) {
-    img.style.display = 'none';
-    const parent = img.closest('.skeleton');
-    if (parent) {
-        parent.classList.remove('skeleton');
-    }
+function updateSkillDisplay(skillType) {
+  const skill = state.skills[skillType];
+  const levelElement = document.getElementById(`${skillType}-level`);
+  if (!levelElement) return;
+  levelElement.textContent = `${skill.level}/${skill.maxLevel}`;
+  applyLevelColor(levelElement, skill.level, skill.maxLevel);
+  skill.values.forEach(valueData => {
+    const element = document.getElementById(valueData.id);
+    if (!element) return;
+    const newVal = getSkillValue(valueData.base, valueData.step, skill.level);
+    element.textContent = newVal + '%';
+    applyLevelColor(element, skill.level, skill.maxLevel);
+  });
 }
-// ==================== 网站运行天数功能 ====================
-function initializeSiteAge() {
-    const launchDate = new Date(2025, 10, 1); // 2025年11月1日
-    const siteAgeElem = document.getElementById('site-age');
-    
-    const specialDays = {
-        30: '🎉 六哥荣耀WIKI上线30天啦！感恩陪伴 🎉',
-        50: '⛄冬至快乐，记得吃饺子🥟⛄',
-        58: '🍰 恭喜言哥哥18岁，生日快乐🍰',
-        59: ' 🧨跨年倒计时2天🧨',
-        60: ' 🎉跨年倒计时1天🎉',
-        61: ' 🎉欢迎来到2026年🎉',
-        78: ' _(:з」∠)_话说这个数字很好看吗或者说很有意思吗？(*´I`*)',
-        100: '🎊 百日庆典！六哥荣耀WIKI与你同行100天 🎊',
-        107: '🧨 除夕快乐！🧨',
-        108: '🎆 新年快乐！ 🎆',
-        365: '🎂六哥荣耀WIKI一周年纪念🎂'
+function updateButtonState(skillType) {
+  const skill = state.skills[skillType];
+  const downBtn = document.getElementById(`${skillType}-down`);
+  const upBtn = document.getElementById(`${skillType}-up`);
+  if (downBtn) downBtn.disabled = skill.level <= 1;
+  if (upBtn) upBtn.disabled = skill.level >= skill.maxLevel;
+}
+function initSkills() {
+  Object.keys(state.skills).forEach(skillType => {
+    updateSkillDisplay(skillType);
+    updateButtonState(skillType);
+  });
+}
+window.changeSkillLevel = function(skillType, change) {
+  const skill = state.skills[skillType];
+  if (!skill) return;
+  const newLevel = skill.level + change;
+  if (newLevel < 1 || newLevel > skill.maxLevel) return;
+  skill.level = newLevel;
+  updateSkillDisplay(skillType);
+  updateButtonState(skillType);
+  saveState();
+};
+
+// ---------- 基础属性更新 ----------
+function updateBaseAttributes(level) {
+  // 确保level是预设值之一
+  const nearest = baseLevelPresets.reduce((prev, curr) => 
+    Math.abs(curr - level) < Math.abs(prev - level) ? curr : prev
+  );
+  if (nearest !== level) level = nearest;
+  state.baseLevel = level;
+
+  // 更新UI
+  document.getElementById('base-level-label').innerText = `Lv.${level} 基础属性`;
+  document.getElementById('base-level-display').textContent = level;
+  const slider = document.getElementById('base-level-slider');
+  if (slider) slider.value = level;
+
+  const stats = baseStats[level];
+  if (stats) {
+    document.getElementById('base-hp').textContent = stats.hp;
+    document.getElementById('base-atk').textContent = stats.atk;
+    document.getElementById('base-def').textContent = stats.def;
+  }
+  // 固定值（这些元素在HTML中不存在，但为了保险保留）
+  const spdEl = document.getElementById('base-spd');
+  if (spdEl) spdEl.textContent = 101;
+  const energyEl = document.getElementById('base-energy');
+  if (energyEl) energyEl.textContent = 110;
+  // 注意：暴击等元素未在HTML中，不更新
+
+  // 控制加减按钮禁用状态
+  const downBtn = document.getElementById('base-level-down');
+  const upBtn = document.getElementById('base-level-up');
+  if (downBtn) downBtn.disabled = level === 1;
+  if (upBtn) upBtn.disabled = level === 90;
+}
+
+function changeBaseLevel(direction) {
+  const current = state.baseLevel;
+  // 确保当前等级在预设中
+  let idx = baseLevelPresets.indexOf(current);
+  if (idx === -1) {
+    // 异常情况，重置到90
+    state.baseLevel = 90;
+    idx = baseLevelPresets.indexOf(90);
+  }
+  const newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= baseLevelPresets.length) return;
+  const newLevel = baseLevelPresets[newIdx];
+  updateBaseAttributes(newLevel);
+  saveState();
+}
+
+// ---------- 存储 ----------
+function saveState() {
+  try {
+    const saveData = {
+      normal: state.skills.normal.level,
+      skill: state.skills.skill.level,
+      ultimate: state.skills.ultimate.level,
+      talent: state.skills.talent.level,
+      baseLevel: state.baseLevel
     };
-    
-    function updateSiteAge() {
-        const today = new Date();
-        const days = Math.floor((today - launchDate) / (1000 * 60 * 60 * 24));
-        
-        if (specialDays[days]) {
-            siteAgeElem.innerHTML = specialDays[days];
-            siteAgeElem.classList.add('special');
-        } else {
-            siteAgeElem.innerHTML = `📅 六哥荣耀WIKI已上线 ${days} 天,祝你天天开心`;
-            siteAgeElem.classList.remove('special');
-        }
-    }
-    
-    updateSiteAge();
-    setInterval(updateSiteAge, 86400000);
+    localStorage.setItem('yingSkillState', JSON.stringify(saveData));
+  } catch (e) { console.warn('保存失败', e); }
 }
-// ==================== 搜索功能 ====================
-function initializeSearch() {
-    const searchInput = document.getElementById('search-input');
-    const allCards = document.querySelectorAll('.content-card');
-    const emptyResult = document.querySelector('.empty-result');
-    
-    searchInput.addEventListener('input', function() {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            const keyword = this.value.trim().toLowerCase();
-            let matchCount = 0;
-            
-            allCards.forEach(card => {
-                const name = card.dataset.name?.toLowerCase() || '';
-                const desc = card.dataset.desc?.toLowerCase() || '';
-                
-                const isMatch = !keyword || name.includes(keyword) || desc.includes(keyword);
-                card.style.display = isMatch ? 'block' : 'none';
-                if (isMatch) matchCount++;
-            });
-            
-            emptyResult.style.display = matchCount === 0 && keyword ? 'block' : 'none';
-        }, 200);
+function loadState() {
+  try {
+    const saved = localStorage.getItem('yingSkillState');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.normal) state.skills.normal.level = Math.min(parsed.normal, state.skills.normal.maxLevel);
+      if (parsed.skill) state.skills.skill.level = Math.min(parsed.skill, state.skills.skill.maxLevel);
+      if (parsed.ultimate) state.skills.ultimate.level = Math.min(parsed.ultimate, state.skills.ultimate.maxLevel);
+      if (parsed.talent) state.skills.talent.level = Math.min(parsed.talent, state.skills.talent.maxLevel);
+      if (parsed.baseLevel && baseLevelPresets.includes(parsed.baseLevel)) {
+        state.baseLevel = parsed.baseLevel;
+      } else {
+        state.baseLevel = 90;
+      }
+    }
+  } catch (e) {}
+}
+
+// ---------- 事件绑定 ----------
+function initBaseLevelControls() {
+  const slider = document.getElementById('base-level-slider');
+  const downBtn = document.getElementById('base-level-down');
+  const upBtn = document.getElementById('base-level-up');
+
+  if (slider) {
+    slider.addEventListener('input', function(e) {
+      const val = parseInt(e.target.value, 10);
+      const nearest = baseLevelPresets.reduce((prev, curr) => 
+        Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev
+      );
+      if (state.baseLevel !== nearest) {
+        updateBaseAttributes(nearest);
+        saveState();
+      } else {
+        e.target.value = state.baseLevel;
+      }
     });
-}
-// ==================== 导航和滚动功能 ====================
-function initializeNavigation() {
-    const backToTopBtn = document.querySelector('.back-to-top');
-    const navLinks = document.querySelectorAll('.nav-link');
-    
-    window.scrollToTop = function() {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-    
-    window.addEventListener('scroll', function() {
-        if (window.scrollY > 300) {
-            backToTopBtn.classList.add('show');
-        } else {
-            backToTopBtn.classList.remove('show');
-        }
-        
-        const sections = document.querySelectorAll('.section-header');
-        let currentSection = '';
-        
-        sections.forEach(section => {
-            const sectionTop = section.offsetTop - 150;
-            if (window.scrollY >= sectionTop) {
-                currentSection = section.id;
-            }
-        });
-        
-        navLinks.forEach(link => {
-            link.classList.toggle('active', link.dataset.target === currentSection);
-        });
+  }
+
+  if (downBtn) {
+    downBtn.addEventListener('click', function() {
+      changeBaseLevel(-1);
     });
-    
-    navLinks.forEach(link => {
-        if (link.getAttribute('href').startsWith('#')) {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const targetId = this.getAttribute('href').substring(1);
-                const target = document.getElementById(targetId);
-                if (target) {
-                    window.scrollTo({
-                        top: target.offsetTop - 80,
-                        behavior: 'smooth'
-                    });
-                    history.pushState(null, null, `#${targetId}`);
-                }
-            });
-        }
+  }
+
+  if (upBtn) {
+    upBtn.addEventListener('click', function() {
+      changeBaseLevel(1);
     });
-    
-    // ========== 【关键修改】所有卡片点击后在新标签页打开 ==========
-    window.jumpToDetail = function(targetUrl, charName) {
-        if (!targetUrl) {
-            showNotification('详情页地址不存在', 'error');
-            return;
-        }
-        // ✅ 使用 window.open 在新标签页打开，原页面保留
-        window.open(targetUrl, '_blank');
-    };
+  }
 }
-// ==================== 更新日志弹窗功能 ====================
-function openChangelogModal() {
-    const modal = document.getElementById('changelog-modal');
-    const iframe = document.getElementById('changelog-iframe');
-    
-    if (!modal || !iframe) return;
-    
-    // 显示弹窗
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-    
-    // 显示加载状态
-    showNotification('正在加载更新日志...', 'info');
-    
-    // 添加时间戳防止缓存
-    iframe.src = 'changelog.html?t=' + Date.now();
-    
-    // 监听iframe加载完成
-    iframe.onload = function() {
-        console.log('更新日志页面加载完成');
-        
-        // 尝试与iframe通信，设置适配模式
-        try {
-            const iframeWindow = iframe.contentWindow;
-            if (iframeWindow) {
-                // 通知iframe页面处于弹窗模式
-                iframeWindow.postMessage({ type: 'setIframeMode', mode: true }, '*');
-                
-                // 设置iframe页面高度适配
-                setTimeout(() => {
-                    if (iframe.contentDocument && iframe.contentDocument.body) {
-                        const bodyHeight = iframe.contentDocument.body.scrollHeight;
-                        iframe.style.height = Math.min(bodyHeight, window.innerHeight * 0.8) + 'px';
-                    }
-                }, 500);
-            }
-        } catch (e) {
-            console.log('跨域通信受限，但仍可正常显示');
-        }
-        
-        showNotification('更新日志已加载', 'success');
-    };
-    
-    iframe.onerror = function() {
-        console.error('加载更新日志失败');
-        showNotification('加载更新日志失败，请稍后重试', 'error');
-    };
+
+// 键盘快捷键
+function setupKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey) {
+      if (e.key === '[') { changeBaseLevel(-1); saveState(); e.preventDefault(); }
+      if (e.key === ']') { changeBaseLevel(1); saveState(); e.preventDefault(); }
+      const skillMap = { '1':'normal', '2':'skill', '3':'ultimate', '4':'talent' };
+      if (skillMap[e.key]) {
+        window.changeSkillLevel(skillMap[e.key], 1);
+        e.preventDefault();
+      }
+      if (e.key === 'r' && confirm('重置所有等级？')) {
+        Object.keys(state.skills).forEach(k => state.skills[k].level = 1);
+        state.baseLevel = 90;
+        initSkills();
+        updateBaseAttributes(90);
+        saveState();
+        e.preventDefault();
+      }
+    }
+  });
 }
-function closeChangelogModal() {
-    const modal = document.getElementById('changelog-modal');
-    if (!modal) return;
-    
-    modal.style.display = 'none';
-    document.body.style.overflow = 'auto';
-    
-    // 可选：重置iframe src
-    const iframe = document.getElementById('changelog-iframe');
-    if (iframe) {
-        iframe.src = 'about:blank';
-    }
+
+// ---------- 初始化 ----------
+function initPage() {
+  loadState();
+  initSkills();
+  updateBaseAttributes(state.baseLevel);
+  initBaseLevelControls();
+  setupKeyboardShortcuts();
+  document.getElementById('year').textContent = new Date().getFullYear();
 }
-// ESC键关闭弹窗
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        closeChangelogModal();
-    }
-});
-// 点击遮罩层关闭
-document.addEventListener('click', function(event) {
-    if (event.target.classList.contains('modal-overlay')) {
-        closeChangelogModal();
-    }
-});
-// 监听来自iframe的消息（用于双向通信）
-window.addEventListener('message', function(event) {
-    if (event.data && event.data.type === 'iframeReady') {
-        console.log('更新日志页面iframe已就绪');
-    }
-    
-    // 如果iframe中的返回主页按钮被点击，关闭弹窗
-    if (event.data && event.data.type === 'closeModal') {
-        closeChangelogModal();
-    }
-    
-    // 处理iframe发送的高度信息
-    if (event.data && event.data.type === 'heightUpdate') {
-        const iframe = document.getElementById('changelog-iframe');
-        if (iframe && event.data.height) {
-            iframe.style.height = Math.min(event.data.height, window.innerHeight * 0.8) + 'px';
-        }
-    }
-});
-//弹窗动作关闭函数
-function closeChangelogModal() {
-    const modal = document.getElementById('changelog-modal');
-    if (!modal) return;
-    
-    // 添加关闭动画
-    modal.classList.add('closing');
-    
-    setTimeout(() => {
-        modal.style.display = 'none';
-        modal.classList.remove('closing');
-        document.body.style.overflow = 'auto';
-        
-        // 可选：重置iframe src
-        const iframe = document.getElementById('changelog-iframe');
-        if (iframe) {
-            iframe.src = 'about:blank';
-        }
-    }, 300); // 动画持续时间
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initPage);
+} else {
+  initPage();
 }
-// ==================== 同步消息监听 ====================
-function initializeMessageListener() {
-    // 监听来自其他页面的消息
-    window.addEventListener('message', function(event) {
-        // 确保消息来自同源
-        if (event.origin !== window.location.origin) return;
-        
-        const data = event.data;
-        
-        if (data.type === 'PROFILE_UPDATED') {
-            // 更新本地缓存
-            if (data.username) {
-                localStorage.setItem('cachedUsername', data.username);
-            }
-            if (data.avatarUrl) {
-                localStorage.setItem('cachedAvatar', data.avatarUrl);
-            }
-            if (data.avatarFrame) {
-                localStorage.setItem('avatarFrame', data.avatarFrame);
-            }
-            
-            // 立即更新导航栏
-            updateNavbarFromCache();
-            
-            // 显示同步提示
-            showNotification('个人资料已同步', 'success');
-        }
-    });
-    
-    // 监听storage事件（当其他页面修改localStorage时）
-    window.addEventListener('storage', function(event) {
-        if (event.key === 'cachedUsername' || event.key === 'cachedAvatar' || event.key === 'avatarFrame') {
-            // 延迟一点确保数据已经写入
-            setTimeout(updateNavbarFromCache, 100);
-        }
-    });
-}
-// ==================== 用户认证和头像显示 ====================
-async function initializeUserProfile() {
-    try {
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        
-        const { data: { user }, error } = await supabaseClient.auth.getUser();
-        
-        if (error || !user) {
-            // 如果未登录，使用缓存数据（如果有）
-            updateNavbarFromCache();
-            return;
-        }
-        
-        currentUser = user;
-        
-        // 获取用户资料
-        const { data: profile } = await supabaseClient
-            .from('user_profiles')
-            .select('username, avatar_url, avatar_frame')
-            .eq('id', user.id)
-            .single();
-        
-        if (profile) {
-            // 更新缓存
-            const username = profile.username || user.email.split('@')[0];
-            localStorage.setItem('cachedUsername', username);
-            
-            if (profile.avatar_url) {
-                localStorage.setItem('cachedAvatar', profile.avatar_url);
-            }
-            
-            if (profile.avatar_frame) {
-                localStorage.setItem('avatarFrame', profile.avatar_frame);
-            }
-            
-            // 更新导航栏
-            updateNavbar(username, profile.avatar_url, profile.avatar_frame);
-        } else {
-            // 如果没有profile，使用缓存
-            updateNavbarFromCache();
-        }
-        
-    } catch (error) {
-        console.error('用户初始化失败:', error);
-        updateNavbarFromCache();
-    }
-}
-// 从缓存更新导航栏
-function updateNavbarFromCache() {
-    const cachedUsername = localStorage.getItem('cachedUsername');
-    const cachedAvatar = localStorage.getItem('cachedAvatar');
-    const avatarFrame = localStorage.getItem('avatarFrame') || 'default';
-    
-    if (cachedUsername) {
-        updateNavbar(cachedUsername, cachedAvatar, avatarFrame);
-    }
-}
-function updateNavbar(username, avatarUrl, avatarFrame = 'default') {
-    const userNavSection = document.getElementById('userNavSection');
-    if (!userNavSection) return;
-    
-    if (username) {
-        const avatarLetter = username.charAt(0).toUpperCase();
-        
-        // 构建带头像框的头像HTML
-        let avatarHtml = `
-            <div class="user-avatar-with-frame" onclick="window.location.href='profile.html'" title="前往个人主页">
-                <div class="user-avatar-frame ${avatarFrame === 'horse' ? 'horse-frame' : 'default-frame'}"></div>
-                <div class="user-avatar-img">
-        `;
-        
-        if (avatarUrl) {
-            avatarHtml += `<img src="${avatarUrl}" alt="${username}" onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML='<div class=\\'avatar-placeholder\\'>${avatarLetter}</div>';">`;
-        } else {
-            avatarHtml += `<div class="avatar-placeholder">${avatarLetter}</div>`;
-        }
-        
-        avatarHtml += `
-                </div>
-            </div>
-        `;
-        
-        userNavSection.innerHTML = `
-            <div class="user-info-container">
-                ${avatarHtml}
-                <span class="username">${username}</span>
-                <button class="logout-btn" onclick="logout()" title="退出登录">
-                    <i class="fas fa-sign-out-alt"></i> 退出
-                </button>
-            </div>
-        `;
-    } else {
-        userNavSection.innerHTML = `
-            <a href="login-real.html" class="nav-link">登录/注册</a>
-        `;
-    }
-}
-async function logout() {
-    if (!confirm('确定要退出登录吗？')) return;
-    
-    if (supabaseClient) {
-        await supabaseClient.auth.signOut();
-    }
-    
-    // 清除所有缓存
-    localStorage.removeItem('cachedUsername');
-    localStorage.removeItem('cachedAvatar');
-    localStorage.removeItem('avatarFrame');
-    localStorage.removeItem('profileLastUpdated');
-    
-    updateNavbar(null, null);
-    showNotification('已退出登录', 'success');
-}
-// ==================== 页面初始化 ====================
-async function initializePage() {
-    // 基础初始化
-    document.getElementById('year').textContent = new Date().getFullYear();
-    initializeSiteAge();
-    initializeSearch();
-    initializeNavigation();
-    initializeMessageListener(); // 添加消息监听
-    
-    // 从缓存初始化导航栏
-    updateNavbarFromCache();
-    
-    // 异步初始化用户资料（从Supabase）
-    setTimeout(() => initializeUserProfile(), 100);
-    
-    // 测试通知系统
-    setTimeout(() => {
-        showNotification('页面加载完成！', 'success');
-    }, 1000);
-    
-    // 隐藏加载动画
-    setTimeout(() => {
-        document.getElementById('global-loading').style.display = 'none';
-    }, 800);
-}
-// ==================== DOM加载完成后执行 ====================
-document.addEventListener('DOMContentLoaded', function() {
-    // 从缓存初始化导航栏
-    updateNavbarFromCache();
-    
-    // 初始化页面
-    initializePage();
-});
+
+// 暴露全局管理器
+window.YingManager = {
+  changeSkillLevel: window.changeSkillLevel,
+  changeBaseLevel,
+  getState: () => ({ ...state.skills, baseLevel: state.baseLevel })
+};
 </script>
 </body>
 </html>
