@@ -1,408 +1,902 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-cmn-Hans">
 <head>
 <meta charset="UTF-8">
-<title>涵 · 数值页</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" 
-      href="https://xiaochen1235789.github.io/images/wangzhantupian.png" 
-      type="image/png">
+<title>涵 · 六哥荣耀WIKI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+<meta name="description" content="涵(物理·同谐·Promax) 技能等级调节器 + 基础属性滑动等级 · 全图片占位">
+<link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
+
+<!-- 预加载占位图片 -->
+<link rel="preconnect" href="https://xiaochen1235789.github.io">
+
 <style>
-:root{
-  --bg:#121212;
-  --surface:#1a1a1a;
-  --card:#202020;
-  --primary:#d3af37;   /* 玉衡金 */
-  --second:#81c784;
-  --text:#e0e0e0;
-  --sub:#99aabb;
-  --line:#333;
-  --radius:6px;
-  --tran:.3s ease;
+/* ====== 基础变量与重置 (涵专属配色：暖金+柔和绿) ====== */
+:root {
+  --bg: #121212;
+  --surface: #1a1a1a;
+  --card: #202020;
+  --primary: #f0c45a;        /* 暖金主色 */
+  --primary-light: #f8d77a;
+  --primary-dark: #c99f3c;
+  --secondary: #a5d6a5;       /* 柔和绿辅助 */
+  --text: #e0e0e0;
+  --sub-text: #99aabb;
+  --line: #333;
+  --radius: 6px;
+  --transition: .3s ease;
+  --button-bg: #8b6e4b;       /* 深棕按钮 */
+  --button-hover: #b48c5c;
+  --button-disabled: #5e4a32;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --legend-gradient: linear-gradient(45deg, #f0c45a, #ffd98c);
 }
-*{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft YaHei",sans-serif;}
-body{background:var(--bg);color:var(--text);padding-bottom: 400px !important;} /* 给列表留足400px空间，绝对够显示 */
-a{color:var(--second);text-decoration:none;}
-img{max-width:100%;display:block;}
-/* 顶部返回栏 */
-.top-bar{display:flex;align-items:center;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--line);}
-.top-bar .back{font-size:1.2rem;margin-right:12px;}
-.top-bar .title{font-size:1.1rem;font-weight:600;}
-/* 立绘区 */
-.art-box{position:relative;background:#2a2a2a;}
-.art-box img{width:100%;aspect-ratio:16/9;object-fit:cover;}
-.name-tag{position:absolute;bottom:12px;left:16px;}
-.ch-name{font-size:1.6rem;font-weight:600;color:#fff;text-shadow:0 0 4px #000;}
-.tags{display:flex;gap:6px;margin-top:4px;}
-.tag{background:rgba(0,0,0,.6);color:var(--primary);padding:2px 8px;border-radius:var(--radius);font-size:.7rem;}
-/* 等级调节 */
-.level-block{background:var(--card);margin:12px 16px;padding:12px 16px;border-radius:var(--radius);}
-.level-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-.level-label{color:var(--sub);font-size:.9rem;}
-.level-value{font-size:1.2rem;font-weight:600;color:var(--primary);}
-.level-slider{width:100%;-webkit-appearance:none;height:4px;background:var(--line);border-radius:2px;outline:none;}
-.level-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--primary);border-radius:50%;cursor:pointer;}
-/* 技能折叠块 */
-.skill-block{background:var(--card);margin:0 16px 12px;border-radius:var(--radius);}
-.skill-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;}
-.skill-header:hover{background:rgba(255,255,255,.05);}
-.skill-name{font-weight:500;}
-.skill-arrow{transition:transform var(--tran);}
-.skill-body{max-height:600px;overflow:visible;}/* 强制显示，去掉折叠动画 */
-.skill-content{padding:0 16px 12px;font-size:.85rem;color:var(--sub);}
-.skill-table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:6px;}
-.skill-table th,.skill-table td{padding:4px 2px;text-align:center;border-bottom:1px solid var(--line);}
-.skill-table th{color:var(--primary);}
-/* 12级传说色渐变样式 */
-.legend-text{
-  background: linear-gradient(45deg, #ffd700, #ffA500);
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+  line-height: 1.5;
+  padding-bottom: 30px;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--secondary);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+a:hover { color: var(--primary-light); }
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ====== 顶部导航栏 ====== */
+.top-bar {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  background-color: rgba(26, 26, 26, 0.9);
+}
+.top-bar .back {
+  font-size: 1.4rem;
+  margin-right: 12px;
+  color: var(--primary);
+  line-height: 1;
+}
+.top-bar .title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  flex-grow: 1;
+  text-align: center;
+  color: var(--primary-light);
+}
+
+/* ====== 角色展示区 ====== */
+.hero-section {
+  position: relative;
+  background: linear-gradient(135deg, #4a3a1e 0%, #2a2a0f 100%);
+  overflow: hidden;
+}
+.hero-image {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  opacity: 0.95;
+  display: block;
+}
+.hero-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+}
+.hero-name {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  margin-bottom: 8px;
+}
+.tag-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tag {
+  background: rgba(240, 196, 90, 0.15);
+  color: var(--primary);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  border: 1px solid rgba(240, 196, 90, 0.3);
+  backdrop-filter: blur(4px);
+}
+
+/* ====== 卡片容器 ====== */
+.card {
+  background: var(--card);
+  margin: 12px 16px;
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* ====== 技能模块头部 ====== */
+.skill-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+}
+.skill-name {
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--secondary);
+  flex-grow: 1;
+}
+
+/* ====== 等级控制 ====== */
+.level-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.level-value {
+  min-width: 50px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: var(--primary);
+  transition: all var(--transition);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+.level-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--button-bg);
+  color: var(--text);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  user-select: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.level-btn:hover:not(:disabled) {
+  background: var(--button-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+.level-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+.level-btn:disabled {
+  background: var(--button-disabled);
+  color: #666;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.level-btn.up { color: #ffd966; }
+.level-btn.down { color: #ffaa7a; }
+
+/* ====== 滑块自定义 ====== */
+.base-slider {
+  width: 160px;
+  height: 6px;
+  -webkit-appearance: none;
+  background: var(--line);
+  border-radius: 3px;
+  outline: none;
+  margin: 0 4px;
+}
+.base-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(240,196,90,0.6);
+  border: 1px solid rgba(255,255,255,0.3);
+  transition: 0.1s;
+}
+.base-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  background: var(--primary-light);
+}
+.base-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: var(--primary);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(240,196,90,0.6);
+}
+
+/* ====== 技能内容 ====== */
+.skill-content {
+  font-size: 0.95rem;
+  color: var(--sub-text);
+  line-height: 1.6;
+}
+.skill-val {
+  color: var(--primary);
+  font-weight: 700;
+  transition: all var(--transition);
+  display: inline-block;
+  padding: 0 2px;
+}
+.legend-text {
+  background: var(--legend-gradient);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  font-weight: 800;
+}
+.highlight-text {
+  color: #ffb870;
   font-weight: 600;
 }
-/* 播放器iframe：直接固定足够高度，不搞复杂适配！ */
-#musicPlayerIframe {
-    display: block !important;
-    visibility: visible !important;
-    height: 380px !important; /* 固定380px，足够显示播放器+完整歌曲列表 */
-    width: 100% !important;
-    z-index: 99999 !important;
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    border: none !important;
-    background: transparent !important;
-    overflow: visible !important;
+.special-text {
+  color: #ffae70;
+  font-weight: 600;
 }
+.energy-text {
+  color: #66ccff;
+  font-weight: 600;
+}
+
+/* ====== 属性图标区域 ====== */
+.attr-container { margin-bottom: 20px; }
+.attr-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+.attr-icon {
+  background: var(--card);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  min-width: 60px;
+  flex: 1;
+  max-width: 100px;
+  border: 1px solid rgba(240,196,90,0.1);
+}
+.attr-icon img {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 4px;
+  object-fit: contain;
+}
+.attr-value {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+  word-break: break-word;
+}
+.attr-label {
+  color: var(--sub-text);
+  font-size: 12px;
+  text-align: center;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+/* ====== 表格样式 ====== */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-top: 12px;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.data-table th, .data-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.data-table th {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* ====== 额外能力/行迹 ====== */
+.section-title {
+  font-size: 1.2rem;
+  color: var(--secondary);
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.ability-item {
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--line);
+}
+.ability-item:last-child {
+  border-bottom: none;
+}
+.ability-name {
+  color: var(--primary);
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 1rem;
+}
+
+/* ====== 命座样式 ====== */
+.constellation-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+.constellation-table th, .constellation-table td {
+  padding: 12px 8px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+.constellation-table th {
+  color: var(--primary);
+  font-weight: 600;
+}
+.constellation-table td:first-child {
+  color: var(--primary);
+  font-weight: 700;
+  min-width: 60px;
+}
+.constellation-table td:nth-child(2) {
+  color: var(--secondary);
+  min-width: 80px;
+  font-weight: 600;
+}
+.const-val {
+  color: var(--primary);
+  font-weight: 700;
+  text-shadow: 0 0 4px rgba(240,196,90,0.3);
+  transition: all var(--transition);
+  display: inline-block;
+}
+.const-val:hover {
+  text-shadow: 0 0 12px rgba(240,196,90,0.7);
+  transform: scale(1.05);
+}
+
+/* ====== 响应式 ====== */
+@media (max-width: 480px) {
+  .hero-name { font-size: 1.5rem; }
+  .card { margin: 10px 12px; padding: 16px; }
+  .skill-header { flex-direction: column; align-items: flex-start; }
+  .level-controls { align-self: stretch; justify-content: center; flex-wrap: wrap; }
+  .base-slider { width: 100%; max-width: 200px; }
+  .attr-icon { min-width: calc(50% - 6px); flex: 0 0 calc(50% - 6px); }
+}
+@media (min-width: 481px) and (max-width: 768px) {
+  .attr-icon { min-width: calc(33.333% - 8px); flex: 0 0 calc(33.333% - 8px); }
+}
+@media (min-width: 769px) {
+  .attr-icon { min-width: 80px; }
+}
+
+/* ====== 页脚 ====== */
+.wiki-footer {
+  text-align: center;
+  margin-top: 20px;
+  color: #7f9e8c;
+  font-size: 13px;
+  opacity: 0.9;
+  padding: 20px 0 10px;
+  border-top: 1px solid #4a705f;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+.wiki-footer a { color: #8FBC8F; text-decoration: none; }
 </style>
 </head>
 <body>
+
+<!-- ===== 顶部导航 ===== -->
 <div class="top-bar">
-  <a class="back" href="index.html">‹</a>
-  <span class="title">涵 · 数值页</span>
+  <span class="title">涵 · 六哥荣耀WIKI</span>
 </div>
-<!-- 立绘 + 名字 + 标签 -->
-<div class="art-box">
-  <img src="https://xiaochen1235789.github.io/images/han.webp" alt="涵立绘">
-  <div class="name-tag">
-    <div class="ch-name">涵</div>
-    <div class="tags">
-      <span class="tag">命途:同谐</span>
-      <span class="tag">属性:物理</span>
-      <span class="tag">定位:直伤辅助</span>
-      <span class="tag">稀有度:限定五星</span>
+
+<!-- ===== 角色展示区 ===== -->
+<section class="hero-section" aria-label="角色展示">
+  <img class="hero-image" src="https://xiaochen1235789.github.io/images/han.webp" alt="涵立绘">
+  <div class="hero-overlay">
+    <div class="hero-name">涵</div>
+    <div class="tag-container">
+      <span class="tag">稀有度:✭✭✭✭✭</span>
     </div>
   </div>
-</div>
-<!-- 等级滑块 -->
-<div class="level-block">
-  <div class="level-header">
-    <span class="level-label">当前等级</span>
-    <span class="level-value" id="levelDisplay">Lv.1</span>
-  </div>
-  <input type="range" class="level-slider" id="levelRange" min="1" max="12" value="1">
-</div>
-<!-- 技能区：普攻、战技、终结技、天赋改为直接显示 -->
-<div class="skill-block">
+</section>
+
+<!-- ===== 基础属性模块 ===== -->
+<section class="card" id="base-attr" aria-label="基础属性">
   <div class="skill-header">
-    <span class="skill-name">普攻 · 光辉斩击(满级7级)</span>
-    <span class="skill-arrow" id="arrow1"></span>
-  </div>
-  <div class="skill-body" id="body1">
-    <div class="skill-content">
-      对敌方目标单体造成等同于涵<span id="val1">50%</span> 攻击力的物理属性伤害。
-      <table class="skill-table">
-        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
-        <tbody>
-          <tr><td>削韧</td><td>10</td></tr>
-          <tr><td>战技点</td><td>+1</td></tr>
-          <tr><td>能量变化</td><td>+20</td></tr>
-        </tbody>
-      </table>
+    <div class="skill-name" id="base-level-label">基础属性 Lv.90</div>
+    <div class="level-controls" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      <button class="level-btn down" id="base-level-down" aria-label="降低基础等级">↓</button>
+      <span class="level-value" id="base-level-display">90</span>
+      <button class="level-btn up" id="base-level-up" aria-label="提高基础等级">↑</button>
+      <span style="color: var(--sub-text); font-size: 0.9rem;">滑动</span>
+      <input type="range" id="base-level-slider" class="base-slider" min="1" max="90" value="90" step="1">
     </div>
   </div>
-</div>
-<div class="skill-block">
+  <div class="skill-content">
+    <!-- 第一行：命途 + 属性 + 限定 -->
+    <div class="attr-container">
+      <div class="attr-row">
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/Harmony.webp" alt="同谐" loading="lazy">
+          <div class="attr-label">同谐</div>
+        </div>
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/Phys.webp" alt="物理" loading="lazy">
+          <div class="attr-label">物理</div>
+        </div>
+        <div class="attr-icon">
+          <div class="attr-label">限定五星</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 核心数值行 HP/ATK/DEF/SPD/ENERGY -->
+    <div class="attr-container">
+      <div class="attr-row">
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/HP.webp" alt="生命">
+          <div class="attr-value" id="base-hp">1300</div>
+          <div class="attr-label">生命</div>
+        </div>
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/ATK.webp" alt="攻击">
+          <div class="attr-value" id="base-atk">600</div>
+          <div class="attr-label">攻击</div>
+        </div>
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/DEF.webp" alt="防御">
+          <div class="attr-value" id="base-def">500</div>
+          <div class="attr-label">防御</div>
+        </div>
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/SPD.webp" alt="速度">
+          <div class="attr-value" id="base-spd">102</div>
+          <div class="attr-label">速度</div>
+        </div>
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/ENERGY.webp" alt="能量">
+          <div class="attr-value" id="base-energy">120</div>
+          <div class="attr-label">能量</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 普攻 ===== -->
+<section class="card" id="normal-attack" aria-label="普攻技能">
   <div class="skill-header">
-    <span class="skill-name">战技 · 闪耀共鸣(满级12级)</span>
-    <span class="skill-arrow" id="arrow2"></span>
-  </div>
-  <div class="skill-body" id="body2">
-    <div class="skill-content">
-      使指定我方目标单体攻击力提高，提高的数值等同于涵 <span id="val2">50%</span> 的攻击力，并使指定的我方目标造成的伤害提高<span id="val3">40%</span>并为自身获得2层[闪亮]，持续3回合，并使指定角色<br><span style="color:orange;">行动提前100%</span>，如果涵有[闪亮]效果，则每有1层使该指定我方目标额外提高<span id="val6">2%</span>的暴击伤害
-      <br><span style="color:orange;">[闪亮]：使我方全体暴击率提高2%，速度提高2%，最高叠加10层</span>。(该技能的得到加强)
-      <table class="skill-table">
-        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
-        <tbody>
-          <tr><td>战技点</td><td>-1</td></tr>
-          <tr><td>能量变化</td><td>+40</td></tr>
-        </tbody>
-      </table>
+    <div class="skill-name">普攻 · 光辉斩击</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('normal', -1)" id="normal-down">↓</button>
+      <span class="level-value" id="normal-level">1/7</span>
+      <button class="level-btn up" onclick="changeSkillLevel('normal', 1)" id="normal-up">↑</button>
     </div>
   </div>
-</div>
-<div class="skill-block">
-  <div class="skill-header">
-    <span class="skill-name">终结技 · 光辉绽放(满级12级)</span>
-    <span class="skill-arrow" id="arrow3"></span>
-  </div>
-  <div class="skill-body" id="body3">
-    <div class="skill-content">
-      涵进入【谐行】状态，使除自身以外的队友立即行动，【谐行】状态期间涵免疫敌方目标<span style="color:orange; font-size: 16px;">[控制类技能]</span>，退出【谐行】状态恢复正常，【谐行】生效期间我方目标全体造成的伤害提高<span id="val4">20%</span>
-      并为自身施加<span style="color:orange; font-size: 16px;">5</span>层[闪亮]，持续3回合【谐行】状态结束前不会进入自己的回合且无法行动。行动序列上出现【谐行】倒计时，倒计时回合结束时涵退出【谐行】状态并立即行动，倒计时固定拥有<span style="color:orange; font-size: 16px;">152</span>点速度。(该技能得到加强)
-      <table class="skill-table">
-        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
-        <tbody>
-          <tr><td>能量变化</td><td>-140</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-<div class="skill-block">
-  <div class="skill-header">
-    <span class="skill-name">天赋 · 闪耀猎手(满级12级)</span>
-    <span class="skill-arrow" id="arrow4"></span>
-  </div>
-  <div class="skill-body" id="body4">
-    <div class="skill-content">
-      我方目标每次施放攻击后，涵会额外造成1次等同于其涵<span id="val5">145%</span>攻击力的物理属性附加伤害，该伤害暴击率固定为<span style="color:orange; font-size: 16px;">100%</span>，暴击伤害固定为<span style="color:orange; font-size: 16px;">250%</span>，进入[谐行]状态后，额外使涵本次造成的伤害提高<span style="color:orange; font-size: 16px;">50%</span>。(该技能得到加强)
-      <table class="skill-table">
-        <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
-        <tbody>
-          <tr><td>/</td><td>/</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-<!-- ===== 额外能力 ===== -->
-<div class="skill-block">
-  <div class="skill-content" style="font-size: 16px;">
-    <span class="skill-name" style="font-size: 18px;"></span>
-    <br>
-    额外能力1：<span style="color:orange; font-size: 16px;">闪耀之源</span>
-    <br>
-    使我方全体暴击伤害提高<span style="color:orange; font-size: 16px;">30%</span>，且我方目标攻击敌方目标后，涵额外为自身恢复<span style="color:orange; font-size: 16px;">2</span>点能量。
-    <br>
-    <br>
-    额外能力2：<span style="color:orange; font-size: 16px;">共鸣增幅</span>
-    <br>
-    当涵处于[谐行]状态时，使我方目标全体造成的伤害提高<span style="color:orange; font-size: 16px;">30%</span>。
-    <br>
-    <br>
-    额外能力3：<span style="color:orange; font-size: 16px;">能量回响</span>
-    <br>
-    [谐行]状态结束后使自身获得<span style="color:orange; font-size: 16px;">15</span>点能量。
-  </div>
-</div>
-<script>
-/* 倍率表 */
-const base = [50,50,40,20,145,1];   // 1 级
-const step = [10,2.5,2,2.4,2,0.6];   // 每级增量
-const spans = ['val1','val2','val3','val4','val5','val6'];
-const range = document.getElementById('levelRange');
-const display = document.getElementById('levelDisplay');
-function updateLevel(lv){
-  const levelNum = Number(lv);
-  display.textContent = 'Lv.'+lv;
-  // 等级数值本身也同步颜色等级
-  if(levelNum === 12){
-    display.className = 'level-value legend-text';
-  } else {
-    display.className = 'level-value';
-    const levelColors = [
-      '#d3af37','#d3af37','#d3af37', // 1-3 浅灰（入门）
-      '#d3af37','#d3af37','#d3af37', // 4-6 亮银（进阶）
-      '#d3af37','#d3af37','#d3af37', // 7-9 暗金（稀有）
-      '#d3af37','#d3af37',           // 10-11 深紫（史诗）
-      ''                              // 12级单独处理
-    ];
-    display.style.color = levelColors[levelNum - 1];
-  }
-  // 技能数值颜色
-  base.forEach((b,i)=>{
-    const val = b + step[i]*(levelNum-1);
-    const el  = document.getElementById(spans[i]);
-    el.textContent = val+'%';
-    /* 颜色 */
-    const colors = [
-      '#d3af37','#d3af37','#d3af37', // 1-3 浅灰（入门）
-      '#d3af37','#d3af37','#d3af37', // 4-6 亮银（进阶）
-      '#d3af37','#d3af37','#d3af37', // 7-9 暗金（稀有）
-      '#d3af37','#d3af37',           // 10-11 深紫（史诗）
-      ''                              // 12级单独处理
-    ];
-    // 12级（传说）：霓虹金渐变
-    if(levelNum === 12){
-      el.className = 'legend-text';
-    } else {
-      el.className = '';
-      el.style.color = colors[levelNum - 1];
-    }
-  });
-}
-range.addEventListener('input', e=>{
-  updateLevel(e.target.value);
-});
-updateLevel(1); // 初始化
-/* 移除折叠技能函数（因无需点击折叠，故删除触发逻辑） */
-</script>
-<!-- ===== 专武 ===== -->
-<div class="skill-block" style="margin:12px 16px;">
-  <div class="skill-header" style="cursor:default;">
-    <span class="skill-name">专武 · 我即闪亮登场</span>
-  </div>
-  <div class="skill-content" style="padding:12px 16px 0;">
-    <div style="margin-bottom:8px;">叠影等级：
-      <select id="weaponLv" onchange="updateWeapon()">
-        <option value="1">Ⅰ</option>
-        <option value="2">Ⅱ</option>
-        <option value="3">Ⅲ</option>
-        <option value="4">Ⅳ</option>
-        <option value="5">Ⅴ</option>
-      </select>
-    </div>
-    <ul style="list-style:none;font-size:.85rem;line-height:1.6;">
-      <li>使装备者的攻击力提高 <span id="wCrit" class="w-val">32</span>%</li>
-      <li>能量恢复效率提高 <span id="wDmg" class="w-val">12</span>%</li>
-      <li>当我方目标击杀敌方目标时，使装备者的攻击力提高 <span id="wCd" class="w-val">30.0</span>%，持续2回合</li>
-    </ul>
-  </div>
-</div>
-<!-- ===== 命座 ===== -->
-<div class="skill-block" style="margin:12px 16px;">
-  <div class="skill-header" style="cursor:default;">
-    <span class="skill-name">命之座</span>
-  </div>
-  <div class="skill-content" style="padding:12px 16px 0;">
-    <table class="skill-table" style="margin:0;">
-      <thead><tr><<th>层数</</th><<th>名称</</th><<th>效果</</th></tr></thead>
+  <div class="skill-content">
+    对敌方单体造成等同于 <span id="normal-val1" class="skill-val">50%</span> 攻击力的物理属性伤害。
+    <table class="data-table">
+      <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
       <tbody>
-        <tr><td><br>1命</td><td><br>「闪耀守护」</td><td><br>
-        涵在场时我方除自身外的队友效果抵抗提高<span class="const-val" data-lv="1">50%</span>，天赋附加攻击的暴击伤害数值提高至<span class="const-val" data-lv="1">750%</span>。<span style="color:purple; font-size: 16px;">(改)</span><br></td></tr>
-        <tr><td><br>2命</td><td><br>「共鸣加速」</td><td><br>
-        处于[谐行]状态时，我方全体速度提高<span class="const-val" data-lv="2">16%</span>。额外能力1的能量恢复效果额外提高<span class="const-val" data-lv="1">3</span>点。<br></td></tr>
-        <tr><td>3命</td><td>「光辉跃升」</td><td>
-        普攻等级+<span class="const-val" data-lv="3">1</span>，最多不超过<span class="const-val" data-lv="3">10</span>级。
-      <br>
-      天赋等级+<span class="const-val" data-lv="3">2</span>，最多不超过<span class="const-val" data-lv="3">15</span>级。</td></tr>
-        <tr><td><br>4命</td><td><br>「后台主宰」</td><td><br>进入[谐行]状态后，解除我方全体全部负面效果，天赋的附加攻击造成的伤害提高<span style="color:orange; font-size: 16px;">450%</span><span style="color:orange; font-size: 16px;">(改)<br></span></td></tr>
-        <tr><td>5命</td><td>「闪耀猎手」</td><td>
-        战技等级+<span class="const-val" data-lv="5">2</span>，最多不超过<span class="const-val" data-lv="5">15</span>级。
-        <br>
-        终结技等级+<span class="const-val" data-lv="5">2</span>，最多不超过<span class="const-val" data-lv="5">15</span>级。</td></tr>
-        <tr><td><br>6命</td><td><br>「永恒闪耀」</td><td><br>
-        [谐行]状态下我方全体无视敌方<span class="const-val" data-lv="6">24%</span>全属性抗性，涵的能量恢复效率提高<span class="const-val" data-lv="6">20%</span>。<br></td></tr>
+        <tr><td>削韧</td><td>单体10</td></tr>
+        <tr><td>战技点</td><td>+1</td></tr>
+        <tr><td>能量变化</td><td>+20</td></tr>
       </tbody>
     </table>
   </div>
-</div>
+</section>
+
+<!-- ===== 战技 ===== -->
+<section class="card" id="skill-attack" aria-label="战技技能">
+  <div class="skill-header">
+    <div class="skill-name">战技 · 闪耀共鸣</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('skill', -1)" id="skill-down">↓</button>
+      <span class="level-value" id="skill-level">1/12</span>
+      <button class="level-btn up" onclick="changeSkillLevel('skill', 1)" id="skill-up">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    使指定我方单体攻击力提高，提高数值等同于涵 <span id="skill-val1" class="skill-val">50%</span> 的攻击力，并使该目标造成的伤害提高 <span id="skill-val2" class="skill-val">40%</span>，同时为自身获得2层【闪亮】，持续3回合，并使该目标<span class="highlight-text">行动提前100%</span>。<br>
+    若涵持有【闪亮】，则每层使该目标额外提高 <span id="skill-val3" class="skill-val">1%</span> 暴击伤害。<br>
+    <span class="special-text">【闪亮】</span>：使我方全体暴击率提高2%，速度提高2%，最高叠加10层。
+    <table class="data-table">
+      <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+      <tbody>
+        <tr><td>战技点</td><td>-1</td></tr>
+        <tr><td>能量变化</td><td>+40</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 终结技 ===== -->
+<section class="card" id="ultimate-attack" aria-label="终结技技能">
+  <div class="skill-header">
+    <div class="skill-name">终结技 · 光辉绽放</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('ultimate', -1)" id="ultimate-down">↓</button>
+      <span class="level-value" id="ultimate-level">1/12</span>
+      <button class="level-btn up" onclick="changeSkillLevel('ultimate', 1)" id="ultimate-up">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    涵进入【谐行】状态，使除自身以外的队友立即行动。【谐行】期间涵免疫控制类技能，我方全体造成的伤害提高 <span id="ultimate-val1" class="skill-val">20%</span>，并为自身施加5层【闪亮】，持续3回合。<br>
+    【谐行】状态下涵不会进入自己的回合且无法行动，倒计时回合结束时涵退出【谐行】并立即行动（倒计时固定速度152）。
+    <table class="data-table">
+      <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+      <tbody>
+        <tr><td>能量消耗</td><td>140</td></tr>
+        <tr><td>回能</td><td>15</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 天赋 ===== -->
+<section class="card" id="talent-attack" aria-label="天赋技能">
+  <div class="skill-header">
+    <div class="skill-name">天赋 · 闪耀猎手</div>
+    <div class="level-controls">
+      <button class="level-btn down" onclick="changeSkillLevel('talent', -1)" id="talent-down">↓</button>
+      <span class="level-value" id="talent-level">1/12</span>
+      <button class="level-btn up" onclick="changeSkillLevel('talent', 1)" id="talent-up">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    我方目标每次施放攻击后，涵额外造成1次等同于 <span id="talent-val1" class="skill-val">145%</span> 攻击力的物理属性附加伤害，该伤害暴击率固定为100%，暴击伤害固定为250%。<br>
+    处于【谐行】状态时，该附加伤害提高50%。
+    <table class="data-table">
+      <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
+      <tbody>
+        <tr><td>/</td><td>/</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 行迹加成(总) ===== -->
+<section class="card" aria-label="行迹加成">
+  <div class="section-title">行迹加成(总)</div>
+  <div class="attr-row" style="justify-content: flex-start;">
+    <div class="attr-icon" style="max-width:120px">
+      <img src="https://xiaochen1235789.github.io/attribute_image/IconCriticalDamage.webp" alt="暴伤加成">
+      <div class="attr-value">41.05%</div><div class="attr-label">暴击伤害</div>
+    </div>
+    <div class="attr-icon" style="max-width:120px">
+      <img src="https://xiaochen1235789.github.io/attribute_image/ATK.webp" alt="攻击加成">
+      <div class="attr-value">19.8%</div><div class="attr-label">攻击力</div>
+    </div>
+    <div class="attr-icon" style="max-width:120px">
+      <img src="https://xiaochen1235789.github.io/attribute_image/SPD.webp" alt="速度加成">
+      <div class="attr-value">11</div><div class="attr-label">速度</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 额外能力 ===== -->
+<section class="card" aria-label="额外能力">
+  <div class="section-title">额外能力</div>
+  <div class="ability-item">
+    <div class="ability-name">闪耀之源</div>
+    <div class="ability-desc">使我方全体暴击伤害提高30%，且我方目标攻击敌方目标后，涵额外恢复2点能量。</div>
+  </div>
+  <div class="ability-item">
+    <div class="ability-name">共鸣增幅</div>
+    <div class="ability-desc">当涵处于【谐行】状态时，使我方全体造成的伤害提高30%。</div>
+  </div>
+  <div class="ability-item">
+    <div class="ability-name">能量回响</div>
+    <div class="ability-desc">【谐行】状态结束后使自身获得15点能量。</div>
+  </div>
+</section>
+
+<!-- ===== 命座 ===== -->
+<section class="card" aria-label="命之座">
+  <div class="section-title">命之座 · 星魂</div>
+  <table class="constellation-table">
+    <thead><tr><th>层数</th><th>名称</th><th>效果</th></tr></thead>
+    <tbody>
+      <tr><td>1命</td><td>闪耀守护</td><td>涵在场时，除自身外的队友效果抵抗提高<span class="const-val" data-lv="1">50%</span>，天赋附加攻击的暴击伤害提高至<span class="const-val" data-lv="1">500%</span>。</td></tr>
+      <tr><td>2命</td><td>共鸣加速</td><td>处于【谐行】状态时，我方全体速度提高<span class="const-val" data-lv="2">16%</span>，额外能力1的能量恢复效果额外提高<span class="const-val" data-lv="2">3</span>点。</td></tr>
+      <tr><td>3命</td><td>光辉跃升</td><td>普攻等级+<span class="const-val" data-lv="3">1</span>（最多10级）；天赋等级+<span class="const-val" data-lv="3">2</span>（最多15级）。</td></tr>
+      <tr><td>4命</td><td>后台主宰</td><td>进入【谐行】状态后，解除我方全体全部负面效果，天赋的附加攻击造成的暴击提高至500%。</td></tr>
+      <tr><td>5命</td><td>闪耀猎手</td><td>战技等级+<span class="const-val" data-lv="5">2</span>（最多15级）；终结技等级+<span class="const-val" data-lv="5">2</span>（最多15级）。</td></tr>
+      <tr><td>6命</td><td>永恒闪耀</td><td>【谐行】状态下我方全体无视敌方<span class="const-val" data-lv="6">24%</span>全属性抗性，涵的能量恢复效率提高<span class="const-val" data-lv="6">20%</span>。</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ===== 页脚 ===== -->
+<footer class="wiki-footer">
+  © <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.<br>
+  本WIKI所有图片均由AI生成，不存在侵权行为，请仔细辨别.
+</footer>
+
 <script>
-/* ========== 专武 ========== */
-const weaponData = {
-  crit: [32,38,44,50,56],
-  dmg:  [12,14,16,18,20],
-  cd:   [30,35,40,45,50]
+// ====== 涵技能倍率数据 ======
+const skillConfig = {
+  normal: { level: 1, maxLevel: 7, values: [ { id: 'normal-val1', base: 50, step: 10 } ] },        // 普攻%
+  skill: { level: 1, maxLevel: 12, values: [ 
+      { id: 'skill-val1', base: 50, step: 2.5 },   // 攻击力提高%
+      { id: 'skill-val2', base: 40, step: 2 },     // 伤害提高%
+      { id: 'skill-val3', base: 1, step: 0.6 }     // 每层暴伤提高%
+  ] },
+  ultimate: { level: 1, maxLevel: 12, values: [ 
+      { id: 'ultimate-val1', base: 20, step: 2.4 } // 终结技全体伤害提高%
+  ] },
+  talent: { level: 1, maxLevel: 12, values: [ 
+      { id: 'talent-val1', base: 145, step: 2 }    // 附加伤害%
+  ] }
 };
-function updateWeapon(){
-  const lv = document.getElementById('weaponLv').value;
-  document.getElementById('wCrit').textContent = weaponData.crit[lv-1];
-  document.getElementById('wDmg').textContent  = weaponData.dmg[lv-1];
-  document.getElementById('wCd').textContent   = weaponData.cd[lv-1];
-  /* 专武颜色同步稀有度递进 */
-  const weaponColors = [
-    '#d3af37', // Ⅰ 浅灰
-    '#d3af37', // Ⅱ 亮银
-    '#d3af37', // Ⅲ 暗金
-    '#d3af37', // Ⅳ 深紫
-    '#d3af37'  // Ⅴ 霓虹金
-  ];
-  document.querySelectorAll('.w-val').forEach(el=>{
-    el.style.color = weaponColors[lv-1];
-  });
-}
-/* ========== 命座颜色同步稀有度递进 ========== */
-function colorConstellation(){
-  const constColors = [
-    '#d3af37','#d3af37','#d3af37', // 1-3命 浅灰→亮银（入门-进阶）
-    '#d3af37','#d3af37','#d3af37'  // 4-6命 亮银→暗金→深紫（进阶-稀有-史诗）
-  ];
-  document.querySelectorAll('.const-val').forEach(el=>{
-    const lv = Number(el.dataset.lv);
-    el.style.color = constColors[lv-1];
-  });
-}
-/* 初始化 */
-updateWeapon();
-colorConstellation();
-</script>
-<!-- 音乐播放器：直接固定高度，解决显示不全！ -->
-<iframe 
-    id="musicPlayerIframe"
-    src="music-player.html"
-    frameborder="0"
-    scrolling="no"
-    style="
-        display: block !important;
-        visibility: visible !important;
-        height: 380px !important; /* 核心：固定380px，足够显示播放器+6首歌列表 */
-        width: 100% !important;
-        z-index: 99999 !important;
-        position: fixed !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        border: none !important;
-        background: transparent !important;
-        overflow: visible !important;
-    "
-></iframe>
-<script>
-// 新脚本：跨页播放状态同步（适配单文件播放器）
-window.addEventListener('load', () => {
-    const iframe = document.getElementById('musicPlayerIframe');
-    
-    // 1. 向播放器同步本地存储的播放状态
-    setTimeout(() => {
-        try {
-            const savedState = localStorage.getItem('musicPlayerState');
-            if (savedState) {
-                iframe.contentWindow.postMessage({ 
-                    type: 'INIT_STATE', 
-                    state: JSON.parse(savedState) 
-                }, '*');
-            }
-        } catch (err) {
-            console.log('播放器状态同步失败:', err);
-        }
-    }, 300);
-    
-    // 2. 监听播放器列表展开/收起（可选，保持高度适配）
-    window.addEventListener('message', (e) => {
-        if (e.data?.type === 'SONG_LIST_TOGGLED' && e.data.isShow) {
-            // 列表展开时确保高度足够（已固定380px，无需修改，仅做容错）
-            iframe.style.height = '380px !important';
-        }
-    });
-});
 
-// 3. 监听本地存储变化，实时同步播放状态（跨页统一）
-window.addEventListener('storage', (e) => {
-    if (e.key === 'musicPlayerState') {
-        const iframe = document.getElementById('musicPlayerIframe');
-        const newState = JSON.parse(e.newValue);
-        try {
-            iframe.contentWindow.postMessage({ 
-                type: 'INIT_STATE', 
-                state: newState 
-            }, '*');
-        } catch (err) {}
+// ====== 基础属性预设 (涵90级估算) ======
+const baseLevelPresets = [1, 20, 30, 40, 50, 60, 70, 80, 90];
+const baseStats = {
+  1:   { hp: 174, atk: 87, def: 66 },
+  20:  { hp: 409, atk: 204, def: 155 },
+  30:  { hp: 566, atk: 283, def: 214 },
+  40:  { hp: 723, atk: 361, def: 273 },
+  50:  { hp: 879, atk: 439, def: 333 },
+  60:  { hp: 1036, atk: 518, def: 392 },
+  70:  { hp: 1193, atk: 596, def: 452 },
+  80:  { hp: 1280, atk: 640, def: 485 },
+  90:  { hp: 1536, atk: 768, def: 582 }   // 80级属性*120%
+};
+
+// ====== 全局状态 ======
+const state = {
+  skills: JSON.parse(JSON.stringify(skillConfig)),
+  baseLevel: 90
+};
+
+// ---------- 通用技能函数 ----------
+function getSkillValue(base, step, level) {
+  // 保留一位小数
+  return (base + step * (level - 1)).toFixed(1);
+}
+function applyLevelColor(element, level, max) {
+  if (level === max) {
+    element.classList.add('legend-text');
+    element.classList.remove('skill-val');
+  } else {
+    element.classList.remove('legend-text');
+    element.classList.add('skill-val');
+  }
+}
+function updateSkillDisplay(skillType) {
+  const skill = state.skills[skillType];
+  const levelElement = document.getElementById(`${skillType}-level`);
+  if (!levelElement) return;
+  levelElement.textContent = `${skill.level}/${skill.maxLevel}`;
+  applyLevelColor(levelElement, skill.level, skill.maxLevel);
+  
+  skill.values.forEach(valueData => {
+    const element = document.getElementById(valueData.id);
+    if (!element) return;
+    const newVal = getSkillValue(valueData.base, valueData.step, skill.level);
+    element.textContent = newVal + '%';
+    applyLevelColor(element, skill.level, skill.maxLevel);
+  });
+}
+function updateButtonState(skillType) {
+  const skill = state.skills[skillType];
+  const downBtn = document.getElementById(`${skillType}-down`);
+  const upBtn = document.getElementById(`${skillType}-up`);
+  if (downBtn) downBtn.disabled = skill.level <= 1;
+  if (upBtn) upBtn.disabled = skill.level >= skill.maxLevel;
+}
+function initSkills() {
+  Object.keys(state.skills).forEach(skillType => {
+    updateSkillDisplay(skillType);
+    updateButtonState(skillType);
+  });
+}
+
+// 全局暴露给onclick
+window.changeSkillLevel = function(skillType, change) {
+  const skill = state.skills[skillType];
+  if (!skill) return;
+  const newLevel = skill.level + change;
+  if (newLevel < 1 || newLevel > skill.maxLevel) return;
+  skill.level = newLevel;
+  updateSkillDisplay(skillType);
+  updateButtonState(skillType);
+  saveState();
+};
+
+// ---------- 基础属性更新 ----------
+function updateBaseAttributes(level) {
+  // 对齐到预设等级
+  const nearest = baseLevelPresets.reduce((prev, curr) => 
+    Math.abs(curr - level) < Math.abs(prev - level) ? curr : prev
+  );
+  if (nearest !== level) level = nearest;
+  state.baseLevel = level;
+
+  document.getElementById('base-level-label').innerText = `基础属性 Lv.${level}`;
+  document.getElementById('base-level-display').textContent = level;
+  const slider = document.getElementById('base-level-slider');
+  if (slider) slider.value = level;
+
+  const stats = baseStats[level];
+  if (stats) {
+    document.getElementById('base-hp').textContent = stats.hp;
+    document.getElementById('base-atk').textContent = stats.atk;
+    document.getElementById('base-def').textContent = stats.def;
+  }
+  // 速度/能量固定
+  document.getElementById('base-spd').textContent = 102;
+  document.getElementById('base-energy').textContent = 120;
+
+  const downBtn = document.getElementById('base-level-down');
+  const upBtn = document.getElementById('base-level-up');
+  if (downBtn) downBtn.disabled = level === 1;
+  if (upBtn) upBtn.disabled = level === 90;
+}
+
+function changeBaseLevel(direction) {
+  let idx = baseLevelPresets.indexOf(state.baseLevel);
+  if (idx === -1) idx = baseLevelPresets.indexOf(90);
+  const newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= baseLevelPresets.length) return;
+  updateBaseAttributes(baseLevelPresets[newIdx]);
+  saveState();
+}
+
+// ---------- 存储 ----------
+function saveState() {
+  try {
+    const saveData = {
+      normal: state.skills.normal.level,
+      skill: state.skills.skill.level,
+      ultimate: state.skills.ultimate.level,
+      talent: state.skills.talent.level,
+      baseLevel: state.baseLevel
+    };
+    localStorage.setItem('hanSkillState', JSON.stringify(saveData));
+  } catch (e) { console.warn('保存失败', e); }
+}
+function loadState() {
+  try {
+    const saved = localStorage.getItem('hanSkillState');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.normal) state.skills.normal.level = Math.min(parsed.normal, state.skills.normal.maxLevel);
+      if (parsed.skill) state.skills.skill.level = Math.min(parsed.skill, state.skills.skill.maxLevel);
+      if (parsed.ultimate) state.skills.ultimate.level = Math.min(parsed.ultimate, state.skills.ultimate.maxLevel);
+      if (parsed.talent) state.skills.talent.level = Math.min(parsed.talent, state.skills.talent.maxLevel);
+      if (parsed.baseLevel && baseLevelPresets.includes(parsed.baseLevel)) {
+        state.baseLevel = parsed.baseLevel;
+      } else state.baseLevel = 90;
     }
-});
+  } catch (e) {}
+}
 
+// ---------- 事件绑定 ----------
+function initBaseLevelControls() {
+  const slider = document.getElementById('base-level-slider');
+  const downBtn = document.getElementById('base-level-down');
+  const upBtn = document.getElementById('base-level-up');
+
+  if (slider) {
+    slider.addEventListener('input', function(e) {
+      const val = parseInt(e.target.value, 10);
+      const nearest = baseLevelPresets.reduce((prev, curr) => 
+        Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev
+      );
+      if (state.baseLevel !== nearest) {
+        updateBaseAttributes(nearest);
+        saveState();
+      } else {
+        e.target.value = state.baseLevel;
+      }
+    });
+  }
+  if (downBtn) downBtn.addEventListener('click', () => { changeBaseLevel(-1); saveState(); });
+  if (upBtn) upBtn.addEventListener('click', () => { changeBaseLevel(1); saveState(); });
+}
+
+// 键盘快捷键 (可选)
+function setupKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey) {
+      if (e.key === '[') { changeBaseLevel(-1); saveState(); e.preventDefault(); }
+      if (e.key === ']') { changeBaseLevel(1); saveState(); e.preventDefault(); }
+      const skillMap = { '1':'normal', '2':'skill', '3':'ultimate', '4':'talent' };
+      if (skillMap[e.key]) {
+        window.changeSkillLevel(skillMap[e.key], 1);
+        e.preventDefault();
+      }
+      if (e.key === 'r' && confirm('重置所有等级？')) {
+        Object.keys(state.skills).forEach(k => state.skills[k].level = 1);
+        state.baseLevel = 90;
+        initSkills();
+        updateBaseAttributes(90);
+        saveState();
+        e.preventDefault();
+      }
+    }
+  });
+}
+
+// ---------- 初始化 ----------
+function initPage() {
+  loadState();
+  initSkills();
+  updateBaseAttributes(state.baseLevel);
+  initBaseLevelControls();
+  setupKeyboardShortcuts();
+  document.getElementById('year').textContent = new Date().getFullYear();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initPage);
+} else {
+  initPage();
+}
+
+// 暴露管理器
+window.HanManager = {
+  changeSkillLevel: window.changeSkillLevel,
+  changeBaseLevel,
+  getState: () => ({ ...state.skills, baseLevel: state.baseLevel })
+};
 </script>
 </body>
 </html>
