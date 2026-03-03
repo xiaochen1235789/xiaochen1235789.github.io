@@ -2,133 +2,186 @@
 <html lang="zh-cmn-Hans">
 <head>
 <meta charset="UTF-8">
-<title>皮哥 · 数值页</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>皮哥 · 六哥荣耀WIKI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+<meta name="description" content="皮哥(冰·存护·Promax) 技能等级调节器 + 基础属性滑动等级 · 全图片占位">
 <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
+
+<!-- 预加载占位图片 -->
+<link rel="preconnect" href="https://xiaochen1235789.github.io">
+
 <style>
+/* ====== 基础变量与重置 (莹风格 + 皮哥冰蓝主色) ====== */
 :root {
   --bg: #121212;
   --surface: #1a1a1a;
   --card: #202020;
-  --primary: #d3af37;   /* 玉衡金 */
-  --primary-light: #e8c96b; /* 浅金色 */
-  --primary-dark: #b8941a; /* 深金色 */
-  --second: #81c784;
+  --primary: #7ec8e0;        /* 冰蓝主色 */
+  --primary-light: #a0dcf0;
+  --primary-dark: #4f9bb8;
+  --secondary: #b0d4e0;       /* 浅冰蓝辅助 */
   --text: #e0e0e0;
-  --sub: #99aabb;
+  --sub-text: #99aabb;
   --line: #333;
   --radius: 6px;
-  --tran: .3s ease;
-  --button-bg: #2d5243;
-  --button-hover: #3d725f;
-  --button-disabled: #1f2e28;
+  --transition: .3s ease;
+  --button-bg: #2d5a6b;       /* 深蓝绿按钮 */
+  --button-hover: #3d7a8f;
+  --button-disabled: #1e3d47;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --legend-gradient: linear-gradient(45deg, #7ec8e0, #b0e0ff);
 }
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: "Microsoft YaHei", sans-serif;
 }
+
+html { scroll-behavior: smooth; }
 body {
   background: var(--bg);
   color: var(--text);
-  padding-bottom: 90px !important;
+  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+  line-height: 1.5;
+  padding-bottom: 30px;
+  -webkit-font-smoothing: antialiased;
 }
+
 a {
-  color: var(--second);
+  color: var(--secondary);
   text-decoration: none;
+  transition: color var(--transition);
 }
+a:hover { color: var(--primary-light); }
+
 img {
   max-width: 100%;
+  height: auto;
   display: block;
 }
-/* 顶部返回栏 */
+
+/* ====== 顶部导航栏 ====== */
 .top-bar {
   display: flex;
   align-items: center;
   padding: 12px 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  background-color: rgba(26, 26, 26, 0.9);
 }
 .top-bar .back {
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   margin-right: 12px;
+  color: var(--primary);
+  line-height: 1;
 }
 .top-bar .title {
   font-size: 1.1rem;
   font-weight: 600;
+  flex-grow: 1;
+  text-align: center;
+  color: var(--primary-light);
 }
-/* 立绘区 */
-.art-box {
+
+/* ====== 角色展示区 ====== */
+.hero-section {
   position: relative;
-  background: #2a2a2a;
+  background: linear-gradient(135deg, #1e3f4a 0%, #0f2a30 100%);
+  overflow: hidden;
 }
-.art-box img {
+.hero-image {
   width: 100%;
   aspect-ratio: 16/9;
   object-fit: cover;
+  opacity: 0.95;
+  display: block;
 }
-.name-tag {
+.hero-overlay {
   position: absolute;
-  bottom: 12px;
-  left: 16px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
 }
-.ch-name {
-  font-size: 1.6rem;
-  font-weight: 600;
+.hero-name {
+  font-size: 1.8rem;
+  font-weight: 700;
   color: #fff;
-  text-shadow: 0 0 4px #000;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  margin-bottom: 8px;
 }
-.tags {
+.tag-container {
   display: flex;
-  gap: 6px;
-  margin-top: 4px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .tag {
-  background: rgba(0,0,0,.6);
+  background: rgba(126, 200, 224, 0.15);
   color: var(--primary);
-  padding: 2px 8px;
-  border-radius: var(--radius);
-  font-size: .7rem;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  border: 1px solid rgba(126, 200, 224, 0.3);
+  backdrop-filter: blur(4px);
 }
-/* 技能等级调节模块 */
-.skill-block {
+
+/* ====== 卡片容器 ====== */
+.card {
   background: var(--card);
   margin: 12px 16px;
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 20px;
   border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  transition: transform var(--transition), box-shadow var(--transition);
 }
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* ====== 技能模块头部 ====== */
 .skill-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--line);
+  gap: 12px;
 }
 .skill-name {
-  font-weight: 500;
-  font-size: 1.1rem;
-  color: var(--second);
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--secondary);
+  flex-grow: 1;
 }
-/* 等级调节按钮组 */
+
+/* ====== 等级控制 ====== */
 .level-controls {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 .level-value {
-  min-width: 40px;
+  min-width: 50px;
   text-align: center;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1.3rem;
   color: var(--primary);
-  transition: all var(--tran);
+  transition: all var(--transition);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 .level-btn {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border: none;
   border-radius: var(--radius);
   background: var(--button-bg);
@@ -138,12 +191,14 @@ img {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--tran);
+  transition: all var(--transition);
   user-select: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 .level-btn:hover:not(:disabled) {
   background: var(--button-hover);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 .level-btn:active:not(:disabled) {
   transform: translateY(0);
@@ -152,70 +207,146 @@ img {
   background: var(--button-disabled);
   color: #666;
   cursor: not-allowed;
+  opacity: 0.6;
 }
-.level-btn.up {
-  color: var(--second);
+.level-btn.up { color: #b0e0ff; }
+.level-btn.down { color: #ffaa7a; }
+
+/* ====== 滑块自定义 ====== */
+.base-slider {
+  width: 160px;
+  height: 6px;
+  -webkit-appearance: none;
+  background: var(--line);
+  border-radius: 3px;
+  outline: none;
+  margin: 0 4px;
 }
-.level-btn.down {
-  color: #ff7b7b;
+.base-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(126,200,224,0.6);
+  border: 1px solid rgba(255,255,255,0.3);
+  transition: 0.1s;
 }
-/* 技能内容 */
+.base-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  background: var(--primary-light);
+}
+.base-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: var(--primary);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(126,200,224,0.6);
+}
+
+/* ====== 技能内容 ====== */
 .skill-content {
-  font-size: .9rem;
-  color: var(--sub);
+  font-size: 0.95rem;
+  color: var(--sub-text);
   line-height: 1.6;
 }
-.skill-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: .8rem;
-  margin-top: 12px;
-}
-.skill-table th, .skill-table td {
-  padding: 6px 4px;
-  text-align: center;
-  border-bottom: 1px solid var(--line);
-}
-.skill-table th {
+.skill-val {
   color: var(--primary);
+  font-weight: 700;
+  transition: all var(--transition);
+  display: inline-block;
+  padding: 0 2px;
 }
-/* 12级传说色渐变样式 */
 .legend-text {
-  background: linear-gradient(45deg, #ffd700, #ffA500);
+  background: var(--legend-gradient);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  font-weight: 800;
+}
+.highlight-text {
+  color: #ffb870;
   font-weight: 600;
 }
-/* 技能数值高亮 */
-.skill-val {
-  color: var(--primary);
+.special-text {
+  color: #ffae70;
   font-weight: 600;
-  transition: all var(--tran);
 }
-/* 命座数值高亮样式 */
-.const-val {
-  color: var(--primary);
-  font-weight: 700;
-  text-shadow: 0 0 3px rgba(211, 175, 55, 0.3);
-  transition: all var(--tran);
-  display: inline-block;
+.energy-text {
+  color: #66ccff;
+  font-weight: 600;
 }
-.const-val:hover {
-  text-shadow: 0 0 8px rgba(211, 175, 55, 0.6);
-  transform: scale(1.05);
+
+/* ====== 属性图标区域 ====== */
+.attr-container { margin-bottom: 20px; }
+.attr-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
 }
-/* 额外能力区域 */
-.extra-ability {
+.attr-icon {
   background: var(--card);
-  margin: 12px 16px;
-  padding: 20px;
-  border-radius: var(--radius);
-  border: 1px solid var(--line);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  min-width: 60px;
+  flex: 1;
+  max-width: 100px;
+  border: 1px solid rgba(126,200,224,0.1);
 }
-.extra-title {
+.attr-icon img {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 4px;
+  object-fit: contain;
+}
+.attr-value {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+  word-break: break-word;
+}
+.attr-label {
+  color: var(--sub-text);
+  font-size: 12px;
+  text-align: center;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+/* ====== 表格样式 ====== */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-top: 12px;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.data-table th, .data-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.data-table th {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* ====== 额外能力/行迹 ====== */
+.section-title {
   font-size: 1.2rem;
-  color: var(--second);
+  color: var(--secondary);
   margin-bottom: 15px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--line);
@@ -234,26 +365,15 @@ img {
   margin-bottom: 6px;
   font-size: 1rem;
 }
-.ability-desc {
-  color: var(--sub);
-  font-size: .9rem;
-  line-height: 1.6;
-}
-/* 命座区域 */
-.constellation-section {
-  background: var(--card);
-  margin: 12px 16px;
-  padding: 20px;
-  border-radius: var(--radius);
-  border: 1px solid var(--line);
-}
+
+/* ====== 命座样式 ====== */
 .constellation-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
 }
 .constellation-table th, .constellation-table td {
-  padding: 10px 8px;
+  padding: 12px 8px;
   text-align: left;
   vertical-align: top;
   border-bottom: 1px solid var(--line);
@@ -264,68 +384,163 @@ img {
 }
 .constellation-table td:first-child {
   color: var(--primary);
-  font-weight: 600;
+  font-weight: 700;
   min-width: 60px;
 }
 .constellation-table td:nth-child(2) {
-  color: var(--second);
+  color: var(--secondary);
   min-width: 80px;
+  font-weight: 600;
 }
-/* 播放器iframe样式 */
-#musicPlayerIframe {
-  display: block !important;
-  visibility: visible !important;
-  height: 400px !important;
-  width: 100% !important;
-  z-index: 99999 !important;
-  position: fixed !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  border: none !important;
-  background: transparent !important;
-  overflow: visible !important;
-  transition: height 0.3s ease !important;
+.const-val {
+  color: var(--primary);
+  font-weight: 700;
+  text-shadow: 0 0 4px rgba(126,200,224,0.3);
+  transition: all var(--transition);
+  display: inline-block;
 }
-/* 响应式调整 */
+.const-val:hover {
+  text-shadow: 0 0 12px rgba(126,200,224,0.7);
+  transform: scale(1.05);
+}
+
+/* ====== 专武下拉 ====== */
+select {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  font-size: 0.9rem;
+  margin-left: 8px;
+  cursor: pointer;
+}
+select:hover {
+  border-color: var(--primary);
+}
+.w-val {
+  color: var(--primary);
+  font-weight: 600;
+  transition: color var(--transition);
+}
+
+/* ====== 响应式 ====== */
 @media (max-width: 480px) {
-  .skill-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  .level-controls {
-    align-self: flex-end;
-  }
-  .constellation-table th, .constellation-table td {
-    padding: 8px 4px;
-    font-size: .85rem;
-  }
+  .hero-name { font-size: 1.5rem; }
+  .card { margin: 10px 12px; padding: 16px; }
+  .skill-header { flex-direction: column; align-items: flex-start; }
+  .level-controls { align-self: stretch; justify-content: center; flex-wrap: wrap; }
+  .base-slider { width: 100%; max-width: 200px; }
+  .attr-icon { min-width: calc(50% - 6px); flex: 0 0 calc(50% - 6px); }
 }
+@media (min-width: 481px) and (max-width: 768px) {
+  .attr-icon { min-width: calc(33.333% - 8px); flex: 0 0 calc(33.333% - 8px); }
+}
+@media (min-width: 769px) {
+  .attr-icon { min-width: 80px; }
+}
+
+/* ====== 页脚 ====== */
+.wiki-footer {
+  text-align: center;
+  margin-top: 20px;
+  color: #7f9e8c;
+  font-size: 13px;
+  opacity: 0.9;
+  padding: 20px 0 10px;
+  border-top: 1px solid #4a705f;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+.wiki-footer a { color: #8FBC8F; text-decoration: none; }
 </style>
 </head>
 <body>
+
+<!-- ===== 顶部导航 ===== -->
 <div class="top-bar">
   <a class="back" href="index.html">‹</a>
-  <span class="title">皮哥 · 数值页</span>
+  <span class="title">皮哥 · 六哥荣耀WIKI</span>
 </div>
 
-<!-- 立绘 + 名字 + 标签 -->
-<div class="art-box">
-  <img src="https://xiaochen1235789.github.io/images/pige.webp" alt="皮哥立绘">
-  <div class="name-tag">
-    <div class="ch-name">皮哥</div>
-    <div class="tags">
-      <span class="tag">命途:存护</span>
-      <span class="tag">属性:冰</span>
-      <span class="tag">定位:生存位</span>
-      <span class="tag">稀有度:限定五星</span>
+<!-- ===== 角色展示区 ===== -->
+<section class="hero-section" aria-label="角色展示">
+  <img class="hero-image" src="https://xiaochen1235789.github.io/images/pige.webp" alt="皮哥立绘">
+  <div class="hero-overlay">
+    <div class="hero-name">皮哥</div>
+    <div class="tag-container">
+      <span class="tag">稀有度：✭✭✭✭✭</span>
     </div>
   </div>
-</div>
+</section>
 
-<!-- 普攻等级调节 -->
-<div class="skill-block" id="normal-attack">
+<!-- ===== 基础属性模块 ===== -->
+<section class="card" id="base-attr" aria-label="基础属性">
+  <div class="skill-header">
+    <div class="skill-name" id="base-level-label">基础属性 Lv.90</div>
+    <div class="level-controls" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      <button class="level-btn down" id="base-level-down" aria-label="降低基础等级">↓</button>
+      <span class="level-value" id="base-level-display">90</span>
+      <button class="level-btn up" id="base-level-up" aria-label="提高基础等级">↑</button>
+      <span style="color: var(--sub-text); font-size: 0.9rem;">滑动</span>
+      <input type="range" id="base-level-slider" class="base-slider" min="1" max="90" value="90" step="1">
+    </div>
+  </div>
+  <div class="skill-content">
+    <!-- 第一行：命途 + 属性 + 限定 -->
+    <div class="attr-container">
+      <div class="attr-row">
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/Preservation.webp" alt="存护" loading="lazy">
+          <div class="attr-label">存护</div>
+        </div>
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/Ice.webp" alt="冰" loading="lazy">
+          <div class="attr-label">冰</div>
+        </div>
+        <div class="attr-icon">
+          <div class="attr-label">限定五星</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 核心数值行 HP/ATK/DEF/SPD/ENERGY -->
+    <div class="attr-container">
+      <div class="attr-row">
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/HP.webp" alt="生命">
+          <div class="attr-value" id="base-hp">1400</div>
+          <div class="attr-label">生命</div>
+        </div>
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/ATK.webp" alt="攻击">
+          <div class="attr-value" id="base-atk">550</div>
+          <div class="attr-label">攻击</div>
+        </div>
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/DEF.webp" alt="防御">
+          <div class="attr-value" id="base-def">750</div>
+          <div class="attr-label">防御</div>
+        </div>
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/SPD.webp" alt="速度">
+          <div class="attr-value" id="base-spd">95</div>
+          <div class="attr-label">速度</div>
+        </div>
+        <div class="attr-icon">
+          <img src="https://xiaochen1235789.github.io/attribute_image/ENERGY.webp" alt="能量">
+          <div class="attr-value" id="base-energy">120</div>
+          <div class="attr-label">能量</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 普攻 ===== -->
+<section class="card" id="normal-attack" aria-label="普攻技能">
   <div class="skill-header">
     <div class="skill-name">普攻 · 坚韧之击</div>
     <div class="level-controls">
@@ -335,20 +550,20 @@ img {
     </div>
   </div>
   <div class="skill-content">
-    对指定敌方目标造成等同于皮哥<span id="normal-val1" class="skill-val">50%</span> 攻击力的冰属性伤害。
-    <table class="skill-table">
+    对指定敌方单体造成等同于 <span id="normal-val1" class="skill-val">50%</span> 攻击力的冰属性伤害。
+    <table class="data-table">
       <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
       <tbody>
-        <tr><td>削韧</td><td>10</td></tr>
+        <tr><td>削韧</td><td>单体10</td></tr>
         <tr><td>战技点</td><td>+1</td></tr>
         <tr><td>能量变化</td><td>+20</td></tr>
       </tbody>
     </table>
   </div>
-</div>
+</section>
 
-<!-- 战技等级调节 -->
-<div class="skill-block" id="skill-attack">
+<!-- ===== 战技 ===== -->
+<section class="card" id="skill-attack" aria-label="战技技能">
   <div class="skill-header">
     <div class="skill-name">战技 · 铜墙铁壁</div>
     <div class="level-controls">
@@ -358,8 +573,8 @@ img {
     </div>
   </div>
   <div class="skill-content">
-    对指定敌方单体造成等同于皮哥 <span id="skill-val1" class="skill-val">210%</span> 攻击力的冰属性伤害，同时指定我方目标单体获得等同于皮哥<span id="skill-val2" class="skill-val">40%</span>防御+<span style="color:orange; font-size: 16px;">200</span>固定值的可抵挡伤害的护盾，我方目标最多持有等同于皮哥<span style="color:orange; font-size: 16px;">150%</span>防御力的护盾，持续<span style="color:orange; font-size: 16px;">2</span>回合
-    <table class="skill-table">
+    对指定敌方单体造成等同于 <span id="skill-val1" class="skill-val">210%</span> 攻击力的冰属性伤害，同时使我方指定单体获得等同于皮哥 <span id="skill-val2" class="skill-val">40%</span> 防御力 + <span class="highlight-text">200</span> 固定值的护盾，持续<span class="highlight-text">2</span>回合（护盾量不超过皮哥防御力的150%）。
+    <table class="data-table">
       <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
       <tbody>
         <tr><td>削韧</td><td>单体20</td></tr>
@@ -368,10 +583,10 @@ img {
       </tbody>
     </table>
   </div>
-</div>
+</section>
 
-<!-- 终结技等级调节 -->
-<div class="skill-block" id="ultimate-attack">
+<!-- ===== 终结技 ===== -->
+<section class="card" id="ultimate-attack" aria-label="终结技技能">
   <div class="skill-header">
     <div class="skill-name">终结技 · 荆棘守护</div>
     <div class="level-controls">
@@ -381,18 +596,19 @@ img {
     </div>
   </div>
   <div class="skill-content">
-    为我方全体提供能够抵消等同于皮哥<span id="ultimate-val1" class="skill-val">50%</span>+<span style="color:orange; font-size: 16px;">200</span>固定值的可抵挡伤害的护盾，我方目标最多持有等同于皮哥<span style="color:orange; font-size: 16px;">150%</span>防御力的护盾，并为我方全体施加<span style="color:orange; font-size: 16px;">[荆棘]</span>效果，持续<span style="color:orange; font-size: 16px;">2</span>回合，<span style="color:orange; font-size: 16px;">[荆棘]</span>可以将受到的<span style="color:orange; font-size: 16px;">25%</span>伤害反弹给敌方行动的目标，该伤害不致命，最多使敌方目标降低至<span style="color:orange; font-size: 16px;">1</span>滴血
-    <table class="skill-table">
+    为我方全体提供等同于皮哥 <span id="ultimate-val1" class="skill-val">50%</span> 防御力 + <span class="highlight-text">200</span> 固定值的护盾(护盾量最多不超过等同于皮哥200%防御)，持续<span class="highlight-text">2</span>回合；并施加【荆棘】效果：受到攻击时反弹<span class="highlight-text">25%</span>伤害（最多使目标生命降至1点）。
+    <table class="data-table">
       <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
       <tbody>
-        <tr><td>能量变化</td><td>-100</td></tr>
+        <tr><td>能量消耗</td><td>100</td></tr>
+        <tr><td>回能</td><td>15</td></tr>
       </tbody>
     </table>
   </div>
-</div>
+</section>
 
-<!-- 天赋等级调节 -->
-<div class="skill-block" id="talent-attack">
+<!-- ===== 天赋 ===== -->
+<section class="card" id="talent-attack" aria-label="天赋技能">
   <div class="skill-header">
     <div class="skill-name">天赋 · 冰魄不灭</div>
     <div class="level-controls">
@@ -402,311 +618,299 @@ img {
     </div>
   </div>
   <div class="skill-content">
-    受到致命攻击时六哥不会陷入无法战斗状态，并立即回复等同于自身生命上限<span id="talent-val1" class="skill-val">45%</span>的生命值，该效果<span style="color:orange; font-size: 16px;">2</span>回合只能触发<span style="color:orange; font-size: 16px;">1</span>次，并立即为我方全体提供等同于皮哥<span style="color:orange; font-size: 16px;">100%</span>防御的可抵挡伤害的护盾，持续2回合
-    <table class="skill-table">
+    受到致命攻击时不会陷入无法战斗，并立即回复 <span id="talent-val1" class="skill-val">45%</span> 生命上限的生命值（每<span class="highlight-text">2</span>回合可触发1次），同时为我方全体提供等同于皮哥<span class="highlight-text">100%</span>防御力的护盾，持续2回合。
+    <table class="data-table">
       <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
       <tbody>
         <tr><td>/</td><td>/</td></tr>
       </tbody>
     </table>
   </div>
-</div>
+</section>
 
-<!-- 额外能力 -->
-<div class="extra-ability">
-  <div class="extra-title">额外能力</div>
+<!-- ===== 行迹加成(总) ===== -->
+<section class="card" aria-label="行迹加成">
+  <div class="section-title">✨ 行迹加成(总)</div>
+  <div class="attr-row" style="justify-content: flex-start;">
+    <div class="attr-icon" style="max-width:120px">
+      <img src="https://xiaochen1235789.github.io/attribute_image/DEF.webp" alt="防御加成">
+      <div class="attr-value">41.05%</div><div class="attr-label">防御力</div>
+    </div>
+    <div class="attr-icon" style="max-width:120px">
+      <img src="https://xiaochen1235789.github.io/attribute_image/IconStatusResistance.webp" alt="效果抵抗">
+      <div class="attr-value">19.8%</div><div class="attr-label">效果抵抗</div>
+    </div>
+    <div class="attr-icon" style="max-width:120px">
+      <img src="https://xiaochen1235789.github.io/attribute_image/SPD.webp" alt="速度加成">
+      <div class="attr-value">11</div><div class="attr-label">速度</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 额外能力 ===== -->
+<section class="card" aria-label="额外能力">
+  <div class="section-title">额外能力</div>
   <div class="ability-item">
     <div class="ability-name">冰霜庇护</div>
-    <div class="ability-desc">
-      施放战技后，我方全体受到的伤害降低<span style="color:orange; font-size: 16px;">30%</span>，持续1回合。<span style="color:purple; font-size: 16px;">(改)</span>
-    </div>
+    <div class="ability-desc">施放战技后，我方全体受到的伤害降低<span class="highlight-text">30%</span>，持续1回合。<span style="color:purple;">(改)</span></div>
   </div>
   <div class="ability-item">
     <div class="ability-name">负面清除</div>
-    <div class="ability-desc">
-      释放战技时，解除指定我方单体的<span style="color:orange; font-size: 16px;">1</span>个负面效果。
-    </div>
+    <div class="ability-desc">施放战技时，解除指定我方单体的<span class="highlight-text">1</span>个负面效果。</div>
   </div>
   <div class="ability-item">
     <div class="ability-name">吸引之源</div>
-    <div class="ability-desc">
-      六哥施放终结技后，受击概率提高至<span style="color:orange; font-size: 16px;">100%</span>，持续<span style="color:orange; font-size: 16px;">1</span>回合。
-    </div>
+    <div class="ability-desc">施放终结技后，受击概率提高至<span class="highlight-text">100%</span>，持续<span class="highlight-text">1</span>回合。</div>
   </div>
-</div>
-
-<!-- 命座 -->
-<div class="constellation-section">
-  <div class="extra-title">命之座</div>
+</section>
+<!-- ===== 命座 ===== -->
+<section class="card" aria-label="命之座">
+  <div class="section-title">命之座 · 星魂</div>
   <table class="constellation-table">
-    <thead><tr><th width="60">层数</th><th width="80">名称</th><th>效果</th></tr></thead>
+    <thead><tr><th>层数</th><th>名称</th><th>效果</th></tr></thead>
     <tbody>
-      <tr>
-        <td>1命</td>
-        <td>寒冰壁垒</td>
-        <td>
-          [荆棘]造成的伤害倍率提高至 <span class="const-val" data-lv="1">60</span>% ，且视为<span style="color:orange;">真实伤害</span>
-          <br><span style="color:orange;">真实伤害：不受任何效果所影响的无属性伤害，本次攻击不视为造成了1次攻击</span>
-        </td>
-      </tr>
-      <tr>
-        <td>2命</td>
-        <td>庇护之息</td>
-        <td>
-          在战技提供的护盾保护下的我方目标，每回合开始时回复等同于各自<span class="const-val" data-lv="2">10%</span>生命上限+<span class="const-val" data-lv="2">200</span>的生命值。
-        </td>
-      </tr>
-      <tr>
-        <td>3命</td>
-        <td>冰锋锐化</td>
-        <td>
-          普攻等级+<span class="const-val" data-lv="3">1</span>，最多不超过<span class="const-val" data-lv="3">10</span>级
-          天赋等级+<span class="const-val" data-lv="3">2</span>，最多不超过<span class="const-val" data-lv="3">15</span>级
-        </td>
-      </tr>
-      <tr>
-        <td>4命</td>
-        <td>寒盾援护</td>
-        <td>
-          进入战斗时，为我方全体目标提供等同于六哥<span class="const-val" data-lv="4">100%</span>防御力+<span class="const-val" data-lv="4">500</span>的护盾，效果抵抗提高<span class="const-val" data-lv="4">50%</span>，持续<span style="color:orange; font-size: 16px;">2</span>回合，触发皮哥天赋的复活效果时也会生效该效果，且本次提供的护盾量无上限<span style="color:purple; font-size: 16px;">(改)</span>
-        </td>
-      </tr>
-      <tr>
-        <td>5命</td>
-        <td>冰棘守护</td>
-        <td>
-          战技等级+<span class="const-val" data-lv="5">2</span>，最多不超过<span class="const-val" data-lv="5">15</span>级
-          终结技等级+<span class="const-val" data-lv="5">2</span>，最多不超过<span class="const-val" data-lv="5">15</span>级
-        </td>
-      </tr>
-      <tr>
-        <td>6命</td>
-        <td>冰霜守护者</td>
-        <td>
-          当我方角色目标在场时，每存在一个我方角色目标使六哥提供的护盾量提高<span class="const-val" data-lv="6">50%</span>，最多提高<span class="const-val" data-lv="6">250%</span>
-        </td>
-      </tr>
+      <tr><td>1命</td><td>寒冰壁垒</td><td>【荆棘】造成的伤害倍率提高至 <span class="const-val" data-lv="1">60</span>%，且视为<span class="highlight-text">真实伤害</span>（不受任何效果影响，不计入攻击次数）。</td></tr>
+      <tr><td>2命</td><td>庇护之息</td><td>在战技护盾保护下的我方目标，每回合开始时回复各自<span class="const-val" data-lv="2">10%</span>生命上限+<span class="const-val" data-lv="2">200</span>的生命值。</td></tr>
+      <tr><td>3命</td><td>冰锋锐化</td><td>普攻等级+<span class="const-val" data-lv="3">1</span>（最多10级）；天赋等级+<span class="const-val" data-lv="3">2</span>（最多15级）。</td></tr>
+      <tr><td>4命</td><td>寒盾援护</td><td>进入战斗时，为我方全体提供等同于皮哥<span class="const-val" data-lv="4">100%</span>防御力+<span class="const-val" data-lv="4">500</span>的护盾，效果抵抗提高<span class="const-val" data-lv="4">50%</span>，持续2回合；触发天赋复活时也会生效，且护盾量无上限。<span style="color:purple;">(改)</span></td></tr>
+      <tr><td>5命</td><td>冰棘守护</td><td>战技等级+<span class="const-val" data-lv="5">2</span>（最多15级）；终结技等级+<span class="const-val" data-lv="5">2</span>（最多15级）。</td></tr>
+      <tr><td>6命</td><td>冰霜守护者</td><td>每存在一个我方角色目标，使皮哥提供的护盾量提高<span class="const-val" data-lv="6">50%</span>，最多提高<span class="const-val" data-lv="6">250%</span>。</td></tr>
     </tbody>
   </table>
-</div>
+</section>
 
-<!-- 播放器iframe -->
-<iframe 
-    id="musicPlayerIframe"
-    src="music-player.html"
-    style="
-        display: block !important;
-        visibility: visible !important;
-        height: 400px !important;
-        width: 100% !important;
-        z-index: 99999 !important;
-        position: fixed !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        border: none !important;
-        background: transparent !important;
-        overflow: visible !important;
-        transition: height 0.3s ease !important;
-    "
-    frameborder="0"
-    scrolling="no"
-    onload="resizePlayerIframe(this)"
-></iframe>
+<!-- ===== 页脚 ===== -->
+<footer class="wiki-footer">
+  © <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.<br>
+  本WIKI所有图片均由AI生成，不存在侵权行为，请仔细辨别.
+</footer>
 
 <script>
-// 技能倍率数据（根据原始数据重构）
-const skillData = {
-  normal: {
-    level: 1,
-    maxLevel: 7,
-    values: [
-      { id: 'normal-val1', base: 50, step: 10 }  // 普攻伤害
-    ]
-  },
-  skill: {
-    level: 1,
-    maxLevel: 12,
-    values: [
-      { id: 'skill-val1', base: 210, step: 10 },  // 战技伤害
-      { id: 'skill-val2', base: 40, step: 1 }    // 护盾倍率
-    ]
-  },
-  ultimate: {
-    level: 1,
-    maxLevel: 12,
-    values: [
-      { id: 'ultimate-val1', base: 50, step: 1 }  // 终结技护盾
-    ]
-  },
-  talent: {
-    level: 1,
-    maxLevel: 12,
-    values: [
-      { id: 'talent-val1', base: 45, step: 5 }    // 天赋生命回复
-    ]
-  }
+// ====== 皮哥技能倍率数据 (基于原页面整理) ======
+const skillConfig = {
+  normal: { level: 1, maxLevel: 7, values: [ { id: 'normal-val1', base: 50, step: 10 } ] },        // 普攻伤害%
+  skill: { level: 1, maxLevel: 12, values: [ 
+      { id: 'skill-val1', base: 210, step: 10 },   // 战技伤害%
+      { id: 'skill-val2', base: 40, step: 1 }      // 战技护盾%
+  ] },
+  ultimate: { level: 1, maxLevel: 12, values: [ 
+      { id: 'ultimate-val1', base: 50, step: 1 }   // 终结技护盾%
+  ] },
+  talent: { level: 1, maxLevel: 12, values: [ 
+      { id: 'talent-val1', base: 45, step: 5 }     // 天赋回血%
+  ] }
 };
 
-// 优化颜色等级数组，创建真正的金色渐变效果
-const levelColors = [
-  '#e8c96b', '#e6c463', '#e4bf5b',           // 1-3 浅金
-  '#e2ba53', '#e0b54b', '#deb043',           // 4-6 中等金
-  '#dcab3b', '#daa633', '#d8a12b',           // 7-9 标准金
-  '#d69c23', '#d4971b', '#d29213'            // 10-12 深金
-];
+// ====== 基础属性预设======
+const baseLevelPresets = [1, 20, 30, 40, 50, 60, 70, 80, 90];
+const baseStats = {
+  1:   { hp: 190, atk: 73, def: 89 },
+  20:  { hp: 446, atk: 173, def: 209 },
+  30:  { hp: 617, atk: 240, def: 289 },
+  40:  { hp: 788, atk: 306, def: 369 },
+  50:  { hp: 959, atk: 373, def: 449 },
+  60:  { hp: 1130, atk: 439, def: 530 },
+  70:  { hp: 1311, atk: 510, def: 614 },
+  80:  { hp: 1397, atk: 543, def: 654 },
+  90:  { hp: 1676, atk: 652, def: 785 }   
+};
 
-// 改变技能等级
-function changeSkillLevel(skillType, change) {
-  const skill = skillData[skillType];
-  const newLevel = skill.level + change;
-  
-  // 检查等级范围
-  if (newLevel < 1 || newLevel > skill.maxLevel) return;
-  
-  skill.level = newLevel;
-  
-  // 更新UI
-  updateSkillDisplay(skillType);
-  
-  // 更新按钮状态
-  updateButtonState(skillType);
+// ====== 全局状态 ======
+const state = {
+  skills: JSON.parse(JSON.stringify(skillConfig)),
+  baseLevel: 90
+};
+
+// ---------- 通用技能函数 ----------
+function getSkillValue(base, step, level) {
+  return base + step * (level - 1);
 }
-
-// 更新技能显示
-function updateSkillDisplay(skillType) {
-  const skill = skillData[skillType];
-  const levelElement = document.getElementById(`${skillType}-level`);
-  
-  // 更新等级显示
-  levelElement.textContent = `${skill.level}/${skill.maxLevel}`;
-  
-  // 设置等级颜色
-  if (skill.level === skill.maxLevel) {
-    levelElement.className = 'level-value legend-text';
-    levelElement.style.color = ''; // 清除内联样式
+function applyLevelColor(element, level, max) {
+  if (level === max) {
+    element.classList.add('legend-text');
+    element.classList.remove('skill-val');
   } else {
-    levelElement.className = 'level-value';
-    levelElement.style.color = levelColors[skill.level - 1] || levelColors[0];
+    element.classList.remove('legend-text');
+    element.classList.add('skill-val');
   }
+}
+function updateSkillDisplay(skillType) {
+  const skill = state.skills[skillType];
+  const levelElement = document.getElementById(`${skillType}-level`);
+  if (!levelElement) return;
+  levelElement.textContent = `${skill.level}/${skill.maxLevel}`;
+  applyLevelColor(levelElement, skill.level, skill.maxLevel);
   
-  // 更新技能数值
   skill.values.forEach(valueData => {
     const element = document.getElementById(valueData.id);
-    const newValue = valueData.base + valueData.step * (skill.level - 1);
-    element.textContent = `${newValue}%`;
-    
-    // 设置数值颜色
-    if (skill.level === skill.maxLevel) {
-      element.className = 'skill-val legend-text';
-      element.style.color = ''; // 清除内联样式
-    } else {
-      element.className = 'skill-val';
-      element.style.color = levelColors[skill.level - 1] || levelColors[0];
-    }
+    if (!element) return;
+    const newVal = getSkillValue(valueData.base, valueData.step, skill.level);
+    element.textContent = newVal + '%';
+    applyLevelColor(element, skill.level, skill.maxLevel);
   });
 }
-
-// 更新按钮状态
 function updateButtonState(skillType) {
-  const skill = skillData[skillType];
-  const downButton = document.getElementById(`${skillType}-down`);
-  const upButton = document.getElementById(`${skillType}-up`);
-  
-  downButton.disabled = skill.level <= 1;
-  upButton.disabled = skill.level >= skill.maxLevel;
+  const skill = state.skills[skillType];
+  const downBtn = document.getElementById(`${skillType}-down`);
+  const upBtn = document.getElementById(`${skillType}-up`);
+  if (downBtn) downBtn.disabled = skill.level <= 1;
+  if (upBtn) upBtn.disabled = skill.level >= skill.maxLevel;
 }
-
-// 初始化命座数值高亮效果
-function initConstellationValues() {
-  const constVals = document.querySelectorAll('.const-val');
-  constVals.forEach(val => {
-    // 为每个命座数值添加悬停效果
-    val.addEventListener('mouseenter', function() {
-      this.style.textShadow = '0 0 8px rgba(211, 175, 55, 0.6)';
-      this.style.transform = 'scale(1.05)';
-    });
-    
-    val.addEventListener('mouseleave', function() {
-      this.style.textShadow = '0 0 3px rgba(211, 175, 55, 0.3)';
-      this.style.transform = 'scale(1)';
-    });
-  });
-}
-
-// 初始化所有技能
-function initAllSkills() {
-  Object.keys(skillData).forEach(skillType => {
+function initSkills() {
+  Object.keys(state.skills).forEach(skillType => {
     updateSkillDisplay(skillType);
     updateButtonState(skillType);
   });
 }
 
-// 播放器高度自适应
-function resizePlayerIframe(iframe) {
-  try {
-    const playerHeight = iframe.contentWindow.document.querySelector('.mini-music-player')?.offsetHeight || 90;
-    const progressHeight = iframe.contentWindow.document.querySelector('.player-progress')?.offsetHeight || 0;
-    iframe.style.height = (playerHeight + progressHeight + 10) + 'px';
-  } catch (err) {
-    iframe.style.height = '110px';
-  }
-}
-
-// 监听播放器消息
-window.addEventListener('message', (e) => {
-  if (e.data?.type === 'SONG_LIST_TOGGLED') {
-    const iframe = document.getElementById('musicPlayerIframe');
-    iframe.style.height = e.data.isShow ? '400px' : '110px';
-  }
-});
-
-// 页面加载完成
-window.addEventListener('DOMContentLoaded', () => {
-  initAllSkills();
-  initConstellationValues();
-  
-  // 初始化音乐播放器状态
-  setTimeout(() => {
-    try {
-      const savedState = localStorage.getItem('musicPlayerState');
-      if (savedState) {
-        const iframe = document.getElementById('musicPlayerIframe');
-        iframe.contentWindow.postMessage({ 
-          type: 'INIT_STATE', 
-          state: JSON.parse(savedState) 
-        }, '*');
-      }
-    } catch (err) {
-      console.log('播放器状态同步失败:', err);
-    }
-  }, 300);
-});
-
-// 跨页播放状态同步（广播监听）
-const bc = new BroadcastChannel('music_player_broadcast');
-bc.onmessage = (e) => {
-  if (e.data.type === 'SYNC_STATE') {
-    const iframe = document.getElementById('musicPlayerIframe');
-    if (iframe) {
-      iframe.contentWindow.postMessage({ type: 'SYNC_STATE', state: e.data.state }, '*');
-    }
-  }
+// 全局暴露给onclick
+window.changeSkillLevel = function(skillType, change) {
+  const skill = state.skills[skillType];
+  if (!skill) return;
+  const newLevel = skill.level + change;
+  if (newLevel < 1 || newLevel > skill.maxLevel) return;
+  skill.level = newLevel;
+  updateSkillDisplay(skillType);
+  updateButtonState(skillType);
+  saveState();
 };
 
-// 监听本地存储变化，实时同步播放状态（跨页统一）
-window.addEventListener('storage', (e) => {
-  if (e.key === 'musicPlayerState') {
-    const iframe = document.getElementById('musicPlayerIframe');
-    const newState = JSON.parse(e.newValue);
-    try {
-      iframe.contentWindow.postMessage({ 
-        type: 'INIT_STATE', 
-        state: newState 
-      }, '*');
-    } catch (err) {}
+// ---------- 基础属性更新 ----------
+function updateBaseAttributes(level) {
+  const nearest = baseLevelPresets.reduce((prev, curr) => 
+    Math.abs(curr - level) < Math.abs(prev - level) ? curr : prev
+  );
+  if (nearest !== level) level = nearest;
+  state.baseLevel = level;
+
+  document.getElementById('base-level-label').innerText = `基础属性 Lv.${level}`;
+  document.getElementById('base-level-display').textContent = level;
+  const slider = document.getElementById('base-level-slider');
+  if (slider) slider.value = level;
+
+  const stats = baseStats[level];
+  if (stats) {
+    document.getElementById('base-hp').textContent = stats.hp;
+    document.getElementById('base-atk').textContent = stats.atk;
+    document.getElementById('base-def').textContent = stats.def;
   }
-});
+  document.getElementById('base-spd').textContent = 92;
+  document.getElementById('base-energy').textContent = 120;
+
+  const downBtn = document.getElementById('base-level-down');
+  const upBtn = document.getElementById('base-level-up');
+  if (downBtn) downBtn.disabled = level === 1;
+  if (upBtn) upBtn.disabled = level === 90;
+}
+
+function changeBaseLevel(direction) {
+  let idx = baseLevelPresets.indexOf(state.baseLevel);
+  if (idx === -1) idx = baseLevelPresets.indexOf(90);
+  const newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= baseLevelPresets.length) return;
+  updateBaseAttributes(baseLevelPresets[newIdx]);
+  saveState();
+}
+
+// ---------- 存储 ----------
+function saveState() {
+  try {
+    const saveData = {
+      normal: state.skills.normal.level,
+      skill: state.skills.skill.level,
+      ultimate: state.skills.ultimate.level,
+      talent: state.skills.talent.level,
+      baseLevel: state.baseLevel
+    };
+    localStorage.setItem('pigeSkillState', JSON.stringify(saveData));
+  } catch (e) { console.warn('保存失败', e); }
+}
+function loadState() {
+  try {
+    const saved = localStorage.getItem('pigeSkillState');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.normal) state.skills.normal.level = Math.min(parsed.normal, state.skills.normal.maxLevel);
+      if (parsed.skill) state.skills.skill.level = Math.min(parsed.skill, state.skills.skill.maxLevel);
+      if (parsed.ultimate) state.skills.ultimate.level = Math.min(parsed.ultimate, state.skills.ultimate.maxLevel);
+      if (parsed.talent) state.skills.talent.level = Math.min(parsed.talent, state.skills.talent.maxLevel);
+      if (parsed.baseLevel && baseLevelPresets.includes(parsed.baseLevel)) {
+        state.baseLevel = parsed.baseLevel;
+      } else state.baseLevel = 90;
+    }
+  } catch (e) {}
+}
+
+// ---------- 事件绑定 ----------
+function initBaseLevelControls() {
+  const slider = document.getElementById('base-level-slider');
+  const downBtn = document.getElementById('base-level-down');
+  const upBtn = document.getElementById('base-level-up');
+
+  if (slider) {
+    slider.addEventListener('input', function(e) {
+      const val = parseInt(e.target.value, 10);
+      const nearest = baseLevelPresets.reduce((prev, curr) => 
+        Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev
+      );
+      if (state.baseLevel !== nearest) {
+        updateBaseAttributes(nearest);
+        saveState();
+      } else {
+        e.target.value = state.baseLevel;
+      }
+    });
+  }
+  if (downBtn) downBtn.addEventListener('click', () => { changeBaseLevel(-1); saveState(); });
+  if (upBtn) upBtn.addEventListener('click', () => { changeBaseLevel(1); saveState(); });
+}
+
+// 键盘快捷键 (可选)
+function setupKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey) {
+      if (e.key === '[') { changeBaseLevel(-1); saveState(); e.preventDefault(); }
+      if (e.key === ']') { changeBaseLevel(1); saveState(); e.preventDefault(); }
+      const skillMap = { '1':'normal', '2':'skill', '3':'ultimate', '4':'talent' };
+      if (skillMap[e.key]) {
+        window.changeSkillLevel(skillMap[e.key], 1);
+        e.preventDefault();
+      }
+      if (e.key === 'r' && confirm('重置所有等级？')) {
+        Object.keys(state.skills).forEach(k => state.skills[k].level = 1);
+        state.baseLevel = 90;
+        initSkills();
+        updateBaseAttributes(90);
+        saveState();
+        e.preventDefault();
+      }
+    }
+  });
+}
+
+// ---------- 初始化 ----------
+function initPage() {
+  loadState();
+  initSkills();
+  updateBaseAttributes(state.baseLevel);
+  initBaseLevelControls();
+  setupKeyboardShortcuts();
+  updateWeapon();  // 专武初始化
+  document.getElementById('year').textContent = new Date().getFullYear();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initPage);
+} else {
+  initPage();
+}
+
+// 暴露管理器
+window.PigeManager = {
+  changeSkillLevel: window.changeSkillLevel,
+  changeBaseLevel,
+  getState: () => ({ ...state.skills, baseLevel: state.baseLevel })
+};
 </script>
 </body>
 </html>
