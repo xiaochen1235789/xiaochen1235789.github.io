@@ -8,7 +8,7 @@
     <title>快乐的路一天 · 六哥荣耀WIKI</title>
 
     <style>
-        /* ----- 设计系统（与主页统一，增强可维护性）----- */
+        /* ----- 设计系统（与主页统一）----- */
         :root {
             --bg: #121212;
             --card-bg: #1e3a2f;
@@ -35,6 +35,11 @@
             --star-gold: #FFD700;
             --star-glow: rgba(255, 215, 0, 0.6);
             --star-empty: #7F8C8D;
+
+            /* 等级控件专用颜色 */
+            --button-bg: #2d5243;
+            --button-hover: #3d725f;
+            --button-disabled: #1f2e28;
         }
 
         * {
@@ -148,7 +153,7 @@
             font-weight: 600;
         }
 
-        /* ===== 主容器：光锥详情卡片区 ===== */
+        /* ===== 主容器 ===== */
         .detail-container {
             max-width: 800px;
             margin: 0 auto;
@@ -158,18 +163,18 @@
             gap: var(--gap);
         }
 
-        /* ----- 光锥英雄卡 ----- */
+        /* ----- 光锥英雄卡（左右布局）----- */
         .lightcone-hero-card {
             background: var(--card-bg);
             border-radius: var(--radius);
             padding: 24px;
-            text-align: center;
             border: 1px solid transparent;
             transition: all var(--transition-normal);
             box-shadow: var(--shadow);
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 24px;
         }
 
         .lightcone-hero-card:hover {
@@ -179,13 +184,19 @@
             box-shadow: 0 8px 24px rgba(0,0,0,0.4);
         }
 
+        /* 左侧图片区 */
+        .hero-left {
+            flex: 0 0 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
         .lightcone-img-container {
-            width: 70%;
-            max-width: 280px;
-            margin-bottom: 20px;
+            width: 100%;
+            max-width: 200px;
             border-radius: var(--radius);
             overflow: hidden;
-            position: relative;
             aspect-ratio: 3/4;
             border: 1px solid var(--border-color);
         }
@@ -211,30 +222,71 @@
             transform: scale(1.05);
         }
 
+        /* 右侧信息区 */
+        .hero-right {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
         .lightcone-name {
             font-size: 1.8rem;
             color: var(--text-highlight);
-            margin-bottom: 8px;
             font-weight: 700;
             text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            line-height: 1.2;
         }
 
-        .lightcone-path {
-            color: var(--text-secondary);
-            margin-bottom: 20px;
-            font-size: 1rem;
-        }
-
-        /* ===== 星级评级（完全移植清风碎片 · 可拓展）===== */
-        .lightcone-rating {
-            margin: 0 0 20px 0;  /* 与下方stats保持间距 */
-            font-size: 32px;      /* 星星大小，与清风碎片一致 */
-            letter-spacing: 8px;
+        /* 命途与专武信息行 */
+        .path-weapon-row {
             display: flex;
-            justify-content: center;
             align-items: center;
-            gap: 4px;
+            gap: 16px;
             flex-wrap: wrap;
+        }
+
+        /* 命途图标框（限制大小） */
+        .path-box {
+            width: 45px;
+            height: 45px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            transition: all var(--transition-fast);
+        }
+
+        .path-box:hover {
+            border-color: var(--text-highlight);
+            background: rgba(129, 199, 132, 0.1);
+        }
+
+        .path-icon {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+
+        .path-text {
+            color: var(--text-highlight);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        .weapon-text {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-style: italic;
+        }
+
+        .lightcone-rating {
+            font-size: 28px;
+            letter-spacing: 6px;
         }
 
         .star-filled {
@@ -242,19 +294,129 @@
             text-shadow: 0 0 16px var(--star-gold), 0 0 30px var(--star-glow);
         }
 
-        .star-empty {
-            color: var(--star-empty);
-            text-shadow: 0 0 6px rgba(0,0,0,0.5);
+        /* 等级控件区域 */
+        .level-control-container {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0,0,0,0.2);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
         }
 
-        /* 光锥属性区 */
+        .level-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .level-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .level-value {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-highlight);
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .level-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .level-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--text-highlight);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(129,199,132,0.6);
+            border: 1px solid rgba(255,255,255,0.3);
+            transition: 0.1s;
+        }
+
+        .level-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            background: var(--special-color);
+        }
+
+        .level-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--text-highlight);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(129,199,132,0.6);
+        }
+
+        .level-btns {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .level-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: var(--radius);
+            background: var(--button-bg);
+            color: var(--text-main);
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .level-btn:hover:not(:disabled) {
+            background: var(--button-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .level-btn:disabled {
+            background: var(--button-disabled);
+            color: #666;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* 属性区域（带等级标题） */
+        .stats-section {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 16px;
+            background: rgba(0,0,0,0.15);
+        }
+
+        .stats-header {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
         .lightcone-stats {
             display: flex;
-            justify-content: center;
-            gap: 24px;
+            justify-content: space-around;
+            gap: 12px;
             flex-wrap: wrap;
-            margin-top: 8px;
-            width: 100%;
         }
 
         .stat-item {
@@ -262,11 +424,12 @@
             flex-direction: column;
             align-items: center;
             gap: 4px;
+            min-width: 80px;
         }
 
         .stat-emoji { font-size: 1.5rem; }
         .stat-label { font-size: 0.9rem; color: var(--text-secondary); }
-        .stat-value { font-size: 1.1rem; color: var(--text-highlight); font-weight: 600; }
+        .stat-value { font-size: 1.2rem; color: var(--text-highlight); font-weight: 600; }
 
         /* ----- 效果与故事模块 ----- */
         .detail-module {
@@ -416,7 +579,6 @@
         }
 
         /* ========== 同步·清风碎片风格 ========== */
-        /* 金色分割线（荣耀余韵） */
         .divider {
             height: 1px;
             background: linear-gradient(90deg, transparent, var(--divider-green), var(--divider-gold), var(--divider-green), transparent);
@@ -426,7 +588,6 @@
             width: 100%;
         }
 
-        /* WIKI 水印（虚构声明） */
         .wiki-watermark {
             text-align: center;
             margin-top: 30px;
@@ -438,7 +599,6 @@
             font-style: normal;
         }
 
-        /* 页脚（完整移植） */
         .wiki-footer {
             text-align: center;
             margin-top: 30px;
@@ -465,47 +625,94 @@
 
         /* ===== 响应式优化 ===== */
         @media (max-width: 768px) {
-            .detail-container { padding: 0 12px; }
-            .lightcone-img-container { width: 85%; }
-            .lightcone-name { font-size: 1.5rem; }
-            .module-header { flex-direction: column; align-items: flex-start; gap: 10px; }
-            .version-select { align-self: flex-start; }
-            .back-to-top {
-                bottom: 20px;
-                right: 15px;
-                width: 42px;
-                height: 42px;
+            /* 手机端：右侧内容改为两列并排 */
+            .lightcone-hero-card {
+                gap: 16px;
             }
-            body { padding-bottom: 20px; }
-            
+            .hero-right {
+                display: flex;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: space-between;
+                gap: 10px;
+            }
+            .lightcone-name,
+            .path-weapon-row,
             .lightcone-rating {
-                font-size: 28px;   /* 移动端略缩 */
-                letter-spacing: 6px;
+                width: 100%;
             }
-
-            .wiki-footer {
-                max-width: 100%;
-                padding: 16px 12px 8px;
-                font-size: 12px;
+            .level-control-container,
+            .stats-section {
+                width: calc(50% - 5px); /* 并排，留出间距 */
+                margin-bottom: 0;
             }
-            .wiki-watermark {
-                margin-top: 24px;
-                font-size: 11px;
+            .level-control-container {
+                padding: 10px;
+            }
+            .level-header .level-value {
+                font-size: 1.2rem;
+            }
+            .level-slider {
+                width: 100%;
+            }
+            .level-btns {
+                margin-top: 8px;
+                gap: 10px;
+            }
+            .level-btn {
+                width: 32px;
+                height: 32px;
+                font-size: 1rem;
+            }
+            .stats-section {
+                padding: 10px;
+            }
+            .stats-header {
+                font-size: 0.9rem;
+                margin-bottom: 8px;
+            }
+            .lightcone-stats {
+                gap: 6px;
+            }
+            .stat-item {
+                min-width: auto;
+                flex: 1;
+            }
+            .stat-emoji img {
+                width: 32px;
+                height: 32px;
+            }
+            .stat-value {
+                font-size: 1rem;
+            }
+            .stat-label {
+                font-size: 0.8rem;
             }
         }
 
         @media (max-width: 480px) {
-            .lightcone-stats { gap: 16px; }
-            .stat-item { min-width: 80px; }
-            .top-nav { padding: 10px 16px; margin: 12px auto; }
-            .detail-module { padding: 18px; }
-            .lightcone-rating {
-                font-size: 26px;
-                letter-spacing: 5px;
+            .level-control-container,
+            .stats-section {
+                width: 100%; /* 超小屏改回上下，保证可用性 */
+            }
+            .lightcone-name {
+                font-size: 1.5rem;
+            }
+            .path-box {
+                width: 70px;
+                height: 70px;
+            }
+            .path-icon {
+                width: 32px;
+                height: 32px;
+            }
+            .path-text {
+                font-size: 0.8rem;
+            }
+            .weapon-text {
+                font-size: 0.9rem;
             }
         }
-
-        /* 完全移除音乐播放器相关，保持纯净 */
     </style>
 </head>
 <body>
@@ -524,46 +731,87 @@
 
     <!-- ===== 顶部导航 ===== -->
     <nav class="top-nav" aria-label="页面导航">
-        <a href="https://xiaochen1235789.github.io/index.html" class="back-btn" id="backBtn">
-            ‹ <span>返回主页</span>
+        <a>
+            <span><span style="color:lightgreen; font-size: 16px;">六哥荣耀WIKI</span></span>
         </a>
         <div class="page-title">光锥详情</div>
     </nav>
 
-    <!-- ===== 主内容区：光锥信息、效果、故事 ===== -->
+    <!-- ===== 主内容区 ===== -->
     <main class="detail-container">
-        <!-- 光锥核心信息卡片 -->
+        <!-- 光锥核心信息卡片（左右布局） -->
         <section class="lightcone-hero-card" aria-labelledby="lcName">
-            <div class="lightcone-img-container skeleton">
-                <img src="https://xiaochen1235789.github.io/guangzhui.images/changjinglu.jpg"
-                     alt="光锥「快乐的路一天」立绘"
-                     class="lightcone-img"
-                     loading="eager"
-                     onload="imageLoaded(this)"
-                     onerror="imageError(this)">
-            </div>
-            <h1 id="lcName" class="lightcone-name">快乐的路一天</h1>
-            <p class="lightcone-path">巡猎 | 鹿将军专武</p>
-            
-            <!-- ===== 星级评级 · 1星居中（完全移植清风碎片风格）===== -->
-            <!-- 根据需求：如果是1⭐则只显示一颗星且居中，以此类推。当前示例为1星，如需调整星级，增减★即可。 -->
-            <div class="lightcone-rating">
-                <span class="star-filled">★★★★★</span>
-                <!-- 如需显示2星：再加一个<span class="star-filled">★</span>；如需空星，使用star-empty类 -->
+            <!-- 左侧图片区 -->
+            <div class="hero-left">
+                <div class="lightcone-img-container skeleton">
+                    <img src="https://xiaochen1235789.github.io/guangzhui.images/changjinglu.jpg"
+                         alt="光锥「快乐的路一天」立绘"
+                         class="lightcone-img"
+                         loading="eager"
+                         onload="imageLoaded(this)"
+                         onerror="imageError(this)">
+                </div>
             </div>
 
-            <div class="lightcone-stats">
-                <div class="stat-item">
-                    <span class="stat-emoji"><img src="https://xiaochen1235789.github.io/attribute_image/HP.webp" style="width:48px; height:48px; vertical-align:middle;" alt="HP"></span>
-                    <span class="stat-value">1058</span>
+            <!-- 右侧信息区 -->
+            <div class="hero-right">
+                <h1 id="lcName" class="lightcone-name">快乐的路一天</h1>
+
+                <!-- 命途图标框 + 专武文本 -->
+                <div class="path-weapon-row">
+                    <!-- 限制大小的命途框 -->
+                    <div class="path-box">
+                        <img src="https://xiaochen1235789.github.io/attribute_image/Hunt.webp" alt="巡猎" class="path-icon" onerror="this.src='https://via.placeholder.com/40x40/2d5243/81c784?text=巡猎'">
+                        <span class="path-text"></span>
+                    </div>
+                    <span class="weapon-text"></span>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-emoji"><img src="https://xiaochen1235789.github.io/attribute_image/ATK.webp" style="width:48px; height:48px; vertical-align:middle;" alt="ATK"></span>
-                    <span class="stat-value">582</span>
+                
+                <div class="lightcone-rating">
+                    <span class="star-filled">✭✭✭✭✭</span>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-emoji"><img src="https://xiaochen1235789.github.io/attribute_image/DEF.webp" style="width:48px; height:48px; vertical-align:middle;" alt="DEF"></span>
-                    <span class="stat-value">463</span>
+
+                <!-- 等级控件 -->
+                <div class="level-control-container">
+                    <div class="level-header">
+                        <span class="level-label">光锥等级</span>
+                        <span class="level-value" id="levelDisplay">Lv.90</span>
+                    </div>
+                    <input type="range" class="level-slider" id="levelRange" min="1" max="90" value="90" step="1" list="level-marks">
+                    <datalist id="level-marks">
+                        <option value="1" label="1"></option>
+                        <option value="20" label="20"></option>
+                        <option value="30" label="30"></option>
+                        <option value="40" label="40"></option>
+                        <option value="50" label="50"></option>
+                        <option value="60" label="60"></option>
+                        <option value="70" label="70"></option>
+                        <option value="80" label="80"></option>
+                        <option value="90" label="90"></option>
+                    </datalist>
+                    <div class="level-btns">
+                        <button class="level-btn" id="levelDown" aria-label="降低等级">↓</button>
+                        <button class="level-btn" id="levelUp" aria-label="提高等级">↑</button>
+                    </div>
+                </div>
+
+                <!-- 属性区域（带等级标题） -->
+                <div class="stats-section">
+                    <div class="stats-header" id="statsHeader">Lv.90 基础属性</div>
+                    <div class="lightcone-stats">
+                        <div class="stat-item">
+                            <span class="stat-emoji"><img src="https://xiaochen1235789.github.io/attribute_image/HP.webp" style="width:48px; height:48px; vertical-align:middle;" alt="HP"></span>
+                            <span class="stat-value" id="statHp">1269</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-emoji"><img src="https://xiaochen1235789.github.io/attribute_image/ATK.webp" style="width:48px; height:48px; vertical-align:middle;" alt="ATK"></span>
+                            <span class="stat-value" id="statAtk">698</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-emoji"><img src="https://xiaochen1235789.github.io/attribute_image/DEF.webp" style="width:48px; height:48px; vertical-align:middle;" alt="DEF"></span>
+                            <span class="stat-value" id="statDef">556</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -598,12 +846,12 @@
             </div>
         </section>
 
-        <!-- ===== 同步·清风碎片：金色分割线 + WIKI水印 ===== -->
+        <!-- ===== 同步·清风碎片 ===== -->
         <div class="divider" aria-hidden="true"></div>
         <div class="wiki-watermark">六哥荣耀WIKI · 虚构材料</div>
     </main>
 
-    <!-- ===== 页脚·同步清风碎片 ===== -->
+    <!-- ===== 页脚 ===== -->
     <footer class="wiki-footer">
         © <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.<br>
         本WIKI所有图片均由AI生成，不存在侵权行为，请仔细辨别.
@@ -613,15 +861,13 @@
     <button class="back-to-top" onclick="scrollToTop()" aria-label="回到顶部">↑</button>
 
     <script>
-        // ========== 全局工具函数（优化可读性，保留原核心） ==========
-        /** 图片加载成功：移除骨架、淡入 */
+        // ========== 全局工具函数 ==========
         function imageLoaded(img) {
             img.classList.add('loaded');
             const parent = img.closest('.skeleton');
             if (parent) parent.classList.remove('skeleton');
         }
 
-        /** 图片加载失败：替换占位图、移除骨架 */
         function imageError(img) {
             console.error('图片加载失败:', img.src);
             img.src = `https://via.placeholder.com/280x373/2d5243/81c784?text=图片加载失败`;
@@ -630,7 +876,6 @@
             if (parent) parent.classList.remove('skeleton');
         }
 
-        /** 显示顶部通知 (自动消失) */
         function showNotification(message, type = 'info') {
             const notification = document.getElementById('notification');
             notification.textContent = message;
@@ -639,18 +884,15 @@
             setTimeout(() => notification.classList.remove('show'), 3000);
         }
 
-        /** 平滑回到顶部 */
         function scrollToTop() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        /** 更新加载进度条宽度 */
         function updateLoadingProgress(percent) {
             const progressBar = document.getElementById('loadingProgress');
             if (progressBar) progressBar.style.width = `${percent}%`;
         }
 
-        /** 隐藏全局加载动画 & 进度条 */
         function hideLoadingOverlay() {
             const loadingEl = document.getElementById('global-loading');
             const progressBar = document.getElementById('loadingProgress');
@@ -664,12 +906,87 @@
             }
         }
 
+        // ========== 光锥等级数据 ==========
+        const levelStats = {
+            1:  { hp: 48, atk: 26, def: 21 },
+            20: { hp: 242, atk: 133, def: 106 },
+            30: { hp: 391, atk: 215, def: 171 },
+            40: { hp: 540, atk: 297, def: 236 },
+            50: { hp: 688, atk: 378, def: 301 },
+            60: { hp: 837, atk: 460, def: 366 },
+            70: { hp: 986, atk: 542, def: 431 },
+            80: { hp: 1058, atk: 582, def: 463 },
+            90: { hp: 1270, atk: 698, def: 556 }
+        };
+        const allowedLevels = [1,20,30,40,50,60,70,80,90];
+
+        // 当前等级状态
+        let currentLevel = 90;
+
+        // 获取最近的允许等级（滑块吸附）
+        function snapToAllowedLevel(value) {
+            return allowedLevels.reduce((prev, curr) => 
+                Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
+            );
+        }
+
+        function updateLevelDisplay() {
+            const levelDisplay = document.getElementById('levelDisplay');
+            const levelRange = document.getElementById('levelRange');
+            const statHp = document.getElementById('statHp');
+            const statAtk = document.getElementById('statAtk');
+            const statDef = document.getElementById('statDef');
+            const statsHeader = document.getElementById('statsHeader');
+            const downBtn = document.getElementById('levelDown');
+            const upBtn = document.getElementById('levelUp');
+
+            levelDisplay.textContent = `Lv.${currentLevel}`;
+            levelRange.value = currentLevel;
+
+            const stats = levelStats[currentLevel];
+            statHp.textContent = stats.hp;
+            statAtk.textContent = stats.atk;
+            statDef.textContent = stats.def;
+            statsHeader.textContent = `Lv.${currentLevel} 基础属性`;
+
+            downBtn.disabled = currentLevel === 1;
+            upBtn.disabled = currentLevel === 90;
+        }
+
+        function changeLevel(direction) {
+            const currentIndex = allowedLevels.indexOf(currentLevel);
+            if (currentIndex === -1) return;
+            const newIndex = currentIndex + direction;
+            if (newIndex < 0 || newIndex >= allowedLevels.length) return;
+            currentLevel = allowedLevels[newIndex];
+            updateLevelDisplay();
+        }
+
         // ========== 页面核心初始化 ==========
         document.addEventListener('DOMContentLoaded', () => {
             const loadStartTime = Date.now();
             updateLoadingProgress(30);
 
-            // --- 光锥版本切换数据 (V1/V2) ---
+            // 等级控件初始化
+            const levelRange = document.getElementById('levelRange');
+            const levelDown = document.getElementById('levelDown');
+            const levelUp = document.getElementById('levelUp');
+
+            levelRange.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value, 10);
+                const snapped = snapToAllowedLevel(val);
+                if (snapped !== currentLevel) {
+                    currentLevel = snapped;
+                    updateLevelDisplay();
+                }
+            });
+
+            levelDown.addEventListener('click', () => changeLevel(-1));
+            levelUp.addEventListener('click', () => changeLevel(1));
+
+            updateLevelDisplay();
+
+            // 光锥版本切换
             const versionData = {
                 v1: {
                     desc: `使装备者的暴击率提高 <span class="highlight">20%/22%/24%/26%/28%</span>，暴击伤害提高<span class="highlight">36%/45%/54%/63%/72%</span>，速度提高<span class="highlight">18%/21%/24%/27%/30%</span>，对生命值≤90%的敌方目标单体额外造成等同于装备者<span class="highlight">60%/80%/100%/120%/140%</span>攻击力的风属性的附加伤害。`,
@@ -691,13 +1008,12 @@
                 versionLogEl.textContent = versionData[ver].log;
             }
 
-            // 初始化版本显示并监听切换
             updateVersionDisplay();
             versionSelect.addEventListener('change', updateVersionDisplay);
 
             updateLoadingProgress(60);
 
-            // --- 回到顶部按钮显隐控制 ---
+            // 回到顶部按钮显隐
             const backToTopBtn = document.querySelector('.back-to-top');
             window.addEventListener('scroll', () => {
                 backToTopBtn.classList.toggle('show', window.scrollY > 300);
@@ -705,7 +1021,7 @@
 
             updateLoadingProgress(80);
 
-            // --- 模拟加载完成（400ms后关闭加载层）---
+            // 模拟加载完成
             setTimeout(() => {
                 updateLoadingProgress(100);
                 const loadTime = Date.now() - loadStartTime;
@@ -714,24 +1030,20 @@
                 showNotification('光锥详情加载完成！', 'success');
             }, 400);
 
-            // --- 同步清风碎片：自动更新页脚版权年份 ---
+            // 页脚年份
             const yearSpan = document.getElementById('year');
             if (yearSpan) yearSpan.textContent = new Date().getFullYear();
         });
 
-        // ========== 保险：window load时再次确保加载层关闭 ==========
         window.addEventListener('load', () => {
             hideLoadingOverlay();
             const progressBar = document.getElementById('loadingProgress');
             if (progressBar && progressBar.style.width !== '100%') {
                 progressBar.style.width = '100%';
             }
-            // 再次确保年份
             const yearSpan = document.getElementById('year');
             if (yearSpan) yearSpan.textContent = new Date().getFullYear();
         });
-
-        // ========== 已完全移除音乐播放器相关代码 ==========
     </script>
 </body>
 </html>
