@@ -1249,7 +1249,7 @@ function imageError(img) {
     }
 }
 
-// ==================== 网站运行天数功能 ====================
+// ==================== 网站运行天数功能 + 实时时间 ====================
 function initializeSiteAge() {
     const launchDate = new Date(2025, 10, 1); // 2025年11月1日
     const siteAgeElem = document.getElementById('site-age');
@@ -1280,15 +1280,15 @@ function initializeSiteAge() {
         if (hour >= 0 && hour < 5) {
             return '♪凌晨星星不睡你在熬，月亮都困了你还在嗨？快睡吧，别让黑眼圈“熊”霸你的脸♪';
         } else if (hour >= 5 && hour < 8) {
-            return '♪枣尚耗！新的一天从美味早餐开始，记得“早”点开心，“早”点元气满满哦！';
+            return '♪枣尚耗！新的一天从美味早餐开始，记得“早”点开心，“早”点元气满满哦！♪';
         } else if (hour >= 8 && hour < 11) {
-            return '♪上午好呀！工作/学习别太累，偶尔“摸鱼”也是生活的艺术，但别被老板“捉”到！';
+            return '♪上午好呀！工作/学习别太累，偶尔“摸鱼”也是生活的艺术，但别被老板“捉”到！♪';
         } else if (hour >= 11 && hour < 13) {
-            return '♪中午好！午饭吃饱饱，下午没烦恼，“饱”持微笑，你就是最“粽”要的人！';
+            return '♪中午好！午饭吃饱饱，下午没烦恼，“饱”持微笑，你就是最“粽”要的人！♪';
         } else if (hour >= 13 && hour < 17) {
             return '♪下午容易犯困？来杯奶茶“茶”一会儿，精神抖擞“下”午继续冲！';
         } else if (hour >= 17 && hour < 19) {
-            return '♪傍晚夕阳无限好，只是近黄昏——赶紧抓住今天的尾巴，把快乐“傍”在身边！';
+            return '♪傍晚夕阳无限好，只是近黄昏——赶紧抓住今天的尾巴，把快乐“傍”在身边！♪';
         } else if (hour >= 19 && hour < 23) {
             return '♪晚上好！追剧打游戏的同时，别忘了喝杯水，眼睛也要“晚”上休息一下哦♪';
         } else {
@@ -1296,6 +1296,7 @@ function initializeSiteAge() {
         }
     }
     
+    // 更新天数与祝福语
     function updateSiteAge() {
         const today = new Date();
         const days = Math.floor((today - launchDate) / (1000 * 60 * 60 * 24));
@@ -1313,8 +1314,47 @@ function initializeSiteAge() {
         }
     }
     
+    // 更新实时时间（北京时间，年月日时分的格式）
+    function updateLiveTime() {
+        const liveTimeElem = document.getElementById('live-time');
+        if (!liveTimeElem) return;
+        
+        // 强制转换为东八区时间
+        const now = new Date();
+        const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+        const chinaDate = new Date(utc + 8 * 3600000);
+        
+        const year = chinaDate.getFullYear();
+        const month = String(chinaDate.getMonth() + 1).padStart(2, '0');
+        const day = String(chinaDate.getDate()).padStart(2, '0');
+        const hour = String(chinaDate.getHours()).padStart(2, '0');
+        const minute = String(chinaDate.getMinutes()).padStart(2, '0');
+        
+        liveTimeElem.textContent = `当前时间：${year}年${month}月${day}日 ${hour}:${minute}`;
+    }
+    
+    // 创建时间显示元素（如果不存在）
+    const container = document.querySelector('.site-age-container');
+    if (container && !document.getElementById('live-time')) {
+        const timeDiv = document.createElement('div');
+        timeDiv.id = 'live-time';
+        // 设置简单样式，与现有设计协调
+        timeDiv.style.marginTop = '8px';
+        timeDiv.style.fontSize = '0.95rem';
+        timeDiv.style.color = 'var(--text-secondary)';
+        timeDiv.style.fontWeight = '400';
+        timeDiv.style.letterSpacing = '0.3px';
+        container.appendChild(timeDiv);
+    }
+    
+    // 立即执行一次
     updateSiteAge();
-    setInterval(updateSiteAge, 86400000); // 每天更新一次
+    updateLiveTime();
+    
+    // 每天更新一次天数
+    setInterval(updateSiteAge, 86400000);
+    // 每分钟更新一次实时时间（分钟变化时才刷新）
+    setInterval(updateLiveTime, 60000);
 }
 
 // ==================== 搜索功能 ====================
