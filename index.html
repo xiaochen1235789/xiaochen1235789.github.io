@@ -1248,6 +1248,7 @@ function imageError(img) {
         parent.classList.remove('skeleton');
     }
 }
+
 // ==================== 网站运行天数功能 ====================
 function initializeSiteAge() {
     const launchDate = new Date(2025, 10, 1); // 2025年11月1日
@@ -1268,22 +1269,54 @@ function initializeSiteAge() {
         365: '🎂六哥荣耀WIKI一周年纪念🎂'
     };
     
+    // 获取中国当前小时（东八区）
+    function getChinaHour() {
+        const now = new Date();
+        return (now.getUTCHours() + 8) % 24;
+    }
+    
+    // 根据小时获取对应祝福语
+    function getGreetingByHour(hour) {
+        if (hour >= 0 && hour < 5) {
+            return '♪凌晨星星不睡你在熬，月亮都困了你还在嗨？快睡吧，别让黑眼圈“熊”霸你的脸♪';
+        } else if (hour >= 5 && hour < 8) {
+            return '♪枣尚耗！新的一天从美味早餐开始，记得“早”点开心，“早”点元气满满哦！';
+        } else if (hour >= 8 && hour < 11) {
+            return '♪上午好呀！工作/学习别太累，偶尔“摸鱼”也是生活的艺术，但别被老板“捉”到！';
+        } else if (hour >= 11 && hour < 13) {
+            return '♪中午好！午饭吃饱饱，下午没烦恼，“饱”持微笑，你就是最“粽”要的人！';
+        } else if (hour >= 13 && hour < 17) {
+            return '♪下午容易犯困？来杯奶茶“茶”一会儿，精神抖擞“下”午继续冲！';
+        } else if (hour >= 17 && hour < 19) {
+            return '♪傍晚夕阳无限好，只是近黄昏——赶紧抓住今天的尾巴，把快乐“傍”在身边！';
+        } else if (hour >= 19 && hour < 23) {
+            return '♪晚上好！追剧打游戏的同时，别忘了喝杯水，眼睛也要“晚”上休息一下哦♪';
+        } else {
+            return '♪深夜夜深了，再不睡就要“深夜emo”了！快躺下，梦里啥都有，包括你想见的人♪';
+        }
+    }
+    
     function updateSiteAge() {
         const today = new Date();
         const days = Math.floor((today - launchDate) / (1000 * 60 * 60 * 24));
+        const chinaHour = getChinaHour();
+        const greeting = getGreetingByHour(chinaHour);
         
         if (specialDays[days]) {
-            siteAgeElem.innerHTML = specialDays[days];
+            // 特殊日：特殊祝福语 + 换行 + 时段祝福语
+            siteAgeElem.innerHTML = specialDays[days] + '<br>' + greeting;
             siteAgeElem.classList.add('special');
         } else {
-            siteAgeElem.innerHTML = `📅 六哥荣耀WIKI已上线 ${days} 天,祝你天天开心`;
+            // 普通日：天数 + 换行 + 时段祝福语
+            siteAgeElem.innerHTML = `📅 六哥荣耀WIKI已上线 ${days} 天<br>${greeting}`;
             siteAgeElem.classList.remove('special');
         }
     }
     
     updateSiteAge();
-    setInterval(updateSiteAge, 86400000);
+    setInterval(updateSiteAge, 86400000); // 每天更新一次
 }
+
 // ==================== 搜索功能 ====================
 function initializeSearch() {
     const searchInput = document.getElementById('search-input');
