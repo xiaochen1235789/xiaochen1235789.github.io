@@ -79,6 +79,11 @@
             min-height: 100vh;
         }
         
+        /* 弹窗打开时禁止页面滚动 */
+        body.modal-open {
+            overflow: hidden;
+        }
+        
         /* ==================== 加载相关样式 ==================== */
         #global-loading {
             position: fixed;
@@ -1449,7 +1454,8 @@ function openChangelogModal() {
     
     // 显示弹窗
     modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
+    // 禁用主页滚动
+    document.body.classList.add('modal-open');
     
     // 显示加载状态
     showNotification('正在加载更新日志...', 'info');
@@ -1492,14 +1498,22 @@ function closeChangelogModal() {
     const modal = document.getElementById('changelog-modal');
     if (!modal) return;
     
-    modal.style.display = 'none';
-    document.body.style.overflow = 'auto';
+    // 添加关闭动画
+    modal.classList.add('closing');
     
-    // 可选：重置iframe src
-    const iframe = document.getElementById('changelog-iframe');
-    if (iframe) {
-        iframe.src = 'about:blank';
-    }
+    // 动画结束后隐藏弹窗并恢复滚动
+    setTimeout(() => {
+        modal.style.display = 'none';
+        modal.classList.remove('closing');
+        // 恢复主页滚动
+        document.body.classList.remove('modal-open');
+        
+        // 可选：重置iframe src
+        const iframe = document.getElementById('changelog-iframe');
+        if (iframe) {
+            iframe.src = 'about:blank';
+        }
+    }, 300); // 动画持续时间
 }
 // ESC键关闭弹窗
 document.addEventListener('keydown', function(event) {
@@ -1532,26 +1546,6 @@ window.addEventListener('message', function(event) {
         }
     }
 });
-//弹窗动作关闭函数
-function closeChangelogModal() {
-    const modal = document.getElementById('changelog-modal');
-    if (!modal) return;
-    
-    // 添加关闭动画
-    modal.classList.add('closing');
-    
-    setTimeout(() => {
-        modal.style.display = 'none';
-        modal.classList.remove('closing');
-        document.body.style.overflow = 'auto';
-        
-        // 可选：重置iframe src
-        const iframe = document.getElementById('changelog-iframe');
-        if (iframe) {
-            iframe.src = 'about:blank';
-        }
-    }, 300); // 动画持续时间
-}
 // ==================== 同步消息监听 ====================
 function initializeMessageListener() {
     // 监听来自其他页面的消息
