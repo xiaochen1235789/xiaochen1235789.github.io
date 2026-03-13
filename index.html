@@ -1459,41 +1459,36 @@ function openChangelogModal() {
     const iframe = document.getElementById('changelog-iframe');
     
     if (!modal || !iframe) return;
+
+    // 如果弹窗已显示且不处于关闭动画中，则忽略本次点击（避免重复加载）
+    if (modal.style.display === 'flex' && !modal.classList.contains('closing')) {
+        return;
+    }
+
+    // 移除可能残留的 closing 类，确保进入动画正常
+    modal.classList.remove('closing');
     
-    // 显示弹窗
     modal.style.display = 'flex';
-    // 禁用主页滚动
     document.body.classList.add('modal-open');
     
-    // 显示加载状态
     showNotification('正在加载更新日志...', 'info');
     
-    // 添加时间戳防止缓存
-    iframe.src = 'changelog.html?t=' + Date.now();
+    iframe.src = 'changelog.html?t=' + Date.now(); // 防缓存
     
-    // 监听iframe加载完成
     iframe.onload = function() {
         console.log('更新日志页面加载完成');
-        
-        // 尝试与iframe通信，设置适配模式
         try {
-            const iframeWindow = iframe.contentWindow;
-            if (iframeWindow) {
-                // 通知iframe页面处于弹窗模式
-                iframeWindow.postMessage({ type: 'setIframeMode', mode: true }, '*');
-            }
-        } catch (e) {
-            console.log('跨域通信受限，但仍可正常显示');
-        }
-        
+            iframe.contentWindow.postMessage({ type: 'setIframeMode', mode: true }, '*');
+        } catch (e) {}
         showNotification('更新日志已加载', 'success');
     };
     
     iframe.onerror = function() {
-        console.error('加载更新日志失败');
         showNotification('加载更新日志失败，请稍后重试', 'error');
     };
 }
+
+
 function closeChangelogModal() {
     const modal = document.getElementById('changelog-modal');
     if (!modal) return;
