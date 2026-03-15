@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="幻灵猫魅 - 五星巡猎光锥，追加攻击特化。画师Mia原创立绘。">
+    <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
+    <title>幻灵猫魅 · 六哥荣耀WIKI</title>
+
+    <style>
+        /* ----- 设计系统（与主页统一）----- */
+        :root {
+            --bg: #121212;
+            --card-bg: #1e3a2f;
+            --card-bg-hover: #284a3c;
+            --text-main: #e0e0e0;
+            --text-highlight: #81c784;   /* 六哥绿 */
+            --text-secondary: #99aabb;
+            --special-color: #ffd700;     /* 荣耀金 */
+            --border-color: #3d725f;
+            --radius: 6px;
+            --gap: 12px;
+            --shadow: 0 4px 12px rgba(0,0,0,0.3);
+            --transition-fast: 0.2s ease;
+            --transition-normal: 0.3s ease;
+            
+            /* 同步清风碎片 · 色彩扩展 */
+            --divider-green: #8FBC8F;
+            --divider-gold: #FFD700;
+            --footer-text: #7f9e8c;
+            --watermark-text: #5f7a6b;
+            --border-deep: #4a705f;
+            
+            /* 星星专用 */
+            --star-gold: #FFD700;
+            --star-glow: rgba(255, 215, 0, 0.6);
+            --star-empty: #7F8C8D;
+
+            /* 等级控件专用颜色 */
+            --button-bg: #2d5243;
+            --button-hover: #3d725f;
+            --button-disabled: #1f2e28;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text-main);
+            line-height: 1.5;
+            min-height: 100vh;
+            padding-bottom: 30px;
+        }
+
+        /* ===== 全局加载 & 进度条 ===== */
+        .loading-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 3px;
+            background: var(--text-highlight);
+            z-index: 9999999;
+            transition: width 0.3s ease, opacity 0.5s ease;
+            opacity: 1;
+        }
+
+        #global-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(129, 199, 132, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--text-highlight);
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, #2a3a35 25%, #354540 50%, #2a3a35 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+            border-radius: var(--radius);
+        }
+
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ===== 顶部导航 ===== */
+        .top-nav {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 12px 20px;
+            margin: 16px auto;
+            display: flex;
+            align-items: center;
+            max-width: 800px;
+            box-shadow: var(--shadow);
+            border: 1px solid transparent;
+            transition: border-color var(--transition-normal);
+        }
+
+        .top-nav:hover {
+            border-color: var(--border-color);
+        }
+
+        .back-btn {
+            color: var(--text-highlight);
+            text-decoration: none;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all var(--transition-fast);
+            font-weight: 500;
+        }
+
+        .back-btn:hover {
+            color: var(--special-color);
+            transform: translateX(-2px);
+        }
+
+        .page-title {
+            margin-left: auto;
+            font-size: 1.2rem;
+            color: var(--text-highlight);
+            font-weight: 600;
+        }
+
+        /* ===== 主容器 ===== */
+        .detail-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 16px;
+            display: flex;
+            flex-direction: column;
+            gap: var(--gap);
+        }
+
+        /* ----- 光锥英雄卡（左右布局）----- */
+        .lightcone-hero-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 24px;
+            border: 1px solid transparent;
+            transition: all var(--transition-normal);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 24px;
+        }
+
+        .lightcone-hero-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--text-highlight);
+            background: var(--card-bg-hover);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        /* 左侧图片区 */
+        .hero-left {
+            flex: 0 0 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .lightcone-img-container {
+            width: 100%;
+            max-width: 200px;
+            border-radius: var(--radius);
+            overflow: hidden;
+            aspect-ratio: 3/4;
+            border: 1px solid var(--border-color);
+        }
+
+        .lightcone-img-container.skeleton {
+            background: #2d5243;
+        }
+
+        .lightcone-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform var(--transition-normal);
+            opacity: 0;
+        }
+
+        .lightcone-img.loaded {
+            opacity: 1;
+        }
+
+        .lightcone-hero-card:hover .lightcone-img {
+            transform: scale(1.05);
+        }
+
+        /* 图源署名 */
+        .image-credit {
+            font-size: 0.75rem;
+            color: #8fae9a;
+            margin-top: 8px;
+            text-align: center;
+            line-height: 1.4;
+            border-top: 1px dashed var(--border-color);
+            padding-top: 6px;
+            width: 100%;
+        }
+        .image-credit a {
+            color: var(--divider-gold);
+            text-decoration: none;
+        }
+        .image-credit a:hover {
+            text-decoration: underline;
+        }
+
+        /* 右侧信息区 */
+        .hero-right {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .lightcone-name {
+            font-size: 1.8rem;
+            color: var(--text-highlight);
+            font-weight: 700;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            line-height: 1.2;
+        }
+
+        /* 命途与专武信息行 */
+        .path-weapon-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        /* 命途图标框（限制大小） */
+        .path-box {
+            width: 45px;
+            height: 45px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            transition: all var(--transition-fast);
+        }
+
+        .path-box:hover {
+            border-color: var(--text-highlight);
+            background: rgba(129, 199, 132, 0.1);
+        }
+
+        .path-icon {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+
+        .path-text {
+            color: var(--text-highlight);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        .weapon-text {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-style: italic;
+        }
+
+        .lightcone-rating {
+            font-size: 28px;
+            letter-spacing: 6px;
+        }
+
+        .star-filled {
+            color: var(--star-gold);
+            text-shadow: 0 0 16px var(--star-gold), 0 0 30px var(--star-glow);
+        }
+
+        /* 等级控件区域 */
+        .level-control-container {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0,0,0,0.2);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .level-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .level-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .level-value {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-highlight);
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .level-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .level-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--text-highlight);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(129,199,132,0.6);
+            border: 1px solid rgba(255,255,255,0.3);
+            transition: 0.1s;
+        }
+
+        .level-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            background: var(--special-color);
+        }
+
+        .level-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--text-highlight);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(129,199,132,0.6);
+        }
+
+        .level-btns {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .level-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: var(--radius);
+            background: var(--button-bg);
+            color: var(--text-main);
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .level-btn:hover:not(:disabled) {
+            background: var(--button-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .level-btn:disabled {
+            background: var(--button-disabled);
+            color: #666;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* 属性区域（带等级标题） */
+        .stats-section {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 16px;
+            background: rgba(0,0,0,0.15);
+        }
+
+        .stats-header {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .lightcone-stats {
+            display: flex;
+            justify-content: space-around;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            min-width: 80px;
+        }
+
+        .stat-emoji { font-size: 1.5rem; }
+        .stat-label { font-size: 0.9rem; color: var(--text-secondary); }
+        .stat-value { font-size: 1.2rem; color: var(--text-highlight); font-weight: 600; }
+
+        /* ----- 效果与故事模块 ----- */
+        .detail-module {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+        }
+
+        .module-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .module-title {
+            font-size: 1.4rem;
+            color: var(--text-highlight);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .module-title::before {
+            content: "";
+        }
+
+        .version-select {
+            background: var(--card-bg-hover);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all var(--transition-fast);
+            outline: none;
+        }
+
+        .version-select:hover,
+        .version-select:focus {
+            border-color: var(--text-highlight);
+            background: #2d5243;
+        }
+
+        .module-content {
+            line-height: 1.7;
+            color: var(--text-main);
+            font-size: 0.95rem;
+        }
+
+        .module-content .highlight {
+            color: var(--special-color);
+            font-weight: 700;
+            background: rgba(255,215,0,0.08);
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+
+        .version-log {
+            margin-top: 16px;
+            padding: 10px 14px;
+            background: rgba(129, 199, 132, 0.05);
+            border-radius: var(--radius);
+            font-size: 0.85rem;
+            color: var(--text-highlight);
+            border-left: 3px solid var(--text-highlight);
+        }
+
+        .lore-content {
+            white-space: pre-line;
+            line-height: 1.8;
+        }
+
+        .lore-content::first-letter {
+            font-size: 1.5em;
+            color: var(--special-color);
+            font-weight: bold;
+            float: left;
+            line-height: 1;
+            margin-right: 4px;
+        }
+
+        /* ===== 回到顶部按钮 ===== */
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 20px;
+            width: 46px;
+            height: 46px;
+            background: var(--card-bg-hover);
+            color: var(--text-highlight);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            opacity: 0;
+            visibility: hidden;
+            transition: all var(--transition-normal);
+            z-index: 9999;
+            border: 1px solid var(--text-highlight);
+        }
+
+        .back-to-top.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .back-to-top:hover {
+            background: var(--text-highlight);
+            color: var(--bg);
+            transform: translateY(-2px);
+        }
+
+        /* ===== 通知消息 ===== */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            color: var(--text-highlight);
+            padding: 12px 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            z-index: 10000;
+            transform: translateX(120%);
+            transition: transform 0.4s ease;
+            border-left: 4px solid var(--text-highlight);
+            max-width: 300px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            border-left-color: #4ade80;
+            color: #4ade80;
+        }
+
+        /* ========== 同步·清风碎片风格 ========== */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--divider-green), var(--divider-gold), var(--divider-green), transparent);
+            margin: 28px 0;
+            opacity: 0.6;
+            border: none;
+            width: 100%;
+        }
+
+        .wiki-watermark {
+            text-align: center;
+            margin-top: 30px;
+            margin-bottom: 10px;
+            color: var(--watermark-text);
+            font-size: 12px;
+            opacity: 0.7;
+            letter-spacing: 1px;
+            font-style: normal;
+        }
+
+        .wiki-footer {
+            text-align: center;
+            margin-top: 30px;
+            color: var(--footer-text);
+            font-size: 13px;
+            opacity: 0.9;
+            padding: 20px 0 10px;
+            border-top: 1px solid var(--border-deep);
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            width: 100%;
+            transition: all var(--transition-fast);
+        }
+
+        .wiki-footer a {
+            color: var(--divider-green);
+            text-decoration: none;
+        }
+
+        .wiki-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ===== 响应式优化 ===== */
+        @media (max-width: 768px) {
+            .lightcone-hero-card {
+                gap: 16px;
+            }
+            .hero-right {
+                display: flex;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: space-between;
+                gap: 10px;
+            }
+            .lightcone-name,
+            .path-weapon-row,
+            .lightcone-rating {
+                width: 100%;
+            }
+            .level-control-container,
+            .stats-section {
+                width: calc(50% - 5px);
+                margin-bottom: 0;
+            }
+            .level-control-container {
+                padding: 10px;
+            }
+            .level-header .level-value {
+                font-size: 1.2rem;
+            }
+            .level-slider {
+                width: 100%;
+            }
+            .level-btns {
+                margin-top: 8px;
+                gap: 10px;
+            }
+            .level-btn {
+                width: 32px;
+                height: 32px;
+                font-size: 1rem;
+            }
+            .stats-section {
+                padding: 10px;
+            }
+            .stats-header {
+                font-size: 0.9rem;
+                margin-bottom: 8px;
+            }
+            .lightcone-stats {
+                gap: 6px;
+            }
+            .stat-item {
+                min-width: auto;
+                flex: 1;
+            }
+            .stat-emoji img {
+                width: 32px;
+                height: 32px;
+            }
+            .stat-value {
+                font-size: 1rem;
+            }
+            .stat-label {
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .level-control-container,
+            .stats-section {
+                width: 100%;
+            }
+            .lightcone-name {
+                font-size: 1.5rem;
+            }
+            .path-box {
+                width: 70px;
+                height: 70px;
+            }
+            .path-icon {
+                width: 32px;
+                height: 32px;
+            }
+            .path-text {
+                font-size: 0.8rem;
+            }
+            .weapon-text {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 加载进度条 -->
+    <div class="loading-progress" id="loadingProgress"></div>
+    <!-- 全局加载动画 -->
+    <div id="global-loading">
+        <div style="text-align: center;">
+            <div class="loading-spinner"></div>
+            <p style="color: var(--text-highlight); margin-top: 16px; font-size: 1.1rem;">加载资源中...</p>
+        </div>
+    </div>
+    <!-- 通知消息容器 -->
+    <div class="notification" id="notification"></div>
+
+    <!-- ===== 顶部导航 ===== -->
+    <nav class="top-nav" aria-label="页面导航">
+        <a>
+            <span><span style="color:lightgreen; font-size: 16px;">六哥荣耀WIKI</span></span>
+        </a>
+        <div class="page-title">光锥详情</div>
+    </nav>
+
+    <!-- ===== 主内容区 ===== -->
+    <main class="detail-container">
+        <!-- 光锥核心信息卡片（左右布局） -->
+        <section class="lightcone-hero-card" aria-labelledby="lcName">
+            <!-- 左侧图片区 + 图源标注 -->
+            <div class="hero-left">
+                <div class="lightcone-img-container skeleton">
+                    <img src="https://xiaochen1235789.github.io/lightcone_images/xiaomi.webp" 
+                         alt="光锥「幻灵猫魅」立绘 · 画师Mia"
+                         class="lightcone-img"
+                         loading="eager"
+                         onload="imageLoaded(this)"
+                         onerror="imageError(this)">
+                </div>
+                <!-- 图源标注：画师 Mia 签名 非盈利 -->
+                <div class="image-credit">
+                    🖌️ 图源：画师 Mia<br>仅作非盈利展示，侵删
+                </div>
+            </div>
+
+            <!-- 右侧信息区 -->
+            <div class="hero-right">
+                <h1 id="lcName" class="lightcone-name">幻灵猫魅</h1>
+
+                <!-- 命途图标框 + 专武文本 -->
+                <div class="path-weapon-row">
+                    <div class="path-box">
+                        <img src="https://xiaochen1235789.github.io/attribute_image/Joy.webp" alt="欢愉" class="path-icon" onerror="this.src='https://via.placeholder.com/40x40/2d5243/81c784?text='欢愉">
+                        <span class="path-text"></span>
+                    </div>
+                    <span class="weapon-text"></span>
+                </div>
+                
+                <div class="lightcone-rating">
+                    <span class="star-filled">✭✭✭✭✭</span>
+                </div>
+
+                <!-- 等级控件 -->
+                <div class="level-control-container">
+                    <div class="level-header">
+                        <span class="level-label">光锥等级</span>
+                        <span class="level-value" id="levelDisplay">Lv.90</span>
+                    </div>
+                    <input type="range" class="level-slider" id="levelRange" min="1" max="90" value="90" step="1" list="level-marks">
+                    <datalist id="level-marks">
+                        <option value="1" label="1"></option>
+                        <option value="20" label="20"></option>
+                        <option value="30" label="30"></option>
+                        <option value="40" label="40"></option>
+                        <option value="50" label="50"></option>
+                        <option value="60" label="60"></option>
+                        <option value="70" label="70"></option>
+                        <option value="80" label="80"></option>
+                        <option value="90" label="90"></option>
+                    </datalist>
+                    <div class="level-btns">
+                        <button class="level-btn" id="levelDown" aria-label="降低等级">↓</button>
+                        <button class="level-btn" id="levelUp" aria-label="提高等级">↑</button>
+                    </div>
+                </div>
+
+                <!-- 属性区域（带等级标题） -->
+                <div class="stats-section">
+                    <div class="stats-header" id="statsHeader">Lv.90 基础属性</div>
+                    <div class="lightcone-stats">
+                        <div class="stat-item">
+                            <span class="stat-emoji"><img src="https://xiaochen1235789.github.io/attribute_image/HP.webp" style="width:48px; height:48px; vertical-align:middle;" alt="HP"></span>
+                            <span class="stat-value" id="statHp">1142</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-emoji"><img src="https://xiaochen1235789.github.io/attribute_image/ATK.webp" style="width:48px; height:48px; vertical-align:middle;" alt="ATK"></span>
+                            <span class="stat-value" id="statAtk">698</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-emoji"><img src="https://xiaochen1235789.github.io/attribute_image/DEF.webp" style="width:48px; height:48px; vertical-align:middle;" alt="DEF"></span>
+                            <span class="stat-value" id="statDef">635</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 光锥效果模块（版本切换） -->
+        <section class="detail-module" aria-labelledby="effectTitle">
+            <div class="module-header">
+                <h2 id="effectTitle" class="module-title">光锥效果：幻灵·灵动</h2>
+                <select class="version-select" id="versionSelect" aria-label="选择技能描述版本">
+                    <option value="v1">V1 测试版本</option>
+                    <option value="v2" selected>V2 正式版本</option>
+                </select>
+            </div>
+            <div class="module-content" id="skillDesc"></div>
+            <div class="version-log" id="versionLog"></div>
+        </section>
+
+        <!-- 光锥背景故事模块 -->
+        <section class="detail-module" aria-labelledby="loreTitle">
+            <div class="module-header">
+                <h2 id="loreTitle" class="module-title">光锥故事</h2>
+            </div>
+            <div class="module-content lore-content">
+什么刺入心脏时，她听见自己的笑声在别人喉咙里响起。
+
+从那天起，“幻灵猫魅”不再是戏子，而是容器——九条忆质凝结的尾巴每摆动一次，台下就有一张脸变成她的傀儡。观众笑得越欢，她就离自己越远。
+
+后来追兵破门而入，只看见一只琥珀色的猫蹲在空荡荡的舞台上，瞳孔里有什么东西晃了晃。
+
+它还在等人发笑。
+
+而真正的她，早被那一夜的笑声吃干净了。
+                <br>
+            </div>
+        </section>
+
+        <!-- ===== 同步 ===== -->
+        <div class="divider" aria-hidden="true"></div>
+        <div class="wiki-watermark">六哥荣耀WIKI · 虚构材料 · 画师Mia</div>
+    </main>
+
+    <!-- ===== 页脚 ===== -->
+    <footer class="wiki-footer">
+        © <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.<br>
+        本WIKI所有图片均由AI生成，不存在侵权行为，请仔细辨别。  图源标注：画师 Mia
+    </footer>
+
+    <!-- 回到顶部按钮 -->
+    <button class="back-to-top" onclick="scrollToTop()" aria-label="回到顶部">↑</button>
+
+    <script>
+        // ========== 全局工具函数 ==========
+        function imageLoaded(img) {
+            img.classList.add('loaded');
+            const parent = img.closest('.skeleton');
+            if (parent) parent.classList.remove('skeleton');
+        }
+
+        function imageError(img) {
+            console.error('图片加载失败:', img.src);
+            img.src = `https://via.placeholder.com/400x533/2d5243/81c784?text=幻灵猫魅+Mia`;
+            img.alt = '图片加载失败，画师Mia';
+            const parent = img.closest('.skeleton');
+            if (parent) parent.classList.remove('skeleton');
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            setTimeout(() => notification.classList.remove('show'), 3000);
+        }
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function updateLoadingProgress(percent) {
+            const progressBar = document.getElementById('loadingProgress');
+            if (progressBar) progressBar.style.width = `${percent}%`;
+        }
+
+        function hideLoadingOverlay() {
+            const loadingEl = document.getElementById('global-loading');
+            const progressBar = document.getElementById('loadingProgress');
+            if (loadingEl && loadingEl.style.display !== 'none') {
+                loadingEl.style.opacity = '0';
+                setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
+            }
+            if (progressBar) {
+                progressBar.style.opacity = '0';
+                setTimeout(() => { progressBar.style.display = 'none'; }, 500);
+            }
+        }
+
+        // ========== 光锥等级数据 (幻灵猫魅) ==========
+        const levelStats = {
+            1:  { hp: 43, atk: 26, def: 24 },
+            20: { hp: 218, atk: 133, def: 121 },
+            30: { hp: 352, atk: 215, def: 195 },
+            40: { hp: 486, atk: 297, def: 270 },
+            50: { hp: 619, atk: 378, def: 344 },
+            60: { hp: 753, atk: 460, def: 418 },
+            70: { hp: 887, atk: 542, def: 493 },
+            80: { hp: 952, atk: 582, def: 529 },
+            90: { hp: 1142, atk: 698, def: 635 }
+        };
+        const allowedLevels = [1,20,30,40,50,60,70,80,90];
+
+        // 当前等级状态
+        let currentLevel = 90;
+
+        // 获取最近的允许等级（滑块吸附）
+        function snapToAllowedLevel(value) {
+            return allowedLevels.reduce((prev, curr) => 
+                Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
+            );
+        }
+
+        function updateLevelDisplay() {
+            const levelDisplay = document.getElementById('levelDisplay');
+            const levelRange = document.getElementById('levelRange');
+            const statHp = document.getElementById('statHp');
+            const statAtk = document.getElementById('statAtk');
+            const statDef = document.getElementById('statDef');
+            const statsHeader = document.getElementById('statsHeader');
+            const downBtn = document.getElementById('levelDown');
+            const upBtn = document.getElementById('levelUp');
+
+            levelDisplay.textContent = `Lv.${currentLevel}`;
+            levelRange.value = currentLevel;
+
+            const stats = levelStats[currentLevel];
+            statHp.textContent = stats.hp;
+            statAtk.textContent = stats.atk;
+            statDef.textContent = stats.def;
+            statsHeader.textContent = `Lv.${currentLevel} 基础属性`;
+
+            downBtn.disabled = currentLevel === 1;
+            upBtn.disabled = currentLevel === 90;
+        }
+
+        function changeLevel(direction) {
+            const currentIndex = allowedLevels.indexOf(currentLevel);
+            if (currentIndex === -1) return;
+            const newIndex = currentIndex + direction;
+            if (newIndex < 0 || newIndex >= allowedLevels.length) return;
+            currentLevel = allowedLevels[newIndex];
+            updateLevelDisplay();
+        }
+
+        // ========== 页面核心初始化 ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            const loadStartTime = Date.now();
+            updateLoadingProgress(30);
+
+            // 等级控件初始化
+            const levelRange = document.getElementById('levelRange');
+            const levelDown = document.getElementById('levelDown');
+            const levelUp = document.getElementById('levelUp');
+
+            levelRange.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value, 10);
+                const snapped = snapToAllowedLevel(val);
+                if (snapped !== currentLevel) {
+                    currentLevel = snapped;
+                    updateLevelDisplay();
+                }
+            });
+
+            levelDown.addEventListener('click', () => changeLevel(-1));
+            levelUp.addEventListener('click', () => changeLevel(1));
+
+            updateLevelDisplay();
+
+            // 光锥版本切换 (幻灵猫魅效果)
+            const versionData = {
+                v1: {
+                    desc: `使装备者暴击率提高 <span class="highlight">15.0%/17.5%/20.0%/22.5%/25.0%</span>。装备者在施放追加攻击时，将获得1层【灵动】效果，最多叠加3层，每层【灵动】使追加攻击造成的伤害提高 <span class="highlight">30%/36%/42%/48%/52%</span>。`,
+                    log: "V1 测试版本 · 数值仅供参考"
+                },
+                v2: {
+                    desc: `使装备者暴击率提高 <span class="highlight">15.0%/17.5%/20.0%/22.5%/25.0%</span>。装备者在施放追加攻击时，将获得1层【灵动】效果，最多叠加3层，每层【灵动】使追加攻击造成的伤害提高 <span class="highlight">30%/36%/42%/48%/52%</span>。`,
+                    log: "V2 正式版本 · 当前生效"
+                }
+            };
+
+            const versionSelect = document.getElementById('versionSelect');
+            const skillDescEl = document.getElementById('skillDesc');
+            const versionLogEl = document.getElementById('versionLog');
+
+            function updateVersionDisplay() {
+                const ver = versionSelect.value;
+                skillDescEl.innerHTML = versionData[ver].desc;
+                versionLogEl.textContent = versionData[ver].log;
+            }
+
+            updateVersionDisplay();
+            versionSelect.addEventListener('change', updateVersionDisplay);
+
+            updateLoadingProgress(60);
+
+            // 回到顶部按钮显隐
+            const backToTopBtn = document.querySelector('.back-to-top');
+            window.addEventListener('scroll', () => {
+                backToTopBtn.classList.toggle('show', window.scrollY > 300);
+            });
+
+            updateLoadingProgress(80);
+
+            // 模拟加载完成
+            setTimeout(() => {
+                updateLoadingProgress(100);
+                const loadTime = Date.now() - loadStartTime;
+                console.log(`详情页加载完成，耗时 ${loadTime}ms`);
+                hideLoadingOverlay();
+                showNotification('幻灵猫魅详情加载完成！', 'success');
+            }, 400);
+
+            // 页脚年份
+            const yearSpan = document.getElementById('year');
+            if (yearSpan) yearSpan.textContent = new Date().getFullYear();
+        });
+
+        window.addEventListener('load', () => {
+            hideLoadingOverlay();
+            const progressBar = document.getElementById('loadingProgress');
+            if (progressBar && progressBar.style.width !== '100%') {
+                progressBar.style.width = '100%';
+            }
+            const yearSpan = document.getElementById('year');
+            if (yearSpan) yearSpan.textContent = new Date().getFullYear();
+        });
+    </script>
+</body>
+</html>
