@@ -36,7 +36,6 @@
     <!-- Font Awesome 图标 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    
     <style>
         /* ==================== 基础变量 ==================== */
         :root {
@@ -486,12 +485,39 @@
             background: var(--card-bg-hover);
             border-color: var(--text-highlight);
         }
-
-        /* 新增：4种养成材料卡片渐变背景样式 - 注释清晰，不影响原有样式 */
-        .material-green {background: linear-gradient(to bottom, #81c784, #284a3c);} /* 淡绿-风系材料/清风碎片专用 */
-        .material-blue {background: linear-gradient(to bottom, #81b7c7, #283c4a);} /* 淡蓝-水系材料专用 */
-        .material-purple {background: linear-gradient(to bottom, #b781c7, #3c284a);} /* 淡紫-雷系/暗系材料专用 */
-        .material-gold {background: linear-gradient(to bottom, #c7c081, #4a4728);} /* 淡金-光系/通用材料专用 */
+        
+        /* 材料卡片品质颜色应用到图片容器背景（方案二） */
+        .material-green .card-img {
+            background: linear-gradient(to bottom, #81c784, #284a3c);
+        }
+        .material-blue .card-img {
+            background: linear-gradient(to bottom, #81b7c7, #283c4a);
+        }
+        .material-purple .card-img {
+            background: linear-gradient(to bottom, #b781c7, #3c284a);
+        }
+        .material-gold .card-img {
+            background: linear-gradient(to bottom, #c7c081, #4a4728);
+        }
+        
+        /* 材料卡片内图片半透明透出背景色 */
+        .material-card .card-img img {
+            opacity: 0.85;
+            transition: opacity 0.2s ease;
+        }
+        
+        /* 鼠标悬停时图片恢复不透明度 */
+        .material-card:hover .card-img img {
+            opacity: 1;
+        }
+        
+        /* 移除原卡片背景渐变（若有残留） */
+        .material-green,
+        .material-blue,
+        .material-purple,
+        .material-gold {
+            background: var(--card-bg) !important;
+        }
         
         /* 图片容器 */
         .card-img {
@@ -1295,26 +1321,97 @@ function initializeSiteAge() {
         return (now.getUTCHours() + 8) % 24;
     }
     
-    // 根据小时获取对应祝福语
-    function getGreetingByHour(hour) {
-        if (hour >= 0 && hour < 5) {
-            return '♪凌晨星星不睡你在熬，月亮都困了你还在嗨？快睡吧，别让黑眼圈“熊”霸你的脸♪';
-        } else if (hour >= 5 && hour < 8) {
-            return '♪枣尚耗！新的一天从美味早餐开始，记得“早”点开心，“早”点元气满满哦！♪';
-        } else if (hour >= 8 && hour < 11) {
-            return '♪上午好呀！工作/学习别太累，偶尔“摸鱼”也是生活的艺术，但别被老板“捉”到！♪';
-        } else if (hour >= 11 && hour < 13) {
-            return '♪中午好！午饭吃饱饱，下午没烦恼，“饱”持微笑，你就是最“粽”要的人！♪';
-        } else if (hour >= 13 && hour < 17) {
-            return '♪下午容易犯困？来杯奶茶“茶”一会儿，精神抖擞“下”午继续冲！';
-        } else if (hour >= 17 && hour < 19) {
-            return '♪傍晚夕阳无限好，只是近黄昏——赶紧抓住今天的尾巴，把快乐“傍”在身边！♪';
-        } else if (hour >= 19 && hour < 23) {
-            return '♪晚上好！追剧打游戏的同时，别忘了喝杯水，眼睛也要“晚”上休息一下哦♪';
-        } else {
-            return '♪深夜夜深了，再不睡就要“深夜emo”了！快躺下，梦里啥都有，包括你想见的人♪';
-        }
+    // 根据小时获取随机祝福语（每个时段多条，随机取一条）
+function getGreetingByHour(hour) {
+    // 凌晨 0-5 点
+    const midnightGreetings = [
+        '♪凌晨星星不睡你在熬，月亮都困了你还在嗨？快睡吧，别让黑眼圈“熊”霸你的脸♪',
+        '♪夜深人静，正是修仙好时节——但小心肝儿会抗议哦，早点休息吧～♪',
+        '♪这个点还在逛WIKI，是真爱没错了！但别忘了给手机也“充个电”，明天见♪',
+        '♪夜猫子专属福利：嘘～小声告诉你，熬夜的你已经偷偷赚到一天的“先机”啦♪',
+        '♪凌晨的世界很安静，适合思考人生，也适合——睡觉！快闭眼，梦里啥都有♪'
+    ];
+    // 清晨 5-8 点
+    const morningGreetings = [
+        '♪枣尚耗！新的一天从美味早餐开始，记得“早”点开心，“早”点元气满满哦！♪',
+        '♪清晨的第一缕阳光，配上六哥荣耀WIKI，今天也是能量满满的一天！♪',
+        '♪早安！一日之计在于晨，今天的你比昨天更接近梦想～♪',
+        '♪揉揉眼睛，伸个懒腰，新的一天从打开WIKI开始，冲鸭！♪',
+        '♪早上好呀！记得吃早餐，胃饱了，心就暖了～♪'
+    ];
+    // 上午 8-11 点
+    const lateMorningGreetings = [
+        '♪上午好呀！工作/学习别太累，偶尔“摸鱼”也是生活的艺术，但别被老板“捉”到！♪',
+        '♪元气满满的一上午！看看WIKI，充充电，效率翻倍♪',
+        '♪阳光正好，微风不燥，正是摸鱼查攻略的好时光～♪',
+        '♪上午时间宝贵，但劳逸结合更聪明，来WIKI歇口气吧♪',
+        '♪滴！上午卡已刷，今日份快乐已送达～♪'
+    ];
+    // 中午 11-13 点
+    const noonGreetings = [
+        '♪中午好！午饭吃饱饱，下午没烦恼，“饱”持微笑，你就是最“粽”要的人！♪',
+        '♪午饭时间到！不管吃啥，记得对自己好一点，毕竟下午还要继续“肝”♪',
+        '♪肚子咕咕叫了？快去吃饭，吃饱了才有力气抽卡～♪',
+        '♪午休片刻，养精蓄锐，下午又是精神小伙/小妹♪',
+        '♪午饭+WIKI=双倍快乐，今天的你也很会享受生活呢♪'
+    ];
+    // 下午 13-17 点
+    const afternoonGreetings = [
+        '♪下午容易犯困？来杯奶茶“茶”一会儿，精神抖擞“下”午继续冲！',
+        '♪下午茶时间到！提神醒脑，WIKI陪你度过慵懒时光♪',
+        '♪阳光斜照，正是刷材料、看攻略的好时候，加油打工人♪',
+        '♪下午犯困不可怕，可怕的是错过WIKI的更新！快醒醒♪',
+        '♪一杯咖啡，一份WIKI，下午的快乐就是这么简单♪'
+    ];
+    // 傍晚 17-19 点
+    const eveningGreetings = [
+        '♪傍晚夕阳无限好，只是近黄昏——赶紧抓住今天的尾巴，把快乐“傍”在身边！♪',
+        '♪夕阳西下，WIKI陪你回家，今天也是充实的一天～♪',
+        '♪傍晚的微风，吹散一天的疲惫，来看看WIKI放松一下吧♪',
+        '♪天色渐暗，但你的WIKI之旅还在继续，夜生活刚刚开始♪',
+        '♪落日余晖，配上WIKI的温馨，今天也要圆满收官♪'
+    ];
+    // 晚上 19-23 点
+    const nightGreetings = [
+        '♪晚上好！追剧打游戏的同时，别忘了喝杯水，眼睛也要“晚”上休息一下哦♪',
+        '♪华灯初上，WIKI与你共度良宵，愿你好梦♪',
+        '♪晚上是放松的时间，看看角色，想想配队，也是一种享受♪',
+        '♪夜生活开始！但别忘了给手机也“放个假”，早点休息～♪',
+        '♪星光点点，WIKI陪伴，愿你的夜晚温暖如初♪'
+    ];
+    // 深夜 23-24 点（其实是23-0点，但归类到深夜）
+    const lateNightGreetings = [
+        '♪深夜夜深了，再不睡就要“深夜emo”了！快躺下，梦里啥都有，包括你想见的人♪',
+        '♪夜已深，WIKI即将打烊，明天见！晚安好梦♪',
+        '♪凌晨的钟声即将敲响，快闭上眼睛，明天又是新的一天♪',
+        '♪深夜还在努力的你，值得被世界温柔以待，晚安～♪',
+        '♪月色如水，WIKI陪你入眠，愿你今夜无梦，醒来皆是惊喜♪'
+    ];
+
+    // 根据小时选择对应的祝福语数组
+    let greetingArray;
+    if (hour >= 0 && hour < 5) {
+        greetingArray = midnightGreetings;
+    } else if (hour >= 5 && hour < 8) {
+        greetingArray = morningGreetings;
+    } else if (hour >= 8 && hour < 11) {
+        greetingArray = lateMorningGreetings;
+    } else if (hour >= 11 && hour < 13) {
+        greetingArray = noonGreetings;
+    } else if (hour >= 13 && hour < 17) {
+        greetingArray = afternoonGreetings;
+    } else if (hour >= 17 && hour < 19) {
+        greetingArray = eveningGreetings;
+    } else if (hour >= 19 && hour < 23) {
+        greetingArray = nightGreetings;
+    } else {
+        greetingArray = lateNightGreetings;
     }
+
+    // 随机返回一条
+    const randomIndex = Math.floor(Math.random() * greetingArray.length);
+    return greetingArray[randomIndex];
+}
     
     // 更新天数与祝福语
     function updateSiteAge() {
