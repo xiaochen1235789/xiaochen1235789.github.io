@@ -10,7 +10,7 @@
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
 <style>
-/* ====== 原有样式保持不变 ====== */
+/* ====== 样式保持不变 ====== */
 :root {
   --bg: #121212;
   --surface: #1a1a1a;
@@ -318,7 +318,7 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .wiki-footer a { color: #8FBC8F; text-decoration: none; }
 
-/* ====== 评论系统样式 ====== */
+/* 评论系统样式 */
 .comment-section {
   background: var(--card);
   margin: 12px 16px;
@@ -461,9 +461,9 @@ img { max-width: 100%; height: auto; display: block; }
   <div class="skill-header">
     <div class="skill-name">普攻 · 迅风斩</div>
     <div class="level-controls">
-      <button class="level-btn down" onclick="changeSkillLevel('normal', -1)" id="normal-down">↓</button>
+      <button class="level-btn down" data-skill="normal" data-dir="-1">↓</button>
       <span class="level-value" id="normal-level">1/7</span>
-      <button class="level-btn up" onclick="changeSkillLevel('normal', 1)" id="normal-up">↑</button>
+      <button class="level-btn up" data-skill="normal" data-dir="1">↑</button>
     </div>
   </div>
   <div class="skill-content">
@@ -476,9 +476,9 @@ img { max-width: 100%; height: auto; display: block; }
   <div class="skill-header">
     <div class="skill-name">战技 · 风之挑衅</div>
     <div class="level-controls">
-      <button class="level-btn down" onclick="changeSkillLevel('skill', -1)" id="skill-down">↓</button>
+      <button class="level-btn down" data-skill="skill" data-dir="-1">↓</button>
       <span class="level-value" id="skill-level">1/12</span>
-      <button class="level-btn up" onclick="changeSkillLevel('skill', 1)" id="skill-up">↑</button>
+      <button class="level-btn up" data-skill="skill" data-dir="1">↑</button>
     </div>
   </div>
   <div class="skill-content">
@@ -491,9 +491,9 @@ img { max-width: 100%; height: auto; display: block; }
   <div class="skill-header">
     <div class="skill-name">终结技 · 狂风终结</div>
     <div class="level-controls">
-      <button class="level-btn down" onclick="changeSkillLevel('ultimate', -1)" id="ultimate-down">↓</button>
+      <button class="level-btn down" data-skill="ultimate" data-dir="-1">↓</button>
       <span class="level-value" id="ultimate-level">1/12</span>
-      <button class="level-btn up" onclick="changeSkillLevel('ultimate', 1)" id="ultimate-up">↑</button>
+      <button class="level-btn up" data-skill="ultimate" data-dir="1">↑</button>
     </div>
   </div>
   <div class="skill-content">
@@ -506,9 +506,9 @@ img { max-width: 100%; height: auto; display: block; }
   <div class="skill-header">
     <div class="skill-name">天赋 · 猎杀强化</div>
     <div class="level-controls">
-      <button class="level-btn down" onclick="changeSkillLevel('talent', -1)" id="talent-down">↓</button>
+      <button class="level-btn down" data-skill="talent" data-dir="-1">↓</button>
       <span class="level-value" id="talent-level">1/12</span>
-      <button class="level-btn up" onclick="changeSkillLevel('talent', 1)" id="talent-up">↑</button>
+      <button class="level-btn up" data-skill="talent" data-dir="1">↑</button>
     </div>
   </div>
   <div class="skill-content">
@@ -548,7 +548,7 @@ img { max-width: 100%; height: auto; display: block; }
   </table>
 </section>
 
-<!-- ====== 评论系统 ====== -->
+<!-- 评论系统 -->
 <section class="comment-section" id="comment-section">
   <div class="section-title">玩家评论</div>
   <div id="comment-login-tip" class="login-tip" style="display: none;">
@@ -571,7 +571,7 @@ img { max-width: 100%; height: auto; display: block; }
 </footer>
 
 <script>
-// ====== 原有鹿将军技能逻辑 (保持不变) ======
+// ========== 技能系统 ==========
 const skillConfig = {
   normal: { level: 1, maxLevel: 7, values: [ { id: 'normal-val1', base: 50, step: 10 } ] },
   skill: { level: 1, maxLevel: 12, values: [ { id: 'skill-val1', base: 150, step: 20 } ] },
@@ -598,7 +598,7 @@ const baseStats = {
   90:  { hp: 1117, atk: 768, def: 582 }
 };
 
-const state = { skills: JSON.parse(JSON.stringify(skillConfig)), baseLevel: 90 };
+let state = { skills: JSON.parse(JSON.stringify(skillConfig)), baseLevel: 90 };
 
 function getSkillValue(base, step, level) { return base + step * (level - 1); }
 function applyLevelColor(element, level, max) {
@@ -621,13 +621,12 @@ function updateSkillDisplay(skillType) {
 }
 function updateButtonState(skillType) {
   const skill = state.skills[skillType];
-  const downBtn = document.getElementById(`${skillType}-down`);
-  const upBtn = document.getElementById(`${skillType}-up`);
+  const downBtn = document.querySelector(`button[data-skill="${skillType}"][data-dir="-1"]`);
+  const upBtn = document.querySelector(`button[data-skill="${skillType}"][data-dir="1"]`);
   if (downBtn) downBtn.disabled = skill.level <= 1;
   if (upBtn) upBtn.disabled = skill.level >= skill.maxLevel;
 }
-function initSkills() { Object.keys(state.skills).forEach(skillType => { updateSkillDisplay(skillType); updateButtonState(skillType); }); }
-window.changeSkillLevel = function(skillType, change) {
+function changeSkillLevel(skillType, change) {
   const skill = state.skills[skillType];
   if (!skill) return;
   const newLevel = skill.level + change;
@@ -636,7 +635,7 @@ window.changeSkillLevel = function(skillType, change) {
   updateSkillDisplay(skillType);
   updateButtonState(skillType);
   saveState();
-};
+}
 
 function updateBaseAttributes(level) {
   const nearest = baseLevelPresets.reduce((prev, curr) => Math.abs(curr - level) < Math.abs(prev - level) ? curr : prev);
@@ -684,60 +683,115 @@ function loadState() {
     const saved = localStorage.getItem('deerSkillState');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed.normal) state.skills.normal.level = Math.min(parsed.normal, state.skills.normal.maxLevel);
-      if (parsed.skill) state.skills.skill.level = Math.min(parsed.skill, state.skills.skill.maxLevel);
-      if (parsed.ultimate) state.skills.ultimate.level = Math.min(parsed.ultimate, state.skills.ultimate.maxLevel);
-      if (parsed.talent) state.skills.talent.level = Math.min(parsed.talent, state.skills.talent.maxLevel);
+      if (parsed.normal && typeof parsed.normal === 'number') state.skills.normal.level = Math.min(parsed.normal, state.skills.normal.maxLevel);
+      if (parsed.skill && typeof parsed.skill === 'number') state.skills.skill.level = Math.min(parsed.skill, state.skills.skill.maxLevel);
+      if (parsed.ultimate && typeof parsed.ultimate === 'number') state.skills.ultimate.level = Math.min(parsed.ultimate, state.skills.ultimate.maxLevel);
+      if (parsed.talent && typeof parsed.talent === 'number') state.skills.talent.level = Math.min(parsed.talent, state.skills.talent.maxLevel);
       if (parsed.baseLevel && baseLevelPresets.includes(parsed.baseLevel)) state.baseLevel = parsed.baseLevel;
       else state.baseLevel = 90;
     }
-  } catch (e) {}
+  } catch (e) { console.warn('读取存档失败', e); }
+}
+function initSkills() {
+  Object.keys(state.skills).forEach(skillType => {
+    updateSkillDisplay(skillType);
+    updateButtonState(skillType);
+  });
+}
+function bindSkillButtons() {
+  document.querySelectorAll('.level-btn[data-skill]').forEach(btn => {
+    btn.removeEventListener('click', skillClickHandler);
+    btn.addEventListener('click', skillClickHandler);
+  });
+}
+function skillClickHandler(e) {
+  const btn = e.currentTarget;
+  const skill = btn.getAttribute('data-skill');
+  const dir = parseInt(btn.getAttribute('data-dir'), 10);
+  if (!isNaN(dir) && skill) changeSkillLevel(skill, dir);
 }
 function initBaseLevelControls() {
   const slider = document.getElementById('base-level-slider');
   const downBtn = document.getElementById('base-level-down');
   const upBtn = document.getElementById('base-level-up');
-  if (slider) slider.addEventListener('input', function(e) {
-    const val = parseInt(e.target.value, 10);
-    const nearest = baseLevelPresets.reduce((prev, curr) => Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev);
-    if (state.baseLevel !== nearest) { updateBaseAttributes(nearest); saveState(); }
-    else e.target.value = state.baseLevel;
-  });
-  if (downBtn) downBtn.addEventListener('click', () => { changeBaseLevel(-1); saveState(); });
-  if (upBtn) upBtn.addEventListener('click', () => { changeBaseLevel(1); saveState(); });
+  if (slider) {
+    slider.removeEventListener('input', baseSliderHandler);
+    slider.addEventListener('input', baseSliderHandler);
+  }
+  if (downBtn) {
+    downBtn.removeEventListener('click', baseDownHandler);
+    downBtn.addEventListener('click', baseDownHandler);
+  }
+  if (upBtn) {
+    upBtn.removeEventListener('click', baseUpHandler);
+    upBtn.addEventListener('click', baseUpHandler);
+  }
 }
+function baseSliderHandler(e) {
+  const val = parseInt(e.target.value, 10);
+  const nearest = baseLevelPresets.reduce((prev, curr) => Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev);
+  if (state.baseLevel !== nearest) { updateBaseAttributes(nearest); saveState(); }
+  else e.target.value = state.baseLevel;
+}
+function baseDownHandler() { changeBaseLevel(-1); saveState(); }
+function baseUpHandler() { changeBaseLevel(1); saveState(); }
 
-// ====== Supabase 评论系统 ======
-const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
+// ========== 评论系统（安全初始化，不影响主功能） ==========
 let supabase = null;
 let currentUser = null;
 let currentUsername = null;
 
-// 获取当前登录用户
+async function safeInitComments() {
+  try {
+    if (typeof supabase === 'undefined' || !window.supabase) {
+      console.warn('Supabase 未加载，评论功能不可用');
+      document.getElementById('comment-list').innerHTML = '<div class="empty-comments">评论功能暂不可用，请稍后再试</div>';
+      return;
+    }
+    supabase = window.supabase.createClient(
+      'https://ysmijycsyzpjoieaknmb.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA'
+    );
+    await updateLoginUI();
+    await loadComments();
+    const submitBtn = document.getElementById('submit-comment');
+    if (submitBtn) {
+      submitBtn.removeEventListener('click', submitCommentHandler);
+      submitBtn.addEventListener('click', submitCommentHandler);
+    }
+  } catch (err) {
+    console.error('评论系统初始化失败:', err);
+    document.getElementById('comment-list').innerHTML = '<div class="empty-comments">评论加载失败，但不影响其他功能</div>';
+  }
+}
+
 async function getCurrentUser() {
+  if (!supabase) return null;
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) return null;
   return user;
 }
 
-// 获取用户显示名（优先从user_profiles获取，否则用邮箱前缀）
 async function getUserDisplayName(user) {
   if (!user) return '匿名';
-  const { data: profile, error } = await supabase
+  if (!supabase) return user.email?.split('@')[0] || '用户';
+  const { data: profile } = await supabase
     .from('user_profiles')
     .select('username')
     .eq('id', user.id)
     .single();
   if (profile && profile.username) return profile.username;
-  return user.email.split('@')[0];
+  return user.email?.split('@')[0] || '用户';
 }
 
-// 加载评论列表
 async function loadComments() {
   const container = document.getElementById('comment-list');
   if (!container) return;
   container.innerHTML = '<div class="empty-comments">加载评论中...</div>';
+  if (!supabase) {
+    container.innerHTML = '<div class="empty-comments">评论功能暂不可用</div>';
+    return;
+  }
   try {
     const { data, error } = await supabase
       .from('comments')
@@ -765,7 +819,6 @@ async function loadComments() {
   }
 }
 
-// 发表评论
 async function submitComment(content) {
   if (!currentUser) {
     alert('请先登录');
@@ -777,6 +830,10 @@ async function submitComment(content) {
   }
   if (content.length > 200) {
     alert('评论内容不能超过200字');
+    return false;
+  }
+  if (!supabase) {
+    alert('评论功能暂不可用');
     return false;
   }
   const displayName = currentUsername || await getUserDisplayName(currentUser);
@@ -793,16 +850,19 @@ async function submitComment(content) {
     alert('发表失败，请稍后重试');
     return false;
   }
-  // 清空输入框并重新加载评论
   document.getElementById('comment-content').value = '';
   await loadComments();
   return true;
 }
 
-// 检查登录状态并更新UI
 async function updateLoginUI() {
   const loginTip = document.getElementById('comment-login-tip');
   const formContainer = document.getElementById('comment-form-container');
+  if (!supabase) {
+    if (loginTip) loginTip.style.display = 'block';
+    if (formContainer) formContainer.style.display = 'none';
+    return;
+  }
   currentUser = await getCurrentUser();
   if (currentUser) {
     currentUsername = await getUserDisplayName(currentUser);
@@ -814,22 +874,11 @@ async function updateLoginUI() {
   }
 }
 
-// 初始化评论系统
-async function initComments() {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  await updateLoginUI();
-  await loadComments();
-  // 绑定提交按钮
-  const submitBtn = document.getElementById('submit-comment');
-  if (submitBtn) {
-    submitBtn.addEventListener('click', async () => {
-      const content = document.getElementById('comment-content').value;
-      await submitComment(content);
-    });
-  }
+async function submitCommentHandler() {
+  const content = document.getElementById('comment-content').value;
+  await submitComment(content);
 }
 
-// 辅助函数：转义HTML
 function escapeHtml(str) {
   if (!str) return '';
   return str.replace(/[&<>]/g, function(m) {
@@ -837,18 +886,18 @@ function escapeHtml(str) {
     if (m === '<') return '&lt;';
     if (m === '>') return '&gt;';
     return m;
-  }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
-    return c;
   });
 }
 
-// ====== 页面初始化 ======
+// ========== 页面主入口 ==========
 function initPage() {
   loadState();
   initSkills();
   updateBaseAttributes(state.baseLevel);
   initBaseLevelControls();
-  initComments();
+  bindSkillButtons();
+  // 安全初始化评论系统，不影响主功能
+  safeInitComments().catch(e => console.warn('评论系统初始化失败，但不影响核心功能', e));
   document.getElementById('year').textContent = new Date().getFullYear();
 }
 
