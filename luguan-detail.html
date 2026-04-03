@@ -2,12 +2,13 @@
 <html lang="zh-cmn-Hans">
 <head>
 <meta charset="UTF-8">
-<title>鹿将军 · 六哥荣耀WIKI（完整版）</title>
+<title>鹿将军 · 六哥荣耀WIKI</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-<meta name="description" content="技能等级调节器 + 基础属性滑动 + 评论系统（Supabase）">
+<meta name="description" content="鹿管技能等级调节器 + 基础属性滑动等级">
 <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
+<link rel="preconnect" href="https://xiaochen1235789.github.io">
+
 <style>
-/* ========== 完整样式（与原版一致） ========== */
 :root {
   --bg: #121212;
   --surface: #1a1a1a;
@@ -151,7 +152,7 @@ img { max-width: 100%; height: auto; display: block; }
   color: var(--text);
   font-size: 1.2rem;
   cursor: pointer;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   transition: all var(--transition);
@@ -314,99 +315,6 @@ img { max-width: 100%; height: auto; display: block; }
   width: 100%;
 }
 .wiki-footer a { color: #8FBC8F; text-decoration: none; }
-
-/* 评论系统样式 */
-.comment-section {
-  background: var(--card);
-  margin: 12px 16px;
-  border-radius: var(--radius);
-  padding: 20px;
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow);
-}
-.comment-form {
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--line);
-}
-.comment-form textarea {
-  width: 100%;
-  padding: 12px;
-  background: #2d3748;
-  border: 1px solid #4a5568;
-  border-radius: var(--radius);
-  color: var(--text);
-  font-size: 0.95rem;
-  resize: vertical;
-  font-family: inherit;
-  outline: none;
-}
-.comment-form textarea:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(211,175,55,0.2);
-}
-.comment-form-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 12px;
-  gap: 10px;
-}
-.comment-btn {
-  background: var(--button-bg);
-  border: none;
-  color: white;
-  padding: 8px 16px;
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background var(--transition);
-}
-.comment-btn:hover {
-  background: var(--button-hover);
-}
-.comment-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.login-tip {
-  background: rgba(211,175,55,0.1);
-  padding: 12px;
-  border-radius: var(--radius);
-  text-align: center;
-  margin-bottom: 20px;
-  color: var(--primary-light);
-}
-.comment-item {
-  padding: 12px 0;
-  border-bottom: 1px solid var(--line);
-}
-.comment-item:last-child { border-bottom: none; }
-.comment-meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 6px;
-  font-size: 0.85rem;
-}
-.comment-username {
-  font-weight: 600;
-  color: var(--primary);
-}
-.comment-time {
-  color: var(--sub-text);
-  font-size: 0.75rem;
-}
-.comment-content {
-  color: var(--text);
-  line-height: 1.5;
-  word-break: break-word;
-}
-.empty-comments {
-  text-align: center;
-  color: var(--sub-text);
-  padding: 30px 0;
-  font-style: italic;
-}
 </style>
 </head>
 <body>
@@ -423,7 +331,6 @@ img { max-width: 100%; height: auto; display: block; }
   </div>
 </section>
 
-<!-- 基础属性 -->
 <section class="card" id="base-attr">
   <div class="skill-header">
     <div class="skill-name" id="base-level-label">基础属性 Lv.90</div>
@@ -455,14 +362,13 @@ img { max-width: 100%; height: auto; display: block; }
   </div>
 </section>
 
-<!-- 普攻 -->
 <section class="card" id="normal-attack">
   <div class="skill-header">
     <div class="skill-name">普攻 · 迅风斩</div>
     <div class="level-controls">
-      <button class="level-btn down" data-skill="normal" data-delta="-1">↓</button>
+      <button class="level-btn down" onclick="changeSkillLevel('normal', -1)" id="normal-down">↓</button>
       <span class="level-value" id="normal-level">1/7</span>
-      <button class="level-btn up" data-skill="normal" data-delta="1">↑</button>
+      <button class="level-btn up" onclick="changeSkillLevel('normal', 1)" id="normal-up">↑</button>
     </div>
   </div>
   <div class="skill-content">
@@ -471,14 +377,13 @@ img { max-width: 100%; height: auto; display: block; }
   </div>
 </section>
 
-<!-- 战技 -->
 <section class="card" id="skill-attack">
   <div class="skill-header">
     <div class="skill-name">战技 · 风之挑衅</div>
     <div class="level-controls">
-      <button class="level-btn down" data-skill="skill" data-delta="-1">↓</button>
+      <button class="level-btn down" onclick="changeSkillLevel('skill', -1)" id="skill-down">↓</button>
       <span class="level-value" id="skill-level">1/12</span>
-      <button class="level-btn up" data-skill="skill" data-delta="1">↑</button>
+      <button class="level-btn up" onclick="changeSkillLevel('skill', 1)" id="skill-up">↑</button>
     </div>
   </div>
   <div class="skill-content">
@@ -487,14 +392,13 @@ img { max-width: 100%; height: auto; display: block; }
   </div>
 </section>
 
-<!-- 终结技 -->
 <section class="card" id="ultimate-attack">
   <div class="skill-header">
     <div class="skill-name">终结技 · 狂风终结</div>
     <div class="level-controls">
-      <button class="level-btn down" data-skill="ultimate" data-delta="-1">↓</button>
+      <button class="level-btn down" onclick="changeSkillLevel('ultimate', -1)" id="ultimate-down">↓</button>
       <span class="level-value" id="ultimate-level">1/12</span>
-      <button class="level-btn up" data-skill="ultimate" data-delta="1">↑</button>
+      <button class="level-btn up" onclick="changeSkillLevel('ultimate', 1)" id="ultimate-up">↑</button>
     </div>
   </div>
   <div class="skill-content">
@@ -503,14 +407,13 @@ img { max-width: 100%; height: auto; display: block; }
   </div>
 </section>
 
-<!-- 天赋 -->
 <section class="card" id="talent-attack">
   <div class="skill-header">
     <div class="skill-name">天赋 · 猎杀强化</div>
     <div class="level-controls">
-      <button class="level-btn down" data-skill="talent" data-delta="-1">↓</button>
+      <button class="level-btn down" onclick="changeSkillLevel('talent', -1)" id="talent-down">↓</button>
       <span class="level-value" id="talent-level">1/12</span>
-      <button class="level-btn up" data-skill="talent" data-delta="1">↑</button>
+      <button class="level-btn up" onclick="changeSkillLevel('talent', 1)" id="talent-up">↑</button>
     </div>
   </div>
   <div class="skill-content">
@@ -519,7 +422,6 @@ img { max-width: 100%; height: auto; display: block; }
   </div>
 </section>
 
-<!-- 行迹加成 -->
 <section class="card">
   <div class="section-title">行迹加成(总)</div>
   <div class="attr-row">
@@ -529,7 +431,6 @@ img { max-width: 100%; height: auto; display: block; }
   </div>
 </section>
 
-<!-- 额外能力 -->
 <section class="card">
   <div class="section-title">额外能力</div>
   <div class="ability-item"><div class="ability-name">疾风守护</div><div class="ability-desc">若当前生命值百分比小于等于<span class="highlight-text">50%</span>时，受到的伤害降低<span class="highlight-text">50%</span><span style="color:purple;">(改)</span>。</div></div>
@@ -537,7 +438,6 @@ img { max-width: 100%; height: auto; display: block; }
   <div class="ability-item"><div class="ability-name">风速迅捷</div><div class="ability-desc">施放普攻后使自身行动提前<span class="highlight-text">20%</span>。</div></div>
 </section>
 
-<!-- 星魂 -->
 <section class="card">
   <div class="section-title">命之座 · 星魂</div>
   <table class="constellation-table">
@@ -553,30 +453,12 @@ img { max-width: 100%; height: auto; display: block; }
   </table>
 </section>
 
-<!-- 评论系统 -->
-<section class="comment-section" id="comment-section">
-  <div class="section-title">玩家评论</div>
-  <div id="comment-login-tip" class="login-tip" style="display: none;">
-    请先<a href="login-real.html" style="color: var(--primary);">登录</a>后发表评论
-  </div>
-  <div class="comment-form" id="comment-form-container" style="display: none;">
-    <textarea id="comment-content" rows="3" placeholder="写下你对鹿将军的看法吧... (最多200字)" maxlength="200"></textarea>
-    <div class="comment-form-actions">
-      <button class="comment-btn" id="submit-comment">发表评论</button>
-    </div>
-  </div>
-  <div id="comment-list" class="comment-list">
-    <div class="empty-comments">加载评论中...</div>
-  </div>
-</section>
-
 <footer class="wiki-footer">
   © <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.<br>
   本WIKI所有图片均由AI生成，不存在侵权行为，请仔细辨别.
 </footer>
 
 <script>
-// ========== 技能调节器核心（完全不依赖外部库，保证按钮立即生效） ==========
 const skillConfig = {
   normal: { level: 1, maxLevel: 7, values: [ { id: 'normal-val1', base: 50, step: 10 } ] },
   skill: { level: 1, maxLevel: 12, values: [ { id: 'skill-val1', base: 150, step: 20 } ] },
@@ -603,15 +485,13 @@ const baseStats = {
   90:  { hp: 1117, atk: 768, def: 582 }
 };
 
-let state = { skills: JSON.parse(JSON.stringify(skillConfig)), baseLevel: 90 };
+const state = { skills: JSON.parse(JSON.stringify(skillConfig)), baseLevel: 90 };
 
 function getSkillValue(base, step, level) { return base + step * (level - 1); }
-
 function applyLevelColor(element, level, max) {
   if (level === max) { element.classList.add('legend-text'); element.classList.remove('skill-val'); }
   else { element.classList.remove('legend-text'); element.classList.add('skill-val'); }
 }
-
 function updateSkillDisplay(skillType) {
   const skill = state.skills[skillType];
   const levelElement = document.getElementById(`${skillType}-level`);
@@ -625,27 +505,25 @@ function updateSkillDisplay(skillType) {
     element.textContent = newVal + '%';
     applyLevelColor(element, skill.level, skill.maxLevel);
   });
-  // 更新按钮禁用状态
-  const parentCard = levelElement.closest('.card');
-  if (parentCard) {
-    const downBtn = parentCard.querySelector('.level-btn.down[data-skill="' + skillType + '"]');
-    const upBtn = parentCard.querySelector('.level-btn.up[data-skill="' + skillType + '"]');
-    if (downBtn) downBtn.disabled = skill.level <= 1;
-    if (upBtn) upBtn.disabled = skill.level >= skill.maxLevel;
-  }
 }
-
-function changeSkillLevel(skillType, delta) {
-  try {
-    const skill = state.skills[skillType];
-    if (!skill) return;
-    const newLevel = skill.level + delta;
-    if (newLevel < 1 || newLevel > skill.maxLevel) return;
-    skill.level = newLevel;
-    updateSkillDisplay(skillType);
-    saveState();
-  } catch(e) { console.error('技能等级修改失败', e); }
+function updateButtonState(skillType) {
+  const skill = state.skills[skillType];
+  const downBtn = document.getElementById(`${skillType}-down`);
+  const upBtn = document.getElementById(`${skillType}-up`);
+  if (downBtn) downBtn.disabled = skill.level <= 1;
+  if (upBtn) upBtn.disabled = skill.level >= skill.maxLevel;
 }
+function initSkills() { Object.keys(state.skills).forEach(skillType => { updateSkillDisplay(skillType); updateButtonState(skillType); }); }
+window.changeSkillLevel = function(skillType, change) {
+  const skill = state.skills[skillType];
+  if (!skill) return;
+  const newLevel = skill.level + change;
+  if (newLevel < 1 || newLevel > skill.maxLevel) return;
+  skill.level = newLevel;
+  updateSkillDisplay(skillType);
+  updateButtonState(skillType);
+  saveState();
+};
 
 function updateBaseAttributes(level) {
   const nearest = baseLevelPresets.reduce((prev, curr) => Math.abs(curr - level) < Math.abs(prev - level) ? curr : prev);
@@ -668,18 +546,14 @@ function updateBaseAttributes(level) {
   if (downBtn) downBtn.disabled = level === 1;
   if (upBtn) upBtn.disabled = level === 90;
 }
-
-function changeBaseLevel(delta) {
-  try {
-    let idx = baseLevelPresets.indexOf(state.baseLevel);
-    if (idx === -1) idx = baseLevelPresets.indexOf(90);
-    const newIdx = idx + delta;
-    if (newIdx < 0 || newIdx >= baseLevelPresets.length) return;
-    updateBaseAttributes(baseLevelPresets[newIdx]);
-    saveState();
-  } catch(e) { console.error('基础等级修改失败', e); }
+function changeBaseLevel(direction) {
+  let idx = baseLevelPresets.indexOf(state.baseLevel);
+  if (idx === -1) idx = baseLevelPresets.indexOf(90);
+  const newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= baseLevelPresets.length) return;
+  updateBaseAttributes(baseLevelPresets[newIdx]);
+  saveState();
 }
-
 function saveState() {
   try {
     const saveData = {
@@ -692,212 +566,43 @@ function saveState() {
     localStorage.setItem('deerSkillState', JSON.stringify(saveData));
   } catch (e) { console.warn('保存失败', e); }
 }
-
 function loadState() {
   try {
     const saved = localStorage.getItem('deerSkillState');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed.normal && typeof parsed.normal === 'number') state.skills.normal.level = Math.min(parsed.normal, state.skills.normal.maxLevel);
-      if (parsed.skill && typeof parsed.skill === 'number') state.skills.skill.level = Math.min(parsed.skill, state.skills.skill.maxLevel);
-      if (parsed.ultimate && typeof parsed.ultimate === 'number') state.skills.ultimate.level = Math.min(parsed.ultimate, state.skills.ultimate.maxLevel);
-      if (parsed.talent && typeof parsed.talent === 'number') state.skills.talent.level = Math.min(parsed.talent, state.skills.talent.maxLevel);
+      if (parsed.normal) state.skills.normal.level = Math.min(parsed.normal, state.skills.normal.maxLevel);
+      if (parsed.skill) state.skills.skill.level = Math.min(parsed.skill, state.skills.skill.maxLevel);
+      if (parsed.ultimate) state.skills.ultimate.level = Math.min(parsed.ultimate, state.skills.ultimate.maxLevel);
+      if (parsed.talent) state.skills.talent.level = Math.min(parsed.talent, state.skills.talent.maxLevel);
       if (parsed.baseLevel && baseLevelPresets.includes(parsed.baseLevel)) state.baseLevel = parsed.baseLevel;
       else state.baseLevel = 90;
     }
-  } catch (e) { console.warn('读取存档失败', e); }
+  } catch (e) {}
 }
-
-function initSkills() {
-  Object.keys(state.skills).forEach(skillType => {
-    updateSkillDisplay(skillType);
-  });
-}
-
-function initBaseSlider() {
+function initBaseLevelControls() {
   const slider = document.getElementById('base-level-slider');
-  if (slider) {
-    slider.addEventListener('input', function(e) {
-      const val = parseInt(e.target.value, 10);
-      const nearest = baseLevelPresets.reduce((prev, curr) => Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev);
-      if (state.baseLevel !== nearest) { updateBaseAttributes(nearest); saveState(); }
-      else e.target.value = state.baseLevel;
-    });
-  }
-}
-
-// 绑定事件（不使用内联onclick，避免与异步加载冲突）
-function bindEvents() {
-  // 技能按钮
-  document.querySelectorAll('.level-btn[data-skill]').forEach(btn => {
-    btn.removeEventListener('click', skillClickHandler);
-    btn.addEventListener('click', skillClickHandler);
+  const downBtn = document.getElementById('base-level-down');
+  const upBtn = document.getElementById('base-level-up');
+  if (slider) slider.addEventListener('input', function(e) {
+    const val = parseInt(e.target.value, 10);
+    const nearest = baseLevelPresets.reduce((prev, curr) => Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev);
+    if (state.baseLevel !== nearest) { updateBaseAttributes(nearest); saveState(); }
+    else e.target.value = state.baseLevel;
   });
-  // 基础等级按钮
-  const baseDown = document.getElementById('base-level-down');
-  const baseUp = document.getElementById('base-level-up');
-  if (baseDown) baseDown.addEventListener('click', () => changeBaseLevel(-1));
-  if (baseUp) baseUp.addEventListener('click', () => changeBaseLevel(1));
+  if (downBtn) downBtn.addEventListener('click', () => { changeBaseLevel(-1); saveState(); });
+  if (upBtn) upBtn.addEventListener('click', () => { changeBaseLevel(1); saveState(); });
 }
 
-function skillClickHandler(e) {
-  const btn = e.currentTarget;
-  const skill = btn.getAttribute('data-skill');
-  const delta = parseInt(btn.getAttribute('data-delta'), 10);
-  if (skill && !isNaN(delta)) changeSkillLevel(skill, delta);
-}
-
-// 页面启动
-window.addEventListener('DOMContentLoaded', () => {
+function initPage() {
   loadState();
   initSkills();
   updateBaseAttributes(state.baseLevel);
-  initBaseSlider();
-  bindEvents();
+  initBaseLevelControls();
   document.getElementById('year').textContent = new Date().getFullYear();
-  console.log('技能调节器已就绪，按钮可点击');
-});
-</script>
-
-<!-- Supabase 评论系统（异步加载，失败不影响主功能） -->
-<script src="https://unpkg.com/@supabase/supabase-js@2" async onerror="console.warn('Supabase 加载失败，评论功能不可用')"></script>
-<script>
-// 评论系统独立模块
-let supabase = null;
-let currentUser = null;
-let currentUsername = null;
-
-async function getCurrentUser() {
-  if (!supabase) return null;
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  return user;
 }
 
-async function getUserDisplayName(user) {
-  if (!user) return '匿名';
-  if (!supabase) return user.email?.split('@')[0] || '用户';
-  try {
-    const { data: profile } = await supabase.from('user_profiles').select('username').eq('id', user.id).single();
-    return profile?.username || user.email?.split('@')[0] || '用户';
-  } catch(e) {
-    return user.email?.split('@')[0] || '用户';
-  }
-}
-
-async function loadComments() {
-  const container = document.getElementById('comment-list');
-  if (!container) return;
-  container.innerHTML = '<div class="empty-comments">加载评论中...</div>';
-  if (!supabase) {
-    container.innerHTML = '<div class="empty-comments">评论功能暂不可用（网络原因）</div>';
-    return;
-  }
-  try {
-    const { data, error } = await supabase.from('comments').select('*').eq('character', 'luguan').order('created_at', { ascending: false }).limit(50);
-    if (error) throw error;
-    if (!data || data.length === 0) {
-      container.innerHTML = '<div class="empty-comments">暂无评论，来说两句吧~</div>';
-      return;
-    }
-    container.innerHTML = data.map(comment => `
-      <div class="comment-item">
-        <div class="comment-meta">
-          <span class="comment-username">${escapeHtml(comment.username)}</span>
-          <span class="comment-time">${new Date(comment.created_at).toLocaleString()}</span>
-        </div>
-        <div class="comment-content">${escapeHtml(comment.content)}</div>
-      </div>
-    `).join('');
-  } catch (err) {
-    console.error('加载评论失败:', err);
-    container.innerHTML = `<div class="empty-comments">加载失败：${err.message}</div>`;
-  }
-}
-
-async function submitComment(content) {
-  if (!currentUser) { alert('请先登录'); return false; }
-  if (!content || content.trim() === '') { alert('评论内容不能为空'); return false; }
-  if (content.length > 200) { alert('评论内容不能超过200字'); return false; }
-  if (!supabase) { alert('评论功能未就绪'); return false; }
-  const displayName = currentUsername || await getUserDisplayName(currentUser);
-  const { error } = await supabase.from('comments').insert({ user_id: currentUser.id, username: displayName, content: content.trim(), character: 'luguan' });
-  if (error) { alert('发表失败: '+error.message); return false; }
-  document.getElementById('comment-content').value = '';
-  await loadComments();
-  return true;
-}
-
-async function updateLoginUI() {
-  const loginTip = document.getElementById('comment-login-tip');
-  const formContainer = document.getElementById('comment-form-container');
-  if (!supabase) {
-    if (loginTip) loginTip.style.display = 'block';
-    if (formContainer) formContainer.style.display = 'none';
-    return;
-  }
-  currentUser = await getCurrentUser();
-  if (currentUser) {
-    currentUsername = await getUserDisplayName(currentUser);
-    if (loginTip) loginTip.style.display = 'none';
-    if (formContainer) formContainer.style.display = 'block';
-  } else {
-    if (loginTip) loginTip.style.display = 'block';
-    if (formContainer) formContainer.style.display = 'none';
-  }
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return str.replace(/[&<>]/g, function(m) {
-    if (m === '&') return '&amp;';
-    if (m === '<') return '&lt;';
-    if (m === '>') return '&gt;';
-    return m;
-  });
-}
-
-async function initComments() {
-  if (!window.supabase) {
-    console.warn('Supabase 未加载，评论功能跳过');
-    const listDiv = document.getElementById('comment-list');
-    if (listDiv) listDiv.innerHTML = '<div class="empty-comments">评论功能暂不可用（CDN加载失败）</div>';
-    return;
-  }
-  try {
-    supabase = window.supabase.createClient(
-      'https://ysmijycsyzpjoieaknmb.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA'
-    );
-    // 测试连接（可选）
-    const { error: testError } = await supabase.from('comments').select('id', { count: 'exact', head: true });
-    if (testError && testError.message.includes('does not exist')) {
-      throw new Error('数据库表不存在，请联系管理员');
-    }
-    await updateLoginUI();
-    await loadComments();
-    const submitBtn = document.getElementById('submit-comment');
-    if (submitBtn) submitBtn.addEventListener('click', () => {
-      const content = document.getElementById('comment-content').value;
-      submitComment(content);
-    });
-    console.log('评论系统初始化成功');
-  } catch (err) {
-    console.error('评论系统错误:', err);
-    const listDiv = document.getElementById('comment-list');
-    if (listDiv) listDiv.innerHTML = `<div class="empty-comments">⚠️ 评论功能暂时不可用：${err.message}</div>`;
-  }
-}
-
-// 等待 Supabase 就绪后初始化评论系统
-function waitForSupabase() {
-  if (window.supabase) {
-    initComments();
-  } else {
-    setTimeout(waitForSupabase, 500);
-  }
-}
-setTimeout(waitForSupabase, 1000);
+document.addEventListener('DOMContentLoaded', initPage);
 </script>
 </body>
 </html>
