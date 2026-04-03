@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>好友系统 - 六哥荣耀WIKI</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://xiaochen1235789.github.io/styles/main.css">
+    <style>
+        /* ========== 沿用原配色与扩展样式 ========== */
+        :root {
+            --bg: #121212;
+            --card-bg: #1e3a2f;
+            --card-bg-hover: #284a3c;
+            --text-main: #e0e0e0;
+            --text-highlight: #81c784;
+            --text-secondary: #99aabb;
+            --radius: 12px;
+            --border-color: #3d725f;
+            --shadow: 0 8px 24px rgba(0,0,0,0.3);
+            --danger: #f87171;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+        body { background: var(--bg); color: var(--text-main); line-height: 1.6; }
+        .friends-container { max-width: 1400px; margin: 0 auto; padding: 20px; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .top-nav {
+            background: var(--card-bg); padding: 15px 20px; display: flex; align-items: center; gap: 20px;
+            border-bottom: 2px solid var(--border-color); position: sticky; top: 0; z-index: 1000;
+        }
+        .nav-title { font-size: 1.5rem; font-weight: bold; color: var(--text-highlight); margin-right: auto; }
+        .nav-link { color: var(--text-main); text-decoration: none; padding: 8px 16px; border-radius: var(--radius); transition: 0.2s; }
+        .nav-link:hover, .nav-link.active { background: var(--text-highlight); color: var(--bg); }
+        .badge {
+            background: var(--danger); color: white; border-radius: 30px; padding: 2px 8px;
+            font-size: 0.7rem; font-weight: bold; margin-left: 8px;
+        }
+        .two-columns {
+            display: grid; grid-template-columns: 1fr 380px; gap: 25px; margin-top: 30px;
+        }
+        .friends-list, .requests-panel, .search-panel {
+            background: var(--card-bg); border-radius: var(--radius); padding: 20px;
+            border: 1px solid var(--border-color); transition: 0.2s;
+        }
+        .section-title {
+            font-size: 1.4rem; color: var(--text-highlight); margin-bottom: 20px;
+            display: flex; align-items: center; gap: 10px; border-left: 4px solid var(--text-highlight); padding-left: 15px;
+        }
+        .friend-card, .request-card {
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(0,0,0,0.2); padding: 12px 15px; border-radius: var(--radius);
+            margin-bottom: 12px; transition: 0.2s;
+        }
+        .friend-card:hover, .request-card:hover { background: var(--card-bg-hover); transform: translateX(5px); }
+        .friend-info { display: flex; align-items: center; gap: 15px; }
+        .friend-avatar {
+            width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #3ecf8e, #8a4baf);
+            display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;
+            overflow: hidden; flex-shrink: 0;
+        }
+        .friend-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .friend-name { font-weight: 600; color: var(--text-highlight); }
+        .btn-icon {
+            background: transparent; border: none; color: var(--text-secondary); cursor: pointer;
+            padding: 8px 12px; border-radius: 30px; transition: 0.2s; font-size: 0.9rem;
+        }
+        .btn-icon:hover { background: rgba(129,199,132,0.2); color: var(--text-highlight); }
+        .btn-danger { color: var(--danger); }
+        .btn-danger:hover { background: rgba(248,113,113,0.2); }
+        .btn-success { background: var(--text-highlight); color: var(--bg); border: none; padding: 6px 14px; border-radius: 30px; cursor: pointer; }
+        .btn-outline { background: transparent; border: 1px solid var(--border-color); padding: 6px 14px; border-radius: 30px; cursor: pointer; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        .search-box input {
+            flex: 1; padding: 10px 15px; background: #2d3748; border: 1px solid var(--border-color);
+            border-radius: 40px; color: white; outline: none;
+        }
+        .search-box input:focus { border-color: var(--text-highlight); }
+        .empty-tip { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+        .loading-spinner-small {
+            width: 24px; height: 24px; border: 3px solid rgba(129,199,132,0.2); border-top-color: var(--text-highlight);
+            border-radius: 50%; animation: spin 1s linear infinite; display: inline-block;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 900px) { .two-columns { grid-template-columns: 1fr; } }
+        .sync-notice {
+            position: fixed; bottom: 100px; right: 20px; background: var(--text-highlight); color: var(--bg);
+            padding: 10px 16px; border-radius: var(--radius); opacity: 0; transition: 0.3s; z-index: 1001;
+        }
+        .sync-notice.show { opacity: 1; transform: translateY(-10px); }
+        #notification {
+            position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px;
+            z-index: 10001; transform: translateX(120%); transition: 0.3s; backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="nav-title">六哥荣耀WIKI</div>
+        <a href="index.html" class="nav-link">首页</a>
+        <a href="profile.html" class="nav-link">个人主页</a>
+        <a href="friends.html" class="nav-link active">好友</a>
+        <div id="userNavSection" style="display: flex; align-items: center; gap: 15px; margin-left: auto;"></div>
+    </nav>
+    <div class="sync-notice" id="syncNotice"><i class="fas fa-sync-alt"></i><span>已同步</span></div>
+    <div class="friends-container">
+        <div id="loadingView" class="loading" style="text-align:center;padding:80px;"><div class="loading-spinner-small"></div><p>加载好友系统...</p></div>
+        <div id="mainContent" style="display:none;">
+            <div class="two-columns">
+                <!-- 左侧：好友列表 -->
+                <div class="friends-list">
+                    <div class="section-title"><i class="fas fa-users"></i> 我的好友 <span id="friendCount" class="badge" style="background:var(--text-highlight);">0</span></div>
+                    <div id="friendsListContainer">加载中...</div>
+                </div>
+                <!-- 右侧：请求 + 搜索 -->
+                <div>
+                    <div class="requests-panel" style="margin-bottom: 25px;">
+                        <div class="section-title"><i class="fas fa-user-plus"></i> 好友请求 <span id="requestBadge" class="badge">0</span></div>
+                        <div id="pendingRequestsContainer">暂无请求</div>
+                    </div>
+                    <div class="requests-panel">
+                        <div class="section-title"><i class="fas fa-paper-plane"></i> 我发出的请求</div>
+                        <div id="sentRequestsContainer">暂无发出请求</div>
+                    </div>
+                    <div class="search-panel" style="margin-top: 25px;">
+                        <div class="section-title"><i class="fas fa-search"></i> 添加好友</div>
+                        <div class="search-box">
+                            <input type="text" id="searchInput" placeholder="输入用户名搜索...">
+                            <button id="searchBtn" class="btn-success"><i class="fas fa-search"></i> 搜索</button>
+                        </div>
+                        <div id="searchResults"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="notification"></div>
+
+    <script>
+        // ---------- 初始化 Supabase ----------
+        const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let currentUserId = null;
+
+        // DOM 工具
+        function $(id) { return document.getElementById(id); }
+        function showNotification(msg, type='info') {
+            let n = $('notification');
+            n.textContent = msg;
+            n.style.background = type==='error'?'#f87171':type==='success'?'#10b981':'#3b82f6';
+            n.style.transform = 'translateX(0)';
+            setTimeout(() => n.style.transform = 'translateX(120%)', 3000);
+        }
+        function showSyncNotice() { let sn=$('syncNotice'); sn.classList.add('show'); setTimeout(()=>sn.classList.remove('show'),2000); }
+
+        // 获取用户资料（头像、用户名）
+        async function getUserProfile(userId) {
+            const { data, error } = await supabase.from('user_profiles').select('username, avatar_url').eq('id', userId).single();
+            if(error) return { username: '未知用户', avatar_url: null };
+            return { username: data.username || '用户', avatar_url: data.avatar_url };
+        }
+
+        // 更新导航栏与头像
+        async function updateNavbar() {
+            const { data: { user } } = await supabase.auth.getUser();
+            if(!user) return;
+            const profile = await getUserProfile(user.id);
+            const avatarHtml = profile.avatar_url ? `<img src="${profile.avatar_url}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">` : `<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;font-weight:600;">${(profile.username.charAt(0)||'U').toUpperCase()}</div>`;
+            $('userNavSection').innerHTML = `${avatarHtml}<span style="color:var(--text-highlight);">${profile.username}</span><button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:30px;cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button>`;
+            $('logoutBtn')?.addEventListener('click', async()=>{ await supabase.auth.signOut(); window.location.href='index.html'; });
+        }
+
+        // 核心：获取所有好友关系数据并渲染
+        async function loadAllFriendsData() {
+            if(!currentUserId) return;
+            // 1. 获取所有与当前用户相关的 accepted 和 pending 记录
+            const { data: relations, error } = await supabase
+                .from('friends')
+                .select('*')
+                .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
+            if(error) { console.error(error); return; }
+
+            // 处理好友列表 (status = accepted)
+            const accepted = relations.filter(r => r.status === 'accepted');
+            const friendIds = accepted.map(r => r.requester_id === currentUserId ? r.addressee_id : r.requester_id);
+            const friendsWithDetails = await Promise.all(friendIds.map(async id => {
+                const profile = await getUserProfile(id);
+                return { id, username: profile.username, avatar_url: profile.avatar_url };
+            }));
+            // 渲染好友列表
+            const friendHtml = friendsWithDetails.length ? friendsWithDetails.map(f => `
+                <div class="friend-card">
+                    <div class="friend-info">
+                        <div class="friend-avatar">${f.avatar_url ? `<img src="${f.avatar_url}">` : f.username.charAt(0).toUpperCase()}</div>
+                        <div class="friend-name">${f.username}</div>
+                    </div>
+                    <button class="btn-icon btn-danger" onclick="removeFriend('${f.id}')"><i class="fas fa-user-minus"></i> 删除</button>
+                </div>
+            `).join('') : '<div class="empty-tip"><i class="fas fa-user-friends"></i> 暂无好友，去添加吧~</div>';
+            $('friendsListContainer').innerHTML = friendHtml;
+            $('friendCount').innerText = friendsWithDetails.length;
+
+            // 待接收请求 (addressee_id = 当前用户, status = pending)
+            const incoming = relations.filter(r => r.addressee_id === currentUserId && r.status === 'pending');
+            const incomingWithUser = await Promise.all(incoming.map(async r => {
+                const profile = await getUserProfile(r.requester_id);
+                return { id: r.id, username: profile.username, avatar_url: profile.avatar_url, requesterId: r.requester_id };
+            }));
+            $('pendingRequestsContainer').innerHTML = incomingWithUser.length ? incomingWithUser.map(req => `
+                <div class="request-card">
+                    <div class="friend-info">
+                        <div class="friend-avatar">${req.avatar_url ? `<img src="${req.avatar_url}">` : req.username.charAt(0).toUpperCase()}</div>
+                        <div class="friend-name">${req.username}</div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn-success" onclick="respondRequest('${req.id}', 'accept')"><i class="fas fa-check"></i> 接受</button>
+                        <button class="btn-outline" onclick="respondRequest('${req.id}', 'reject')"><i class="fas fa-times"></i> 拒绝</button>
+                    </div>
+                </div>
+            `).join('') : '<div class="empty-tip">暂无好友请求</div>';
+            $('requestBadge').innerText = incoming.length;
+
+            // 我发出的请求 (requester_id = 当前用户, status = pending)
+            const sent = relations.filter(r => r.requester_id === currentUserId && r.status === 'pending');
+            const sentWithUser = await Promise.all(sent.map(async r => {
+                const profile = await getUserProfile(r.addressee_id);
+                return { id: r.id, username: profile.username, avatar_url: profile.avatar_url };
+            }));
+            $('sentRequestsContainer').innerHTML = sentWithUser.length ? sentWithUser.map(req => `
+                <div class="request-card">
+                    <div class="friend-info">
+                        <div class="friend-avatar">${req.avatar_url ? `<img src="${req.avatar_url}">` : req.username.charAt(0).toUpperCase()}</div>
+                        <div class="friend-name">${req.username}</div>
+                    </div>
+                    <button class="btn-icon btn-danger" onclick="cancelSentRequest('${req.id}')"><i class="fas fa-trash-alt"></i> 撤销</button>
+                </div>
+            `).join('') : '<div class="empty-tip">未发出任何请求</div>';
+        }
+
+        // 删除好友
+        window.removeFriend = async (friendId) => {
+            if(!confirm('确定要删除这位好友吗？')) return;
+            const { error } = await supabase
+                .from('friends')
+                .delete()
+                .or(`(requester_id.eq.${currentUserId} AND addressee_id.eq.${friendId}),(requester_id.eq.${friendId} AND addressee_id.eq.${currentUserId})`)
+                .eq('status', 'accepted');
+            if(error) showNotification('删除失败', 'error');
+            else { showNotification('已删除好友', 'success'); loadAllFriendsData(); showSyncNotice(); }
+        };
+
+        // 处理接受/拒绝请求
+        window.respondRequest = async (requestId, action) => {
+            if(action === 'accept') {
+                const { error } = await supabase.from('friends').update({ status: 'accepted', updated_at: new Date() }).eq('id', requestId);
+                if(error) showNotification('接受失败', 'error');
+                else { showNotification('已添加好友', 'success'); loadAllFriendsData(); showSyncNotice(); }
+            } else {
+                const { error } = await supabase.from('friends').delete().eq('id', requestId);
+                if(error) showNotification('拒绝失败', 'error');
+                else { showNotification('已拒绝请求', 'success'); loadAllFriendsData(); }
+            }
+        };
+        window.cancelSentRequest = async (requestId) => {
+            const { error } = await supabase.from('friends').delete().eq('id', requestId);
+            if(error) showNotification('撤销失败', 'error');
+            else { showNotification('已撤销请求', 'success'); loadAllFriendsData(); }
+        };
+
+        // 搜索用户并发送好友请求
+        let searchTimeout;
+        $('searchBtn').onclick = () => performSearch();
+        $('searchInput').addEventListener('input', () => { clearTimeout(searchTimeout); searchTimeout = setTimeout(performSearch, 400); });
+        async function performSearch() {
+            const keyword = $('searchInput').value.trim();
+            if(!keyword) { $('searchResults').innerHTML = ''; return; }
+            const { data: users, error } = await supabase
+                .from('user_profiles')
+                .select('id, username, avatar_url')
+                .ilike('username', `%${keyword}%`)
+                .limit(10);
+            if(error) return;
+            const filtered = users.filter(u => u.id !== currentUserId);
+            if(filtered.length === 0) { $('searchResults').innerHTML = '<div class="empty-tip">未找到其他用户</div>'; return; }
+            // 检查是否已经是好友或已有请求
+            const { data: existing } = await supabase
+                .from('friends')
+                .select('requester_id, addressee_id, status')
+                .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
+            const existingMap = new Map();
+            existing?.forEach(rel => {
+                const otherId = rel.requester_id === currentUserId ? rel.addressee_id : rel.requester_id;
+                existingMap.set(otherId, rel.status);
+            });
+            $('searchResults').innerHTML = filtered.map(u => {
+                let actionHtml = '';
+                const status = existingMap.get(u.id);
+                if(!status) actionHtml = `<button class="btn-success" onclick="sendFriendRequest('${u.id}')"><i class="fas fa-user-plus"></i> 添加</button>`;
+                else if(status === 'pending') {
+                    const isSentByMe = existing?.find(r => r.requester_id === currentUserId && r.addressee_id === u.id);
+                    actionHtml = isSentByMe ? '<span style="color:#ffd966;">等待验证</span>' : '<span style="color:#aaa;">请求已发送给您</span>';
+                } else if(status === 'accepted') actionHtml = '<span style="color:var(--text-highlight);"><i class="fas fa-check-circle"></i> 已是好友</span>';
+                return `
+                    <div class="friend-card">
+                        <div class="friend-info">
+                            <div class="friend-avatar">${u.avatar_url ? `<img src="${u.avatar_url}">` : (u.username.charAt(0).toUpperCase())}</div>
+                            <div class="friend-name">${u.username}</div>
+                        </div>
+                        <div>${actionHtml}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.sendFriendRequest = async (targetId) => {
+            const { error } = await supabase.from('friends').insert({
+                requester_id: currentUserId,
+                addressee_id: targetId,
+                status: 'pending'
+            });
+            if(error) { if(error.code === '23505') showNotification('已经发送过请求或已是好友', 'error'); else showNotification('发送失败', 'error'); }
+            else { showNotification('好友请求已发送', 'success'); performSearch(); loadAllFriendsData(); showSyncNotice(); }
+        };
+
+        // 实时监听变更
+        function subscribeToFriendsChanges() {
+            const channel = supabase.channel('friends-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'friends', filter: `requester_id=eq.${currentUserId}` }, () => loadAllFriendsData())
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'friends', filter: `addressee_id=eq.${currentUserId}` }, () => loadAllFriendsData())
+                .subscribe();
+        }
+
+        // 初始化页面
+        async function init() {
+            const { data: { user }, error } = await supabase.auth.getUser();
+            if(error || !user) { showNotification('请先登录', 'error'); setTimeout(()=>window.location.href='login-real.html', 1500); return; }
+            currentUserId = user.id;
+            await updateNavbar();
+            await loadAllFriendsData();
+            subscribeToFriendsChanges();
+            $('loadingView').style.display = 'none';
+            $('mainContent').style.display = 'block';
+        }
+        init();
+    </script>
+</body>
+</html>
