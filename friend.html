@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://xiaochen1235789.github.io/styles/main.css">
     <style>
-        /* ========== 沿用原配色与扩展样式 ========== */
+        /* 保持原有样式不变，省略重复代码（与您现有样式完全相同） */
         :root {
             --bg: #121212;
             --card-bg: #1e3a2f;
@@ -92,6 +92,10 @@
             position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px;
             z-index: 10001; transform: translateX(120%); transition: 0.3s; backdrop-filter: blur(10px);
         }
+        .error-box {
+            background: rgba(248,113,113,0.1); border: 1px solid #f87171; border-radius: var(--radius);
+            padding: 20px; text-align: center; color: #f87171; margin: 20px;
+        }
     </style>
 </head>
 <body>
@@ -104,18 +108,17 @@
     </nav>
     <div class="sync-notice" id="syncNotice"><i class="fas fa-sync-alt"></i><span>已同步</span></div>
     <div class="friends-container">
-        <div id="loadingView" class="loading" style="text-align:center;padding:80px;">
+        <div id="loadingView" style="text-align:center;padding:80px;">
             <div class="loading-spinner-small"></div>
-            <p>加载好友系统...</p>
+            <p id="loadingMessage">加载好友系统...</p>
         </div>
         <div id="mainContent" style="display:none;">
+            <!-- 内容结构与之前相同 -->
             <div class="two-columns">
-                <!-- 左侧：好友列表 -->
                 <div class="friends-list">
                     <div class="section-title"><i class="fas fa-users"></i> 我的好友 <span id="friendCount" class="badge" style="background:var(--text-highlight);">0</span></div>
                     <div id="friendsListContainer">加载中...</div>
                 </div>
-                <!-- 右侧：请求 + 搜索 -->
                 <div>
                     <div class="requests-panel" style="margin-bottom: 25px;">
                         <div class="section-title"><i class="fas fa-user-plus"></i> 好友请求 <span id="requestBadge" class="badge">0</span></div>
@@ -140,13 +143,11 @@
     <div id="notification"></div>
 
     <script>
-        // ---------- 初始化 Supabase ----------
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let currentUserId = null;
 
-        // DOM 工具
         function $(id) { return document.getElementById(id); }
         function showNotification(msg, type='info') {
             let n = $('notification');
@@ -157,7 +158,6 @@
         }
         function showSyncNotice() { let sn=$('syncNotice'); sn.classList.add('show'); setTimeout(()=>sn.classList.remove('show'),2000); }
         
-        // 防 XSS
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/[&<>]/g, function(m) {
@@ -168,7 +168,6 @@
             });
         }
 
-        // 获取用户资料（头像、用户名）
         async function getUserProfile(userId) {
             try {
                 const { data, error } = await supabase.from('user_profiles').select('username, avatar_url').eq('id', userId).single();
@@ -180,7 +179,6 @@
             }
         }
 
-        // 更新导航栏
         async function updateNavbar() {
             const { data: { user } } = await supabase.auth.getUser();
             if(!user) return;
@@ -190,25 +188,28 @@
             $('logoutBtn')?.addEventListener('click', async()=>{ await supabase.auth.signOut(); window.location.href='index.html'; });
         }
 
-        // 核心：加载所有好友数据
         async function loadAllFriendsData() {
             if (!currentUserId) return;
             try {
-                // 1. 获取所有与当前用户相关的记录
+                // 先检查 friends 表是否存在（通过尝试查询一条记录）
+                const { error: checkError } = await supabase.from('friends').select('id').limit(1);
+                if (checkError && checkError.message.includes('relation') && checkError.message.includes('does not exist')) {
+                    throw new Error('friends 表不存在，请在 Supabase 中执行建表 SQL');
+                }
+
                 const { data: relations, error } = await supabase
                     .from('friends')
                     .select('*')
                     .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
                 if (error) throw new Error(`查询好友关系失败: ${error.message}`);
 
-                // 处理好友列表 (status = accepted)
+                // 处理好友列表
                 const accepted = relations.filter(r => r.status === 'accepted');
                 const friendIds = accepted.map(r => r.requester_id === currentUserId ? r.addressee_id : r.requester_id);
                 const friendsWithDetails = await Promise.all(friendIds.map(async id => {
                     const profile = await getUserProfile(id);
                     return { id, username: profile.username, avatar_url: profile.avatar_url };
                 }));
-                // 渲染好友列表
                 const friendHtml = friendsWithDetails.length ? friendsWithDetails.map(f => `
                     <div class="friend-card">
                         <div class="friend-info">
@@ -221,11 +222,10 @@
                 $('friendsListContainer').innerHTML = friendHtml;
                 $('friendCount').innerText = friendsWithDetails.length;
 
-                // 待接收请求 (addressee_id = 当前用户, status = pending)
                 const incoming = relations.filter(r => r.addressee_id === currentUserId && r.status === 'pending');
                 const incomingWithUser = await Promise.all(incoming.map(async r => {
                     const profile = await getUserProfile(r.requester_id);
-                    return { id: r.id, username: profile.username, avatar_url: profile.avatar_url, requesterId: r.requester_id };
+                    return { id: r.id, username: profile.username, avatar_url: profile.avatar_url };
                 }));
                 $('pendingRequestsContainer').innerHTML = incomingWithUser.length ? incomingWithUser.map(req => `
                     <div class="request-card">
@@ -241,7 +241,6 @@
                 `).join('') : '<div class="empty-tip">暂无好友请求</div>';
                 $('requestBadge').innerText = incoming.length;
 
-                // 我发出的请求 (requester_id = 当前用户, status = pending)
                 const sent = relations.filter(r => r.requester_id === currentUserId && r.status === 'pending');
                 const sentWithUser = await Promise.all(sent.map(async r => {
                     const profile = await getUserProfile(r.addressee_id);
@@ -257,13 +256,13 @@
                     </div>
                 `).join('') : '<div class="empty-tip">未发出任何请求</div>';
             } catch (err) {
-                console.error(err);
-                $('friendsListContainer').innerHTML = `<div class="empty-tip" style="color:#f87171;">❌ ${escapeHtml(err.message)}</div>`;
+                console.error('loadAllFriendsData 错误:', err);
+                $('friendsListContainer').innerHTML = `<div class="empty-tip" style="color:#f87171;">❌ 错误：${escapeHtml(err.message)}</div>`;
                 showNotification(err.message, 'error');
+                throw err; // 重新抛出以便 init 捕获
             }
         }
 
-        // 删除好友
         window.removeFriend = async (friendId) => {
             if(!confirm('确定要删除这位好友吗？')) return;
             try {
@@ -281,7 +280,6 @@
             }
         };
 
-        // 处理接受/拒绝请求
         window.respondRequest = async (requestId, action) => {
             try {
                 if(action === 'accept') {
@@ -312,7 +310,6 @@
             }
         };
 
-        // 搜索用户并发送好友请求
         let searchTimeout;
         $('searchBtn').onclick = () => performSearch();
         $('searchInput').addEventListener('input', () => { clearTimeout(searchTimeout); searchTimeout = setTimeout(performSearch, 400); });
@@ -330,7 +327,6 @@
                 const filtered = users.filter(u => u.id !== currentUserId);
                 if(filtered.length === 0) { $('searchResults').innerHTML = '<div class="empty-tip">未找到其他用户</div>'; return; }
                 
-                // 检查是否已经是好友或已有请求
                 const { data: existing } = await supabase
                     .from('friends')
                     .select('requester_id, addressee_id, status')
@@ -376,7 +372,7 @@
                     else throw error;
                 } else {
                     showNotification('好友请求已发送', 'success');
-                    await performSearch();  // 刷新搜索结果
+                    await performSearch();
                     await loadAllFriendsData();
                     showSyncNotice();
                 }
@@ -385,7 +381,6 @@
             }
         };
 
-        // 实时监听变更
         function subscribeToFriendsChanges() {
             if (!currentUserId) return;
             const channel = supabase.channel('friends-changes')
@@ -397,25 +392,39 @@
                 });
         }
 
-        // 初始化页面
         async function init() {
             try {
+                // 1. 检查登录
                 const { data: { user }, error: userError } = await supabase.auth.getUser();
                 if (userError || !user) {
-                    showNotification('请先登录', 'error');
-                    setTimeout(() => window.location.href = 'login-real.html', 1500);
-                    return;
+                    throw new Error('请先登录');
                 }
                 currentUserId = user.id;
+                $('loadingMessage').innerText = '已登录，正在加载个人资料...';
+                
+                // 2. 更新导航栏（会调用 getUserProfile，可能因 user_profiles 表问题失败）
                 await updateNavbar();
+                $('loadingMessage').innerText = '正在加载好友列表...';
+                
+                // 3. 加载好友数据
                 await loadAllFriendsData();
+                
+                // 4. 订阅实时更新
                 subscribeToFriendsChanges();
+                
+                // 5. 隐藏加载界面，显示主内容
                 $('loadingView').style.display = 'none';
                 $('mainContent').style.display = 'block';
             } catch (err) {
-                console.error('初始化失败', err);
-                $('loadingView').innerHTML = `<div style="color:#f87171;"><i class="fas fa-exclamation-triangle"></i> 加载失败：${escapeHtml(err.message)}<br><button onclick="location.reload()" style="margin-top:10px;padding:6px 12px;background:var(--text-highlight);border:none;border-radius:8px;cursor:pointer;">重试</button></div>`;
-                showNotification('初始化失败: '+err.message, 'error');
+                console.error('初始化失败:', err);
+                let errorMsg = err.message;
+                if (errorMsg.includes('user_profiles')) {
+                    errorMsg = 'user_profiles 表不存在或当前用户无记录，请在 Supabase 执行补充 SQL';
+                } else if (errorMsg.includes('friends')) {
+                    errorMsg = 'friends 表不存在，请在 Supabase 执行建表 SQL';
+                }
+                $('loadingView').innerHTML = `<div class="error-box"><i class="fas fa-exclamation-triangle"></i> 加载失败：${escapeHtml(errorMsg)}<br><br><button onclick="location.reload()" style="padding:8px 16px;background:var(--text-highlight);border:none;border-radius:8px;cursor:pointer;">重试</button></div>`;
+                showNotification(errorMsg, 'error');
             }
         }
         init();
