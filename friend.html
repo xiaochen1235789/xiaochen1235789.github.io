@@ -104,7 +104,10 @@
     </nav>
     <div class="sync-notice" id="syncNotice"><i class="fas fa-sync-alt"></i><span>已同步</span></div>
     <div class="friends-container">
-        <div id="loadingView" class="loading" style="text-align:center;padding:80px;"><div class="loading-spinner-small"></div><p>加载好友系统...</p></div>
+        <div id="loadingView" class="loading" style="text-align:center;padding:80px;">
+            <div class="loading-spinner-small"></div>
+            <p>加载好友系统...</p>
+        </div>
         <div id="mainContent" style="display:none;">
             <div class="two-columns">
                 <!-- 左侧：好友列表 -->
@@ -153,194 +156,267 @@
             setTimeout(() => n.style.transform = 'translateX(120%)', 3000);
         }
         function showSyncNotice() { let sn=$('syncNotice'); sn.classList.add('show'); setTimeout(()=>sn.classList.remove('show'),2000); }
+        
+        // 防 XSS
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
 
         // 获取用户资料（头像、用户名）
         async function getUserProfile(userId) {
-            const { data, error } = await supabase.from('user_profiles').select('username, avatar_url').eq('id', userId).single();
-            if(error) return { username: '未知用户', avatar_url: null };
-            return { username: data.username || '用户', avatar_url: data.avatar_url };
+            try {
+                const { data, error } = await supabase.from('user_profiles').select('username, avatar_url').eq('id', userId).single();
+                if (error) throw error;
+                return { username: data.username || '用户', avatar_url: data.avatar_url };
+            } catch (err) {
+                console.warn(`获取用户 ${userId} 资料失败:`, err);
+                return { username: '未知用户', avatar_url: null };
+            }
         }
 
-        // 更新导航栏与头像
+        // 更新导航栏
         async function updateNavbar() {
             const { data: { user } } = await supabase.auth.getUser();
             if(!user) return;
             const profile = await getUserProfile(user.id);
             const avatarHtml = profile.avatar_url ? `<img src="${profile.avatar_url}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">` : `<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;font-weight:600;">${(profile.username.charAt(0)||'U').toUpperCase()}</div>`;
-            $('userNavSection').innerHTML = `${avatarHtml}<span style="color:var(--text-highlight);">${profile.username}</span><button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:30px;cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button>`;
+            $('userNavSection').innerHTML = `${avatarHtml}<span style="color:var(--text-highlight);">${escapeHtml(profile.username)}</span><button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:30px;cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button>`;
             $('logoutBtn')?.addEventListener('click', async()=>{ await supabase.auth.signOut(); window.location.href='index.html'; });
         }
 
-        // 核心：获取所有好友关系数据并渲染
+        // 核心：加载所有好友数据
         async function loadAllFriendsData() {
-            if(!currentUserId) return;
-            // 1. 获取所有与当前用户相关的 accepted 和 pending 记录
-            const { data: relations, error } = await supabase
-                .from('friends')
-                .select('*')
-                .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
-            if(error) { console.error(error); return; }
+            if (!currentUserId) return;
+            try {
+                // 1. 获取所有与当前用户相关的记录
+                const { data: relations, error } = await supabase
+                    .from('friends')
+                    .select('*')
+                    .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
+                if (error) throw new Error(`查询好友关系失败: ${error.message}`);
 
-            // 处理好友列表 (status = accepted)
-            const accepted = relations.filter(r => r.status === 'accepted');
-            const friendIds = accepted.map(r => r.requester_id === currentUserId ? r.addressee_id : r.requester_id);
-            const friendsWithDetails = await Promise.all(friendIds.map(async id => {
-                const profile = await getUserProfile(id);
-                return { id, username: profile.username, avatar_url: profile.avatar_url };
-            }));
-            // 渲染好友列表
-            const friendHtml = friendsWithDetails.length ? friendsWithDetails.map(f => `
-                <div class="friend-card">
-                    <div class="friend-info">
-                        <div class="friend-avatar">${f.avatar_url ? `<img src="${f.avatar_url}">` : f.username.charAt(0).toUpperCase()}</div>
-                        <div class="friend-name">${f.username}</div>
+                // 处理好友列表 (status = accepted)
+                const accepted = relations.filter(r => r.status === 'accepted');
+                const friendIds = accepted.map(r => r.requester_id === currentUserId ? r.addressee_id : r.requester_id);
+                const friendsWithDetails = await Promise.all(friendIds.map(async id => {
+                    const profile = await getUserProfile(id);
+                    return { id, username: profile.username, avatar_url: profile.avatar_url };
+                }));
+                // 渲染好友列表
+                const friendHtml = friendsWithDetails.length ? friendsWithDetails.map(f => `
+                    <div class="friend-card">
+                        <div class="friend-info">
+                            <div class="friend-avatar">${f.avatar_url ? `<img src="${f.avatar_url}">` : escapeHtml(f.username.charAt(0).toUpperCase())}</div>
+                            <div class="friend-name">${escapeHtml(f.username)}</div>
+                        </div>
+                        <button class="btn-icon btn-danger" onclick="removeFriend('${f.id}')"><i class="fas fa-user-minus"></i> 删除</button>
                     </div>
-                    <button class="btn-icon btn-danger" onclick="removeFriend('${f.id}')"><i class="fas fa-user-minus"></i> 删除</button>
-                </div>
-            `).join('') : '<div class="empty-tip"><i class="fas fa-user-friends"></i> 暂无好友，去添加吧~</div>';
-            $('friendsListContainer').innerHTML = friendHtml;
-            $('friendCount').innerText = friendsWithDetails.length;
+                `).join('') : '<div class="empty-tip"><i class="fas fa-user-friends"></i> 暂无好友，去添加吧~</div>';
+                $('friendsListContainer').innerHTML = friendHtml;
+                $('friendCount').innerText = friendsWithDetails.length;
 
-            // 待接收请求 (addressee_id = 当前用户, status = pending)
-            const incoming = relations.filter(r => r.addressee_id === currentUserId && r.status === 'pending');
-            const incomingWithUser = await Promise.all(incoming.map(async r => {
-                const profile = await getUserProfile(r.requester_id);
-                return { id: r.id, username: profile.username, avatar_url: profile.avatar_url, requesterId: r.requester_id };
-            }));
-            $('pendingRequestsContainer').innerHTML = incomingWithUser.length ? incomingWithUser.map(req => `
-                <div class="request-card">
-                    <div class="friend-info">
-                        <div class="friend-avatar">${req.avatar_url ? `<img src="${req.avatar_url}">` : req.username.charAt(0).toUpperCase()}</div>
-                        <div class="friend-name">${req.username}</div>
+                // 待接收请求 (addressee_id = 当前用户, status = pending)
+                const incoming = relations.filter(r => r.addressee_id === currentUserId && r.status === 'pending');
+                const incomingWithUser = await Promise.all(incoming.map(async r => {
+                    const profile = await getUserProfile(r.requester_id);
+                    return { id: r.id, username: profile.username, avatar_url: profile.avatar_url, requesterId: r.requester_id };
+                }));
+                $('pendingRequestsContainer').innerHTML = incomingWithUser.length ? incomingWithUser.map(req => `
+                    <div class="request-card">
+                        <div class="friend-info">
+                            <div class="friend-avatar">${req.avatar_url ? `<img src="${req.avatar_url}">` : escapeHtml(req.username.charAt(0).toUpperCase())}</div>
+                            <div class="friend-name">${escapeHtml(req.username)}</div>
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn-success" onclick="respondRequest('${req.id}', 'accept')"><i class="fas fa-check"></i> 接受</button>
+                            <button class="btn-outline" onclick="respondRequest('${req.id}', 'reject')"><i class="fas fa-times"></i> 拒绝</button>
+                        </div>
                     </div>
-                    <div style="display:flex;gap:8px;">
-                        <button class="btn-success" onclick="respondRequest('${req.id}', 'accept')"><i class="fas fa-check"></i> 接受</button>
-                        <button class="btn-outline" onclick="respondRequest('${req.id}', 'reject')"><i class="fas fa-times"></i> 拒绝</button>
-                    </div>
-                </div>
-            `).join('') : '<div class="empty-tip">暂无好友请求</div>';
-            $('requestBadge').innerText = incoming.length;
+                `).join('') : '<div class="empty-tip">暂无好友请求</div>';
+                $('requestBadge').innerText = incoming.length;
 
-            // 我发出的请求 (requester_id = 当前用户, status = pending)
-            const sent = relations.filter(r => r.requester_id === currentUserId && r.status === 'pending');
-            const sentWithUser = await Promise.all(sent.map(async r => {
-                const profile = await getUserProfile(r.addressee_id);
-                return { id: r.id, username: profile.username, avatar_url: profile.avatar_url };
-            }));
-            $('sentRequestsContainer').innerHTML = sentWithUser.length ? sentWithUser.map(req => `
-                <div class="request-card">
-                    <div class="friend-info">
-                        <div class="friend-avatar">${req.avatar_url ? `<img src="${req.avatar_url}">` : req.username.charAt(0).toUpperCase()}</div>
-                        <div class="friend-name">${req.username}</div>
+                // 我发出的请求 (requester_id = 当前用户, status = pending)
+                const sent = relations.filter(r => r.requester_id === currentUserId && r.status === 'pending');
+                const sentWithUser = await Promise.all(sent.map(async r => {
+                    const profile = await getUserProfile(r.addressee_id);
+                    return { id: r.id, username: profile.username, avatar_url: profile.avatar_url };
+                }));
+                $('sentRequestsContainer').innerHTML = sentWithUser.length ? sentWithUser.map(req => `
+                    <div class="request-card">
+                        <div class="friend-info">
+                            <div class="friend-avatar">${req.avatar_url ? `<img src="${req.avatar_url}">` : escapeHtml(req.username.charAt(0).toUpperCase())}</div>
+                            <div class="friend-name">${escapeHtml(req.username)}</div>
+                        </div>
+                        <button class="btn-icon btn-danger" onclick="cancelSentRequest('${req.id}')"><i class="fas fa-trash-alt"></i> 撤销</button>
                     </div>
-                    <button class="btn-icon btn-danger" onclick="cancelSentRequest('${req.id}')"><i class="fas fa-trash-alt"></i> 撤销</button>
-                </div>
-            `).join('') : '<div class="empty-tip">未发出任何请求</div>';
+                `).join('') : '<div class="empty-tip">未发出任何请求</div>';
+            } catch (err) {
+                console.error(err);
+                $('friendsListContainer').innerHTML = `<div class="empty-tip" style="color:#f87171;">❌ ${escapeHtml(err.message)}</div>`;
+                showNotification(err.message, 'error');
+            }
         }
 
         // 删除好友
         window.removeFriend = async (friendId) => {
             if(!confirm('确定要删除这位好友吗？')) return;
-            const { error } = await supabase
-                .from('friends')
-                .delete()
-                .or(`(requester_id.eq.${currentUserId} AND addressee_id.eq.${friendId}),(requester_id.eq.${friendId} AND addressee_id.eq.${currentUserId})`)
-                .eq('status', 'accepted');
-            if(error) showNotification('删除失败', 'error');
-            else { showNotification('已删除好友', 'success'); loadAllFriendsData(); showSyncNotice(); }
+            try {
+                const { error } = await supabase
+                    .from('friends')
+                    .delete()
+                    .or(`(requester_id.eq.${currentUserId} AND addressee_id.eq.${friendId}),(requester_id.eq.${friendId} AND addressee_id.eq.${currentUserId})`)
+                    .eq('status', 'accepted');
+                if (error) throw error;
+                showNotification('已删除好友', 'success');
+                await loadAllFriendsData();
+                showSyncNotice();
+            } catch(err) {
+                showNotification('删除失败: '+err.message, 'error');
+            }
         };
 
         // 处理接受/拒绝请求
         window.respondRequest = async (requestId, action) => {
-            if(action === 'accept') {
-                const { error } = await supabase.from('friends').update({ status: 'accepted', updated_at: new Date() }).eq('id', requestId);
-                if(error) showNotification('接受失败', 'error');
-                else { showNotification('已添加好友', 'success'); loadAllFriendsData(); showSyncNotice(); }
-            } else {
-                const { error } = await supabase.from('friends').delete().eq('id', requestId);
-                if(error) showNotification('拒绝失败', 'error');
-                else { showNotification('已拒绝请求', 'success'); loadAllFriendsData(); }
+            try {
+                if(action === 'accept') {
+                    const { error } = await supabase.from('friends').update({ status: 'accepted', updated_at: new Date() }).eq('id', requestId);
+                    if (error) throw error;
+                    showNotification('已添加好友', 'success');
+                } else {
+                    const { error } = await supabase.from('friends').delete().eq('id', requestId);
+                    if (error) throw error;
+                    showNotification('已拒绝请求', 'success');
+                }
+                await loadAllFriendsData();
+                showSyncNotice();
+            } catch(err) {
+                showNotification('操作失败: '+err.message, 'error');
             }
         };
+
         window.cancelSentRequest = async (requestId) => {
-            const { error } = await supabase.from('friends').delete().eq('id', requestId);
-            if(error) showNotification('撤销失败', 'error');
-            else { showNotification('已撤销请求', 'success'); loadAllFriendsData(); }
+            try {
+                const { error } = await supabase.from('friends').delete().eq('id', requestId);
+                if (error) throw error;
+                showNotification('已撤销请求', 'success');
+                await loadAllFriendsData();
+                showSyncNotice();
+            } catch(err) {
+                showNotification('撤销失败: '+err.message, 'error');
+            }
         };
 
         // 搜索用户并发送好友请求
         let searchTimeout;
         $('searchBtn').onclick = () => performSearch();
         $('searchInput').addEventListener('input', () => { clearTimeout(searchTimeout); searchTimeout = setTimeout(performSearch, 400); });
+        
         async function performSearch() {
             const keyword = $('searchInput').value.trim();
             if(!keyword) { $('searchResults').innerHTML = ''; return; }
-            const { data: users, error } = await supabase
-                .from('user_profiles')
-                .select('id, username, avatar_url')
-                .ilike('username', `%${keyword}%`)
-                .limit(10);
-            if(error) return;
-            const filtered = users.filter(u => u.id !== currentUserId);
-            if(filtered.length === 0) { $('searchResults').innerHTML = '<div class="empty-tip">未找到其他用户</div>'; return; }
-            // 检查是否已经是好友或已有请求
-            const { data: existing } = await supabase
-                .from('friends')
-                .select('requester_id, addressee_id, status')
-                .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
-            const existingMap = new Map();
-            existing?.forEach(rel => {
-                const otherId = rel.requester_id === currentUserId ? rel.addressee_id : rel.requester_id;
-                existingMap.set(otherId, rel.status);
-            });
-            $('searchResults').innerHTML = filtered.map(u => {
-                let actionHtml = '';
-                const status = existingMap.get(u.id);
-                if(!status) actionHtml = `<button class="btn-success" onclick="sendFriendRequest('${u.id}')"><i class="fas fa-user-plus"></i> 添加</button>`;
-                else if(status === 'pending') {
-                    const isSentByMe = existing?.find(r => r.requester_id === currentUserId && r.addressee_id === u.id);
-                    actionHtml = isSentByMe ? '<span style="color:#ffd966;">等待验证</span>' : '<span style="color:#aaa;">请求已发送给您</span>';
-                } else if(status === 'accepted') actionHtml = '<span style="color:var(--text-highlight);"><i class="fas fa-check-circle"></i> 已是好友</span>';
-                return `
-                    <div class="friend-card">
-                        <div class="friend-info">
-                            <div class="friend-avatar">${u.avatar_url ? `<img src="${u.avatar_url}">` : (u.username.charAt(0).toUpperCase())}</div>
-                            <div class="friend-name">${u.username}</div>
+            try {
+                const { data: users, error } = await supabase
+                    .from('user_profiles')
+                    .select('id, username, avatar_url')
+                    .ilike('username', `%${keyword}%`)
+                    .limit(10);
+                if (error) throw error;
+                const filtered = users.filter(u => u.id !== currentUserId);
+                if(filtered.length === 0) { $('searchResults').innerHTML = '<div class="empty-tip">未找到其他用户</div>'; return; }
+                
+                // 检查是否已经是好友或已有请求
+                const { data: existing } = await supabase
+                    .from('friends')
+                    .select('requester_id, addressee_id, status')
+                    .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
+                const existingMap = new Map();
+                existing?.forEach(rel => {
+                    const otherId = rel.requester_id === currentUserId ? rel.addressee_id : rel.requester_id;
+                    existingMap.set(otherId, rel.status);
+                });
+                
+                $('searchResults').innerHTML = filtered.map(u => {
+                    let actionHtml = '';
+                    const status = existingMap.get(u.id);
+                    if(!status) actionHtml = `<button class="btn-success" onclick="sendFriendRequest('${u.id}')"><i class="fas fa-user-plus"></i> 添加</button>`;
+                    else if(status === 'pending') {
+                        const isSentByMe = existing?.find(r => r.requester_id === currentUserId && r.addressee_id === u.id);
+                        actionHtml = isSentByMe ? '<span style="color:#ffd966;">等待验证</span>' : '<span style="color:#aaa;">请求已发送给您</span>';
+                    } else if(status === 'accepted') actionHtml = '<span style="color:var(--text-highlight);"><i class="fas fa-check-circle"></i> 已是好友</span>';
+                    return `
+                        <div class="friend-card">
+                            <div class="friend-info">
+                                <div class="friend-avatar">${u.avatar_url ? `<img src="${u.avatar_url}">` : escapeHtml(u.username.charAt(0).toUpperCase())}</div>
+                                <div class="friend-name">${escapeHtml(u.username)}</div>
+                            </div>
+                            <div>${actionHtml}</div>
                         </div>
-                        <div>${actionHtml}</div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            } catch(err) {
+                showNotification('搜索失败: '+err.message, 'error');
+            }
         }
 
         window.sendFriendRequest = async (targetId) => {
-            const { error } = await supabase.from('friends').insert({
-                requester_id: currentUserId,
-                addressee_id: targetId,
-                status: 'pending'
-            });
-            if(error) { if(error.code === '23505') showNotification('已经发送过请求或已是好友', 'error'); else showNotification('发送失败', 'error'); }
-            else { showNotification('好友请求已发送', 'success'); performSearch(); loadAllFriendsData(); showSyncNotice(); }
+            try {
+                const { error } = await supabase.from('friends').insert({
+                    requester_id: currentUserId,
+                    addressee_id: targetId,
+                    status: 'pending'
+                });
+                if (error) {
+                    if (error.code === '23505') showNotification('已经发送过请求或已是好友', 'error');
+                    else throw error;
+                } else {
+                    showNotification('好友请求已发送', 'success');
+                    await performSearch();  // 刷新搜索结果
+                    await loadAllFriendsData();
+                    showSyncNotice();
+                }
+            } catch(err) {
+                showNotification('发送失败: '+err.message, 'error');
+            }
         };
 
         // 实时监听变更
         function subscribeToFriendsChanges() {
+            if (!currentUserId) return;
             const channel = supabase.channel('friends-changes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'friends', filter: `requester_id=eq.${currentUserId}` }, () => loadAllFriendsData())
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'friends', filter: `addressee_id=eq.${currentUserId}` }, () => loadAllFriendsData())
-                .subscribe();
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') console.log('已订阅好友实时更新');
+                    if (status === 'CHANNEL_ERROR') console.warn('实时订阅出错，但不影响基本功能');
+                });
         }
 
         // 初始化页面
         async function init() {
-            const { data: { user }, error } = await supabase.auth.getUser();
-            if(error || !user) { showNotification('请先登录', 'error'); setTimeout(()=>window.location.href='login-real.html', 1500); return; }
-            currentUserId = user.id;
-            await updateNavbar();
-            await loadAllFriendsData();
-            subscribeToFriendsChanges();
-            $('loadingView').style.display = 'none';
-            $('mainContent').style.display = 'block';
+            try {
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                if (userError || !user) {
+                    showNotification('请先登录', 'error');
+                    setTimeout(() => window.location.href = 'login-real.html', 1500);
+                    return;
+                }
+                currentUserId = user.id;
+                await updateNavbar();
+                await loadAllFriendsData();
+                subscribeToFriendsChanges();
+                $('loadingView').style.display = 'none';
+                $('mainContent').style.display = 'block';
+            } catch (err) {
+                console.error('初始化失败', err);
+                $('loadingView').innerHTML = `<div style="color:#f87171;"><i class="fas fa-exclamation-triangle"></i> 加载失败：${escapeHtml(err.message)}<br><button onclick="location.reload()" style="margin-top:10px;padding:6px 12px;background:var(--text-highlight);border:none;border-radius:8px;cursor:pointer;">重试</button></div>`;
+                showNotification('初始化失败: '+err.message, 'error');
+            }
         }
         init();
     </script>
