@@ -2,13 +2,16 @@
 <html lang="zh-cmn-Hans">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>我的个人主页 - 六哥荣耀WIKI</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://xiaochen1235789.github.io/styles/main.css">
+    <!-- 引入 Cropper.js 样式与脚本 -->
+    <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
     <style>
-        /* ========== 样式（同之前提供的完整样式，保留关键部分） ========== */
+        /* ========== 样式（保持原有所有样式，仅增加裁剪模态框样式） ========== */
         :root {
             --bg: #121212;
             --card-bg: #1e3a2f;
@@ -545,7 +548,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.85);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -553,7 +556,7 @@
             opacity: 0;
             visibility: hidden;
             transition: all var(--transition-normal);
-            backdrop-filter: blur(5px);
+            backdrop-filter: blur(8px);
         }
         
         .modal-overlay.show {
@@ -565,13 +568,42 @@
             background: var(--card-bg);
             border-radius: var(--radius);
             padding: 30px;
-            max-width: 500px;
+            max-width: 550px;
             width: 90%;
-            max-height: 80vh;
+            max-height: 85vh;
             overflow-y: auto;
             border: 1px solid var(--border-color);
             box-shadow: var(--shadow);
             animation: modalSlideIn 0.3s ease;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .modal-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--text-highlight);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: var(--transition-fast);
+        }
+        
+        .modal-close:hover {
+            color: var(--text-highlight);
+            transform: scale(1.1);
         }
         
         @keyframes modalSlideIn {
@@ -595,9 +627,26 @@
             border-color: var(--text-highlight);
             box-shadow: 0 0 0 2px rgba(129, 199, 132, 0.2);
         }
-        .form-actions { display: flex; gap: 10px; margin-top: 30px; }
+        .form-actions { display: flex; gap: 10px; margin-top: 30px; justify-content: flex-end; }
         .btn-cancel { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); }
         .btn-save { background: var(--text-highlight); color: var(--bg); border: none; }
+        
+        /* 裁剪模态框专用样式 */
+        .cropper-container {
+            margin: 0 auto;
+            max-height: 60vh;
+        }
+        .crop-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        .preview-img {
+            max-width: 100px;
+            margin-top: 10px;
+            border-radius: 50%;
+        }
         
         .top-nav {
             background: var(--card-bg);
@@ -638,7 +687,7 @@
             right: 20px;
             padding: 12px 20px;
             border-radius: 6px;
-            z-index: 10000;
+            z-index: 10001;
             transform: translateX(120%);
             transition: transform 0.4s ease;
             max-width: 300px;
@@ -662,7 +711,7 @@
                     <div class="avatar-section">
                         <div class="avatar-container">
                             <div class="avatar" id="userAvatar"><div class="avatar-placeholder" id="avatarPlaceholder">U</div></div>
-                            <div class="avatar-upload" onclick="openAvatarUpload()" title="上传头像（云存储）"><i class="fas fa-camera"></i></div>
+                            <div class="avatar-upload" onclick="openAvatarUpload()" title="上传头像（支持裁剪）"><i class="fas fa-camera"></i></div>
                         </div>
                     </div>
                     <div class="user-info">
@@ -685,7 +734,26 @@
             </div>
         </div>
     </div>
-    <!-- 模态框 -->
+    <!-- 裁剪头像模态框 -->
+    <div class="modal-overlay" id="cropModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-crop-alt"></i> 裁剪头像</div>
+                <button class="modal-close" id="closeCropModal">&times;</button>
+            </div>
+            <div class="form-group">
+                <div style="background: #1a1f2e; border-radius: 8px; overflow: hidden;">
+                    <img id="cropImage" style="max-width: 100%; display: block;" alt="裁剪预览">
+                </div>
+            </div>
+            <div class="crop-buttons">
+                <button class="btn btn-cancel" id="cancelCropBtn">取消</button>
+                <button class="btn btn-primary" id="confirmCropBtn"><i class="fas fa-check"></i> 确认裁剪并上传</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 其他模态框 -->
     <div class="modal-overlay" id="usernameModal"><div class="modal"><div class="modal-header"><div class="modal-title">修改用户名</div><button class="modal-close" id="closeUsernameModal">&times;</button></div><div class="form-group"><label class="form-label">新用户名</label><input type="text" class="form-input" id="newUsername" maxlength="20"></div><div class="form-actions"><button class="btn btn-cancel" id="cancelUsernameUpdate">取消</button><button class="btn btn-save" id="saveUsername">保存</button></div></div></div>
     <div class="modal-overlay" id="bioModal"><div class="modal"><div class="modal-header"><div class="modal-title">修改个人简介</div><button class="modal-close" id="closeBioModal">&times;</button></div><div class="form-group"><label class="form-label">个人简介</label><textarea class="form-textarea" id="newBio" maxlength="200"></textarea></div><div class="form-actions"><button class="btn btn-cancel" id="cancelBioUpdate">取消</button><button class="btn btn-save" id="saveBio">保存</button></div></div></div>
     <div class="modal-overlay" id="passwordModal"><div class="modal"><div class="modal-header"><div class="modal-title">修改密码</div><button class="modal-close" id="closePasswordModal">&times;</button></div><div class="form-group"><label class="form-label">当前密码</label><input type="password" class="form-input" id="currentPassword"></div><div class="form-group"><label class="form-label">新密码</label><input type="password" class="form-input" id="newPassword"></div><div class="form-group"><label class="form-label">确认新密码</label><input type="password" class="form-input" id="confirmPassword"></div><div class="form-actions"><button class="btn btn-cancel" id="cancelPasswordUpdate">取消</button><button class="btn btn-save" id="savePassword">更新密码</button></div></div></div>
@@ -694,6 +762,8 @@
 
     <script>
         let supabaseClient = null, currentUser = null, userProfile = null;
+        let cropper = null;          // 裁剪实例
+        let selectedFile = null;     // 选中的原始文件
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
         
@@ -732,42 +802,115 @@
             navDiv.innerHTML=`<div style="display:flex;align-items:center;gap:10px;">${avatarHtml}<span style="color:var(--text-highlight);">${username}</span><button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:var(--radius);cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
             document.getElementById('logoutBtn')?.addEventListener('click',async()=>{ await supabaseClient.auth.signOut(); localStorage.removeItem('cachedUsername');localStorage.removeItem('cachedAvatar');window.location.href='index.html'; });
         }
+        
+        // 删除用户所有旧头像文件（保留清理能力）
         async function deleteOldAvatarFiles(userId) {
             try {
                 const { data: files, error } = await supabaseClient.storage.from('avatars').list(userId);
-                if(error || !files) return;
+                if(error || !files || files.length === 0) return;
                 const paths = files.map(f=>`${userId}/${f.name}`);
                 if(paths.length) await supabaseClient.storage.from('avatars').remove(paths);
             } catch(e){ console.warn('删除旧头像失败',e); }
         }
-        window.openAvatarUpload = async function() {
-            const input=document.createElement('input'); input.type='file'; input.accept='image/jpeg,image/png,image/gif,image/webp';
-            input.onchange=async(e)=>{
-                const file=e.target.files[0]; if(!file) return;
-                if(file.size>2*1024*1024){ showNotification('图片大小不能超过2MB','error'); return; }
-                const validTypes=['image/jpeg','image/png','image/gif','image/webp'];
+        
+        // 执行上传裁剪后的图片
+        async function uploadCroppedImage(blob) {
+            if(!currentUser) { showNotification('用户未登录','error'); return false; }
+            const ext = 'png';
+            const fileName = `avatar_${Date.now()}.${ext}`;
+            const filePath = `${currentUser.id}/${fileName}`;
+            try {
+                showNotification('正在上传新头像...','info');
+                // 1. 先删除旧头像（清理存储）
+                await deleteOldAvatarFiles(currentUser.id);
+                // 2. 上传新裁剪图片
+                const { error: uploadErr } = await supabaseClient.storage.from('avatars').upload(filePath, blob, { contentType: 'image/png' });
+                if(uploadErr) throw uploadErr;
+                const { data: { publicUrl } } = supabaseClient.storage.from('avatars').getPublicUrl(filePath);
+                // 3. 更新数据库
+                const { error: updateErr } = await supabaseClient.from('user_profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
+                if(updateErr) throw updateErr;
+                // 4. 更新本地状态
+                if(userProfile) userProfile.avatar_url = publicUrl;
+                localStorage.setItem('userAvatar', publicUrl);
+                updateAvatarDisplay(publicUrl);
+                cacheUserProfile(userProfile?.username || currentUser.email.split('@')[0], publicUrl);
+                updateNavbar();
+                showNotification('头像上传成功','success');
+                return true;
+            } catch(err) {
+                console.error(err);
+                showNotification('上传失败: '+err.message,'error');
+                return false;
+            }
+        }
+        
+        // 初始化裁剪模态框并显示
+        function initCropperModal(file) {
+            const img = document.getElementById('cropImage');
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                img.src = e.target.result;
+                if(cropper) cropper.destroy();
+                img.onload = () => {
+                    cropper = new Cropper(img, {
+                        aspectRatio: 1,
+                        viewMode: 1,
+                        dragMode: 'move',
+                        cropBoxMovable: true,
+                        cropBoxResizable: true,
+                        background: false,
+                        autoCropArea: 0.8,
+                        responsive: true,
+                    });
+                    openModal('cropModal');
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // 头像上传入口（带裁剪流程）
+        window.openAvatarUpload = function() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/jpeg,image/png,image/gif,image/webp';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if(!file) return;
+                if(file.size > 5 * 1024 * 1024) { showNotification('图片大小不能超过5MB','error'); return; }
+                const validTypes = ['image/jpeg','image/png','image/gif','image/webp'];
                 if(!validTypes.includes(file.type)){ showNotification('仅支持JPG/PNG/GIF/WEBP格式','error'); return; }
-                const ext=file.name.split('.').pop().toLowerCase();
-                const fileName=`avatar_${Date.now()}.${ext}`;
-                const filePath=`${currentUser.id}/${fileName}`;
-                showNotification('正在上传头像...','info');
-                try {
-                    await deleteOldAvatarFiles(currentUser.id);
-                    const { error:uploadErr } = await supabaseClient.storage.from('avatars').upload(filePath, file);
-                    if(uploadErr) throw uploadErr;
-                    const { data: { publicUrl } } = supabaseClient.storage.from('avatars').getPublicUrl(filePath);
-                    const { error:updateErr } = await supabaseClient.from('user_profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
-                    if(updateErr) throw updateErr;
-                    localStorage.setItem('userAvatar', publicUrl);
-                    updateAvatarDisplay(publicUrl);
-                    cacheUserProfile(userProfile?.username||currentUser.email.split('@')[0], publicUrl);
-                    updateNavbar();
-                    showNotification('头像上传成功','success');
-                } catch(err){ console.error(err); showNotification('上传失败: '+err.message,'error'); }
+                selectedFile = file;
+                initCropperModal(file);
                 input.remove();
             };
-            document.body.appendChild(input); input.click();
+            document.body.appendChild(input);
+            input.click();
         };
+        
+        // 确认裁剪并上传
+        async function confirmCropAndUpload() {
+            if(!cropper) { showNotification('裁剪器未初始化','error'); return; }
+            const canvas = cropper.getCroppedCanvas({
+                width: 500,
+                height: 500,
+                imageSmoothingEnabled: true,
+                imageSmoothingQuality: 'high'
+            });
+            if(!canvas) { showNotification('无法获取裁剪区域','error'); return; }
+            canvas.toBlob(async (blob) => {
+                if(!blob) { showNotification('生成图片失败','error'); return; }
+                closeModal('cropModal');
+                await uploadCroppedImage(blob);
+                if(cropper) { cropper.destroy(); cropper = null; }
+            }, 'image/png', 0.92);
+        }
+        
+        function cancelCrop() {
+            if(cropper) { cropper.destroy(); cropper = null; }
+            closeModal('cropModal');
+        }
+        
         async function loadUserProfile() {
             const { data: profile, error } = await supabaseClient.from('user_profiles').select('*').eq('id',currentUser.id).single();
             if(error && error.code==='PGRST116'){ await supabaseClient.from('user_profiles').insert({ id:currentUser.id, username:currentUser.email.split('@')[0], bio:'这个人很懒，什么都没有写...' }); return loadUserProfile(); }
@@ -781,7 +924,6 @@
                 safeSetText('createdAt',new Date(currentUser.created_at).toLocaleString('zh-CN'));
                 const days=Math.floor((new Date()-new Date(currentUser.created_at))/(1000*3600*24));
                 safeSetText('userDays',days);
-                // 优先使用数据库中的 avatar_url
                 if(profile.avatar_url && profile.avatar_url.trim()!==''){
                     localStorage.setItem('userAvatar',profile.avatar_url);
                     updateAvatarDisplay(profile.avatar_url);
@@ -835,6 +977,7 @@
         window.openBioModal=()=>{ document.getElementById('newBio').value=userProfile?.bio||''; openModal('bioModal'); };
         window.openPasswordModal=()=>openModal('passwordModal');
         window.openDeleteAccountModal=()=>{ document.getElementById('confirmEmail').value=currentUser?.email||''; openModal('deleteAccountModal'); };
+        
         async function initializeProfile(){
             supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
             const { data:{ user }, error } = await supabaseClient.auth.getUser();
@@ -845,10 +988,16 @@
             await loadUserStats();
             document.getElementById('loading').style.display='none';
             document.getElementById('profileContent').style.display='block';
+            // 绑定事件
             document.getElementById('saveUsername')?.addEventListener('click',updateUsername);
             document.getElementById('saveBio')?.addEventListener('click',updateBio);
             document.getElementById('savePassword')?.addEventListener('click',updatePassword);
             document.getElementById('confirmDeleteAccount')?.addEventListener('click',deleteAccount);
+            // 裁剪相关按钮
+            document.getElementById('confirmCropBtn')?.addEventListener('click', confirmCropAndUpload);
+            document.getElementById('cancelCropBtn')?.addEventListener('click', cancelCrop);
+            document.getElementById('closeCropModal')?.addEventListener('click', cancelCrop);
+            
             ['closeUsernameModal','closeBioModal','closePasswordModal','closeDeleteAccountModal','cancelUsernameUpdate','cancelBioUpdate','cancelPasswordUpdate','cancelDeleteAccount'].forEach(id=>{
                 let btn=document.getElementById(id); if(btn) btn.addEventListener('click',()=>closeModal(id.replace('close','').replace('cancel','')+'Modal'));
             });
