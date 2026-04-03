@@ -7,7 +7,7 @@
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
+<style>
         /* ========== 全局风格，延续暗色质感 ========== */
         :root {
             --bg: #121212;
@@ -115,7 +115,6 @@
     </style>
 </head>
 <body>
-
 <div class="chat-header">
     <button class="back-btn" id="backBtn"><i class="fas fa-arrow-left"></i></button>
     <div class="friend-avatar" id="friendAvatar">👤</div>
@@ -124,11 +123,9 @@
         <p id="friendStatus"><i class="fas fa-comment-dots"></i> 好友聊天</p>
     </div>
 </div>
-
 <div class="messages-area" id="messagesArea">
     <div class="loading-msg"><i class="fas fa-spinner fa-pulse"></i> 加载聊天记录...</div>
 </div>
-
 <div class="input-area">
     <div class="emoji-panel" id="emojiPanel"></div>
     <div class="input-row">
@@ -136,57 +133,26 @@
         <button class="send-btn" id="sendBtn"><i class="fas fa-paper-plane"></i></button>
     </div>
 </div>
-
 <script>
-    // ---------- 初始化 Supabase 客户端（避免重复声明）----------
     const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-    // 关键修复：使用不同的变量名，避免与全局 supabase 对象冲突
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    
-    let currentUser = null;
-    let friendId = null;
-    let friendName = '好友';
-    let friendAvatarUrl = null;
-    let messagesSubscription = null;
-    
-    // DOM 元素
+    let currentUser = null, friendId = null, friendName = '好友', friendAvatarUrl = null, messagesSubscription = null, pollingInterval = null;
     const messagesArea = document.getElementById('messagesArea');
     const messageInput = document.getElementById('messageInput');
     const sendBtn = document.getElementById('sendBtn');
     const backBtn = document.getElementById('backBtn');
     const friendNameSpan = document.getElementById('friendName');
     const friendAvatarDiv = document.getElementById('friendAvatar');
-    
-    // ---------- 辅助函数 ----------
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-    
+
+    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
     function showNotification(msg, isError = false) {
         let toast = document.createElement('div');
         toast.textContent = msg;
-        toast.style.position = 'fixed';
-        toast.style.bottom = '80px';
-        toast.style.left = '50%';
-        toast.style.transform = 'translateX(-50%)';
-        toast.style.backgroundColor = isError ? '#f87171' : '#10b981';
-        toast.style.color = '#fff';
-        toast.style.padding = '8px 20px';
-        toast.style.borderRadius = '40px';
-        toast.style.zIndex = '9999';
-        toast.style.fontSize = '0.9rem';
-        toast.style.boxShadow = '0 2px 12px rgba(0,0,0,0.3)';
+        toast.style.cssText = `position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background-color:${isError ? '#f87171' : '#10b981'}; color:#fff; padding:8px 20px; border-radius:40px; z-index:9999; font-size:0.9rem; box-shadow:0 2px 12px rgba(0,0,0,0.3);`;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 2500);
     }
-    
     function renderMessageContent(rawText) {
         if (!rawText) return '';
         let escaped = escapeHtml(rawText);
@@ -199,141 +165,72 @@
             '动态星星': 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXRmM2JxbzVkYnA5MTNheWZ6ZmQ0aWlxZjU0Y2NidTVneWVibzByOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26tP4Jq9z9nz0HPsA/giphy.gif',
             '狗头': 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f436.png',
         };
-        escaped = escaped.replace(/\[emoji:([^\]]+)\]/g, (match, key) => {
-            const imgUrl = emojiMap[key];
-            if (imgUrl) return `<img src="${imgUrl}" class="chat-emoji-img" alt="${key}" title="${key}">`;
-            return match;
-        });
-        escaped = escaped.replace(/\n/g, '<br>');
-        return escaped;
+        escaped = escaped.replace(/\[emoji:([^\]]+)\]/g, (match, key) => { const imgUrl = emojiMap[key]; return imgUrl ? `<img src="${imgUrl}" class="chat-emoji-img" alt="${key}" title="${key}">` : match; });
+        return escaped.replace(/\n/g, '<br>');
     }
-    
     function createMessageElement(msg) {
         const isOwn = msg.sender_id === currentUser?.id;
         const div = document.createElement('div');
         div.className = `message ${isOwn ? 'own' : 'friend'}`;
         const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const contentHtml = renderMessageContent(msg.content);
-        div.innerHTML = `<div class="message-bubble">${contentHtml}</div><div class="message-time">${time}</div>`;
+        div.innerHTML = `<div class="message-bubble">${renderMessageContent(msg.content)}</div><div class="message-time">${time}</div>`;
         return div;
     }
-    
     async function loadMessages() {
         if (!currentUser || !friendId) return;
-        const { data, error } = await supabaseClient
-            .from('messages')
-            .select('*')
-            .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${currentUser.id})`)
-            .order('created_at', { ascending: true })
-            .limit(100);
-        if (error) {
-            console.error('加载消息失败:', error);
-            if (error.message.includes('relation') && error.message.includes('does not exist')) {
-                messagesArea.innerHTML = '<div class="error-box">⚠️ 消息表(messages)不存在，请在Supabase中执行SQL创建</div>';
-            } else {
-                messagesArea.innerHTML = `<div class="error-box">加载消息失败: ${escapeHtml(error.message)}</div>`;
-            }
-            return;
-        }
+        const { data, error } = await supabaseClient.from('messages').select('*').or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${currentUser.id})`).order('created_at', { ascending: true }).limit(100);
+        if (error) { console.error(error); messagesArea.innerHTML = `<div class="error-box">加载消息失败: ${escapeHtml(error.message)}</div>`; return; }
+        const wasAtBottom = messagesArea.scrollHeight - messagesArea.scrollTop <= messagesArea.clientHeight + 50;
         messagesArea.innerHTML = '';
-        if (!data || data.length === 0) {
-            messagesArea.innerHTML = '<div class="loading-msg"><i class="far fa-comment-dots"></i> 暂无消息，打个招呼吧～</div>';
-            return;
-        }
+        if (!data || data.length === 0) { messagesArea.innerHTML = '<div class="loading-msg"><i class="far fa-comment-dots"></i> 暂无消息，打个招呼吧～</div>'; return; }
         data.forEach(msg => messagesArea.appendChild(createMessageElement(msg)));
-        scrollToBottom();
+        if (wasAtBottom) scrollToBottom();
     }
-    
-    function scrollToBottom() {
-        setTimeout(() => messagesArea.scrollTop = messagesArea.scrollHeight, 100);
-    }
-    
+    function scrollToBottom() { setTimeout(() => messagesArea.scrollTop = messagesArea.scrollHeight, 100); }
     async function sendMessage() {
         let text = messageInput.value.trim();
         if (!text) { showNotification('消息不能为空~'); return; }
         if (text.length > 1000) { showNotification('消息太长啦，最多1000字', true); return; }
-        const { error } = await supabaseClient.from('messages').insert({
-            sender_id: currentUser.id,
-            receiver_id: friendId,
-            content: text,
-            created_at: new Date().toISOString()
-        });
-        if (error) {
-            console.error(error);
-            showNotification('发送失败: ' + error.message, true);
-        } else {
-            messageInput.value = '';
-            messageInput.style.height = 'auto';
-            scrollToBottom();
-        }
+        const { error } = await supabaseClient.from('messages').insert({ sender_id: currentUser.id, receiver_id: friendId, content: text, created_at: new Date().toISOString() });
+        if (error) { console.error(error); showNotification('发送失败: ' + error.message, true); } 
+        else { messageInput.value = ''; messageInput.style.height = 'auto'; scrollToBottom(); }
     }
-    
     function subscribeMessages() {
         if (messagesSubscription) supabaseClient.removeChannel(messagesSubscription);
         const channel = supabaseClient.channel('chat-realtime')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${friendId},receiver_id=eq.${currentUser.id}` }, (payload) => {
                 const newMsg = payload.new;
-                if (newMsg.sender_id === friendId && newMsg.receiver_id === currentUser.id) {
-                    messagesArea.appendChild(createMessageElement(newMsg));
-                    scrollToBottom();
-                }
+                if (newMsg.sender_id === friendId && newMsg.receiver_id === currentUser.id) { messagesArea.appendChild(createMessageElement(newMsg)); scrollToBottom(); }
             })
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${currentUser.id},receiver_id=eq.${friendId}` }, (payload) => {
                 const newMsg = payload.new;
                 if (newMsg.sender_id === currentUser.id && newMsg.receiver_id === friendId) {
                     const existing = Array.from(messagesArea.children).find(child => child.innerHTML.includes(escapeHtml(newMsg.content.substring(0, 20))));
-                    if (!existing) {
-                        messagesArea.appendChild(createMessageElement(newMsg));
-                        scrollToBottom();
-                    }
+                    if (!existing) { messagesArea.appendChild(createMessageElement(newMsg)); scrollToBottom(); }
                 }
             })
             .subscribe((status) => { if (status === 'SUBSCRIBED') console.log('聊天实时订阅成功'); });
         messagesSubscription = channel;
     }
-    
-    // 验证好友关系 (使用 maybeSingle 避免错误)
     async function validateFriendship() {
         if (!currentUser || !friendId) return false;
-        const { data, error } = await supabaseClient
-            .from('friends')
-            .select('status')
-            .or(`and(requester_id.eq.${currentUser.id},addressee_id.eq.${friendId}),and(requester_id.eq.${friendId},addressee_id.eq.${currentUser.id})`)
-            .maybeSingle();
-        if (error) {
-            console.error('好友关系查询出错:', error);
-            return false;
-        }
+        const { data, error } = await supabaseClient.from('friends').select('status').or(`and(requester_id.eq.${currentUser.id},addressee_id.eq.${friendId}),and(requester_id.eq.${friendId},addressee_id.eq.${currentUser.id})`).maybeSingle();
         return data?.status === 'accepted';
     }
-    
     async function loadFriendProfile() {
         if (!friendId) return;
-        const { data, error } = await supabaseClient
-            .from('user_profiles')
-            .select('username, avatar_url')
-            .eq('id', friendId)
-            .single();
+        const { data, error } = await supabaseClient.from('user_profiles').select('username, avatar_url').eq('id', friendId).single();
         if (!error && data) {
             friendName = data.username || '好友';
             friendAvatarUrl = data.avatar_url;
             friendNameSpan.innerText = escapeHtml(friendName);
-            if (friendAvatarUrl) {
-                friendAvatarDiv.innerHTML = `<img src="${friendAvatarUrl}" style="width:100%;height:100%;object-fit:cover;">`;
-            } else {
-                friendAvatarDiv.innerHTML = friendName.charAt(0).toUpperCase();
-            }
-        } else {
-            friendNameSpan.innerText = '好友';
-        }
+            friendAvatarDiv.innerHTML = friendAvatarUrl ? `<img src="${friendAvatarUrl}" style="width:100%;height:100%;object-fit:cover;">` : friendName.charAt(0).toUpperCase();
+        } else friendNameSpan.innerText = '好友';
     }
-    
     function initEmojiPanel() {
         const panel = document.getElementById('emojiPanel');
         const emojiItems = [
-            { type: 'text', label: '😊', value: '😊' }, { type: 'text', label: '😂', value: '😂' },
-            { type: 'text', label: '❤️', value: '❤️' }, { type: 'text', label: '🔥', value: '🔥' },
-            { type: 'text', label: '🎉', value: '🎉' },
+            { type: 'text', label: '😊', value: '😊' }, { type: 'text', label: '😂', value: '😂' }, { type: 'text', label: '❤️', value: '❤️' }, { type: 'text', label: '🔥', value: '🔥' }, { type: 'text', label: '🎉', value: '🎉' },
             { type: 'image', name: '微笑', imgUrl: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f642.png', placeholder: '[emoji:微笑]' },
             { type: 'image', name: '大笑', imgUrl: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f606.png', placeholder: '[emoji:大笑]' },
             { type: 'image', name: '动态猫猫', imgUrl: 'https://media1.tenor.com/m/-hxVXVN6bUMAAAAC/cat-cat-stare.gif', placeholder: '[emoji:动态猫猫]' },
@@ -342,117 +239,60 @@
         ];
         panel.innerHTML = '';
         emojiItems.forEach(item => {
-            const span = document.createElement('span');
-            span.className = 'emoji-item';
+            const span = document.createElement('span'); span.className = 'emoji-item';
             if (item.type === 'text') {
                 span.innerHTML = `<span class="emoji-text">${item.label}</span>`;
                 span.onclick = () => {
-                    const input = messageInput;
-                    const start = input.selectionStart;
-                    const end = input.selectionEnd;
-                    const text = input.value;
+                    const input = messageInput, start = input.selectionStart, end = input.selectionEnd, text = input.value;
                     input.value = text.substring(0, start) + item.value + text.substring(end);
-                    input.focus();
-                    input.selectionStart = input.selectionEnd = start + item.value.length;
-                    input.style.height = 'auto';
-                    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+                    input.focus(); input.selectionStart = input.selectionEnd = start + item.value.length;
+                    input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 120) + 'px';
                 };
             } else {
-                const img = document.createElement('img');
-                img.src = item.imgUrl;
-                img.style.width = '28px';
-                img.style.height = '28px';
-                img.style.objectFit = 'contain';
-                const labelSpan = document.createElement('span');
-                labelSpan.textContent = item.name;
-                labelSpan.style.fontSize = '0.7rem';
-                span.appendChild(img);
-                span.appendChild(labelSpan);
+                const img = document.createElement('img'); img.src = item.imgUrl; img.style.width = '28px'; img.style.height = '28px'; img.style.objectFit = 'contain';
+                const labelSpan = document.createElement('span'); labelSpan.textContent = item.name; labelSpan.style.fontSize = '0.7rem';
+                span.appendChild(img); span.appendChild(labelSpan);
                 span.onclick = () => {
-                    const placeholder = item.placeholder;
-                    const input = messageInput;
-                    const start = input.selectionStart;
-                    const text = input.value;
-                    input.value = text.substring(0, start) + placeholder + text.substring(start);
-                    input.focus();
-                    input.selectionStart = input.selectionEnd = start + placeholder.length;
-                    input.style.height = 'auto';
-                    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+                    const input = messageInput, start = input.selectionStart, text = input.value;
+                    input.value = text.substring(0, start) + item.placeholder + text.substring(start);
+                    input.focus(); input.selectionStart = input.selectionEnd = start + item.placeholder.length;
+                    input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 120) + 'px';
                 };
             }
             panel.appendChild(span);
         });
     }
-    
-    function autoResizeTextarea() {
-        messageInput.style.height = 'auto';
-        messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
-    }
-    
-    // 主要初始化流程：先验证登录，再解析参数，最后加载聊天内容
+    function autoResizeTextarea() { messageInput.style.height = 'auto'; messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px'; }
     async function initChat() {
-        // 1. 先检查登录状态
         const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
-        if (userErr || !user) {
-            messagesArea.innerHTML = `<div class="error-box"><i class="fas fa-lock"></i> 请先登录 <a href="index.html" style="color:var(--text-highlight);">去登录</a></div>`;
-            document.querySelector('.input-area').style.display = 'none';
-            return;
-        }
+        if (userErr || !user) { messagesArea.innerHTML = `<div class="error-box"><i class="fas fa-lock"></i> 请先登录 <a href="index.html" style="color:var(--text-highlight);">去登录</a></div>`; document.querySelector('.input-area').style.display = 'none'; return; }
         currentUser = user;
-        
-        // 2. 获取URL参数
         const urlParams = new URLSearchParams(window.location.search);
-        const fId = urlParams.get('friend_id');
-        const fName = urlParams.get('friend_name');
-        if (!fId) {
-            messagesArea.innerHTML = `<div class="error-box"><i class="fas fa-exclamation-triangle"></i> 缺少好友参数，请从好友列表进入</div>`;
-            document.querySelector('.input-area').style.display = 'none';
-            return;
-        }
-        friendId = fId;
-        if (fName) friendName = decodeURIComponent(fName);
-        
-        // 3. 不能和自己聊天
-        if (currentUser.id === friendId) {
-            messagesArea.innerHTML = `<div class="error-box"><i class="fas fa-ban"></i> 不能和自己聊天哦</div>`;
-            document.querySelector('.input-area').style.display = 'none';
-            return;
-        }
-        
-        // 4. 加载好友资料并验证好友关系
+        const fId = urlParams.get('friend_id'), fName = urlParams.get('friend_name');
+        if (!fId) { messagesArea.innerHTML = `<div class="error-box"><i class="fas fa-exclamation-triangle"></i> 缺少好友参数，请从好友列表进入</div>`; document.querySelector('.input-area').style.display = 'none'; return; }
+        friendId = fId; if (fName) friendName = decodeURIComponent(fName);
+        if (currentUser.id === friendId) { messagesArea.innerHTML = `<div class="error-box"><i class="fas fa-ban"></i> 不能和自己聊天哦</div>`; document.querySelector('.input-area').style.display = 'none'; return; }
         await loadFriendProfile();
         const isFriend = await validateFriendship();
-        if (!isFriend) {
-            messagesArea.innerHTML = `<div class="error-box"><i class="fas fa-user-friends"></i> 你们还不是好友，无法聊天。请先添加好友。</div>`;
-            document.querySelector('.input-area').style.display = 'none';
-            return;
-        }
-        
-        // 5. 所有验证通过，显示聊天界面
+        if (!isFriend) { messagesArea.innerHTML = `<div class="error-box"><i class="fas fa-user-friends"></i> 你们还不是好友，无法聊天。请先添加好友。</div>`; document.querySelector('.input-area').style.display = 'none'; return; }
         document.querySelector('.input-area').style.display = 'block';
         initEmojiPanel();
         await loadMessages();
         subscribeMessages();
-        
         messageInput.addEventListener('input', autoResizeTextarea);
         sendBtn.onclick = sendMessage;
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
+        messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
         backBtn.onclick = () => { window.location.href = './friend.html'; };
         
+        // ========== 自动刷新轮询（每3秒刷新一次，确保消息实时性） ==========
+        pollingInterval = setInterval(() => { loadMessages(); }, 3000);
+        
         window.addEventListener('beforeunload', () => {
+            if (pollingInterval) clearInterval(pollingInterval);
             if (messagesSubscription) supabaseClient.removeChannel(messagesSubscription);
         });
     }
-    
-    initChat().catch(err => {
-        console.error(err);
-        messagesArea.innerHTML = `<div class="error-box">初始化错误: ${escapeHtml(err.message)}</div>`;
-    });
+    initChat().catch(err => { console.error(err); messagesArea.innerHTML = `<div class="error-box">初始化错误: ${escapeHtml(err.message)}</div>`; });
 </script>
 </body>
 </html>
