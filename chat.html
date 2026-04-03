@@ -26,7 +26,6 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
         body { background: var(--bg); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* 顶部导航 */
         .chat-header {
             background: var(--card-bg); padding: 12px 20px; display: flex; align-items: center; gap: 16px;
             border-bottom: 2px solid var(--border-color); flex-shrink: 0;
@@ -34,7 +33,7 @@
         .back-btn {
             background: rgba(129,199,132,0.2); border: none; color: var(--text-highlight);
             width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem;
-            transition: 0.2s; display: flex; align-items: center; justify-content: center;
+            display: flex; align-items: center; justify-content: center;
         }
         .back-btn:hover { background: var(--text-highlight); color: var(--bg); }
         .friend-avatar {
@@ -46,7 +45,6 @@
         .friend-info h2 { font-size: 1.2rem; color: var(--text-highlight); }
         .friend-info p { font-size: 0.75rem; color: var(--text-secondary); }
         
-        /* 聊天记录区域 */
         .messages-area {
             flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px;
             scroll-behavior: smooth;
@@ -58,7 +56,7 @@
         .message.friend { align-self: flex-start; }
         .message-bubble {
             background: var(--friend-msg); padding: 10px 14px; border-radius: 20px;
-            word-wrap: break-word; line-height: 1.4; position: relative;
+            word-wrap: break-word; line-height: 1.4;
             box-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
         .message.own .message-bubble { background: var(--own-msg); border-bottom-right-radius: 4px; }
@@ -71,7 +69,6 @@
             max-width: 32px; max-height: 32px; vertical-align: middle; margin: 0 2px;
             display: inline-block;
         }
-        /* 输入区域 */
         .input-area {
             background: var(--card-bg); border-top: 1px solid var(--border-color); padding: 12px 20px;
             flex-shrink: 0;
@@ -108,12 +105,9 @@
             padding: 20px; text-align: center; margin: 20px;
         }
         @keyframes fadeInMsg { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* 滚动条 */
         .messages-area::-webkit-scrollbar { width: 5px; }
         .messages-area::-webkit-scrollbar-track { background: #2d2d2d; border-radius: 10px; }
         .messages-area::-webkit-scrollbar-thumb { background: var(--text-highlight); border-radius: 10px; }
-        
         @media (max-width: 600px) {
             .message { max-width: 90%; }
             .emoji-panel { gap: 8px; }
@@ -136,9 +130,7 @@
 </div>
 
 <div class="input-area">
-    <div class="emoji-panel" id="emojiPanel">
-        <!-- 动态表情包 + 静态表情 + emoji快捷按钮 会由js动态生成，也可静态写 -->
-    </div>
+    <div class="emoji-panel" id="emojiPanel"></div>
     <div class="input-row">
         <textarea id="messageInput" rows="1" placeholder="输入消息... 支持文字、Emoji 😊 点击表情包添加图片表情"></textarea>
         <button class="send-btn" id="sendBtn"><i class="fas fa-paper-plane"></i></button>
@@ -146,10 +138,11 @@
 </div>
 
 <script>
-    // ---------- Supabase 配置 (与之前一致) ----------
+    // ---------- 初始化 Supabase 客户端（避免重复声明）----------
     const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // 关键修复：使用不同的变量名，避免与全局 supabase 对象冲突
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
     let currentUser = null;
     let friendId = null;
@@ -177,7 +170,6 @@
     }
     
     function showNotification(msg, isError = false) {
-        // 简单顶部提示 (轻提示)
         let toast = document.createElement('div');
         toast.textContent = msg;
         toast.style.position = 'fixed';
@@ -195,53 +187,40 @@
         setTimeout(() => toast.remove(), 2500);
     }
     
-    // 渲染消息：将文本中的表情包占位符 [emoji:key] 转换为 img 标签，同时转义文本内容
     function renderMessageContent(rawText) {
         if (!rawText) return '';
-        // 先转义HTML，避免XSS
         let escaped = escapeHtml(rawText);
-        // 替换自定义表情包占位符: [emoji:微笑] 格式 -> 对应的图片url
-        // 表情包映射表 (静态/动态)
         const emojiMap = {
-            '微笑': 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f642.png',     // 静态png
+            '微笑': 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f642.png',
             '大笑': 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f606.png',
             '爱心': 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2764.png',
             '哭': 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f622.png',
-            '动态猫猫': 'https://media1.tenor.com/m/-hxVXVN6bUMAAAAC/cat-cat-stare.gif',    // 动态gif示例
-            '动态星星': 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXRmM2JxbzVkYnA5MTNheWZ6ZmQ0aWlxZjU0Y2NidTVneWVibzByOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26tP4Jq9z9nz0HPsA/giphy.gif', // 动态星星
+            '动态猫猫': 'https://media1.tenor.com/m/-hxVXVN6bUMAAAAC/cat-cat-stare.gif',
+            '动态星星': 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXRmM2JxbzVkYnA5MTNheWZ6ZmQ0aWlxZjU0Y2NidTVneWVibzByOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26tP4Jq9z9nz0HPsA/giphy.gif',
             '狗头': 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f436.png',
         };
-        // 正则匹配 [emoji:xxx]
         escaped = escaped.replace(/\[emoji:([^\]]+)\]/g, (match, key) => {
             const imgUrl = emojiMap[key];
-            if (imgUrl) {
-                return `<img src="${imgUrl}" class="chat-emoji-img" alt="${key}" title="${key}">`;
-            }
-            return match; // 没匹配保留原样
+            if (imgUrl) return `<img src="${imgUrl}" class="chat-emoji-img" alt="${key}" title="${key}">`;
+            return match;
         });
-        // 处理换行
         escaped = escaped.replace(/\n/g, '<br>');
         return escaped;
     }
     
-    // 将消息对象转为DOM
     function createMessageElement(msg) {
         const isOwn = msg.sender_id === currentUser?.id;
         const div = document.createElement('div');
         div.className = `message ${isOwn ? 'own' : 'friend'}`;
         const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const contentHtml = renderMessageContent(msg.content);
-        div.innerHTML = `
-            <div class="message-bubble">${contentHtml}</div>
-            <div class="message-time">${time}</div>
-        `;
+        div.innerHTML = `<div class="message-bubble">${contentHtml}</div><div class="message-time">${time}</div>`;
         return div;
     }
     
-    // 加载历史消息
     async function loadMessages() {
         if (!currentUser || !friendId) return;
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('messages')
             .select('*')
             .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${currentUser.id})`)
@@ -249,39 +228,31 @@
             .limit(100);
         if (error) {
             console.error('加载消息失败:', error);
-            showNotification('加载消息失败: ' + error.message, true);
+            if (error.message.includes('relation') && error.message.includes('does not exist')) {
+                messagesArea.innerHTML = '<div class="error-box">⚠️ 消息表(messages)不存在，请在Supabase中执行SQL创建</div>';
+            } else {
+                messagesArea.innerHTML = `<div class="error-box">加载消息失败: ${escapeHtml(error.message)}</div>`;
+            }
             return;
         }
         messagesArea.innerHTML = '';
         if (!data || data.length === 0) {
-            messagesArea.innerHTML = '<div class="loading-msg" style="color:var(--text-secondary);"><i class="far fa-comment-dots"></i> 暂无消息，打个招呼吧～</div>';
+            messagesArea.innerHTML = '<div class="loading-msg"><i class="far fa-comment-dots"></i> 暂无消息，打个招呼吧～</div>';
             return;
         }
-        data.forEach(msg => {
-            messagesArea.appendChild(createMessageElement(msg));
-        });
+        data.forEach(msg => messagesArea.appendChild(createMessageElement(msg)));
         scrollToBottom();
     }
     
     function scrollToBottom() {
-        setTimeout(() => {
-            messagesArea.scrollTop = messagesArea.scrollHeight;
-        }, 100);
+        setTimeout(() => messagesArea.scrollTop = messagesArea.scrollHeight, 100);
     }
     
-    // 发送消息
     async function sendMessage() {
         let text = messageInput.value.trim();
-        if (!text) {
-            showNotification('消息不能为空~', false);
-            return;
-        }
-        // 限制长度
-        if (text.length > 1000) {
-            showNotification('消息太长啦，最多1000字', true);
-            return;
-        }
-        const { error } = await supabase.from('messages').insert({
+        if (!text) { showNotification('消息不能为空~'); return; }
+        if (text.length > 1000) { showNotification('消息太长啦，最多1000字', true); return; }
+        const { error } = await supabaseClient.from('messages').insert({
             sender_id: currentUser.id,
             receiver_id: friendId,
             content: text,
@@ -292,82 +263,53 @@
             showNotification('发送失败: ' + error.message, true);
         } else {
             messageInput.value = '';
-            // 手动调整textarea高度
             messageInput.style.height = 'auto';
-            // 乐观更新可以不手动，实时订阅会自己刷新，但为了立即感，也可以等待订阅更新，延迟较小
-            // 直接清空输入框，等待实时更新即可
             scrollToBottom();
         }
     }
     
-    // 订阅实时消息 (仅当前对话)
     function subscribeMessages() {
-        if (messagesSubscription) {
-            supabase.removeChannel(messagesSubscription);
-        }
-        const channel = supabase.channel('chat-realtime')
-            .on('postgres_changes', {
-                event: 'INSERT',
-                schema: 'public',
-                table: 'messages',
-                filter: `sender_id=eq.${friendId},receiver_id=eq.${currentUser.id}`
-            }, (payload) => {
-                // 收到对方发来的消息
+        if (messagesSubscription) supabaseClient.removeChannel(messagesSubscription);
+        const channel = supabaseClient.channel('chat-realtime')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${friendId},receiver_id=eq.${currentUser.id}` }, (payload) => {
                 const newMsg = payload.new;
                 if (newMsg.sender_id === friendId && newMsg.receiver_id === currentUser.id) {
                     messagesArea.appendChild(createMessageElement(newMsg));
                     scrollToBottom();
                 }
             })
-            .on('postgres_changes', {
-                event: 'INSERT',
-                schema: 'public',
-                table: 'messages',
-                filter: `sender_id=eq.${currentUser.id},receiver_id=eq.${friendId}`
-            }, (payload) => {
-                // 自己刚发的消息 (避免重复添加，但消息表插入后也会触发，可以正常添加)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${currentUser.id},receiver_id=eq.${friendId}` }, (payload) => {
                 const newMsg = payload.new;
                 if (newMsg.sender_id === currentUser.id && newMsg.receiver_id === friendId) {
-                    // 检查是否已存在防止重复添加（由于load后订阅，新消息都会是新增）
-                    // 简单去重: 查找最后一个消息是否id相同
-                    const lastMsg = messagesArea.lastChild?.querySelector?.('.message-bubble');
-                    if (!lastMsg) {
+                    const existing = Array.from(messagesArea.children).find(child => child.innerHTML.includes(escapeHtml(newMsg.content.substring(0, 20))));
+                    if (!existing) {
                         messagesArea.appendChild(createMessageElement(newMsg));
-                    } else {
-                        // 避免重复
-                        const existing = Array.from(messagesArea.children).find(child => child.getAttribute?.('data-msg-id') === newMsg.id);
-                        if (!existing) {
-                            messagesArea.appendChild(createMessageElement(newMsg));
-                        }
+                        scrollToBottom();
                     }
-                    scrollToBottom();
                 }
             })
-            .subscribe((status) => {
-                if (status === 'SUBSCRIBED') console.log('聊天实时订阅成功');
-            });
+            .subscribe((status) => { if (status === 'SUBSCRIBED') console.log('聊天实时订阅成功'); });
         messagesSubscription = channel;
     }
     
-    // 验证好友关系 (必须是accepted)
+    // 验证好友关系 (使用 maybeSingle 避免错误)
     async function validateFriendship() {
         if (!currentUser || !friendId) return false;
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('friends')
             .select('status')
             .or(`and(requester_id.eq.${currentUser.id},addressee_id.eq.${friendId}),and(requester_id.eq.${friendId},addressee_id.eq.${currentUser.id})`)
-            .single();
-        if (error || !data) {
-            console.warn('好友关系校验失败', error);
+            .maybeSingle();
+        if (error) {
+            console.error('好友关系查询出错:', error);
             return false;
         }
-        return data.status === 'accepted';
+        return data?.status === 'accepted';
     }
     
-    // 获取好友资料(头像+用户名)
     async function loadFriendProfile() {
         if (!friendId) return;
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('user_profiles')
             .select('username, avatar_url')
             .eq('id', friendId)
@@ -386,20 +328,16 @@
         }
     }
     
-    // 初始化表情包面板 (静态/动态表情包 + Emoji 快捷)
     function initEmojiPanel() {
         const panel = document.getElementById('emojiPanel');
-        // 表情包数据: 显示文本 + 对应占位符 (也可以是纯文本emoji)
         const emojiItems = [
-            { type: 'text', label: '😊', value: '😊' },
-            { type: 'text', label: '😂', value: '😂' },
-            { type: 'text', label: '❤️', value: '❤️' },
-            { type: 'text', label: '🔥', value: '🔥' },
+            { type: 'text', label: '😊', value: '😊' }, { type: 'text', label: '😂', value: '😂' },
+            { type: 'text', label: '❤️', value: '❤️' }, { type: 'text', label: '🔥', value: '🔥' },
             { type: 'text', label: '🎉', value: '🎉' },
             { type: 'image', name: '微笑', imgUrl: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f642.png', placeholder: '[emoji:微笑]' },
             { type: 'image', name: '大笑', imgUrl: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f606.png', placeholder: '[emoji:大笑]' },
-            { type: 'image', name: '动态猫猫', imgUrl: 'https://media1.tenor.com/m/-hxVXVN6bUMAAAAC/cat-cat-stare.gif', placeholder: '[emoji:动态猫猫]', dynamic: true },
-            { type: 'image', name: '动态星星', imgUrl: 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXRmM2JxbzVkYnA5MTNheWZ6ZmQ0aWlxZjU0Y2NidTVneWVibzByOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26tP4Jq9z9nz0HPsA/giphy.gif', placeholder: '[emoji:动态星星]', dynamic: true },
+            { type: 'image', name: '动态猫猫', imgUrl: 'https://media1.tenor.com/m/-hxVXVN6bUMAAAAC/cat-cat-stare.gif', placeholder: '[emoji:动态猫猫]' },
+            { type: 'image', name: '动态星星', imgUrl: 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXRmM2JxbzVkYnA5MTNheWZ6ZmQ0aWlxZjU0Y2NidTVneWVibzByOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26tP4Jq9z9nz0HPsA/giphy.gif', placeholder: '[emoji:动态星星]' },
             { type: 'image', name: '狗头', imgUrl: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f436.png', placeholder: '[emoji:狗头]' },
         ];
         panel.innerHTML = '';
@@ -416,12 +354,10 @@
                     input.value = text.substring(0, start) + item.value + text.substring(end);
                     input.focus();
                     input.selectionStart = input.selectionEnd = start + item.value.length;
-                    // 自动调整高度
                     input.style.height = 'auto';
                     input.style.height = Math.min(input.scrollHeight, 120) + 'px';
                 };
             } else {
-                // 图片表情包
                 const img = document.createElement('img');
                 img.src = item.imgUrl;
                 img.style.width = '28px';
@@ -446,45 +382,45 @@
             }
             panel.appendChild(span);
         });
-        // 额外加一个“清除格式”或分割线不需要，足够
     }
     
-    // 自动调整textarea高度
     function autoResizeTextarea() {
         messageInput.style.height = 'auto';
         messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
     }
     
-    // 主要初始化流程
+    // 主要初始化流程：先验证登录，再解析参数，最后加载聊天内容
     async function initChat() {
-        // 获取URL参数
+        // 1. 先检查登录状态
+        const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
+        if (userErr || !user) {
+            messagesArea.innerHTML = `<div class="error-box"><i class="fas fa-lock"></i> 请先登录 <a href="index.html" style="color:var(--text-highlight);">去登录</a></div>`;
+            document.querySelector('.input-area').style.display = 'none';
+            return;
+        }
+        currentUser = user;
+        
+        // 2. 获取URL参数
         const urlParams = new URLSearchParams(window.location.search);
         const fId = urlParams.get('friend_id');
         const fName = urlParams.get('friend_name');
         if (!fId) {
             messagesArea.innerHTML = `<div class="error-box"><i class="fas fa-exclamation-triangle"></i> 缺少好友参数，请从好友列表进入</div>`;
+            document.querySelector('.input-area').style.display = 'none';
             return;
         }
         friendId = fId;
-        if (fName) friendName = fName;
+        if (fName) friendName = decodeURIComponent(fName);
         
-        // 获取当前登录用户
-        const { data: { user }, error: userErr } = await supabase.auth.getUser();
-        if (userErr || !user) {
-            messagesArea.innerHTML = `<div class="error-box"><i class="fas fa-lock"></i> 请先登录 <a href="index.html" style="color:var(--text-highlight);">去登录</a></div>`;
-            return;
-        }
-        currentUser = user;
-        
-        // 不能和自己聊天
+        // 3. 不能和自己聊天
         if (currentUser.id === friendId) {
             messagesArea.innerHTML = `<div class="error-box"><i class="fas fa-ban"></i> 不能和自己聊天哦</div>`;
+            document.querySelector('.input-area').style.display = 'none';
             return;
         }
         
-        // 加载好友资料
+        // 4. 加载好友资料并验证好友关系
         await loadFriendProfile();
-        // 验证好友关系
         const isFriend = await validateFriendship();
         if (!isFriend) {
             messagesArea.innerHTML = `<div class="error-box"><i class="fas fa-user-friends"></i> 你们还不是好友，无法聊天。请先添加好友。</div>`;
@@ -492,32 +428,24 @@
             return;
         }
         
-        // 显示聊天区域
+        // 5. 所有验证通过，显示聊天界面
         document.querySelector('.input-area').style.display = 'block';
-        // 初始化表情包面板
         initEmojiPanel();
-        // 加载历史消息
         await loadMessages();
-        // 订阅实时消息
         subscribeMessages();
-        // 监听输入框高度
+        
         messageInput.addEventListener('input', autoResizeTextarea);
-        // 发送按钮
         sendBtn.onclick = sendMessage;
-        // 回车发送 (ctrl+enter换行)
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
             }
         });
-        // 返回按钮
-        backBtn.onclick = () => {
-            window.location.href = './friends.html';
-        };
-        // 页面关闭前取消订阅可选
+        backBtn.onclick = () => { window.location.href = './friend.html'; };
+        
         window.addEventListener('beforeunload', () => {
-            if (messagesSubscription) supabase.removeChannel(messagesSubscription);
+            if (messagesSubscription) supabaseClient.removeChannel(messagesSubscription);
         });
     }
     
