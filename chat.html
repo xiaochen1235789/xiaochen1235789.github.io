@@ -137,7 +137,7 @@
     const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    let currentUser = null, friendId = null, friendName = '好友', friendAvatarUrl = null, messagesSubscription = null, pollingInterval = null;
+    let currentUser = null, friendId = null, friendName = '好友', friendAvatarUrl = null, messagesSubscription = null;
     const messagesArea = document.getElementById('messagesArea');
     const messageInput = document.getElementById('messageInput');
     const sendBtn = document.getElementById('sendBtn');
@@ -187,31 +187,71 @@
         if (wasAtBottom) scrollToBottom();
     }
     function scrollToBottom() { setTimeout(() => messagesArea.scrollTop = messagesArea.scrollHeight, 100); }
+    
+    // 发送消息：乐观更新 + 存入数据库
     async function sendMessage() {
         let text = messageInput.value.trim();
         if (!text) { showNotification('消息不能为空~'); return; }
         if (text.length > 1000) { showNotification('消息太长啦，最多1000字', true); return; }
-        const { error } = await supabaseClient.from('messages').insert({ sender_id: currentUser.id, receiver_id: friendId, content: text, created_at: new Date().toISOString() });
-        if (error) { console.error(error); showNotification('发送失败: ' + error.message, true); } 
-        else { messageInput.value = ''; messageInput.style.height = 'auto'; scrollToBottom(); }
+
+        const now = new Date().toISOString();
+        const newMsg = {
+            sender_id: currentUser.id,
+            receiver_id: friendId,
+            content: text,
+            created_at: now
+        };
+
+        // 立即显示自己的消息（乐观更新）
+        const tempElement = createMessageElement(newMsg);
+        messagesArea.appendChild(tempElement);
+        scrollToBottom();
+
+        // 清空输入框
+        messageInput.value = '';
+        messageInput.style.height = 'auto';
+
+        // 发送到数据库
+        const { error } = await supabaseClient.from('messages').insert(newMsg);
+        if (error) {
+            console.error(error);
+            showNotification('发送失败: ' + error.message, true);
+            // 发送失败则移除刚才添加的临时消息
+            tempElement.remove();
+        }
     }
+
+    // 实时订阅：只接收别人发给我的消息
     function subscribeMessages() {
         if (messagesSubscription) supabaseClient.removeChannel(messagesSubscription);
         const channel = supabaseClient.channel('chat-realtime')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${friendId},receiver_id=eq.${currentUser.id}` }, (payload) => {
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'messages',
+                filter: `receiver_id=eq.${currentUser.id}`
+            }, (payload) => {
                 const newMsg = payload.new;
-                if (newMsg.sender_id === friendId && newMsg.receiver_id === currentUser.id) { messagesArea.appendChild(createMessageElement(newMsg)); scrollToBottom(); }
-            })
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${currentUser.id},receiver_id=eq.${friendId}` }, (payload) => {
-                const newMsg = payload.new;
-                if (newMsg.sender_id === currentUser.id && newMsg.receiver_id === friendId) {
-                    const existing = Array.from(messagesArea.children).find(child => child.innerHTML.includes(escapeHtml(newMsg.content.substring(0, 20))));
-                    if (!existing) { messagesArea.appendChild(createMessageElement(newMsg)); scrollToBottom(); }
+                // 忽略自己发送的消息（已在 sendMessage 中乐观更新）
+                if (newMsg.sender_id === currentUser.id) return;
+                // 避免重复添加（极少数情况）
+                const existing = Array.from(messagesArea.children).some(child => {
+                    const timeSpan = child.querySelector('.message-time');
+                    if (!timeSpan) return false;
+                    return child.innerHTML.includes(escapeHtml(newMsg.content.substring(0, 20))) &&
+                           timeSpan.textContent === new Date(newMsg.created_at).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+                });
+                if (!existing) {
+                    messagesArea.appendChild(createMessageElement(newMsg));
+                    scrollToBottom();
                 }
             })
-            .subscribe((status) => { if (status === 'SUBSCRIBED') console.log('聊天实时订阅成功'); });
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') console.log('聊天实时订阅成功');
+            });
         messagesSubscription = channel;
     }
+
     async function validateFriendship() {
         if (!currentUser || !friendId) return false;
         const { data, error } = await supabaseClient.from('friends').select('status').or(`and(requester_id.eq.${currentUser.id},addressee_id.eq.${friendId}),and(requester_id.eq.${friendId},addressee_id.eq.${currentUser.id})`).maybeSingle();
@@ -263,6 +303,7 @@
         });
     }
     function autoResizeTextarea() { messageInput.style.height = 'auto'; messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px'; }
+    
     async function initChat() {
         const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
         if (userErr || !user) { messagesArea.innerHTML = `<div class="error-box"><i class="fas fa-lock"></i> 请先登录 <a href="index.html" style="color:var(--text-highlight);">去登录</a></div>`; document.querySelector('.input-area').style.display = 'none'; return; }
@@ -278,17 +319,13 @@
         document.querySelector('.input-area').style.display = 'block';
         initEmojiPanel();
         await loadMessages();
-        subscribeMessages();
+        subscribeMessages();   // 实时订阅，无轮询
         messageInput.addEventListener('input', autoResizeTextarea);
         sendBtn.onclick = sendMessage;
         messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
         backBtn.onclick = () => { window.location.href = './friend.html'; };
         
-        // ========== 自动刷新轮询（每3秒刷新一次，确保消息实时性） ==========
-        pollingInterval = setInterval(() => { loadMessages(); }, 3000);
-        
         window.addEventListener('beforeunload', () => {
-            if (pollingInterval) clearInterval(pollingInterval);
             if (messagesSubscription) supabaseClient.removeChannel(messagesSubscription);
         });
     }
