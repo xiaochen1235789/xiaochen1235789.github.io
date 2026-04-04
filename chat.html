@@ -50,13 +50,13 @@
             scroll-behavior: smooth;
         }
         .message {
-            display: flex; max-width: 80%; animation: fadeInMsg 0.2s ease;
+            display: flex; max-width: 85%; animation: fadeInMsg 0.2s ease;
         }
         .message.own { align-self: flex-end; flex-direction: row-reverse; }
         .message.friend { align-self: flex-start; }
         .message-bubble {
             background: var(--friend-msg); padding: 10px 14px; border-radius: 20px;
-            word-wrap: break-word; line-height: 1.4;
+            word-wrap: break-word; word-break: break-word; line-height: 1.4;
             box-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
         .message.own .message-bubble { background: var(--own-msg); border-bottom-right-radius: 4px; }
@@ -67,6 +67,16 @@
         .message.own .message-time { text-align: right; }
         .chat-emoji-img {
             max-width: 32px; max-height: 32px; vertical-align: middle; margin: 0 2px;
+            display: inline-block;
+        }
+        /* 放大动态动画表情（动态星星、动态猫猫等） */
+        .animated-emoji-large {
+            width: 64px !important;
+            height: 64px !important;
+            max-width: 64px !important;
+            max-height: 64px !important;
+            vertical-align: middle;
+            margin: 4px 6px;
             display: inline-block;
         }
         .input-area {
@@ -111,6 +121,18 @@
         @media (max-width: 600px) {
             .message { max-width: 90%; }
             .emoji-panel { gap: 8px; }
+            .message-bubble { font-size: 0.9rem; padding: 8px 12px; }
+            .friend-avatar { width: 40px; height: 40px; font-size: 1.2rem; }
+            .chat-header { padding: 8px 15px; gap: 10px; }
+            .messages-area { padding: 15px; }
+            .input-area { padding: 10px 15px; }
+            .send-btn { width: 42px; height: 42px; }
+            .animated-emoji-large {
+                width: 56px !important;
+                height: 56px !important;
+                max-width: 56px !important;
+                max-height: 56px !important;
+            }
         }
     </style>
 </head>
@@ -153,6 +175,24 @@
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 2500);
     }
+    
+    // 智能格式化消息时间
+    function formatMessageTime(isoString) {
+        const date = new Date(isoString);
+        const now = new Date();
+        const isToday = date.toDateString() === now.toDateString();
+        const isThisYear = date.getFullYear() === now.getFullYear();
+        const isThisMonth = isThisYear && date.getMonth() === now.getMonth();
+        
+        if (isToday) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (isThisMonth) {
+            return `${date.getMonth()+1}.${date.getDate()} ${date.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}`;
+        } else {
+            return `${date.getFullYear()}.${date.getMonth()+1}.${date.getDate()}`;
+        }
+    }
+    
     function renderMessageContent(rawText) {
         if (!rawText) return '';
         let escaped = escapeHtml(rawText);
@@ -165,15 +205,22 @@
             '动态星星': 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXRmM2JxbzVkYnA5MTNheWZ6ZmQ0aWlxZjU0Y2NidTVneWVibzByOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26tP4Jq9z9nz0HPsA/giphy.gif',
             '狗头': 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f436.png',
         };
-        escaped = escaped.replace(/\[emoji:([^\]]+)\]/g, (match, key) => { const imgUrl = emojiMap[key]; return imgUrl ? `<img src="${imgUrl}" class="chat-emoji-img" alt="${key}" title="${key}">` : match; });
+        // 替换动画表情时加上大尺寸类
+        escaped = escaped.replace(/\[emoji:([^\]]+)\]/g, (match, key) => {
+            const imgUrl = emojiMap[key];
+            if (!imgUrl) return match;
+            // 动态星星和动态猫猫使用放大样式
+            const extraClass = (key === '动态星星' || key === '动态猫猫') ? ' animated-emoji-large' : '';
+            return `<img src="${imgUrl}" class="chat-emoji-img${extraClass}" alt="${key}" title="${key}">`;
+        });
         return escaped.replace(/\n/g, '<br>');
     }
     function createMessageElement(msg) {
         const isOwn = msg.sender_id === currentUser?.id;
         const div = document.createElement('div');
         div.className = `message ${isOwn ? 'own' : 'friend'}`;
-        const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        div.innerHTML = `<div class="message-bubble">${renderMessageContent(msg.content)}</div><div class="message-time">${time}</div>`;
+        const timeStr = formatMessageTime(msg.created_at);
+        div.innerHTML = `<div class="message-bubble">${renderMessageContent(msg.content)}</div><div class="message-time">${timeStr}</div>`;
         return div;
     }
     async function loadMessages() {
@@ -239,7 +286,7 @@
                     const timeSpan = child.querySelector('.message-time');
                     if (!timeSpan) return false;
                     return child.innerHTML.includes(escapeHtml(newMsg.content.substring(0, 20))) &&
-                           timeSpan.textContent === new Date(newMsg.created_at).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+                           timeSpan.textContent === formatMessageTime(newMsg.created_at);
                 });
                 if (!existing) {
                     messagesArea.appendChild(createMessageElement(newMsg));
