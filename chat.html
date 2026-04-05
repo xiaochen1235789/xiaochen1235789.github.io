@@ -8,7 +8,6 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-        /* ========== 全局风格 ========== */
         :root {
             --bg: #121212;
             --card-bg: #1e3a2f;
@@ -30,6 +29,8 @@
         .chat-header {
             background: var(--card-bg); padding: 12px 20px; display: flex; align-items: center; gap: 16px;
             border-bottom: 2px solid var(--border-color); flex-shrink: 0;
+            z-index: 10;
+            position: relative;
         }
         .back-btn {
             background: rgba(129,199,132,0.2); border: none; color: var(--text-highlight);
@@ -60,7 +61,6 @@
             background: var(--friend-msg); padding: 10px 14px; border-radius: 20px;
             word-wrap: break-word; word-break: break-word; line-height: 1.4;
             box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-            position: relative;
         }
         .message.own .message-bubble { background: var(--own-msg); border-bottom-right-radius: 4px; }
         .message.friend .message-bubble { border-bottom-left-radius: 4px; }
@@ -73,24 +73,6 @@
             font-size: 0.65rem; color: var(--text-secondary); margin-top: 4px; padding: 0 6px;
         }
         .message.own .message-time { text-align: right; }
-        .recall-btn {
-            position: absolute;
-            right: -32px;
-            top: 8px;
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 0.8rem;
-            opacity: 0;
-            transition: 0.2s;
-        }
-        .message:hover .recall-btn {
-            opacity: 0.8;
-        }
-        .recall-btn:hover {
-            color: var(--danger);
-        }
         .chat-emoji-img {
             max-width: 32px;
             max-height: 32px;
@@ -98,7 +80,6 @@
             margin: 0 2px;
             display: inline-block;
         }
-        /* 放大动态动画表情（动态星星、动态猫猫等） */
         .animated-emoji-large {
             width: 64px !important;
             height: 64px !important;
@@ -108,7 +89,6 @@
             margin: 4px 6px;
             display: inline-block;
         }
-        /* 自定义表情放大 + 可点击 */
         .custom-emoji {
             width: 48px !important;
             height: 48px !important;
@@ -124,7 +104,6 @@
         .custom-emoji:hover {
             transform: scale(1.05);
         }
-        /* 图片预览模态框 */
         .image-preview-overlay {
             position: fixed;
             top: 0;
@@ -146,6 +125,8 @@
         .input-area {
             background: var(--card-bg); border-top: 1px solid var(--border-color); padding: 12px 20px;
             flex-shrink: 0;
+            z-index: 9;
+            position: relative;
         }
         .emoji-panel {
             display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; padding-bottom: 8px;
@@ -186,11 +167,11 @@
         .messages-area::-webkit-scrollbar { width: 5px; }
         .messages-area::-webkit-scrollbar-track { background: #2d2d2d; border-radius: 10px; }
         .messages-area::-webkit-scrollbar-thumb { background: var(--text-highlight); border-radius: 10px; }
-        @media (max-width: 600px) {
+        @media (max-width: 768px) {
             .message { max-width: 90%; }
             .emoji-panel { gap: 8px; }
             .custom-emoji-panel { gap: 8px; }
-            .message-bubble { font-size: 0.9rem; padding: 8px 12px; }
+            .message-bubble { font-size: 0.9rem; padding: 10px 12px; }
             .friend-avatar { width: 40px; height: 40px; font-size: 1.2rem; }
             .chat-header { padding: 8px 15px; gap: 10px; }
             .messages-area { padding: 15px; }
@@ -199,16 +180,10 @@
             .animated-emoji-large {
                 width: 56px !important;
                 height: 56px !important;
-                max-width: 56px !important;
-                max-height: 56px !important;
             }
             .custom-emoji {
                 width: 40px !important;
                 height: 40px !important;
-            }
-            .recall-btn {
-                right: -28px;
-                font-size: 0.7rem;
             }
         }
     </style>
@@ -262,7 +237,6 @@
         setTimeout(() => toast.remove(), 2500);
     }
     
-    // 图片预览
     function showImagePreview(url) {
         const overlay = document.createElement('div');
         overlay.className = 'image-preview-overlay';
@@ -273,14 +247,12 @@
         document.body.appendChild(overlay);
     }
     
-    // 智能格式化消息时间
     function formatMessageTime(isoString) {
         const date = new Date(isoString);
         const now = new Date();
         const isToday = date.toDateString() === now.toDateString();
         const isThisYear = date.getFullYear() === now.getFullYear();
         const isThisMonth = isThisYear && date.getMonth() === now.getMonth();
-        
         if (isToday) {
             return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         } else if (isThisMonth) {
@@ -290,14 +262,12 @@
         }
     }
     
-    // 检查消息是否可撤回（发送时间 <= 2分钟）
     function canRecall(createdAt) {
         const msgTime = new Date(createdAt).getTime();
         const now = Date.now();
         return (now - msgTime) <= 2 * 60 * 1000;
     }
     
-    // 渲染消息内容（支持内置表情和自定义表情）
     function renderMessageContent(msg) {
         if (msg.is_recalled) {
             if (msg.sender_id === currentUser?.id) {
@@ -324,37 +294,10 @@
             const extraClass = (key === '动态星星' || key === '动态猫猫') ? ' animated-emoji-large' : '';
             return `<img src="${imgUrl}" class="chat-emoji-img${extraClass}" alt="${key}" title="${key}">`;
         });
-        // 自定义表情替换 [custom:URL]
         escaped = escaped.replace(/\[custom:([^\]]+)\]/g, (match, url) => {
             return `<img src="${escapeHtml(url)}" class="chat-emoji-img custom-emoji" alt="自定义表情" loading="lazy" onclick="event.stopPropagation(); showImagePreview('${escapeHtml(url)}')">`;
         });
         return escaped.replace(/\n/g, '<br>');
-    }
-    
-    function createMessageElement(msg) {
-        const isOwn = msg.sender_id === currentUser?.id;
-        const div = document.createElement('div');
-        div.className = `message ${isOwn ? 'own' : 'friend'}`;
-        if (msg.is_recalled) div.classList.add('recalled');
-        const timeStr = formatMessageTime(msg.created_at);
-        const recallBtnHtml = (isOwn && !msg.is_recalled && canRecall(msg.created_at)) 
-            ? `<button class="recall-btn" data-msg-id="${msg.id}" title="撤回消息"><i class="fas fa-undo-alt"></i></button>`
-            : '';
-        div.innerHTML = `
-            <div class="message-bubble">${renderMessageContent(msg)}</div>
-            <div class="message-time">${timeStr}</div>
-            ${recallBtnHtml}
-        `;
-        // 绑定撤回按钮事件
-        const recallBtn = div.querySelector('.recall-btn');
-        if (recallBtn) {
-            recallBtn.onclick = async (e) => {
-                e.stopPropagation();
-                const msgId = recallBtn.dataset.msgId;
-                await recallMessage(msgId);
-            };
-        }
-        return div;
     }
     
     async function recallMessage(msgId) {
@@ -369,6 +312,33 @@
         } else {
             showNotification('已撤回', false);
         }
+    }
+    
+    function createMessageElement(msg) {
+        const isOwn = msg.sender_id === currentUser?.id;
+        const div = document.createElement('div');
+        div.className = `message ${isOwn ? 'own' : 'friend'}`;
+        if (msg.is_recalled) div.classList.add('recalled');
+        div.setAttribute('data-msg-id', msg.id);
+        const timeStr = formatMessageTime(msg.created_at);
+        div.innerHTML = `
+            <div class="message-bubble">${renderMessageContent(msg)}</div>
+            <div class="message-time">${timeStr}</div>
+        `;
+        // 双击撤回（仅自己发送、未撤回、2分钟内）
+        if (isOwn && !msg.is_recalled && canRecall(msg.created_at)) {
+            div.addEventListener('dblclick', (e) => {
+                // 如果双击的是图片（自定义表情），不触发撤回，只预览（预览已在图片的onclick处理）
+                if (e.target.tagName === 'IMG' && e.target.classList.contains('custom-emoji')) {
+                    return;
+                }
+                if (confirm('撤回这条消息？')) {
+                    recallMessage(msg.id);
+                }
+                e.stopPropagation();
+            });
+        }
+        return div;
     }
     
     async function loadMessages() {
@@ -386,9 +356,9 @@
         data.forEach(msg => messagesArea.appendChild(createMessageElement(msg)));
         if (wasAtBottom) scrollToBottom();
     }
+    
     function scrollToBottom() { setTimeout(() => messagesArea.scrollTop = messagesArea.scrollHeight, 100); }
     
-    // 发送消息：乐观更新 + 存入数据库
     async function sendMessage() {
         let text = messageInput.value.trim();
         if (!text) { showNotification('消息不能为空~'); return; }
@@ -422,12 +392,17 @@
             showNotification('发送失败: ' + error.message, true);
             tempElement.remove();
         } else {
-            // 替换临时元素的id
-            tempElement.querySelector('.recall-btn')?.setAttribute('data-msg-id', data.id);
+            // 更新临时元素的 data-msg-id 为真实 ID
+            tempElement.setAttribute('data-msg-id', data.id);
+            // 重新绑定双击事件（因为新消息的撤回时间限制依然有效）
+            if (tempElement.getAttribute('data-msg-id') !== 'temp') {
+                // 移除原有双击监听（如果有），重新添加
+                const newElement = createMessageElement(data);
+                tempElement.replaceWith(newElement);
+            }
         }
     }
 
-    // 实时订阅：监听 INSERT 和 UPDATE (用于撤回)
     function subscribeMessages() {
         if (messagesSubscription) supabaseClient.removeChannel(messagesSubscription);
         const channel = supabaseClient.channel('chat-realtime')
@@ -439,13 +414,7 @@
             }, (payload) => {
                 const newMsg = payload.new;
                 if (newMsg.sender_id === currentUser.id) return;
-                // 避免重复添加
-                const existing = Array.from(messagesArea.children).some(child => {
-                    const timeSpan = child.querySelector('.message-time');
-                    if (!timeSpan) return false;
-                    return child.innerHTML.includes(escapeHtml(newMsg.content?.substring(0, 20) || '')) &&
-                           timeSpan.textContent === formatMessageTime(newMsg.created_at);
-                });
+                const existing = document.querySelector(`.message[data-msg-id="${newMsg.id}"]`);
                 if (!existing) {
                     messagesArea.appendChild(createMessageElement(newMsg));
                     scrollToBottom();
@@ -459,19 +428,10 @@
             }, (payload) => {
                 const updated = payload.new;
                 if (updated.sender_id === currentUser.id) return;
-                // 找到对应的消息元素并更新
-                const msgElements = Array.from(messagesArea.children).filter(el => el.classList.contains('message'));
-                for (let el of msgElements) {
-                    const timeSpan = el.querySelector('.message-time');
-                    if (timeSpan && timeSpan.textContent === formatMessageTime(updated.created_at)) {
-                        // 简单比较内容和时间不够准确，最好用id，但由于乐观更新没有id，这里用时间+内容前20字符判断
-                        const oldContent = el.querySelector('.message-bubble')?.innerHTML;
-                        if (oldContent && (oldContent.includes(escapeHtml(updated.content?.substring(0,20) || '') || oldContent.includes('撤回')))) {
-                            const newEl = createMessageElement(updated);
-                            el.replaceWith(newEl);
-                            break;
-                        }
-                    }
+                const targetElem = document.querySelector(`.message[data-msg-id="${updated.id}"]`);
+                if (targetElem) {
+                    const newElem = createMessageElement(updated);
+                    targetElem.replaceWith(newElem);
                 }
             })
             .subscribe((status) => {
@@ -480,7 +440,7 @@
         messagesSubscription = channel;
     }
 
-    // ========== 自定义表情管理 ==========
+    // ========== 自定义表情 ==========
     async function loadCustomEmojis() {
         if (!currentUser) return;
         const { data, error } = await supabaseClient
@@ -595,7 +555,6 @@
         };
     }
     
-    // 内置表情面板
     function initEmojiPanel() {
         const panel = document.getElementById('emojiPanel');
         const emojiItems = [
@@ -678,7 +637,6 @@
         });
     }
     initChat().catch(err => { console.error(err); messagesArea.innerHTML = `<div class="error-box">初始化错误: ${escapeHtml(err.message)}</div>`; });
-    // 全局函数供图片预览调用
     window.showImagePreview = showImagePreview;
 </script>
 </body>
