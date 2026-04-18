@@ -223,11 +223,12 @@
 // ======================= Supabase 配置 =======================
 const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
+// 使用 supabaseClient 避免与全局 supabase 变量冲突
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ======================= 抽卡核心参数 =======================
 const BANNER_START = new Date(2026, 3, 18, 10, 10, 0);
-const BANNER_END = new Date(2099, 11, 31, 23, 59, 59);
+const BANNER_END = new Date(2026, 4, 9, 9, 59, 59);
 const PERMANENT_FIVE_STAR = ["姬子", "瓦尔特", "布洛妮娅", "杰帕德", "克拉拉", "彦卿", "白露", "希儿", "景元", "卡芙卡", "镜流", "托帕", "银狼", "罗刹"];
 const UP_FIVE_STAR = "鹿将军";
 const FOUR_STAR_CHARS = ["三月七", "丹恒", "希露瓦", "阿兰", "停云", "佩拉", "青雀", "娜塔莎", "驭空", "卢卡", "桂乃芬", "玲可", "米沙", "寒鸦"];
@@ -372,7 +373,7 @@ function updateCountdown() {
 setInterval(updateCountdown, 1000);
 updateCountdown();
 
-// 加载用户数据（幂等）
+// 加载用户数据（幂等：若记录不存在则创建，星琼=1599840，专票=100）
 async function loadUserData() {
     if (!currentUser) return;
     if (isLoadingData) return;
@@ -417,7 +418,7 @@ async function loadUserData() {
         fourStarPity = stateData.four_star_pity;
         guaranteedUp = stateData.guaranteed_up;
 
-        // 3. gacha_history
+        // 3. gacha_history（可能表不存在，降级处理）
         try {
             let { data: historyData, error: histErr } = await supabaseClient
                 .from('gacha_history')
@@ -458,6 +459,7 @@ async function loadUserData() {
     } catch (err) {
         console.error('加载用户数据失败:', err);
         showTip('加载数据失败，将使用本地默认值');
+        // 降级：使用默认值，不影响抽卡
         starJade = 1599840;
         tickets = 100;
         fiveStarPity = 0;
@@ -584,24 +586,12 @@ function performSingleDraw() {
     return { name: selectedThree, star: 3 };
 }
 
-// 单抽（会立即添加历史）
 function drawOneWithTicket() {
     if (tickets >= COST_SINGLE_TICKET) {
         tickets -= COST_SINGLE_TICKET;
         const result = performSingleDraw();
         updateUI();
         addHistoryRecord(result.name, result.star);
-        return result;
-    }
-    return null;
-}
-
-// 十连专用（不立即添加历史，避免重复）
-function drawOneWithTicketNoHistory() {
-    if (tickets >= COST_SINGLE_TICKET) {
-        tickets -= COST_SINGLE_TICKET;
-        const result = performSingleDraw();
-        updateUI();
         return result;
     }
     return null;
@@ -658,14 +648,12 @@ async function tenPull() {
         for (let i = 0; i < 10; i++) {
             await new Promise(r => setTimeout(r, 50));
             if (tickets < 1) break;
-            const result = drawOneWithTicketNoHistory();  // 不添加历史
+            const result = drawOneWithTicket();
             if (result) {
                 pullResults.push(result);
+                addHistoryRecord(result.name, result.star);
+                updateUI();
             }
-        }
-        // 统一添加到历史记录（只添加一次）
-        for (const res of pullResults) {
-            addHistoryRecord(res.name, res.star);
         }
         const fiveCount = pullResults.filter(r => r.star === 5).length;
         showTip(`十连完成！获得 ${fiveCount} 位五星 ✨`);
@@ -779,7 +767,7 @@ function bindEvents() {
     confirmExchangeBtn.addEventListener('click', performExchange);
     exchangeAmountInput.addEventListener('input', updateExchangePreview);
     
-    // 长按重置（长按星琼区域）
+    // 长按重置（保留）
     let timer = null;
     const resetTarget = document.querySelector('.jade-left') || document.querySelector('.resources');
     if (resetTarget) {
@@ -790,6 +778,7 @@ function bindEvents() {
     }
 }
 
+// 初始化登录检查（确保 loading 始终消失）
 async function initAuth() {
     try {
         const { data: { user }, error } = await supabaseClient.auth.getUser();
