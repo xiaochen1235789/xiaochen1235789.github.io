@@ -9,7 +9,7 @@
     <title>卡池 - 六哥荣耀WIKI (云存档版)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ========== 完整样式（已删除加星琼按钮相关，与之前一致） ========== */
+        /* ========== 完整样式 ========== */
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
         body { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; background: #0a0515; font-family: 'Segoe UI', 'Poppins', 'Noto Sans', system-ui, sans-serif; touch-action: pan-x pan-y; }
         .star-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; background: radial-gradient(ellipse at 40% 50%, #0e0a2a, #020008); overflow: hidden; }
@@ -223,7 +223,6 @@
 // ======================= Supabase 配置 =======================
 const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-// 使用 supabaseClient 避免与全局 supabase 变量冲突
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ======================= 抽卡核心参数 =======================
@@ -373,7 +372,7 @@ function updateCountdown() {
 setInterval(updateCountdown, 1000);
 updateCountdown();
 
-// 加载用户数据（幂等：若记录不存在则创建，星琼=1599840，专票=100）
+// 加载用户数据（幂等）
 async function loadUserData() {
     if (!currentUser) return;
     if (isLoadingData) return;
@@ -418,7 +417,7 @@ async function loadUserData() {
         fourStarPity = stateData.four_star_pity;
         guaranteedUp = stateData.guaranteed_up;
 
-        // 3. gacha_history（可能表不存在，降级处理）
+        // 3. gacha_history
         try {
             let { data: historyData, error: histErr } = await supabaseClient
                 .from('gacha_history')
@@ -459,7 +458,6 @@ async function loadUserData() {
     } catch (err) {
         console.error('加载用户数据失败:', err);
         showTip('加载数据失败，将使用本地默认值');
-        // 降级：使用默认值，不影响抽卡
         starJade = 1599840;
         tickets = 100;
         fiveStarPity = 0;
@@ -586,12 +584,24 @@ function performSingleDraw() {
     return { name: selectedThree, star: 3 };
 }
 
+// 单抽（会立即添加历史）
 function drawOneWithTicket() {
     if (tickets >= COST_SINGLE_TICKET) {
         tickets -= COST_SINGLE_TICKET;
         const result = performSingleDraw();
         updateUI();
         addHistoryRecord(result.name, result.star);
+        return result;
+    }
+    return null;
+}
+
+// 十连专用（不立即添加历史，避免重复）
+function drawOneWithTicketNoHistory() {
+    if (tickets >= COST_SINGLE_TICKET) {
+        tickets -= COST_SINGLE_TICKET;
+        const result = performSingleDraw();
+        updateUI();
         return result;
     }
     return null;
@@ -648,12 +658,14 @@ async function tenPull() {
         for (let i = 0; i < 10; i++) {
             await new Promise(r => setTimeout(r, 50));
             if (tickets < 1) break;
-            const result = drawOneWithTicket();
+            const result = drawOneWithTicketNoHistory();  // 不添加历史
             if (result) {
                 pullResults.push(result);
-                addHistoryRecord(result.name, result.star);
-                updateUI();
             }
+        }
+        // 统一添加到历史记录（只添加一次）
+        for (const res of pullResults) {
+            addHistoryRecord(res.name, res.star);
         }
         const fiveCount = pullResults.filter(r => r.star === 5).length;
         showTip(`十连完成！获得 ${fiveCount} 位五星 ✨`);
@@ -767,7 +779,7 @@ function bindEvents() {
     confirmExchangeBtn.addEventListener('click', performExchange);
     exchangeAmountInput.addEventListener('input', updateExchangePreview);
     
-    // 长按重置（保留）
+    // 长按重置（长按星琼区域）
     let timer = null;
     const resetTarget = document.querySelector('.jade-left') || document.querySelector('.resources');
     if (resetTarget) {
@@ -778,7 +790,6 @@ function bindEvents() {
     }
 }
 
-// 初始化登录检查（确保 loading 始终消失）
 async function initAuth() {
     try {
         const { data: { user }, error } = await supabaseClient.auth.getUser();
