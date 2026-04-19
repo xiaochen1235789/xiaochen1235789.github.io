@@ -9,7 +9,7 @@
     <title>卡池 - 六哥荣耀WIKI (优化)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ========== 完整样式（已优化，增加抽卡禁用样式） ========== */
+        /* ========== 样式保持不变（略，与原版一致） ========== */
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
         body { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; background: #0a0515; font-family: 'Segoe UI', 'Poppins', 'Noto Sans', system-ui, sans-serif; touch-action: pan-x pan-y; }
         .star-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; background: radial-gradient(ellipse at 40% 50%, #0e0a2a, #020008); overflow: hidden; }
@@ -300,12 +300,13 @@ function updateUI() {
     rateDisplaySpan.innerText = `当前5星概率: ${(currentRate * 100).toFixed(2)}%`;
 }
 
-// 优化后的软保底概率：74抽后每抽增加约6%，更贴近崩铁机制
 function getCurrentFiveStarRate(pityCount) {
     if (pityCount >= PITY_5_MAX - 1) return 1.0;
     if (pityCount < SOFT_PITY_START) return 0.006;
-    let extra = (pityCount - SOFT_PITY_START + 1) * 0.06;
-    return Math.min(0.006 + extra, 1.0);
+    let step = pityCount - (SOFT_PITY_START - 1);
+    let maxStep = PITY_5_MAX - SOFT_PITY_START;
+    let rate = 0.006 + (1.0 - 0.006) * (step / maxStep);
+    return Math.min(rate, 1.0);
 }
 
 function checkBannerActive() {
@@ -331,18 +332,6 @@ function updateButtonsState() {
         singleBtn.disabled = false;
         tenBtn.disabled = false;
         disabledNoticeSpan.style.display = 'none';
-    }
-    // 抽卡过程中视觉禁用
-    if (isDrawing) {
-        singleBtn.style.opacity = '0.6';
-        tenBtn.style.opacity = '0.6';
-        singleBtn.style.pointerEvents = 'none';
-        tenBtn.style.pointerEvents = 'none';
-    } else {
-        singleBtn.style.opacity = '';
-        tenBtn.style.opacity = '';
-        singleBtn.style.pointerEvents = '';
-        tenBtn.style.pointerEvents = '';
     }
 }
 
@@ -383,12 +372,13 @@ function updateCountdown() {
 setInterval(updateCountdown, 1000);
 updateCountdown();
 
-// 加载用户数据
+// 加载用户数据（幂等：若记录不存在则创建，星琼=1599840，专票=100）
 async function loadUserData() {
     if (!currentUser) return;
     if (isLoadingData) return;
     isLoadingData = true;
     try {
+        // 1. user_resources
         let { data: resData, error: resErr } = await supabaseClient
             .from('user_resources')
             .select('*')
@@ -407,6 +397,7 @@ async function loadUserData() {
         starJade = resData.star_jade;
         tickets = resData.tickets;
 
+        // 2. user_gacha_state
         let { data: stateData, error: stateErr } = await supabaseClient
             .from('user_gacha_state')
             .select('five_star_pity, four_star_pity, guaranteed_up')
@@ -426,6 +417,7 @@ async function loadUserData() {
         fourStarPity = stateData.four_star_pity;
         guaranteedUp = stateData.guaranteed_up;
 
+        // 3. gacha_history（可能表不存在，降级处理）
         try {
             let { data: historyData, error: histErr } = await supabaseClient
                 .from('gacha_history')
@@ -436,7 +428,7 @@ async function loadUserData() {
             if (!histErr) {
                 gachaHistory = (historyData || []).map(h => ({ name: h.item_name, star: h.star_level, time: h.created_at }));
             } else {
-                console.warn('历史表查询失败', histErr);
+                console.warn('历史表可能不存在，已忽略', histErr);
                 gachaHistory = [];
             }
         } catch (e) {
@@ -444,6 +436,7 @@ async function loadUserData() {
             gachaHistory = [];
         }
 
+        // 4. UID
         try {
             let { data: profileData, error: profErr } = await supabaseClient
                 .from('user_profiles')
@@ -465,6 +458,7 @@ async function loadUserData() {
     } catch (err) {
         console.error('加载用户数据失败:', err);
         showTip('加载数据失败，将使用本地默认值');
+        // 降级：使用默认值，不影响抽卡
         starJade = 1599840;
         tickets = 100;
         fiveStarPity = 0;
@@ -501,22 +495,6 @@ async function saveAfterDraw(resultList) {
     } catch (err) {
         console.error('保存数据失败:', err);
         showTip('数据保存失败，请检查网络');
-    }
-}
-
-// 新增：清空历史记录（重置时调用）
-async function clearGachaHistory() {
-    if (!currentUser) return;
-    try {
-        await supabaseClient
-            .from('gacha_history')
-            .delete()
-            .eq('user_id', currentUser.id);
-        gachaHistory = [];
-        renderHistoryModal();
-    } catch (err) {
-        console.error('清空历史记录失败:', err);
-        showTip('清空历史记录失败，请手动刷新');
     }
 }
 
@@ -646,62 +624,45 @@ async function singlePull() {
     if (!isBannerActive) { showTip('卡池已关闭，无法跃迁'); return; }
     if (isDrawing) { showTip('跃迁进行中...'); return; }
     isDrawing = true;
-    updateButtonsState(); // 立即禁用按钮样式
-    try {
-        await attemptDraw(COST_SINGLE_TICKET, EXCHANGE_RATE, async () => {
-            const result = drawOneWithTicket();
-            if (result) {
-                showTip(`获得: ${result.name} (${result.star}★)`);
-                showResultDialog([result]);
-                updateUI();
-                await saveAfterDraw([result]);
-            }
-            return result;
-        });
-    } catch (err) {
-        console.error('抽卡异常:', err);
-        showTip('抽卡失败，请重试');
-    } finally {
-        isDrawing = false;
-        updateButtonsState();
-    }
+    await attemptDraw(COST_SINGLE_TICKET, EXCHANGE_RATE, async () => {
+        const result = drawOneWithTicket();
+        if (result) {
+            showTip(`获得: ${result.name} (${result.star}★)`);
+            showResultDialog([result]);
+            updateUI();
+            await saveAfterDraw([result]);
+        }
+        return result;
+    });
+    isDrawing = false;
 }
 
+// ★★★★★ 修复十连重复记录 Bug ★★★★★
 async function tenPull() {
     if (!isBannerActive) { showTip('卡池已关闭，无法跃迁'); return; }
     if (isDrawing) { showTip('当前正在跃迁中，请稍等…'); return; }
     isDrawing = true;
-    updateButtonsState();
-    try {
-        await attemptDraw(COST_TEN_TICKET, EXCHANGE_RATE * COST_TEN_TICKET, async () => {
-            showTip('十连跃迁开启，群星闪烁 ✨✨');
-            const pullResults = [];
-            for (let i = 0; i < 10; i++) {
-                await new Promise(r => setTimeout(r, 50));
-                if (tickets < 1) break;
-                const result = drawOneWithTicket();
-                if (result) {
-                    pullResults.push(result);
-                    addHistoryRecord(result.name, result.star);
-                    updateUI();
-                }
+    await attemptDraw(COST_TEN_TICKET, EXCHANGE_RATE * COST_TEN_TICKET, async () => {
+        showTip('十连跃迁开启，群星闪烁 ✨✨');
+        const pullResults = [];
+        for (let i = 0; i < 10; i++) {
+            await new Promise(r => setTimeout(r, 50));
+            if (tickets < 1) break;
+            const result = drawOneWithTicket();
+            if (result) {
+                pullResults.push(result);
+                // 注意：drawOneWithTicket 内部已经调用 addHistoryRecord 和 updateUI，此处不再重复添加
             }
-            const fiveCount = pullResults.filter(r => r.star === 5).length;
-            showTip(`十连完成！获得 ${fiveCount} 位五星 ✨`);
-            showResultDialog(pullResults);
-            await saveAfterDraw(pullResults);
-            return pullResults;
-        });
-    } catch (err) {
-        console.error('十连异常:', err);
-        showTip('十连失败，请重试');
-    } finally {
-        isDrawing = false;
-        updateButtonsState();
-    }
+        }
+        const fiveCount = pullResults.filter(r => r.star === 5).length;
+        showTip(`十连完成！获得 ${fiveCount} 位五星 ✨`);
+        showResultDialog(pullResults);
+        await saveAfterDraw(pullResults);
+        return pullResults;
+    });
+    isDrawing = false;
 }
 
-// 修复重置功能：清除所有用户数据并重置为初始状态
 async function fullResetGame() {
     if(isDrawing) return;
     if (!confirm('⚠️ 重置后所有抽卡资源、保底、历史记录将清空，且不可恢复！确定吗？')) return;
@@ -709,26 +670,11 @@ async function fullResetGame() {
     tickets = 100;
     fiveStarPity = 0;
     fourStarPity = 0;
+    gachaHistory = [];
     guaranteedUp = false;
-    // 清空数据库历史记录
-    await clearGachaHistory();
-    // 更新资源与保底
-    if (currentUser) {
-        try {
-            await supabaseClient
-                .from('user_resources')
-                .update({ star_jade: starJade, tickets: tickets })
-                .eq('user_id', currentUser.id);
-            await supabaseClient
-                .from('user_gacha_state')
-                .update({ five_star_pity: fiveStarPity, four_star_pity: fourStarPity, guaranteed_up: guaranteedUp })
-                .eq('user_id', currentUser.id);
-        } catch (err) {
-            console.error('重置保存失败', err);
-        }
-    }
     updateUI();
     renderHistoryModal();
+    await saveAfterDraw([]);
     showTip('列车补给完毕！星琼+1599840，星轨专票100，跃迁重置');
 }
 
@@ -826,6 +772,7 @@ function bindEvents() {
     confirmExchangeBtn.addEventListener('click', performExchange);
     exchangeAmountInput.addEventListener('input', updateExchangePreview);
     
+    // 长按重置（保留）
     let timer = null;
     const resetTarget = document.querySelector('.jade-left') || document.querySelector('.resources');
     if (resetTarget) {
@@ -836,6 +783,7 @@ function bindEvents() {
     }
 }
 
+// 初始化登录检查（确保 loading 始终消失）
 async function initAuth() {
     try {
         const { data: { user }, error } = await supabaseClient.auth.getUser();
