@@ -6,10 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, orientation=landscape">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>卡池 - 六哥荣耀WIKI </title>
+    <title>卡池 - 六哥荣耀WIKI</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ========== 完整样式 ========== */
+        /* ========== 完整样式（含统计弹窗及保底增强，可滚动命座列表） ========== */
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
         body { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; background: #0a0515; font-family: 'Segoe UI', 'Poppins', 'Noto Sans', system-ui, sans-serif; touch-action: pan-x pan-y; }
         .star-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; background: radial-gradient(ellipse at 40% 50%, #0e0a2a, #020008); overflow: hidden; }
@@ -18,10 +18,8 @@
         .shooting-star { position: absolute; width: 2px; height: 2px; background: linear-gradient(45deg, rgba(255,255,200,1), rgba(255,255,200,0)); border-radius: 50%; box-shadow: 0 0 6px 1px rgba(255,245,180,0.8); animation: shoot 6s linear infinite; opacity: 0; }
         @keyframes shoot { 0% { transform: translateX(0) translateY(0) rotate(45deg); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateX(300px) translateY(300px) rotate(45deg); opacity: 0; } }
         .landscape-wrapper { position: relative; z-index: 2; width: 100%; height: 100%; display: flex; flex-direction: row; overflow: hidden; padding: 16px 20px; gap: 20px; backdrop-filter: blur(8px); }
-        .left-panel { flex: 3; min-width: 240px; background: rgba(8, 6, 24, 0.65); backdrop-filter: blur(16px); border-radius: 48px; border: 1px solid rgba(210, 180, 255, 0.4); display: flex; flex-direction: column; box-shadow: 0 20px 35px rgba(0, 0, 0, 0.5); position: relative; height: 100%; }
-        /* 可滚动的内容区 */
+        .left-panel { flex: 3; min-width: 240px; background: rgba(8, 6, 24, 0.65); backdrop-filter: blur(16px); border-radius: 48px; border: 1px solid rgba(210, 180, 255, 0.4); display: flex; flex-direction: column; box-shadow: 0 20px 35px rgba(0, 0, 0, 0.5); height: 100%; }
         .left-panel-scroll { flex: 1; overflow-y: auto; padding: 20px 16px; scrollbar-width: thin; }
-        /* UID 固定底部 */
         .uid-badge { margin: 0 16px 16px 16px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 6px 12px; border-radius: 30px; font-size: 0.7rem; color: #ffcf8a; font-family: monospace; border: 1px solid rgba(255,200,100,0.3); text-align: center; flex-shrink: 0; width: calc(100% - 32px); align-self: center; }
         .card-pool { text-align: center; margin-bottom: 20px; }
         .pool-name { font-size: 1.6rem; font-weight: bold; background: linear-gradient(135deg, #FFE6B0, #FFB347); background-clip: text; -webkit-background-clip: text; color: transparent; letter-spacing: 2px; margin-bottom: 8px; }
@@ -64,7 +62,7 @@
         .special-btn { background: linear-gradient(105deg, #9b4d96, #5e2a5c); box-shadow: 0 6px 0 #2e1a2c; }
         .modal-mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 1000; display: flex; justify-content: center; align-items: center; visibility: hidden; opacity: 0; transition: 0.2s; }
         .modal-mask.active { visibility: visible; opacity: 1; }
-        .modal-content { width: 85%; max-width: 400px; background: #120e28; border-radius: 56px; border: 2px solid #ffbc6e; overflow: hidden; box-shadow: 0 25px 45px black; }
+        .modal-content { width: 85%; max-width: 550px; background: #120e28; border-radius: 56px; border: 2px solid #ffbc6e; overflow: hidden; box-shadow: 0 25px 45px black; }
         .modal-header { padding: 18px 20px; background: #1f1938; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,215,150,0.4); }
         .modal-header h3 { color: #ffe3a3; font-size: 1.2rem; }
         .modal-header .close-modal { background: none; border: none; font-size: 1.8rem; color: #ffbc6e; cursor: pointer; line-height: 1; padding: 0 8px; }
@@ -74,8 +72,9 @@
         .stat-card .stat-label { font-size: 0.7rem; color: #b9c8ff; letter-spacing: 1px; margin-bottom: 6px; }
         .stat-card .stat-number { font-size: 1.4rem; font-weight: 800; color: #ffdfaa; line-height: 1; }
         .stat-card .stat-unit { font-size: 0.7rem; color: #cbbaff; }
-        /* 命座一览样式 */
-        .constellation-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; max-height: 200px; overflow-y: auto; }
+        .constellation-section { margin-top: 20px; border-top: 1px solid rgba(255,200,100,0.3); padding-top: 12px; max-height: 220px; overflow-y: auto; text-align: left; }
+        .constellation-title { font-size: 0.85rem; margin-bottom: 8px; color: #ffddb0; }
+        .constellation-grid { display: flex; flex-wrap: wrap; gap: 8px; }
         .constellation-item { background: rgba(0,0,0,0.5); border-radius: 40px; padding: 4px 12px; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #ffbc6e30; }
         .constellation-name { color: #ffdfaa; }
         .constellation-level { color: #ffbc6e; font-weight: bold; }
@@ -108,10 +107,10 @@
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .toast-notice { position: fixed; top: 20px; right: 20px; z-index: 1200; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); border: 1px solid #ffbc6e; border-radius: 32px; padding: 10px 20px; color: #ffdfaa; font-size: 0.9rem; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.3); pointer-events: none; opacity: 0; transition: opacity 0.2s ease; white-space: nowrap; }
         .toast-notice.show { opacity: 1; }
-        @media (max-width: 800px) { .landscape-wrapper { padding: 12px; gap: 12px; } .left-panel-scroll { padding: 12px; } .pool-name { font-size: 1.2rem; } .jade-amount { font-size: 0.9rem; } .ticket-amount { font-size: 0.85rem; } .gacha-btn { font-size: 0.85rem; padding: 8px 0; } .toast-notice { font-size: 0.75rem; padding: 6px 12px; white-space: normal; max-width: 70%; } .action-btn { font-size: 0.7rem; padding: 4px 12px; } .splash-img { max-height: 35vh; } .uid-badge { font-size: 0.6rem; margin-bottom: 12px; } .stats-grid { grid-template-columns: 1fr; } }
-        .record-list::-webkit-scrollbar, .dialog-content::-webkit-scrollbar, .left-panel-scroll::-webkit-scrollbar { width: 4px; }
-        .record-list::-webkit-scrollbar-track, .dialog-content::-webkit-scrollbar-track, .left-panel-scroll::-webkit-scrollbar-track { background: rgba(255,255,200,0.1); }
-        .record-list::-webkit-scrollbar-thumb, .dialog-content::-webkit-scrollbar-thumb, .left-panel-scroll::-webkit-scrollbar-thumb { background: #ffbc6e; border-radius: 10px; }
+        @media (max-width: 800px) { .landscape-wrapper { padding: 12px; gap: 12px; } .left-panel-scroll { padding: 12px; } .pool-name { font-size: 1.2rem; } .jade-amount { font-size: 0.9rem; } .ticket-amount { font-size: 0.85rem; } .gacha-btn { font-size: 0.85rem; padding: 8px 0; } .toast-notice { font-size: 0.75rem; padding: 6px 12px; white-space: normal; max-width: 70%; } .action-btn { font-size: 0.7rem; padding: 4px 12px; } .splash-img { max-height: 35vh; } .uid-badge { font-size: 0.6rem; margin-bottom: 12px; } .stats-grid { grid-template-columns: 1fr; } .constellation-section { max-height: 180px; } }
+        .record-list::-webkit-scrollbar, .dialog-content::-webkit-scrollbar, .left-panel-scroll::-webkit-scrollbar, .constellation-section::-webkit-scrollbar { width: 4px; }
+        .record-list::-webkit-scrollbar-track, .dialog-content::-webkit-scrollbar-track, .left-panel-scroll::-webkit-scrollbar-track, .constellation-section::-webkit-scrollbar-track { background: rgba(255,255,200,0.1); }
+        .record-list::-webkit-scrollbar-thumb, .dialog-content::-webkit-scrollbar-thumb, .left-panel-scroll::-webkit-scrollbar-thumb, .constellation-section::-webkit-scrollbar-thumb { background: #ffbc6e; border-radius: 10px; }
         .orientation-tip { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); backdrop-filter: blur(12px); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; color: #ffdfaa; font-size: 1.4rem; pointer-events: none; }
         @media (orientation: landscape) { .orientation-tip { display: none !important; } }
         .login-loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(12px); z-index: 2000; display: flex; justify-content: center; align-items: center; flex-direction: column; color: #ffdfaa; font-size: 1.2rem; gap: 20px; }
@@ -131,7 +130,6 @@
 
 <div class="landscape-wrapper" id="mainContent" style="display: none;">
     <div class="left-panel">
-        <!-- 可滚动内容区 -->
         <div class="left-panel-scroll">
             <div class="card-pool">
                 <div class="pool-name">✨ 流光定影 ✨</div>
@@ -168,7 +166,6 @@
                 <div class="dynamic-rate-badge" id="rateDisplay">当前5星概率: 0.60%</div>
             </div>
         </div>
-        <!-- UID 固定底部 -->
         <div class="uid-badge" id="uidBadge">UID: --</div>
     </div>
 
@@ -195,17 +192,17 @@
     </div>
 </div>
 
-<!-- 统计弹窗（含命座一览） -->
+<!-- 统计弹窗（内含可滑动命座列表） -->
 <div id="statsModal" class="modal-mask">
-    <div class="modal-content" style="max-width: 550px;">
+    <div class="modal-content">
         <div class="modal-header">
             <h3>📊 抽卡统计报告 & 角色命座</h3>
             <button class="close-modal" id="closeStatsBtn">✖</button>
         </div>
         <div class="modal-body">
             <div class="stats-grid" id="statsGrid"></div>
-            <div style="margin-top: 20px; border-top: 1px solid rgba(255,200,100,0.3); padding-top: 12px;">
-                <div style="font-size:0.85rem; margin-bottom:8px;">✨ 角色命座一览 ✨</div>
+            <div class="constellation-section">
+                <div class="constellation-title">✨ 已获角色命座 ✨</div>
                 <div id="constellationList" class="constellation-grid"></div>
             </div>
         </div>
@@ -281,7 +278,8 @@ const SOFT_PITY_START = 74;
 const COST_SINGLE_TICKET = 1;
 const COST_TEN_TICKET = 10;
 const EXCHANGE_RATE = 160;
-const OVERFLOW_COMPENSATION = 1600; // 满命溢出转换为1600星琼
+const OVERFLOW_COMPENSATION_5 = 1600;   // 五星满命补偿
+const OVERFLOW_COMPENSATION_4 = 160;    // 四星满命补偿
 
 // 全局状态
 let currentUser = null;
@@ -296,7 +294,7 @@ let guaranteedUp = false;
 let userNumber = null;
 let isLoadingData = false;
 
-// 命座数据: Map<角色名, 命座等级>
+// 命座数据
 let constellationsMap = new Map();
 
 // 统计变量
@@ -375,7 +373,7 @@ function updateEnhancedPityHints() {
     fourPityRemainSpan.innerText = `${fourRemain} 抽后必出四星`;
 }
 
-// 命座相关函数
+// 命座相关（首次获得默认为0命，抽到后升到1命；满命补偿区分星级）
 async function loadConstellations() {
     if (!currentUser) return;
     try {
@@ -389,25 +387,23 @@ async function loadConstellations() {
             constellationsMap.set(row.character_name, row.constellation_level);
         }
     } catch (err) {
-        console.warn('加载命座数据失败:', err);
+        console.warn('加载命座失败:', err);
     }
 }
 
 async function saveConstellation(characterName, level) {
     if (!currentUser) return;
     try {
-        const { error } = await supabaseClient
+        await supabaseClient
             .from('user_constellations')
             .upsert({ user_id: currentUser.id, character_name: characterName, constellation_level: level, updated_at: new Date() }, { onConflict: 'user_id, character_name' });
-        if (error) throw error;
     } catch (err) {
         console.error('保存命座失败:', err);
     }
 }
 
-// 处理角色获取（命座提升或溢出补偿）
 async function processCharacterObtain(characterName, starLevel) {
-    const currentLevel = constellationsMap.get(characterName) || 0;
+    const currentLevel = constellationsMap.get(characterName) || 0; // 未获得时为0
     if (currentLevel < 6) {
         const newLevel = currentLevel + 1;
         constellationsMap.set(characterName, newLevel);
@@ -415,24 +411,23 @@ async function processCharacterObtain(characterName, starLevel) {
         showTip(`${characterName} 命座提升至 ${newLevel} 阶！`);
         return { action: 'constellation', newLevel };
     } else {
-        // 满命溢出，补偿星琼
-        starJade += OVERFLOW_COMPENSATION;
+        // 满命溢出，根据星级补偿星琼
+        const compensation = (starLevel === 5) ? OVERFLOW_COMPENSATION_5 : OVERFLOW_COMPENSATION_4;
+        starJade += compensation;
         updateUI();
-        await saveAfterDraw([]); // 同步资源
-        showTip(`✨ ${characterName} 已满命，转换为 ${OVERFLOW_COMPENSATION} 星琼 ✨`);
-        return { action: 'overflow', compensation: OVERFLOW_COMPENSATION };
+        await saveAfterDraw([]);
+        showTip(`✨ ${characterName} 已满命，转换为 ${compensation} 星琼 ✨`);
+        return { action: 'overflow', compensation };
     }
 }
 
-// 更新统计面板内容（含命座展示）
+// 统计相关
 function updateStatsModalContent() {
     const avgPulls = fiveStarCount === 0 ? '--' : (totalPulls / fiveStarCount).toFixed(1);
     let best = '--', worst = '--';
     if (fiveStarDistances.length > 0) {
-        const minDist = Math.min(...fiveStarDistances);
-        const maxDist = Math.max(...fiveStarDistances);
-        best = minDist;
-        worst = maxDist;
+        best = Math.min(...fiveStarDistances);
+        worst = Math.max(...fiveStarDistances);
     }
     const upRate = fiveStarCount === 0 ? '--' : ((upFiveStarCount / fiveStarCount) * 100).toFixed(1) + '%';
     const statsHtml = `
@@ -462,7 +457,6 @@ function updateStatsAfterPull(resultItem) {
     totalPulls++;
     if (resultItem.star === 5) {
         fiveStarCount++;
-        // 排除第一次五星的间隔
         if (lastFiveStarPullIndex !== 0) {
             let distance = totalPulls - lastFiveStarPullIndex;
             distance = Math.min(distance, PITY_5_MAX);
@@ -659,9 +653,7 @@ async function loadUserData() {
             uidBadge.innerText = `UID: --`;
         }
 
-        // 加载命座数据
         await loadConstellations();
-
         updateUI();
         renderHistoryModal();
         rebuildStatsFromHistory();
@@ -757,9 +749,8 @@ function escapeHtml(str) {
     return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
 }
 
-// 抽卡核心：处理单抽（含命座和溢出）
+// 核心抽卡（含命座处理，首次获得默认为0命，抽到后+1）
 async function performSingleDrawWithConstellation() {
-    // 先执行原有抽卡逻辑，得到角色名和星级
     let isFiveStar = false;
     if (fiveStarPity + 1 >= PITY_5_MAX) {
         isFiveStar = true;
@@ -803,23 +794,18 @@ async function performSingleDrawWithConstellation() {
         }
     }
 
-    // 处理角色（只有4星和5星才处理命座，三星物品忽略）
     let constellationMsg = null;
     if (resultStar >= 4) {
-        const result = await processCharacterObtain(resultName, resultStar);
-        if (result.action === 'constellation') {
-            constellationMsg = `命座 ${result.newLevel}`;
-        } else if (result.action === 'overflow') {
-            constellationMsg = `满命转化 ${result.compensation}星琼`;
+        const res = await processCharacterObtain(resultName, resultStar);
+        if (res.action === 'constellation') {
+            constellationMsg = `命座 ${res.newLevel}`;
+        } else if (res.action === 'overflow') {
+            constellationMsg = `满命转化 ${res.compensation}星琼`;
         }
     }
-
-    // 扣除门票（已经在drawOneWithTicket中扣除，但这里为了独立，需要扣除门票，注意调用位置）
-    // 注意：此函数会在drawOneWithTicket中调用，门票扣除在外部进行，这里不重复扣除
     return { name: resultName, star: resultStar, constellationMsg };
 }
 
-// 带门票扣除的单抽
 async function drawOneWithTicketAndConstellation() {
     if (tickets >= COST_SINGLE_TICKET) {
         tickets -= COST_SINGLE_TICKET;
@@ -915,7 +901,6 @@ async function fullResetGame() {
     updateUI();
     renderHistoryModal();
     await saveAfterDraw([]);
-    // 清空命座表
     if (currentUser) {
         await supabaseClient.from('user_constellations').delete().eq('user_id', currentUser.id);
     }
@@ -981,7 +966,7 @@ function closeStatsModal() {
 function preventScrollRefresh() {
     document.body.addEventListener('touchmove', function(e) {
         const target = e.target;
-        const isScrollable = target.closest('.record-list') || target.closest('.dialog-content') || target.closest('.left-panel-scroll') || target.closest('.stats-grid') || target.closest('.constellation-grid');
+        const isScrollable = target.closest('.record-list') || target.closest('.dialog-content') || target.closest('.left-panel-scroll') || target.closest('.stats-grid') || target.closest('.constellation-section');
         if (!isScrollable) e.preventDefault();
     }, { passive: false });
 }
