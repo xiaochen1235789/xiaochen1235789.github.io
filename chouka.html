@@ -9,7 +9,7 @@
     <title>卡池 - 六哥荣耀WIKI (优化)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ========== 样式保持不变（略，与原版一致） ========== */
+        /* ========== 完整样式（含统计弹窗及保底增强） ========== */
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
         body { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; background: #0a0515; font-family: 'Segoe UI', 'Poppins', 'Noto Sans', system-ui, sans-serif; touch-action: pan-x pan-y; }
         .star-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; background: radial-gradient(ellipse at 40% 50%, #0e0a2a, #020008); overflow: hidden; }
@@ -40,6 +40,10 @@
         .pity-card { background: rgba(0, 0, 0, 0.5); border-radius: 32px; padding: 14px; margin: 12px 0; text-align: center; }
         .pity-item { display: flex; justify-content: space-between; margin: 8px 0; color: #cdd9ff; font-size: 0.85rem; }
         .pity-value { color: #ffbc6e; font-weight: bold; }
+        .pity-enhanced { margin-top: 12px; border-top: 1px dashed rgba(210,180,140,0.4); padding-top: 10px; font-size: 0.75rem; color: #ffddb0; text-align: left; }
+        .pity-enhanced div { margin: 6px 0; display: flex; justify-content: space-between; }
+        .pity-enhanced .label { color: #aab9de; }
+        .pity-enhanced .value { color: #ffcf8a; font-weight: 500; }
         .dynamic-rate-badge { background: #1e1a2f; border-radius: 24px; padding: 8px; font-size: 0.7rem; text-align: center; color: #ffcf9a; margin-top: 12px; }
         .right-panel { flex: 7; display: flex; flex-direction: column; min-width: 0; height: 100%; }
         .character-splash { background: rgba(3, 2, 15, 0.5); border-radius: 48px; border: 1px solid rgba(210, 180, 255, 0.4); backdrop-filter: blur(4px); display: flex; flex-direction: column; padding: 16px 18px; gap: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); height: 100%; max-height: 100%; }
@@ -62,6 +66,11 @@
         .modal-header h3 { color: #ffe3a3; font-size: 1.2rem; }
         .modal-header .close-modal { background: none; border: none; font-size: 1.8rem; color: #ffbc6e; cursor: pointer; line-height: 1; padding: 0 8px; }
         .modal-body { padding: 24px; text-align: center; color: #ffdfaa; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 12px; margin-top: 8px; text-align: left; }
+        .stat-card { background: rgba(0,0,0,0.4); border-radius: 28px; padding: 12px; backdrop-filter: blur(4px); }
+        .stat-card .stat-label { font-size: 0.7rem; color: #b9c8ff; letter-spacing: 1px; margin-bottom: 6px; }
+        .stat-card .stat-number { font-size: 1.4rem; font-weight: 800; color: #ffdfaa; line-height: 1; }
+        .stat-card .stat-unit { font-size: 0.7rem; color: #cbbaff; }
         .exchange-input { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 20px 0; }
         .exchange-input input { width: 100px; padding: 8px; border-radius: 40px; border: 1px solid #ffbc6e; background: rgba(0,0,0,0.6); color: #ffdfaa; font-size: 1rem; text-align: center; }
         .exchange-info { font-size: 0.9rem; margin: 12px 0; }
@@ -91,7 +100,7 @@
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .toast-notice { position: fixed; top: 20px; right: 20px; z-index: 1200; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); border: 1px solid #ffbc6e; border-radius: 32px; padding: 10px 20px; color: #ffdfaa; font-size: 0.9rem; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.3); pointer-events: none; opacity: 0; transition: opacity 0.2s ease; white-space: nowrap; }
         .toast-notice.show { opacity: 1; }
-        @media (max-width: 800px) { .landscape-wrapper { padding: 12px; gap: 12px; } .left-panel { flex: 4; padding: 12px; } .pool-name { font-size: 1.2rem; } .jade-amount { font-size: 0.9rem; } .ticket-amount { font-size: 0.85rem; } .gacha-btn { font-size: 0.85rem; padding: 8px 0; } .toast-notice { font-size: 0.75rem; padding: 6px 12px; white-space: normal; max-width: 70%; } .action-btn { font-size: 0.7rem; padding: 4px 12px; } .splash-img { max-height: 35vh; } .uid-badge { font-size: 0.6rem; bottom: 8px; left: 8px; } }
+        @media (max-width: 800px) { .landscape-wrapper { padding: 12px; gap: 12px; } .left-panel { flex: 4; padding: 12px; } .pool-name { font-size: 1.2rem; } .jade-amount { font-size: 0.9rem; } .ticket-amount { font-size: 0.85rem; } .gacha-btn { font-size: 0.85rem; padding: 8px 0; } .toast-notice { font-size: 0.75rem; padding: 6px 12px; white-space: normal; max-width: 70%; } .action-btn { font-size: 0.7rem; padding: 4px 12px; } .splash-img { max-height: 35vh; } .uid-badge { font-size: 0.6rem; bottom: 8px; left: 8px; } .stats-grid { grid-template-columns: 1fr; } }
         .record-list::-webkit-scrollbar, .dialog-content::-webkit-scrollbar, .left-panel::-webkit-scrollbar { width: 4px; }
         .record-list::-webkit-scrollbar-track, .dialog-content::-webkit-scrollbar-track, .left-panel::-webkit-scrollbar-track { background: rgba(255,255,200,0.1); }
         .record-list::-webkit-scrollbar-thumb, .dialog-content::-webkit-scrollbar-thumb, .left-panel::-webkit-scrollbar-thumb { background: #ffbc6e; border-radius: 10px; }
@@ -143,6 +152,11 @@
             <div class="pity-card">
                 <div class="pity-item"><span>🌟 5星保底计数</span><span class="pity-value" id="pityCounter">0</span><span> / 90</span></div>
                 <div class="pity-item"><span>🎴 4星保底计数</span><span class="pity-value" id="fourPityCounter">0</span><span> / 10</span></div>
+                <div class="pity-enhanced" id="enhancedPityHint">
+                    <div><span class="label">🔍 软保底剩余：</span><span class="value" id="softPityRemain">--</span></div>
+                    <div><span class="label">🎯 下次五星类型：</span><span class="value" id="nextFiveType">--</span></div>
+                    <div><span class="label">🎴 四星保底剩余：</span><span class="value" id="fourPityRemain">--</span></div>
+                </div>
                 <div class="dynamic-rate-badge" id="rateDisplay">当前5星概率: 0.60%</div>
             </div>
         </div>
@@ -151,6 +165,7 @@
     <div class="right-panel">
         <div class="character-splash">
             <div class="action-buttons">
+                <div class="action-btn" id="statsBtn">📊 统计</div>
                 <div class="action-btn" id="exchangeBtn">🎫 兑换</div>
                 <div class="action-btn" id="openRecordBtn">📜 记录</div>
             </div>
@@ -166,6 +181,19 @@
                     <img src="https://xiaochen1235789.github.io/images/Star_ticket_gold.webp" alt="专票"> 10 跃迁10次
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- 统计弹窗 -->
+<div id="statsModal" class="modal-mask">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>📊 抽卡统计报告</h3>
+            <button class="close-modal" id="closeStatsBtn">✖</button>
+        </div>
+        <div class="modal-body">
+            <div class="stats-grid" id="statsGrid"></div>
         </div>
     </div>
 </div>
@@ -253,6 +281,15 @@ let guaranteedUp = false;
 let userNumber = null;
 let isLoadingData = false;
 
+// 统计变量
+let totalPulls = 0;
+let fiveStarCount = 0;
+let fourStarCount = 0;
+let threeStarCount = 0;
+let upFiveStarCount = 0;
+let fiveStarDistances = [];
+let lastFiveStarPullIndex = 0;
+
 // DOM 元素
 const jadeSpan = document.getElementById('jadeAmount');
 const ticketSpan = document.getElementById('ticketAmount');
@@ -278,6 +315,13 @@ const closeExchangeBtn = document.getElementById('closeExchangeBtn');
 const uidBadge = document.getElementById('uidBadge');
 const loginLoadingDiv = document.getElementById('loginLoading');
 const mainContentDiv = document.getElementById('mainContent');
+const statsBtn = document.getElementById('statsBtn');
+const statsModal = document.getElementById('statsModal');
+const closeStatsBtn = document.getElementById('closeStatsBtn');
+const statsGrid = document.getElementById('statsGrid');
+const softPityRemainSpan = document.getElementById('softPityRemain');
+const nextFiveTypeSpan = document.getElementById('nextFiveType');
+const fourPityRemainSpan = document.getElementById('fourPityRemain');
 
 splashImg.onerror = () => { splashImg.src = "https://xiaochen1235789.github.io/images/changjinglu.webp"; };
 
@@ -298,6 +342,87 @@ function updateUI() {
     fourPitySpan.innerText = fourStarPity;
     let currentRate = getCurrentFiveStarRate(fiveStarPity);
     rateDisplaySpan.innerText = `当前5星概率: ${(currentRate * 100).toFixed(2)}%`;
+    updateEnhancedPityHints();
+}
+
+function updateEnhancedPityHints() {
+    if (fiveStarPity < SOFT_PITY_START) {
+        softPityRemainSpan.innerText = `${SOFT_PITY_START - fiveStarPity} 抽后进入软保底区`;
+    } else {
+        softPityRemainSpan.innerText = `已进入软保底区 (${fiveStarPity}/90)`;
+    }
+    nextFiveTypeSpan.innerText = guaranteedUp ? "大保底（必得UP）" : "小保底（50%概率UP）";
+    const fourRemain = PITY_4_MAX - fourStarPity;
+    fourPityRemainSpan.innerText = `${fourRemain} 抽后必出四星`;
+}
+
+function updateStatsModalContent() {
+    const avgPulls = fiveStarCount === 0 ? '--' : (totalPulls / fiveStarCount).toFixed(1);
+    let best = '--', worst = '--';
+    if (fiveStarDistances.length > 0) {
+        const minDist = Math.min(...fiveStarDistances);
+        const maxDist = Math.max(...fiveStarDistances);
+        best = minDist;
+        worst = maxDist;
+    }
+    const upRate = fiveStarCount === 0 ? '--' : ((upFiveStarCount / fiveStarCount) * 100).toFixed(1) + '%';
+    const html = `
+        <div class="stat-card"><div class="stat-label">🎲 总抽数</div><div class="stat-number">${totalPulls}</div></div>
+        <div class="stat-card"><div class="stat-label">⭐ 五星数量</div><div class="stat-number">${fiveStarCount}</div></div>
+        <div class="stat-card"><div class="stat-label">✨ 四星数量</div><div class="stat-number">${fourStarCount}</div></div>
+        <div class="stat-card"><div class="stat-label">🌀 三星数量</div><div class="stat-number">${threeStarCount}</div></div>
+        <div class="stat-card"><div class="stat-label">📊 平均出货抽数</div><div class="stat-number">${avgPulls}</div><div class="stat-unit"> (五星)</div></div>
+        <div class="stat-card"><div class="stat-label">🏆 最欧记录</div><div class="stat-number">${best}</div><div class="stat-unit"> 抽出五星</div></div>
+        <div class="stat-card"><div class="stat-label">💀 最非记录</div><div class="stat-number">${worst}</div><div class="stat-unit"> 抽出五星</div></div>
+        <div class="stat-card"><div class="stat-label">🎯 UP命中率</div><div class="stat-number">${upRate}</div></div>
+    `;
+    statsGrid.innerHTML = html;
+}
+
+function updateStatsAfterPull(resultItem) {
+    totalPulls++;
+    if (resultItem.star === 5) {
+        fiveStarCount++;
+        const distance = totalPulls - lastFiveStarPullIndex;
+        fiveStarDistances.push(distance);
+        lastFiveStarPullIndex = totalPulls;
+        if (resultItem.name === UP_FIVE_STAR) upFiveStarCount++;
+    } else if (resultItem.star === 4) {
+        fourStarCount++;
+    } else {
+        threeStarCount++;
+    }
+}
+
+function resetStatistics() {
+    totalPulls = 0;
+    fiveStarCount = 0;
+    fourStarCount = 0;
+    threeStarCount = 0;
+    upFiveStarCount = 0;
+    fiveStarDistances = [];
+    lastFiveStarPullIndex = 0;
+    updateStatsModalContent();
+}
+
+function rebuildStatsFromHistory() {
+    resetStatistics();
+    const reversed = [...gachaHistory].reverse();
+    for (let rec of reversed) {
+        totalPulls++;
+        if (rec.star === 5) {
+            fiveStarCount++;
+            const distance = totalPulls - lastFiveStarPullIndex;
+            fiveStarDistances.push(distance);
+            lastFiveStarPullIndex = totalPulls;
+            if (rec.name === UP_FIVE_STAR) upFiveStarCount++;
+        } else if (rec.star === 4) {
+            fourStarCount++;
+        } else {
+            threeStarCount++;
+        }
+    }
+    updateStatsModalContent();
 }
 
 function getCurrentFiveStarRate(pityCount) {
@@ -372,13 +497,11 @@ function updateCountdown() {
 setInterval(updateCountdown, 1000);
 updateCountdown();
 
-// 加载用户数据（幂等：若记录不存在则创建，星琼=1599840，专票=100）
 async function loadUserData() {
     if (!currentUser) return;
     if (isLoadingData) return;
     isLoadingData = true;
     try {
-        // 1. user_resources
         let { data: resData, error: resErr } = await supabaseClient
             .from('user_resources')
             .select('*')
@@ -397,7 +520,6 @@ async function loadUserData() {
         starJade = resData.star_jade;
         tickets = resData.tickets;
 
-        // 2. user_gacha_state
         let { data: stateData, error: stateErr } = await supabaseClient
             .from('user_gacha_state')
             .select('five_star_pity, four_star_pity, guaranteed_up')
@@ -417,7 +539,6 @@ async function loadUserData() {
         fourStarPity = stateData.four_star_pity;
         guaranteedUp = stateData.guaranteed_up;
 
-        // 3. gacha_history（可能表不存在，降级处理）
         try {
             let { data: historyData, error: histErr } = await supabaseClient
                 .from('gacha_history')
@@ -428,7 +549,7 @@ async function loadUserData() {
             if (!histErr) {
                 gachaHistory = (historyData || []).map(h => ({ name: h.item_name, star: h.star_level, time: h.created_at }));
             } else {
-                console.warn('历史表可能不存在，已忽略', histErr);
+                console.warn('历史表可能不存在', histErr);
                 gachaHistory = [];
             }
         } catch (e) {
@@ -436,7 +557,6 @@ async function loadUserData() {
             gachaHistory = [];
         }
 
-        // 4. UID
         try {
             let { data: profileData, error: profErr } = await supabaseClient
                 .from('user_profiles')
@@ -455,10 +575,10 @@ async function loadUserData() {
 
         updateUI();
         renderHistoryModal();
+        rebuildStatsFromHistory();
     } catch (err) {
         console.error('加载用户数据失败:', err);
         showTip('加载数据失败，将使用本地默认值');
-        // 降级：使用默认值，不影响抽卡
         starJade = 1599840;
         tickets = 100;
         fiveStarPity = 0;
@@ -467,6 +587,7 @@ async function loadUserData() {
         gachaHistory = [];
         updateUI();
         renderHistoryModal();
+        resetStatistics();
     } finally {
         isLoadingData = false;
     }
@@ -591,6 +712,7 @@ function drawOneWithTicket() {
         const result = performSingleDraw();
         updateUI();
         addHistoryRecord(result.name, result.star);
+        updateStatsAfterPull(result);
         return result;
     }
     return null;
@@ -631,13 +753,13 @@ async function singlePull() {
             showResultDialog([result]);
             updateUI();
             await saveAfterDraw([result]);
+            updateStatsModalContent();
         }
         return result;
     });
     isDrawing = false;
 }
 
-// ★★★★★ 修复十连重复记录 Bug ★★★★★
 async function tenPull() {
     if (!isBannerActive) { showTip('卡池已关闭，无法跃迁'); return; }
     if (isDrawing) { showTip('当前正在跃迁中，请稍等…'); return; }
@@ -651,13 +773,13 @@ async function tenPull() {
             const result = drawOneWithTicket();
             if (result) {
                 pullResults.push(result);
-                // 注意：drawOneWithTicket 内部已经调用 addHistoryRecord 和 updateUI，此处不再重复添加
             }
         }
         const fiveCount = pullResults.filter(r => r.star === 5).length;
         showTip(`十连完成！获得 ${fiveCount} 位五星 ✨`);
         showResultDialog(pullResults);
         await saveAfterDraw(pullResults);
+        updateStatsModalContent();
         return pullResults;
     });
     isDrawing = false;
@@ -672,6 +794,7 @@ async function fullResetGame() {
     fourStarPity = 0;
     gachaHistory = [];
     guaranteedUp = false;
+    resetStatistics();
     updateUI();
     renderHistoryModal();
     await saveAfterDraw([]);
@@ -726,11 +849,18 @@ function openRecordModal() {
 function closeRecordModal() {
     recordModal.classList.remove('active');
 }
+function openStatsModal() {
+    updateStatsModalContent();
+    statsModal.classList.add('active');
+}
+function closeStatsModal() {
+    statsModal.classList.remove('active');
+}
 
 function preventScrollRefresh() {
     document.body.addEventListener('touchmove', function(e) {
         const target = e.target;
-        const isScrollable = target.closest('.record-list') || target.closest('.dialog-content') || target.closest('.left-panel');
+        const isScrollable = target.closest('.record-list') || target.closest('.dialog-content') || target.closest('.left-panel') || target.closest('.stats-grid');
         if (!isScrollable) e.preventDefault();
     }, { passive: false });
 }
@@ -764,6 +894,9 @@ function bindEvents() {
     tenBtn.addEventListener('click', tenPull);
     document.getElementById('exchangeBtn').addEventListener('click', openExchangeModal);
     document.getElementById('openRecordBtn').addEventListener('click', openRecordModal);
+    statsBtn.addEventListener('click', openStatsModal);
+    closeStatsBtn.addEventListener('click', closeStatsModal);
+    statsModal.addEventListener('click', (e) => { if(e.target === statsModal) closeStatsModal(); });
     document.getElementById('closeModalBtn').addEventListener('click', closeRecordModal);
     recordModal.addEventListener('click', (e) => { if(e.target === recordModal) closeRecordModal(); });
     resultDialog.addEventListener('click', (e) => { if (e.target === resultDialog) closeResultDialogGlobal(); });
@@ -772,7 +905,6 @@ function bindEvents() {
     confirmExchangeBtn.addEventListener('click', performExchange);
     exchangeAmountInput.addEventListener('input', updateExchangePreview);
     
-    // 长按重置（保留）
     let timer = null;
     const resetTarget = document.querySelector('.jade-left') || document.querySelector('.resources');
     if (resetTarget) {
@@ -783,7 +915,6 @@ function bindEvents() {
     }
 }
 
-// 初始化登录检查（确保 loading 始终消失）
 async function initAuth() {
     try {
         const { data: { user }, error } = await supabaseClient.auth.getUser();
