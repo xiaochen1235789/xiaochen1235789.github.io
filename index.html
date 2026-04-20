@@ -917,7 +917,6 @@
     </div>
     <h2 class="section-header" id="character">角色列表</h2>
     <div class="grid-container" data-category="character">
-        <!-- 角色卡片（保持不变） -->
         <div class="content-card" onclick="jumpToDetail('yunli-detail.html', '云璃')" data-type="角色" data-name="云璃" data-desc="毁灭 · 物理 | 魔改五星 | 无版本">
             <div class="card-img skeleton"><img src="./images/yunli.webp" alt="云璃角色卡片" loading="lazy" width="150" height="188" onload="imageLoaded(this)" onerror="imageError(this)"></div>
             <div class="card-name">云璃</div><div class="card-desc">毁灭 · 物理 | 魔改五星 | 无版本</div>
@@ -1260,7 +1259,9 @@ async function initializePage() {
     // 检测登录成功参数，强制刷新用户信息
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('login') === 'success') {
-        history.replaceState(null, '', window.location.pathname);
+        // 使用安全的方式清除 URL 参数，避免 SecurityError
+        const cleanUrl = window.location.href.split('?')[0];
+        history.replaceState(null, '', cleanUrl);
         // 延迟确保 supabaseClient 已创建
         setTimeout(async () => {
             if (supabaseClient) {
@@ -1269,14 +1270,12 @@ async function initializePage() {
                     await initializeUserProfile();
                     showNotification('登录成功！', 'success');
                 } else {
-                    // 如果 session 还未就绪，重试一次
                     setTimeout(async () => {
                         await initializeUserProfile();
                         showNotification('登录成功！', 'success');
                     }, 500);
                 }
             } else {
-                // 如果客户端未初始化，手动初始化
                 try {
                     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                     await initializeUserProfile();
