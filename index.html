@@ -880,6 +880,7 @@
             animation: modalSlideOut 0.3s ease forwards;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div id="global-loading">
@@ -1193,12 +1194,6 @@ window.addEventListener('message', (event) => {
 
 // ==================== 用户认证和头像 ====================
 async function initializeUserProfile() {
-    // 等待 Supabase SDK 加载完成
-    if (typeof window.supabase === 'undefined' || !window.supabase.createClient) {
-        console.warn('Supabase SDK 未加载，1秒后重试...');
-        setTimeout(initializeUserProfile, 1000);
-        return;
-    }
     try {
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const { data: { user }, error } = await supabaseClient.auth.getUser();
@@ -1260,52 +1255,44 @@ async function logout() {
     showNotification('已退出登录', 'success');
 }
 
-// ==================== 页面初始化（含登录同步） ====================
+// ==================== 页面初始化 ====================
 async function initializePage() {
-    // 1. 处理 URL 参数 login=success
+    // 检测登录成功参数，强制刷新用户信息
     const urlParams = new URLSearchParams(window.location.search);
-    let needRefresh = false;
     if (urlParams.get('login') === 'success') {
+        // 使用安全的方式清除 URL 参数，避免 SecurityError
         const cleanUrl = window.location.href.split('?')[0];
         history.replaceState(null, '', cleanUrl);
-        needRefresh = true;
-    }
-    // 2. 检查 localStorage 中的登录标记
-    const loginTimestamp = localStorage.getItem('login_timestamp');
-    if (loginTimestamp) {
-        localStorage.removeItem('login_timestamp');
-        needRefresh = true;
-    }
-    // 3. 如果需要刷新，强制重新加载用户信息
-    if (needRefresh) {
-        // 等待 SDK 加载
-        const waitForSdk = setInterval(() => {
-            if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
-                clearInterval(waitForSdk);
-                initializeUserProfile().then(() => {
+        // 延迟确保 supabaseClient 已创建
+        setTimeout(async () => {
+            if (supabaseClient) {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session?.user) {
+                    await initializeUserProfile();
                     showNotification('登录成功！', 'success');
-                });
+                } else {
+                    setTimeout(async () => {
+                        await initializeUserProfile();
+                        showNotification('登录成功！', 'success');
+                    }, 500);
+                }
+            } else {
+                try {
+                    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    await initializeUserProfile();
+                    showNotification('登录成功！', 'success');
+                } catch(e) {}
             }
         }, 200);
-        setTimeout(() => clearInterval(waitForSdk), 10000);
     }
-    
     document.getElementById('year').textContent = new Date().getFullYear();
     initializeSiteAge();
     initializeSearch();
     initializeNavigation();
     updateNavbarFromCache();
-    // 延迟初始化用户资料（等待 SDK 加载）
-    setTimeout(() => initializeUserProfile(), 500);
+    setTimeout(() => initializeUserProfile(), 100);
     setTimeout(() => { document.getElementById('global-loading').style.display = 'none'; }, 800);
 }
-
-// 监听 storage 事件（当其他页面修改 localStorage 时，比如 profile.html 更新头像后）
-window.addEventListener('storage', function(event) {
-    if (event.key === 'cachedUsername' || event.key === 'cachedAvatar' || event.key === 'avatarFrame') {
-        updateNavbarFromCache();
-    }
-});
 
 document.addEventListener('DOMContentLoaded', function() {
     updateNavbarFromCache();
