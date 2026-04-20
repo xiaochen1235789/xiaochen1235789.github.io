@@ -62,9 +62,7 @@
         .special-btn { background: linear-gradient(105deg, #9b4d96, #5e2a5c); box-shadow: 0 6px 0 #2e1a2c; }
         .modal-mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 1000; display: flex; justify-content: center; align-items: center; visibility: hidden; opacity: 0; transition: 0.2s; }
         .modal-mask.active { visibility: visible; opacity: 1; }
-        /* 通用弹窗容器 */
         .modal-content { width: 85%; max-width: 550px; background: #120e28; border-radius: 56px; border: 2px solid #ffbc6e; overflow: hidden; box-shadow: 0 25px 45px black; }
-        /* 统计弹窗专用滚动修复 */
         #statsModal .modal-content {
             max-height: 85vh;
             display: flex;
@@ -76,7 +74,6 @@
             padding: 24px;
             scrollbar-width: thin;
         }
-        /* 确保命座列表区域在内部滚动，不产生嵌套冲突 */
         .constellation-section {
             max-height: 220px;
             overflow-y: auto;
@@ -127,6 +124,13 @@
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .toast-notice { position: fixed; top: 20px; right: 20px; z-index: 1200; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); border: 1px solid #ffbc6e; border-radius: 32px; padding: 10px 20px; color: #ffdfaa; font-size: 0.9rem; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.3); pointer-events: none; opacity: 0; transition: opacity 0.2s ease; white-space: nowrap; }
         .toast-notice.show { opacity: 1; }
+        .skin-switch-animation {
+            animation: skinFlash 0.2s ease;
+        }
+        @keyframes skinFlash {
+            0% { opacity: 0.7; transform: scale(0.99); }
+            100% { opacity: 1; transform: scale(1); }
+        }
         @media (max-width: 800px) { .landscape-wrapper { padding: 12px; gap: 12px; } .left-panel-scroll { padding: 12px; } .pool-name { font-size: 1.2rem; } .jade-amount { font-size: 0.9rem; } .ticket-amount { font-size: 0.85rem; } .gacha-btn { font-size: 0.85rem; padding: 8px 0; } .toast-notice { font-size: 0.75rem; padding: 6px 12px; white-space: normal; max-width: 70%; } .action-btn { font-size: 0.7rem; padding: 4px 12px; } .splash-img { max-height: 35vh; } .uid-badge { font-size: 0.6rem; margin-bottom: 12px; } .stats-grid { grid-template-columns: 1fr; } .constellation-section { max-height: 180px; } }
         .record-list::-webkit-scrollbar, .dialog-content::-webkit-scrollbar, .left-panel-scroll::-webkit-scrollbar, .constellation-section::-webkit-scrollbar, #statsModal .modal-body::-webkit-scrollbar { width: 4px; }
         .record-list::-webkit-scrollbar-track, .dialog-content::-webkit-scrollbar-track, .left-panel-scroll::-webkit-scrollbar-track, .constellation-section::-webkit-scrollbar-track, #statsModal .modal-body::-webkit-scrollbar-track { background: rgba(255,255,200,0.1); }
@@ -152,12 +156,12 @@
     <div class="left-panel">
         <div class="left-panel-scroll">
             <div class="card-pool">
-                <div class="pool-name">✨ 流光定影 ✨</div>
-                <div class="pool-sub">「鹿将军 · 业途游旌」</div>
+                <div class="pool-name" id="poolName">✨ 流光定影 ✨</div>
+                <div class="pool-sub" id="poolSub">「鹿将军 · 业途游旌」</div>
             </div>
-            <div class="up-char">
+            <div class="up-char" id="upChar">
                 <span>⭐ 当期UP ⭐</span><br>
-                <span>🌟 鹿将军 🌟</span><br>
+                <span id="upCharName">🌟 鹿将军 🌟</span><br>
                 <small>5星限定角色 · 50%概率UP</small>
             </div>
             <div class="resources">
@@ -174,6 +178,12 @@
                 <div class="countdown-title">⏳ 卡池剩余时间</div>
                 <div class="countdown-time" id="countdownTimer">--天 --时 --分 --秒</div>
                 <div class="disabled-notice" id="disabledNotice" style="display: none;">⚠️ 卡池已关闭，无法跃迁</div>
+            </div>
+            <!-- 视觉切换按钮 -->
+            <div style="text-align: center; margin: 10px 0;">
+                <button id="fakeSwitchBtn" style="background: rgba(0,0,0,0.6); border: 1px solid #ffbc6e; border-radius: 30px; color: #ffbc6e; padding: 6px 20px; font-size: 0.8rem; cursor: pointer;">
+                    🔄 换池（视觉切换）
+                </button>
             </div>
             <div class="pity-card">
                 <div class="pity-item"><span>🌟 5星保底计数</span><span class="pity-value" id="pityCounter">0</span><span> / 90</span></div>
@@ -199,7 +209,7 @@
             <div class="splash-img-container">
                 <img id="charSplash" class="splash-img" src="https://xiaochen1235789.github.io/images/changjinglu.webp" alt="鹿将军立绘">
             </div>
-            <div class="splash-caption">「鹿将军 · 巡猎星神之威」</div>
+            <div class="splash-caption" id="splashCaption">「鹿将军 · 巡猎星神之威」</div>
             <div class="gacha-buttons">
                 <button class="gacha-btn" id="singlePullBtn">
                     <img src="https://xiaochen1235789.github.io/images/Star_ticket_gold.webp" alt="专票"> 1 跃迁1次
@@ -212,7 +222,7 @@
     </div>
 </div>
 
-<!-- 统计弹窗（已修复滚动） -->
+<!-- 统计弹窗 -->
 <div id="statsModal" class="modal-mask">
     <div class="modal-content">
         <div class="modal-header">
@@ -285,8 +295,13 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ======================= 抽卡核心参数 =======================
-const BANNER_START = new Date(2026, 3, 18, 10, 10, 0);
+// 鹿将军池时间
+const BANNER_START = new Date(2026, 3, 18, 10, 0, 0);
 const BANNER_END = new Date(2026, 4, 9, 9, 59, 59);
+// 皮哥池时间（开池 2026-05-09 10:00:00，结束 2026-05-30 09:59:59）
+const PIGE_BANNER_START = new Date(2026, 4, 9, 10, 0, 0);
+const PIGE_BANNER_END = new Date(2026, 4, 30, 9, 59, 59);
+
 const PERMANENT_FIVE_STAR = ["姬子", "瓦尔特", "布洛妮娅", "杰帕德", "克拉拉", "彦卿", "白露", "希儿", "景元", "卡芙卡", "镜流", "托帕", "银狼", "罗刹"];
 const UP_FIVE_STAR = "鹿将军";
 const FOUR_STAR_CHARS = ["三月七", "丹恒", "希露瓦", "阿兰", "停云", "佩拉", "青雀", "娜塔莎", "驭空", "卢卡", "桂乃芬", "玲可", "米沙", "寒鸦"];
@@ -298,8 +313,8 @@ const SOFT_PITY_START = 74;
 const COST_SINGLE_TICKET = 1;
 const COST_TEN_TICKET = 10;
 const EXCHANGE_RATE = 160;
-const OVERFLOW_COMPENSATION_5 = 1600;   // 五星满命补偿
-const OVERFLOW_COMPENSATION_4 = 160;    // 四星满命补偿
+const OVERFLOW_COMPENSATION_5 = 1600;
+const OVERFLOW_COMPENSATION_4 = 160;
 
 // 全局状态
 let currentUser = null;
@@ -325,6 +340,51 @@ let threeStarCount = 0;
 let upFiveStarCount = 0;
 let fiveStarDistances = [];
 let lastFiveStarPullIndex = 0;
+
+// ========== 视觉切换皮肤（纯换皮，抽卡逻辑不变，但倒计时独立） ==========
+const SKINS = {
+    lujiangjun: {
+        poolName: '✨ 流光定影 ✨',
+        poolSub: '「鹿将军 · 业途游旌」',
+        upCharName: '🌟 鹿将军 🌟',
+        splashImg: 'https://xiaochen1235789.github.io/images/changjinglu.webp',
+        caption: '「鹿将军 · 巡猎星神之威」',
+        startTime: BANNER_START,
+        endTime: BANNER_END
+    },
+    pige: {
+        poolName: '❄️ 冰天雪地 ❄️',
+        poolSub: '「皮哥 · 冰雪涌动」',
+        upCharName: '🌟 皮哥 🌟',
+        splashImg: 'https://xiaochen1235789.github.io/images/pige.webp',
+        caption: '「皮哥 · 永远的存护」',
+        startTime: PIGE_BANNER_START,
+        endTime: PIGE_BANNER_END
+    }
+};
+let currentSkin = 'lujiangjun';   // 当前显示的皮肤
+
+function switchSkin(skinId) {
+    if (!SKINS[skinId]) return;
+    currentSkin = skinId;
+    const skin = SKINS[skinId];
+    
+    // 更新界面文字和图片
+    document.getElementById('poolName').innerText = skin.poolName;
+    document.getElementById('poolSub').innerText = skin.poolSub;
+    document.getElementById('upCharName').innerHTML = skin.upCharName;
+    document.getElementById('charSplash').src = skin.splashImg;
+    document.getElementById('splashCaption').innerText = skin.caption;
+    
+    // 添加闪动动画
+    const leftPanel = document.querySelector('.left-panel');
+    leftPanel.classList.add('skin-switch-animation');
+    setTimeout(() => leftPanel.classList.remove('skin-switch-animation'), 200);
+    
+    // 立即刷新倒计时显示
+    updateCountdown();
+    showTip(`卡池已切换至「${skin.poolName}」外观（抽卡规则不变，倒计时独立）`);
+}
 
 // DOM 元素
 const jadeSpan = document.getElementById('jadeAmount');
@@ -393,7 +453,6 @@ function updateEnhancedPityHints() {
     fourPityRemainSpan.innerText = `${fourRemain} 抽后必出四星`;
 }
 
-// 命座相关
 async function loadConstellations() {
     if (!currentUser) return;
     try {
@@ -440,7 +499,6 @@ async function processCharacterObtain(characterName, starLevel) {
     }
 }
 
-// 统计相关
 function updateStatsModalContent() {
     const avgPulls = fiveStarCount === 0 ? '--' : (totalPulls / fiveStarCount).toFixed(1);
     let best = '--', worst = '--';
@@ -532,6 +590,7 @@ function getCurrentFiveStarRate(pityCount) {
     return Math.min(rate, 1.0);
 }
 
+// 抽卡按钮是否可用仍然由鹿将军池的实际时间决定（因为抽卡规则未变）
 function checkBannerActive() {
     const now = new Date();
     const active = (now >= BANNER_START && now <= BANNER_END);
@@ -558,39 +617,34 @@ function updateButtonsState() {
     }
 }
 
+// 倒计时根据当前皮肤独立显示
 function updateCountdown() {
+    const skin = SKINS[currentSkin];
+    if (!skin) return;
     const now = new Date();
-    if (now >= BANNER_END) {
+    const start = skin.startTime;
+    const end = skin.endTime;
+    
+    if (now >= end) {
         countdownTimerSpan.innerText = '卡池已结束';
-        if (isBannerActive) {
-            isBannerActive = false;
-            updateButtonsState();
-        }
         return;
     }
-    if (now < BANNER_START) {
-        const diff = BANNER_START - now;
+    if (now < start) {
+        const diff = start - now;
         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
         const hours = Math.floor((diff % (86400000)) / 3600000);
         const minutes = Math.floor((diff % 3600000) / 60000);
         const seconds = Math.floor((diff % 60000) / 1000);
-        countdownTimerSpan.innerText = `${days}天 ${hours}时 ${minutes}分 ${seconds}秒后开启`;
-        if (isBannerActive) {
-            isBannerActive = false;
-            updateButtonsState();
-        }
+        countdownTimerSpan.innerText = `距离开启 ${days}天 ${hours}时 ${minutes}分 ${seconds}秒`;
         return;
     }
-    const diff = BANNER_END - now;
+    // 卡池开放中
+    const diff = end - now;
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (86400000)) / 3600000);
     const minutes = Math.floor((diff % 3600000) / 60000);
     const seconds = Math.floor((diff % 60000) / 1000);
     countdownTimerSpan.innerText = `${days}天 ${hours}时 ${minutes}分 ${seconds}秒`;
-    if (!isBannerActive) {
-        isBannerActive = true;
-        updateButtonsState();
-    }
 }
 setInterval(updateCountdown, 1000);
 updateCountdown();
@@ -1026,6 +1080,15 @@ function bindEvents() {
     confirmExchangeBtn.addEventListener('click', performExchange);
     exchangeAmountInput.addEventListener('input', updateExchangePreview);
     
+    // 视觉切换按钮
+    const switchBtn = document.getElementById('fakeSwitchBtn');
+    if (switchBtn) {
+        switchBtn.addEventListener('click', () => {
+            const newSkin = currentSkin === 'lujiangjun' ? 'pige' : 'lujiangjun';
+            switchSkin(newSkin);
+        });
+    }
+    
     let timer = null;
     const resetTarget = document.querySelector('.jade-left') || document.querySelector('.resources');
     if (resetTarget) {
@@ -1063,8 +1126,8 @@ async function init() {
     await initAuth();
     bindEvents();
     preventScrollRefresh();
-    updateCountdown();
     checkBannerActive();
+    updateCountdown();
 }
 init();
 </script>
