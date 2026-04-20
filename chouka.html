@@ -48,9 +48,26 @@
         .dynamic-rate-badge { background: #1e1a2f; border-radius: 24px; padding: 8px; font-size: 0.7rem; text-align: center; color: #ffcf9a; margin-top: 12px; }
         .right-panel { flex: 7; display: flex; flex-direction: column; min-width: 0; height: 100%; }
         .character-splash { background: rgba(3, 2, 15, 0.5); border-radius: 48px; border: 1px solid rgba(210, 180, 255, 0.4); backdrop-filter: blur(4px); display: flex; flex-direction: column; padding: 16px 18px; gap: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); height: 100%; max-height: 100%; }
-        .action-buttons { display: flex; justify-content: flex-end; gap: 12px; flex-shrink: 0; }
+        .action-buttons { display: flex; justify-content: flex-end; gap: 12px; flex-shrink: 0; align-items: center; }
         .action-btn { background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); border: 1px solid #ffbc6e; border-radius: 40px; padding: 6px 16px; font-size: 0.85rem; color: #ffdfaa; cursor: pointer; transition: 0.1s; display: flex; align-items: center; gap: 6px; }
         .action-btn:active { transform: scale(0.96); }
+        /* 圆形齿轮按钮 */
+        .settings-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid #ffbc6e;
+            color: #ffdfaa;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: 0.1s;
+        }
+        .settings-btn:active { transform: scale(0.96); }
         .splash-img-container { flex: 1; display: flex; justify-content: center; align-items: center; min-height: 0; overflow: hidden; }
         .splash-img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: 36px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); background: #0b0719; }
         .splash-caption { text-align: center; color: #ffd9a5; font-size: 0.85rem; letter-spacing: 1px; font-weight: 500; flex-shrink: 0; }
@@ -131,7 +148,7 @@
             0% { opacity: 0.7; transform: scale(0.99); }
             100% { opacity: 1; transform: scale(1); }
         }
-        @media (max-width: 800px) { .landscape-wrapper { padding: 12px; gap: 12px; } .left-panel-scroll { padding: 12px; } .pool-name { font-size: 1.2rem; } .jade-amount { font-size: 0.9rem; } .ticket-amount { font-size: 0.85rem; } .gacha-btn { font-size: 0.85rem; padding: 8px 0; } .toast-notice { font-size: 0.75rem; padding: 6px 12px; white-space: normal; max-width: 70%; } .action-btn { font-size: 0.7rem; padding: 4px 12px; } .splash-img { max-height: 35vh; } .uid-badge { font-size: 0.6rem; margin-bottom: 12px; } .stats-grid { grid-template-columns: 1fr; } .constellation-section { max-height: 180px; } }
+        @media (max-width: 800px) { .landscape-wrapper { padding: 12px; gap: 12px; } .left-panel-scroll { padding: 12px; } .pool-name { font-size: 1.2rem; } .jade-amount { font-size: 0.9rem; } .ticket-amount { font-size: 0.85rem; } .gacha-btn { font-size: 0.85rem; padding: 8px 0; } .toast-notice { font-size: 0.75rem; padding: 6px 12px; white-space: normal; max-width: 70%; } .action-btn { font-size: 0.7rem; padding: 4px 12px; } .settings-btn { width: 30px; height: 30px; font-size: 1rem; } .splash-img { max-height: 35vh; } .uid-badge { font-size: 0.6rem; margin-bottom: 12px; } .stats-grid { grid-template-columns: 1fr; } .constellation-section { max-height: 180px; } }
         .record-list::-webkit-scrollbar, .dialog-content::-webkit-scrollbar, .left-panel-scroll::-webkit-scrollbar, .constellation-section::-webkit-scrollbar, #statsModal .modal-body::-webkit-scrollbar { width: 4px; }
         .record-list::-webkit-scrollbar-track, .dialog-content::-webkit-scrollbar-track, .left-panel-scroll::-webkit-scrollbar-track, .constellation-section::-webkit-scrollbar-track, #statsModal .modal-body::-webkit-scrollbar-track { background: rgba(255,255,200,0.1); }
         .record-list::-webkit-scrollbar-thumb, .dialog-content::-webkit-scrollbar-thumb, .left-panel-scroll::-webkit-scrollbar-thumb, .constellation-section::-webkit-scrollbar-thumb, #statsModal .modal-body::-webkit-scrollbar-thumb { background: #ffbc6e; border-radius: 10px; }
@@ -202,6 +219,7 @@
     <div class="right-panel">
         <div class="character-splash">
             <div class="action-buttons">
+                <div class="settings-btn" id="settingsBtn">⚙️</div>
                 <div class="action-btn" id="statsBtn">📊 统计</div>
                 <div class="action-btn" id="exchangeBtn">🎫 兑换</div>
                 <div class="action-btn" id="openRecordBtn">📜 记录</div>
@@ -286,6 +304,46 @@
     </div>
 </div>
 
+<!-- 设置弹窗 -->
+<div id="settingsModal" class="modal-mask">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>⚙️ 设置</h3>
+            <button class="close-modal" id="closeSettingsBtn">✖</button>
+        </div>
+        <div class="modal-body">
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                <!-- 加星琼 -->
+                <div style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px;">
+                    <div style="margin-bottom: 8px;">✨ 增加星琼</div>
+                    <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                        <input type="number" id="addJadeAmount" value="1000" min="1" max="999999" step="100" style="width: 120px; padding: 6px; border-radius: 30px; border: 1px solid #ffbc6e; background: rgba(0,0,0,0.6); color: #ffdfaa; text-align: center;">
+                        <button id="confirmAddJadeBtn" class="btn-confirm" style="padding: 6px 16px;">增加</button>
+                    </div>
+                </div>
+                <!-- 加专票 -->
+                <div style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px;">
+                    <div style="margin-bottom: 8px;">🎫 增加星轨专票</div>
+                    <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                        <input type="number" id="addTicketAmount" value="10" min="1" max="9999" step="1" style="width: 120px; padding: 6px; border-radius: 30px; border: 1px solid #ffbc6e; background: rgba(0,0,0,0.6); color: #ffdfaa; text-align: center;">
+                        <button id="confirmAddTicketBtn" class="btn-confirm" style="padding: 6px 16px;">增加</button>
+                    </div>
+                </div>
+                <!-- 重置命座 -->
+                <div style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px;">
+                    <div style="margin-bottom: 8px;">🔄 重置命座</div>
+                    <button id="resetConstellationsBtn" class="btn-confirm" style="background: #ff8888; color: #1a132e;">清空所有命座</button>
+                </div>
+                <!-- 重置历史记录 -->
+                <div style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px;">
+                    <div style="margin-bottom: 8px;">🗑️ 重置历史记录</div>
+                    <button id="resetHistoryBtn" class="btn-confirm" style="background: #ff8888; color: #1a132e;">清空抽卡记录</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="toastNotice" class="toast-notice"></div>
 
 <script>
@@ -340,7 +398,7 @@ let upFiveStarCount = 0;
 let fiveStarDistances = [];
 let lastFiveStarPullIndex = 0;
 
-// ========== 视觉切换皮肤（纯换皮，抽卡逻辑不变，但倒计时独立且抽卡受限于皮肤时间） ==========
+// ========== 视觉切换皮肤 ==========
 const SKINS = {
     lujiangjun: {
         poolName: '✨ 流光定影 ✨',
@@ -363,7 +421,7 @@ const SKINS = {
         isActive: function(now) { return now >= this.startTime && now <= this.endTime; }
     }
 };
-let currentSkinId = 'lujiangjun';   // 当前显示的皮肤
+let currentSkinId = 'lujiangjun';
 
 function getCurrentSkin() {
     return SKINS[currentSkinId];
@@ -374,25 +432,21 @@ function switchSkin(skinId) {
     currentSkinId = skinId;
     const skin = getCurrentSkin();
     
-    // 更新界面文字和图片
     document.getElementById('poolName').innerText = skin.poolName;
     document.getElementById('poolSub').innerText = skin.poolSub;
     document.getElementById('upCharName').innerHTML = skin.upCharName;
     document.getElementById('charSplash').src = skin.splashImg;
     document.getElementById('splashCaption').innerText = skin.caption;
     
-    // 添加闪动动画
     const leftPanel = document.querySelector('.left-panel');
     leftPanel.classList.add('skin-switch-animation');
     setTimeout(() => leftPanel.classList.remove('skin-switch-animation'), 200);
     
-    // 刷新倒计时和按钮状态
     updateCountdown();
     updateButtonsStateBySkin();
     showTip(`卡池已切换至「${skin.poolName}」外观`);
 }
 
-// 根据当前皮肤判断抽卡按钮是否可用，并更新禁用状态和提示文字
 function updateButtonsStateBySkin() {
     const skin = getCurrentSkin();
     const now = new Date();
@@ -456,6 +510,16 @@ const constellationListDiv = document.getElementById('constellationList');
 const softPityRemainSpan = document.getElementById('softPityRemain');
 const nextFiveTypeSpan = document.getElementById('nextFiveType');
 const fourPityRemainSpan = document.getElementById('fourPityRemain');
+
+// 设置弹窗元素
+const settingsModal = document.getElementById('settingsModal');
+const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+const addJadeAmountInput = document.getElementById('addJadeAmount');
+const confirmAddJadeBtn = document.getElementById('confirmAddJadeBtn');
+const addTicketAmountInput = document.getElementById('addTicketAmount');
+const confirmAddTicketBtn = document.getElementById('confirmAddTicketBtn');
+const resetConstellationsBtn = document.getElementById('resetConstellationsBtn');
+const resetHistoryBtn = document.getElementById('resetHistoryBtn');
 
 splashImg.onerror = () => { splashImg.src = "https://xiaochen1235789.github.io/images/changjinglu.webp"; };
 
@@ -627,7 +691,6 @@ function getCurrentFiveStarRate(pityCount) {
     return Math.min(rate, 1.0);
 }
 
-// 倒计时根据当前皮肤独立显示
 function updateCountdown() {
     const skin = getCurrentSkin();
     if (!skin) return;
@@ -648,7 +711,6 @@ function updateCountdown() {
         countdownTimerSpan.innerText = `距离开启 ${days}天 ${hours}时 ${minutes}分 ${seconds}秒`;
         return;
     }
-    // 卡池开放中
     const diff = end - now;
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (86400000)) / 3600000);
@@ -922,7 +984,6 @@ async function attemptDraw(needTickets, costJade, drawFunc) {
 }
 
 async function singlePull() {
-    // 先检查当前皮肤对应的时间是否开放
     const skin = getCurrentSkin();
     const now = new Date();
     if (!skin.isActive(now)) {
@@ -954,7 +1015,6 @@ async function singlePull() {
 }
 
 async function tenPull() {
-    // 先检查当前皮肤对应的时间是否开放
     const skin = getCurrentSkin();
     const now = new Date();
     if (!skin.isActive(now)) {
@@ -990,26 +1050,62 @@ async function tenPull() {
     isDrawing = false;
 }
 
-async function fullResetGame() {
-    if(isDrawing) return;
-    if (!confirm('⚠️ 重置后所有抽卡资源、保底、历史记录、命座数据将清空，且不可恢复！确定吗？')) return;
-    starJade = 1599840;
-    tickets = 100;
-    fiveStarPity = 0;
-    fourStarPity = 0;
-    gachaHistory = [];
-    guaranteedUp = false;
-    constellationsMap.clear();
-    resetStatistics();
-    updateUI();
-    renderHistoryModal();
-    await saveAfterDraw([]);
-    if (currentUser) {
-        await supabaseClient.from('user_constellations').delete().eq('user_id', currentUser.id);
+// ======================= 设置功能 =======================
+function openSettingsModal() {
+    settingsModal.classList.add('active');
+}
+function closeSettingsModal() {
+    settingsModal.classList.remove('active');
+}
+async function addStarJade() {
+    let amount = parseInt(addJadeAmountInput.value);
+    if (isNaN(amount) || amount <= 0) {
+        showTip('请输入有效的星琼数量');
+        return;
     }
-    showTip('列车补给完毕！星琼+1599840，星轨专票100，跃迁重置，命座已清空');
+    starJade += amount;
+    updateUI();
+    if (currentUser) {
+        await supabaseClient.from('user_resources').update({ star_jade: starJade }).eq('user_id', currentUser.id);
+    }
+    showTip(`成功添加 ${amount} 星琼`);
+}
+async function addTickets() {
+    let amount = parseInt(addTicketAmountInput.value);
+    if (isNaN(amount) || amount <= 0) {
+        showTip('请输入有效的专票数量');
+        return;
+    }
+    tickets += amount;
+    updateUI();
+    if (currentUser) {
+        await supabaseClient.from('user_resources').update({ tickets: tickets }).eq('user_id', currentUser.id);
+    }
+    showTip(`成功添加 ${amount} 张星轨专票`);
+}
+async function resetConstellations() {
+    if (!confirm('⚠️ 确定要清空所有角色命座数据吗？此操作不可恢复！')) return;
+    if (!currentUser) return;
+    // 清空数据库
+    await supabaseClient.from('user_constellations').delete().eq('user_id', currentUser.id);
+    // 清空本地
+    constellationsMap.clear();
+    updateStatsModalContent();
+    showTip('所有命座已重置');
+}
+async function resetHistory() {
+    if (!confirm('⚠️ 确定要清空所有抽卡记录和统计吗？此操作不可恢复！')) return;
+    if (!currentUser) return;
+    // 清空数据库历史
+    await supabaseClient.from('gacha_history').delete().eq('user_id', currentUser.id);
+    // 清空本地
+    gachaHistory = [];
+    renderHistoryModal();
+    resetStatistics();
+    showTip('抽卡记录已清空');
 }
 
+// ======================= 初始化和事件绑定 =======================
 function openExchangeModal() {
     exchangeAmountInput.value = '1';
     updateExchangePreview();
@@ -1069,7 +1165,7 @@ function closeStatsModal() {
 function preventScrollRefresh() {
     document.body.addEventListener('touchmove', function(e) {
         const target = e.target;
-        const isScrollable = target.closest('.record-list') || target.closest('.dialog-content') || target.closest('.left-panel-scroll') || target.closest('#statsModal .modal-body');
+        const isScrollable = target.closest('.record-list') || target.closest('.dialog-content') || target.closest('.left-panel-scroll') || target.closest('#statsModal .modal-body') || target.closest('#settingsModal .modal-body');
         if (!isScrollable) e.preventDefault();
     }, { passive: false });
 }
@@ -1123,14 +1219,17 @@ function bindEvents() {
         });
     }
     
-    let timer = null;
-    const resetTarget = document.querySelector('.jade-left') || document.querySelector('.resources');
-    if (resetTarget) {
-        resetTarget.addEventListener('touchstart', () => { timer = setTimeout(() => fullResetGame(), 800); });
-        resetTarget.addEventListener('touchend', () => { clearTimeout(timer); });
-        resetTarget.addEventListener('mousedown', () => { timer = setTimeout(() => fullResetGame(), 800); });
-        resetTarget.addEventListener('mouseup', () => { clearTimeout(timer); });
+    // 设置按钮
+    const settingsBtn = document.getElementById('settingsBtn');
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', openSettingsModal);
     }
+    closeSettingsBtn.addEventListener('click', closeSettingsModal);
+    settingsModal.addEventListener('click', (e) => { if(e.target === settingsModal) closeSettingsModal(); });
+    confirmAddJadeBtn.addEventListener('click', addStarJade);
+    confirmAddTicketBtn.addEventListener('click', addTickets);
+    resetConstellationsBtn.addEventListener('click', resetConstellations);
+    resetHistoryBtn.addEventListener('click', resetHistory);
 }
 
 async function initAuth() {
@@ -1160,7 +1259,7 @@ async function init() {
     await initAuth();
     bindEvents();
     preventScrollRefresh();
-    updateButtonsStateBySkin();   // 初始按钮状态
+    updateButtonsStateBySkin();
     updateCountdown();
 }
 init();
