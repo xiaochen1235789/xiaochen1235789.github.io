@@ -2,7 +2,6 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta property="og:image" content="https://xiaochen1235789.github.io/images/wangzhantupian.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>登录 - 六哥荣耀WIKI</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -27,18 +26,12 @@
         .form-panel { display: none; animation: fadeIn 0.25s ease; }
         .form-panel.active-panel { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-        .user-card { background: #f8fafc; border-radius: 1.5rem; padding: 1.4rem; margin-top: 0.5rem; border: 1px solid #eef2ff; }
-        .user-card h3 { font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; color: #0f172a; border-left: 3px solid #667eea; padding-left: 0.7rem; }
-        .user-detail { background: white; border-radius: 1rem; padding: 0.8rem 1rem; margin-bottom: 0.8rem; display: flex; justify-content: space-between; align-items: center; word-break: break-all; }
-        .user-detail strong { color: #334155; }
-        .user-detail span { color: #1e293b; font-weight: 500; max-width: 65%; text-align: right; }
         input, button { width: 100%; padding: 0.9rem 1rem; margin: 0.5rem 0; border-radius: 1rem; font-size: 0.95rem; transition: all 0.2s; }
         input { border: 1.5px solid #e2e8f0; background: white; }
         input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2); }
         button { background: linear-gradient(100deg, #667eea, #764ba2); color: white; font-weight: 600; border: none; cursor: pointer; margin-top: 1rem; }
         button:active { transform: scale(0.97); }
         button:disabled { opacity: 0.6; transform: none; cursor: not-allowed; }
-        .btn-danger { background: linear-gradient(100deg, #ef4444, #dc2626); }
         .password-wrapper { position: relative; }
         .toggle-pwd { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; z-index: 2; }
         .toggle-pwd:hover { color: #667eea; }
@@ -66,7 +59,6 @@
         </div>
         <div id="globalAlert" class="alert"></div>
 
-        <!-- 未登录区域 -->
         <div id="authSection">
             <div class="tabs" id="tabGroup">
                 <div class="tab active" data-tab="login">🔐 登录</div>
@@ -105,18 +97,6 @@
             <button id="retryInitBtn" class="retry-btn" style="margin-top: 1rem;"><i class="fas fa-sync-alt"></i> 重新连接 Supabase</button>
         </div>
 
-        <!-- 已登录区域（一般不会显示，因为登录后立即跳转） -->
-        <div id="userSection" style="display: none;">
-            <div class="user-card">
-                <h3><i class="fas fa-user-circle"></i> 账户信息</h3>
-                <div class="user-detail"><strong>📧 邮箱</strong><span id="userEmail">—</span></div>
-                <div class="user-detail"><strong>👤 昵称</strong><span id="userName">—</span></div>
-                <div class="user-detail"><strong>🆔 用户ID</strong><span id="userId" title="完整ID">—</span></div>
-                <div class="user-detail"><strong>🕒 登录时间</strong><span id="loginTime">—</span></div>
-                <button id="logoutBtn" class="btn-danger"><i class="fas fa-sign-out-alt"></i> 安全退出</button>
-            </div>
-        </div>
-
         <div id="globalLoader" class="loading-overlay">
             <div class="spinner"></div>
             <p style="font-size: 0.8rem;">处理中...</p>
@@ -129,22 +109,19 @@
     const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
     
-    let supabase = null;
+    let supabaseClient = null;  // 重命名避免与全局 supabase 冲突
     let currentLoading = false;
-    let authListener = null;
     let initSuccess = false;
 
     // DOM 元素
     let dom = {};
 
-    // 工具函数
     function showMessage(text, type = 'info') {
         if (!dom.alertBox) return;
         dom.alertBox.textContent = text;
         dom.alertBox.className = `alert ${type}`;
         dom.alertBox.style.display = 'block';
-        const duration = type === 'error' ? 6000 : 4000;
-        setTimeout(() => { if (dom.alertBox) dom.alertBox.style.display = 'none'; }, duration);
+        setTimeout(() => { if (dom.alertBox) dom.alertBox.style.display = 'none'; }, type === 'error' ? 6000 : 4000);
     }
 
     function updateStatus(text, isOk = true) {
@@ -158,7 +135,7 @@
     function setLoading(loading) {
         currentLoading = loading;
         if (dom.loader) dom.loader.style.display = loading ? 'flex' : 'none';
-        const btns = [dom.loginBtn, dom.registerBtn, dom.logoutBtn, dom.retryInitBtn];
+        const btns = [dom.loginBtn, dom.registerBtn, dom.retryInitBtn];
         btns.forEach(btn => { if (btn) btn.disabled = loading; });
     }
 
@@ -228,13 +205,10 @@
         }
     }
 
-    // 登录成功后的跳转（带参数，让主页刷新）
     function redirectToMainAfterLogin() {
-        // 跳转到主页并带上 login=success 参数，主页会检测并刷新用户数据
         window.location.href = 'index.html?login=success';
     }
 
-    // 登录处理
     async function handleLogin() {
         if (!initSuccess) { showMessage('系统未就绪，请等待初始化或点击“重新连接”', 'error'); return; }
         if (currentLoading) return;
@@ -246,7 +220,7 @@
         setLoading(true);
         try {
             const persist = dom.rememberCheck.checked;
-            const { data, error } = await supabase.auth.signInWithPassword({
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
                 email,
                 password: pwd,
                 options: { persistSession: persist }
@@ -254,10 +228,7 @@
             if (error) throw error;
             showMessage(`登录成功！正在跳转...`, 'success');
             updateStatus('登录成功 ✓', true);
-            // 延迟跳转，让用户看到成功消息
-            setTimeout(() => {
-                redirectToMainAfterLogin();
-            }, 500);
+            setTimeout(() => redirectToMainAfterLogin(), 500);
         } catch (err) {
             let friendlyMsg = err.message;
             if (err.message.includes('Invalid login')) friendlyMsg = '邮箱或密码错误';
@@ -268,7 +239,6 @@
         }
     }
 
-    // 注册处理（注册成功后跳转到登录页并自动切换标签）
     async function handleRegister() {
         if (!initSuccess) { showMessage('系统未就绪，请等待初始化或点击“重新连接”', 'error'); return; }
         if (currentLoading) return;
@@ -286,7 +256,7 @@
                 username: username || email.split('@')[0],
                 full_name: fullname || username || '新用户'
             };
-            const { data, error } = await supabase.auth.signUp({
+            const { data, error } = await supabaseClient.auth.signUp({
                 email,
                 password: pwd,
                 options: { data: meta }
@@ -295,10 +265,9 @@
             if (data.user?.identities?.length === 0) {
                 showMessage('该邮箱已注册，请直接登录', 'info');
                 switchTab('login');
-                dom.loginEmail.value = email; // 自动填入邮箱
+                dom.loginEmail.value = email;
             } else {
                 showMessage('注册成功！请查收验证邮件 (若未收到请检查垃圾箱)', 'success');
-                // 注册成功后跳转到登录页，并带上参数提醒
                 window.location.href = 'login-real.html?registered=success&email=' + encodeURIComponent(email);
             }
         } catch (err) {
@@ -311,10 +280,25 @@
         }
     }
 
-    async function handleLogout() { /* 登录页一般用不到，但保留 */ }
-    async function handleForgotPassword() { /* 保持不变 */ }
+    async function handleForgotPassword() {
+        if (!initSuccess) { showMessage('系统未就绪，请稍后重试', 'error'); return; }
+        const email = prompt('请输入注册邮箱用于接收重置链接：');
+        if (!email) return;
+        if (!isValidEmail(email)) return showMessage('邮箱格式无效', 'error');
+        setLoading(true);
+        try {
+            const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + window.location.pathname,
+            });
+            if (error) throw error;
+            showMessage('重置邮件已发送，请查收邮箱（包括垃圾箱）', 'success');
+        } catch (err) {
+            showMessage(`发送失败: ${err.message}`, 'error');
+        } finally {
+            setLoading(false);
+        }
+    }
 
-    // 初始化 Supabase
     async function initSupabaseClient(showRetryHint = true) {
         try {
             if (typeof window.supabase === 'undefined' || !window.supabase.createClient) {
@@ -325,14 +309,14 @@
             });
             const { error } = await client.auth.getSession();
             if (error) throw error;
-            supabase = client;
+            supabaseClient = client;
             initSuccess = true;
             updateStatus('就绪 ✅', true);
             showMessage('Supabase 连接成功！', 'success');
             return true;
         } catch (err) {
             initSuccess = false;
-            supabase = null;
+            supabaseClient = null;
             let errorMsg = err.message || '未知错误';
             if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
                 errorMsg = '网络错误：无法访问 Supabase 服务，请检查网络或稍后重试。';
@@ -369,13 +353,11 @@
     async function bootstrap() {
         dom = {
             authSection: document.getElementById('authSection'),
-            userSection: document.getElementById('userSection'),
             statusText: document.getElementById('status-text'),
             alertBox: document.getElementById('globalAlert'),
             loader: document.getElementById('globalLoader'),
             loginBtn: document.getElementById('loginBtn'),
             registerBtn: document.getElementById('registerBtn'),
-            logoutBtn: document.getElementById('logoutBtn'),
             loginEmail: document.getElementById('loginEmail'),
             loginPassword: document.getElementById('loginPassword'),
             regEmail: document.getElementById('regEmail'),
@@ -392,7 +374,6 @@
         bindEvents();
         setLoading(false);
         
-        // 处理注册成功后的参数：自动切换到登录标签并填入邮箱
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('registered') === 'success') {
             const email = urlParams.get('email');
@@ -401,7 +382,6 @@
             }
             switchTab('login');
             showMessage('注册成功！请登录您的账户', 'success');
-            // 清除 URL 参数（不刷新页面）
             history.replaceState(null, '', window.location.pathname);
         }
     }
