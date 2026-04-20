@@ -324,7 +324,6 @@ let fiveStarPity = 0;
 let fourStarPity = 0;
 let gachaHistory = [];
 let isDrawing = false;
-let isBannerActive = true;
 let guaranteedUp = false;
 let userNumber = null;
 let isLoadingData = false;
@@ -341,7 +340,7 @@ let upFiveStarCount = 0;
 let fiveStarDistances = [];
 let lastFiveStarPullIndex = 0;
 
-// ========== 视觉切换皮肤（纯换皮，抽卡逻辑不变，但倒计时独立） ==========
+// ========== 视觉切换皮肤（纯换皮，抽卡逻辑不变，但倒计时独立且抽卡受限于皮肤时间） ==========
 const SKINS = {
     lujiangjun: {
         poolName: '✨ 流光定影 ✨',
@@ -350,7 +349,8 @@ const SKINS = {
         splashImg: 'https://xiaochen1235789.github.io/images/changjinglu.webp',
         caption: '「鹿将军 · 巡猎星神之威」',
         startTime: BANNER_START,
-        endTime: BANNER_END
+        endTime: BANNER_END,
+        isActive: function(now) { return now >= this.startTime && now <= this.endTime; }
     },
     pige: {
         poolName: '❄️ 冰天雪地 ❄️',
@@ -359,15 +359,20 @@ const SKINS = {
         splashImg: 'https://xiaochen1235789.github.io/images/pige.webp',
         caption: '「皮哥 · 永远的存护」',
         startTime: PIGE_BANNER_START,
-        endTime: PIGE_BANNER_END
+        endTime: PIGE_BANNER_END,
+        isActive: function(now) { return now >= this.startTime && now <= this.endTime; }
     }
 };
-let currentSkin = 'lujiangjun';   // 当前显示的皮肤
+let currentSkinId = 'lujiangjun';   // 当前显示的皮肤
+
+function getCurrentSkin() {
+    return SKINS[currentSkinId];
+}
 
 function switchSkin(skinId) {
     if (!SKINS[skinId]) return;
-    currentSkin = skinId;
-    const skin = SKINS[skinId];
+    currentSkinId = skinId;
+    const skin = getCurrentSkin();
     
     // 更新界面文字和图片
     document.getElementById('poolName').innerText = skin.poolName;
@@ -381,9 +386,41 @@ function switchSkin(skinId) {
     leftPanel.classList.add('skin-switch-animation');
     setTimeout(() => leftPanel.classList.remove('skin-switch-animation'), 200);
     
-    // 立即刷新倒计时显示
+    // 刷新倒计时和按钮状态
     updateCountdown();
-    showTip(`卡池已切换至「${skin.poolName}」外观（抽卡规则不变，倒计时独立）`);
+    updateButtonsStateBySkin();
+    showTip(`卡池已切换至「${skin.poolName}」外观`);
+}
+
+// 根据当前皮肤判断抽卡按钮是否可用，并更新禁用状态和提示文字
+function updateButtonsStateBySkin() {
+    const skin = getCurrentSkin();
+    const now = new Date();
+    const isActive = skin.isActive(now);
+    const disabledNotice = document.getElementById('disabledNotice');
+    
+    if (!isActive) {
+        singleBtn.classList.add('disabled');
+        tenBtn.classList.add('disabled');
+        singleBtn.disabled = true;
+        tenBtn.disabled = true;
+        if (now < skin.startTime) {
+            disabledNotice.style.display = 'block';
+            disabledNotice.innerText = '⏳ 卡池尚未开启，敬请期待！';
+        } else if (now > skin.endTime) {
+            disabledNotice.style.display = 'block';
+            disabledNotice.innerText = '⚠️ 卡池已结束，无法跃迁';
+        } else {
+            disabledNotice.style.display = 'block';
+            disabledNotice.innerText = '⚠️ 卡池暂时不可用';
+        }
+    } else {
+        singleBtn.classList.remove('disabled');
+        tenBtn.classList.remove('disabled');
+        singleBtn.disabled = false;
+        tenBtn.disabled = false;
+        disabledNotice.style.display = 'none';
+    }
 }
 
 // DOM 元素
@@ -590,36 +627,9 @@ function getCurrentFiveStarRate(pityCount) {
     return Math.min(rate, 1.0);
 }
 
-// 抽卡按钮是否可用仍然由鹿将军池的实际时间决定（因为抽卡规则未变）
-function checkBannerActive() {
-    const now = new Date();
-    const active = (now >= BANNER_START && now <= BANNER_END);
-    if (active !== isBannerActive) {
-        isBannerActive = active;
-        updateButtonsState();
-    }
-    return active;
-}
-
-function updateButtonsState() {
-    if (!isBannerActive) {
-        singleBtn.classList.add('disabled');
-        tenBtn.classList.add('disabled');
-        singleBtn.disabled = true;
-        tenBtn.disabled = true;
-        disabledNoticeSpan.style.display = 'block';
-    } else {
-        singleBtn.classList.remove('disabled');
-        tenBtn.classList.remove('disabled');
-        singleBtn.disabled = false;
-        tenBtn.disabled = false;
-        disabledNoticeSpan.style.display = 'none';
-    }
-}
-
 // 倒计时根据当前皮肤独立显示
 function updateCountdown() {
-    const skin = SKINS[currentSkin];
+    const skin = getCurrentSkin();
     if (!skin) return;
     const now = new Date();
     const start = skin.startTime;
@@ -912,7 +922,19 @@ async function attemptDraw(needTickets, costJade, drawFunc) {
 }
 
 async function singlePull() {
-    if (!isBannerActive) { showTip('卡池已关闭，无法跃迁'); return; }
+    // 先检查当前皮肤对应的时间是否开放
+    const skin = getCurrentSkin();
+    const now = new Date();
+    if (!skin.isActive(now)) {
+        if (now < skin.startTime) {
+            showTip(`「${skin.poolName}」尚未开启，敬请期待！`);
+        } else if (now > skin.endTime) {
+            showTip(`「${skin.poolName}」已结束，无法跃迁`);
+        } else {
+            showTip(`「${skin.poolName}」暂时无法跃迁`);
+        }
+        return;
+    }
     if (isDrawing) { showTip('跃迁进行中...'); return; }
     isDrawing = true;
     await attemptDraw(COST_SINGLE_TICKET, EXCHANGE_RATE, async () => {
@@ -932,7 +954,19 @@ async function singlePull() {
 }
 
 async function tenPull() {
-    if (!isBannerActive) { showTip('卡池已关闭，无法跃迁'); return; }
+    // 先检查当前皮肤对应的时间是否开放
+    const skin = getCurrentSkin();
+    const now = new Date();
+    if (!skin.isActive(now)) {
+        if (now < skin.startTime) {
+            showTip(`「${skin.poolName}」尚未开启，敬请期待！`);
+        } else if (now > skin.endTime) {
+            showTip(`「${skin.poolName}」已结束，无法跃迁`);
+        } else {
+            showTip(`「${skin.poolName}」暂时无法跃迁`);
+        }
+        return;
+    }
     if (isDrawing) { showTip('当前正在跃迁中，请稍等…'); return; }
     isDrawing = true;
     await attemptDraw(COST_TEN_TICKET, EXCHANGE_RATE * COST_TEN_TICKET, async () => {
@@ -1084,7 +1118,7 @@ function bindEvents() {
     const switchBtn = document.getElementById('fakeSwitchBtn');
     if (switchBtn) {
         switchBtn.addEventListener('click', () => {
-            const newSkin = currentSkin === 'lujiangjun' ? 'pige' : 'lujiangjun';
+            const newSkin = currentSkinId === 'lujiangjun' ? 'pige' : 'lujiangjun';
             switchSkin(newSkin);
         });
     }
@@ -1126,7 +1160,7 @@ async function init() {
     await initAuth();
     bindEvents();
     preventScrollRefresh();
-    checkBannerActive();
+    updateButtonsStateBySkin();   // 初始按钮状态
     updateCountdown();
 }
 init();
