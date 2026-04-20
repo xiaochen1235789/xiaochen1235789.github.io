@@ -9,20 +9,65 @@
     <title>卡池 - 六哥荣耀WIKI (星魂系统·补偿优化)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ========== 完整样式 ========== */
+        /* ========== 全局样式 ========== */
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
-        body { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; background: #0a0515; font-family: 'Segoe UI', 'Poppins', 'Noto Sans', system-ui, sans-serif; touch-action: pan-x pan-y; }
-        .star-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; background: radial-gradient(ellipse at 40% 50%, #0e0a2a, #020008); overflow: hidden; }
+        body { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; 
+            background: #0a0515; font-family: 'Segoe UI', 'Poppins', 'Noto Sans', system-ui, sans-serif; 
+            touch-action: pan-x pan-y; 
+        }
+        .star-bg { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; 
+            background: radial-gradient(ellipse at 40% 50%, #0e0a2a, #020008); overflow: hidden; 
+        }
         .star { position: absolute; background-color: #fff; border-radius: 50%; opacity: 0; animation: twinkle 3s infinite alternate; }
         @keyframes twinkle { 0% { opacity: 0.2; transform: scale(1); } 100% { opacity: 1; transform: scale(1.2); } }
-        .shooting-star { position: absolute; width: 2px; height: 2px; background: linear-gradient(45deg, rgba(255,255,200,1), rgba(255,255,200,0)); border-radius: 50%; box-shadow: 0 0 6px 1px rgba(255,245,180,0.8); animation: shoot 6s linear infinite; opacity: 0; }
-        @keyframes shoot { 0% { transform: translateX(0) translateY(0) rotate(45deg); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateX(300px) translateY(300px) rotate(45deg); opacity: 0; } }
-        .landscape-wrapper { position: relative; z-index: 2; width: 100%; height: 100%; display: flex; flex-direction: row; overflow: hidden; padding: 16px 20px; gap: 20px; backdrop-filter: blur(8px); }
-        .left-panel { flex: 3; min-width: 240px; background: rgba(8, 6, 24, 0.65); backdrop-filter: blur(16px); border-radius: 48px; border: 1px solid rgba(210, 180, 255, 0.4); display: flex; flex-direction: column; box-shadow: 0 20px 35px rgba(0, 0, 0, 0.5); height: 100%; }
+        .shooting-star { 
+            position: absolute; width: 2px; height: 2px; background: linear-gradient(45deg, rgba(255,255,200,1), rgba(255,255,200,0)); 
+            border-radius: 50%; box-shadow: 0 0 6px 1px rgba(255,245,180,0.8); animation: shoot 6s linear infinite; opacity: 0; 
+        }
+        @keyframes shoot { 
+            0% { transform: translateX(0) translateY(0) rotate(45deg); opacity: 0; } 
+            10% { opacity: 1; } 90% { opacity: 1; } 
+            100% { transform: translateX(300px) translateY(300px) rotate(45deg); opacity: 0; } 
+        }
+        /* 主容器：手机全屏，平板/电脑缩小居中露出星空 */
+        .landscape-wrapper { 
+            position: relative; z-index: 2; display: flex; flex-direction: row; overflow: hidden; 
+            backdrop-filter: blur(8px); transition: all 0.2s;
+        }
+        /* 手机横屏默认全屏 */
+        @media (orientation: landscape) and (max-width: 1023px) {
+            .landscape-wrapper { width: 100%; height: 100%; padding: 16px 20px; gap: 20px; }
+        }
+        /* 平板/电脑横屏时缩小并居中 */
+        @media (orientation: landscape) and (min-width: 1024px) {
+            .landscape-wrapper { 
+                width: 90%; max-width: 1400px; height: 90%; margin: auto; padding: 20px 30px; gap: 24px;
+                border-radius: 48px; background: rgba(0,0,0,0.3); backdrop-filter: blur(12px);
+            }
+        }
+        /* 竖屏提示覆盖 */
+        @media (orientation: portrait) {
+            .landscape-wrapper { display: none !important; }
+            .orientation-tip { display: flex !important; }
+        }
+        .left-panel { 
+            flex: 3; min-width: 240px; background: rgba(8, 6, 24, 0.65); backdrop-filter: blur(16px); 
+            border-radius: 48px; border: 1px solid rgba(210, 180, 255, 0.4); display: flex; flex-direction: column; 
+            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.5); height: 100%; 
+        }
         .left-panel-scroll { flex: 1; overflow-y: auto; padding: 20px 16px; scrollbar-width: thin; }
-        .uid-badge { margin: 0 16px 16px 16px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 6px 12px; border-radius: 30px; font-size: 0.7rem; color: #ffcf8a; font-family: monospace; border: 1px solid rgba(255,200,100,0.3); text-align: center; flex-shrink: 0; width: calc(100% - 32px); align-self: center; }
+        .uid-badge { 
+            margin: 0 16px 16px 16px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 6px 12px; 
+            border-radius: 30px; font-size: 0.7rem; color: #ffcf8a; font-family: monospace; 
+            border: 1px solid rgba(255,200,100,0.3); text-align: center; flex-shrink: 0; width: calc(100% - 32px); align-self: center; 
+        }
         .card-pool { text-align: center; margin-bottom: 20px; }
-        .pool-name { font-size: 1.6rem; font-weight: bold; background: linear-gradient(135deg, #FFE6B0, #FFB347); background-clip: text; -webkit-background-clip: text; color: transparent; letter-spacing: 2px; margin-bottom: 8px; }
+        .pool-name { 
+            font-size: 1.6rem; font-weight: bold; background: linear-gradient(135deg, #FFE6B0, #FFB347); 
+            background-clip: text; -webkit-background-clip: text; color: transparent; letter-spacing: 2px; margin-bottom: 8px; 
+        }
         .pool-sub { font-size: 0.75rem; color: #b9a9e0; border-top: 1px dashed rgba(255,200,100,0.4); display: inline-block; padding-top: 6px; }
         .up-char { background: rgba(0,0,0,0.5); border-radius: 32px; padding: 12px; margin: 15px 0; text-align: center; }
         .up-char span { color: #ffcf8a; font-weight: bold; font-size: 1rem; }
@@ -66,6 +111,7 @@
         .gacha-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #0a0620; }
         .gacha-btn.disabled, .gacha-btn:disabled { opacity: 0.5; transform: none; cursor: not-allowed; pointer-events: none; }
         .special-btn { background: linear-gradient(105deg, #9b4d96, #5e2a5c); box-shadow: 0 6px 0 #2e1a2c; }
+        /* 弹窗通用样式 */
         .modal-mask { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 1000; display: flex; justify-content: center; align-items: center; visibility: hidden; opacity: 0; transition: 0.2s; }
         .modal-mask.active { visibility: visible; opacity: 1; }
         .modal-content { width: 85%; max-width: 550px; background: #120e28; border-radius: 56px; border: 2px solid #ffbc6e; overflow: hidden; box-shadow: 0 25px 45px black; }
@@ -86,12 +132,11 @@
         .constellation-item { background: rgba(0,0,0,0.5); border-radius: 40px; padding: 4px 12px; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #ffbc6e30; }
         .constellation-name { color: #ffdfaa; }
         .constellation-level { color: #ffbc6e; font-weight: bold; }
-        /* 统计弹窗星级样式 */
         .star5-constellation { background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(218, 165, 32, 0.4)); border-color: #ffd700; }
         .star4-constellation { background: linear-gradient(135deg, rgba(200, 150, 255, 0.25), rgba(160, 100, 220, 0.4)); border-color: #c084fc; }
         .record-modal { width: 90%; max-width: 700px; height: 70%; background: #0f0b20; border-radius: 48px; border: 1px solid #ffbc6e; display: flex; flex-direction: column; overflow: hidden; }
         .record-list { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-        .record-item { background: rgba(0,0,0,0.5); border-radius: 40px; padding: 10px 18px; display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 500; border-left: 6px solid; }
+        .record-item { background: rgba(0,0,0,0.5); border-radius: 40px; padding: 10px 18px; display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 500; border-left: 6px solid; align-items: center; }
         .record-star5 { border-left-color: #ffb347; background: linear-gradient(90deg, #2a1e3a, #0f0b1c); color: #ffd966; }
         .record-star4 { border-left-color: #c084fc; color: #d9aaff; }
         .record-star3 { border-left-color: #5f7f9e; color: #bbccdd; }
@@ -107,21 +152,34 @@
         .dialog-star5 { border-left-color: #ffb347; background: linear-gradient(90deg, #2a1e3a, #0f0b1c); color: #ffd966; }
         .dialog-star4 { border-left-color: #c084fc; color: #d9aaff; }
         .dialog-star3 { border-left-color: #5f7f9e; color: #bbccdd; }
-        .dialog-star-label { font-weight: bold; background: rgba(0,0,0,0.4); padding: 2px 12px; border-radius: 30px; font-size: 0.8rem; }
+        .dialog-star-label { font-weight: bold; background: rgba(0,0,0,0.4); padding: 2px 12px; border-radius: 30px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .toast-notice { position: fixed; top: 20px; right: 20px; z-index: 1200; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); border: 1px solid #ffbc6e; border-radius: 32px; padding: 10px 20px; color: #ffdfaa; font-size: 0.9rem; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.3); pointer-events: none; opacity: 0; transition: opacity 0.2s ease; white-space: nowrap; }
         .toast-notice.show { opacity: 1; }
         .skin-switch-animation { animation: skinFlash 0.2s ease; }
         @keyframes skinFlash { 0% { opacity: 0.7; transform: scale(0.99); } 100% { opacity: 1; transform: scale(1); } }
-        @media (max-width: 800px) { .landscape-wrapper { padding: 12px; gap: 12px; } .left-panel-scroll { padding: 12px; } .pool-name { font-size: 1.2rem; } .jade-amount { font-size: 0.9rem; } .ticket-amount { font-size: 0.85rem; } .gacha-btn { font-size: 0.85rem; padding: 8px 0; } .toast-notice { font-size: 0.75rem; padding: 6px 12px; white-space: normal; max-width: 70%; } .action-btn { font-size: 0.7rem; padding: 4px 12px; } .settings-btn { width: 30px; height: 30px; font-size: 1rem; } .splash-img { max-height: 35vh; } .uid-badge { font-size: 0.6rem; margin-bottom: 12px; } .stats-grid { grid-template-columns: 1fr; } .constellation-section { max-height: 180px; } }
-        .record-list::-webkit-scrollbar, .dialog-content::-webkit-scrollbar, .left-panel-scroll::-webkit-scrollbar, .constellation-section::-webkit-scrollbar, #statsModal .modal-body::-webkit-scrollbar { width: 4px; }
-        .record-list::-webkit-scrollbar-track, .dialog-content::-webkit-scrollbar-track, .left-panel-scroll::-webkit-scrollbar-track, .constellation-section::-webkit-scrollbar-track, #statsModal .modal-body::-webkit-scrollbar-track { background: rgba(255,255,200,0.1); }
-        .record-list::-webkit-scrollbar-thumb, .dialog-content::-webkit-scrollbar-thumb, .left-panel-scroll::-webkit-scrollbar-thumb, .constellation-section::-webkit-scrollbar-thumb, #statsModal .modal-body::-webkit-scrollbar-thumb { background: #ffbc6e; border-radius: 10px; }
-        .orientation-tip { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); backdrop-filter: blur(12px); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; color: #ffdfaa; font-size: 1.4rem; pointer-events: none; }
-        @media (orientation: landscape) { .orientation-tip { display: none !important; } }
-        /* 轻量加载提示（右上角小圆圈） */
+        .orientation-tip { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); backdrop-filter: blur(12px); z-index: 9999; display: none; justify-content: center; align-items: center; flex-direction: column; color: #ffdfaa; font-size: 1.4rem; pointer-events: none; }
         .mini-loader { position: fixed; top: 20px; right: 20px; width: 30px; height: 30px; border: 3px solid rgba(255,200,100,0.3); border-top-color: #ffbc6e; border-radius: 50%; animation: spin 0.8s linear infinite; z-index: 2100; display: none; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        /* 滚动条 */
+        .record-list::-webkit-scrollbar, .dialog-content::-webkit-scrollbar, .left-panel-scroll::-webkit-scrollbar, .constellation-section::-webkit-scrollbar, #statsModal .modal-body::-webkit-scrollbar, .modal-body::-webkit-scrollbar { width: 4px; }
+        .record-list::-webkit-scrollbar-track, .dialog-content::-webkit-scrollbar-track, .left-panel-scroll::-webkit-scrollbar-track, .constellation-section::-webkit-scrollbar-track, #statsModal .modal-body::-webkit-scrollbar-track { background: rgba(255,255,200,0.1); }
+        .record-list::-webkit-scrollbar-thumb, .dialog-content::-webkit-scrollbar-thumb, .left-panel-scroll::-webkit-scrollbar-thumb, .constellation-section::-webkit-scrollbar-thumb, #statsModal .modal-body::-webkit-scrollbar-thumb { background: #ffbc6e; border-radius: 10px; }
+        /* 手机端适配 */
+        @media (max-width: 800px) and (orientation: landscape) {
+            .left-panel-scroll { padding: 12px; }
+            .pool-name { font-size: 1.2rem; }
+            .jade-amount { font-size: 0.9rem; }
+            .ticket-amount { font-size: 0.85rem; }
+            .gacha-btn { font-size: 0.85rem; padding: 8px 0; }
+            .toast-notice { font-size: 0.75rem; padding: 6px 12px; white-space: normal; max-width: 70%; }
+            .action-btn { font-size: 0.7rem; padding: 4px 12px; }
+            .settings-btn { width: 30px; height: 30px; font-size: 1rem; }
+            .splash-img { max-height: 35vh; }
+            .uid-badge { font-size: 0.6rem; margin-bottom: 12px; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .constellation-section { max-height: 180px; }
+        }
     </style>
 </head>
 <body>
@@ -167,7 +225,36 @@
 <!-- 抽卡结果弹窗 -->
 <div id="resultDialog" class="result-dialog"><div class="dialog-container"><div class="dialog-header"><h3>✨ 本次跃迁结果 ✨</h3><button class="close-dialog-btn" onclick="window.closeResultDialogGlobal()">✖</button></div><div id="dialogContent" class="dialog-content"></div></div></div>
 <!-- 设置弹窗 -->
-<div id="settingsModal" class="modal-mask"><div class="modal-content"><div class="modal-header"><h3>⚙️ 设置</h3><button class="close-modal" id="closeSettingsBtn">✖</button></div><div class="modal-body"><div style="display: flex; flex-direction: column; gap: 20px;"><div style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px;"><div style="margin-bottom: 8px;">✨ 增加星琼</div><div style="display: flex; gap: 8px; justify-content: center; align-items: center;"><input type="number" id="addJadeAmount" value="1000" min="1" max="999999" step="100" style="width: 120px; padding: 6px; border-radius: 30px; border: 1px solid #ffbc6e; background: rgba(0,0,0,0.6); color: #ffdfaa; text-align: center;"><button id="confirmAddJadeBtn" class="btn-confirm" style="padding: 6px 16px;">增加</button></div></div><div style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px;"><div style="margin-bottom: 8px;">🎫 增加星轨专票</div><div style="display: flex; gap: 8px; justify-content: center; align-items: center;"><input type="number" id="addTicketAmount" value="10" min="1" max="9999" step="1" style="width: 120px; padding: 6px; border-radius: 30px; border: 1px solid #ffbc6e; background: rgba(0,0,0,0.6); color: #ffdfaa; text-align: center;"><button id="confirmAddTicketBtn" class="btn-confirm" style="padding: 6px 16px;">增加</button></div></div><div style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px;"><div style="margin-bottom: 8px;">🔄 重置星魂</div><button id="resetConstellationsBtn" class="btn-confirm" style="background: #ff8888; color: #1a132e;">清空所有星魂</button></div><div style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px;"><div style="margin-bottom: 8px;">🗑️ 重置历史记录</div><button id="resetHistoryBtn" class="btn-confirm" style="background: #ff8888; color: #1a132e;">清空抽卡记录</button></div></div></div></div></div>
+<div id="settingsModal" class="modal-mask"><div class="modal-content" style="max-height: 85vh; display: flex; flex-direction: column;"><div class="modal-header"><h3>⚙️ 设置</h3><button class="close-modal" id="closeSettingsBtn">✖</button></div><div class="modal-body" style="overflow-y: auto; flex:1;"><div style="display: flex; flex-direction: column; gap: 20px;">
+    <!-- 增加/减少星琼 -->
+    <div style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px;">
+        <div style="margin-bottom: 8px;">✨ 星琼</div>
+        <div style="display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap;">
+            <div><input type="number" id="addJadeAmount" value="1000" min="1" max="999999" step="100" style="width: 100px; padding: 6px; border-radius: 30px; border: 1px solid #ffbc6e; background: rgba(0,0,0,0.6); color: #ffdfaa; text-align: center;"></div>
+            <button id="confirmAddJadeBtn" class="btn-confirm" style="padding: 6px 16px;">增加</button>
+            <button id="confirmSubJadeBtn" class="btn-confirm" style="padding: 6px 16px; background: #ff8888;">减少</button>
+        </div>
+    </div>
+    <!-- 增加/减少专票 -->
+    <div style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px;">
+        <div style="margin-bottom: 8px;">🎫 星轨专票</div>
+        <div style="display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap;">
+            <div><input type="number" id="addTicketAmount" value="10" min="1" max="9999" step="1" style="width: 100px; padding: 6px; border-radius: 30px; border: 1px solid #ffbc6e; background: rgba(0,0,0,0.6); color: #ffdfaa; text-align: center;"></div>
+            <button id="confirmAddTicketBtn" class="btn-confirm" style="padding: 6px 16px;">增加</button>
+            <button id="confirmSubTicketBtn" class="btn-confirm" style="padding: 6px 16px; background: #ff8888;">减少</button>
+        </div>
+    </div>
+    <!-- 重置星魂（仅管理员） -->
+    <div id="resetConstellationsContainer" style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px;">
+        <div style="margin-bottom: 8px;">🔄 重置星魂</div>
+        <button id="resetConstellationsBtn" class="btn-confirm" style="background: #ff8888; color: #1a132e;">清空所有星魂</button>
+    </div>
+    <!-- 重置历史记录（仅管理员） -->
+    <div id="resetHistoryContainer" style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px;">
+        <div style="margin-bottom: 8px;">🗑️ 重置历史记录</div>
+        <button id="resetHistoryBtn" class="btn-confirm" style="background: #ff8888; color: #1a132e;">清空抽卡记录</button>
+    </div>
+</div></div></div></div>
 <div id="toastNotice" class="toast-notice"></div>
 
 <script>
@@ -265,8 +352,12 @@ const constellationListDiv = document.getElementById('constellationList'), softP
 const nextFiveTypeSpan = document.getElementById('nextFiveType'), fourPityRemainSpan = document.getElementById('fourPityRemain');
 const settingsModal = document.getElementById('settingsModal'), closeSettingsBtn = document.getElementById('closeSettingsBtn');
 const addJadeAmountInput = document.getElementById('addJadeAmount'), confirmAddJadeBtn = document.getElementById('confirmAddJadeBtn');
+const confirmSubJadeBtn = document.getElementById('confirmSubJadeBtn');
 const addTicketAmountInput = document.getElementById('addTicketAmount'), confirmAddTicketBtn = document.getElementById('confirmAddTicketBtn');
+const confirmSubTicketBtn = document.getElementById('confirmSubTicketBtn');
 const resetConstellationsBtn = document.getElementById('resetConstellationsBtn'), resetHistoryBtn = document.getElementById('resetHistoryBtn');
+const resetConstellationsContainer = document.getElementById('resetConstellationsContainer');
+const resetHistoryContainer = document.getElementById('resetHistoryContainer');
 const miniLoader = document.getElementById('miniLoader');
 
 splashImg.onerror = () => splashImg.src = "https://xiaochen1235789.github.io/images/changjinglu.webp";
@@ -293,7 +384,6 @@ async function saveConstellation(characterName, level) { if (!currentUser) retur
 async function processCharacterObtain(characterName, starLevel) {
     const currentLevel = constellationsMap.get(characterName) || 0;
     if (currentLevel === 0 && !constellationsMap.has(characterName)) {
-        // 首次获得本体
         constellationsMap.set(characterName, 0);
         await saveConstellation(characterName, 0);
         showTip(`获得新角色：${characterName}！星魂等级 0/6`);
@@ -321,7 +411,7 @@ function updateStatsModalContent() {
     const upRate = fiveStarCount === 0 ? '--' : ((upFiveStarCount / fiveStarCount) * 100).toFixed(1) + '%';
     statsGrid.innerHTML = `<div class="stat-card"><div class="stat-label">🎲 总抽数</div><div class="stat-number">${totalPulls}</div></div><div class="stat-card"><div class="stat-label">⭐ 五星数量</div><div class="stat-number">${fiveStarCount}</div></div><div class="stat-card"><div class="stat-label">✨ 四星数量</div><div class="stat-number">${fourStarCount}</div></div><div class="stat-card"><div class="stat-label">🌀 三星数量</div><div class="stat-number">${threeStarCount}</div></div><div class="stat-card"><div class="stat-label">📊 平均出货抽数</div><div class="stat-number">${avgPulls}</div><div class="stat-unit"> (五星)</div></div><div class="stat-card"><div class="stat-label">🏆 最欧记录</div><div class="stat-number">${best}</div><div class="stat-unit"> 抽出五星</div></div><div class="stat-card"><div class="stat-label">💀 最非记录</div><div class="stat-number">${worst}</div><div class="stat-unit"> 抽出五星</div></div><div class="stat-card"><div class="stat-label">🎯 UP命中率</div><div class="stat-number">${upRate}</div></div>`;
     if (constellationsMap.size === 0) { constellationListDiv.innerHTML = '<div style="color:#aab9de; font-size:0.7rem;">暂无角色星魂信息</div>'; return; }
-    // 排序：UP五星 > 常驻五星 > 四星，各自按名称排序
+    // 排序：UP五星 > 常驻五星 > 四星
     let upFive = [], perFive = [], fours = [];
     for (let [name, level] of constellationsMap.entries()) {
         if (name === UP_FIVE_STAR) upFive.push([name, level]);
@@ -378,8 +468,16 @@ async function loadUserData() {
         try { let { data: historyData, error: histErr } = await supabaseClient.from('gacha_history').select('item_name, star_level, created_at').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(500); if (!histErr) gachaHistory = (historyData || []).map(h => ({ name: h.item_name, star: h.star_level, time: h.created_at })); else gachaHistory = []; } catch (e) { gachaHistory = []; }
         try { let { data: profileData, error: profErr } = await supabaseClient.from('user_profiles').select('user_number').eq('id', currentUser.id).maybeSingle(); if (!profErr && profileData && profileData.user_number) { userNumber = profileData.user_number; uidBadge.innerText = `UID: ${userNumber}`; } else uidBadge.innerText = `UID: --`; } catch (e) { uidBadge.innerText = `UID: --`; }
         await loadConstellations(); updateUI(); renderHistoryModal(); rebuildStatsFromHistory();
-        if (currentUser.id === ADMIN_USER_ID) { isAdmin = true; resetHistoryBtn.disabled = false; resetHistoryBtn.style.opacity = '1'; resetHistoryBtn.style.cursor = 'pointer'; resetConstellationsBtn.disabled = false; resetConstellationsBtn.style.opacity = '1'; resetConstellationsBtn.style.cursor = 'pointer'; }
-        else { isAdmin = false; resetHistoryBtn.disabled = true; resetHistoryBtn.style.opacity = '0.5'; resetHistoryBtn.style.cursor = 'not-allowed'; resetHistoryBtn.title = '仅管理员可清空历史记录'; resetConstellationsBtn.disabled = true; resetConstellationsBtn.style.opacity = '0.5'; resetConstellationsBtn.style.cursor = 'not-allowed'; resetConstellationsBtn.title = '仅管理员可重置星魂'; }
+        // 管理员权限控制
+        if (currentUser.id === ADMIN_USER_ID) {
+            isAdmin = true;
+            resetConstellationsContainer.style.display = 'block';
+            resetHistoryContainer.style.display = 'block';
+        } else {
+            isAdmin = false;
+            resetConstellationsContainer.style.display = 'none';
+            resetHistoryContainer.style.display = 'none';
+        }
     } catch (err) { console.error('加载用户数据失败:', err); showTip('加载数据失败，将使用本地默认值'); starJade = 1599840; tickets = 100; fiveStarPity = 0; fourStarPity = 0; guaranteedUp = false; gachaHistory = []; constellationsMap.clear(); updateUI(); renderHistoryModal(); resetStatistics(); }
     finally { isLoadingData = false; }
 }
@@ -397,9 +495,12 @@ function renderHistoryModal() {
     if (gachaHistory.length === 0) { recordListDiv.innerHTML = '<div class="empty-history">暂无抽卡记录</div>'; return; }
     let html = '';
     for (let rec of gachaHistory) {
-        let starClass = ''; let starColorText = '';
-        if (rec.star === 5) { starClass = 'record-star5'; starColorText = '★五星'; } else if (rec.star === 4) { starClass = 'record-star4'; starColorText = '★四星'; } else { starClass = 'record-star3'; starColorText = '★★★三星'; }
-        html += `<div class="record-item ${starClass}"><span>${escapeHtml(rec.name)}</span><span style="font-weight:bold;">${starColorText}</span></div>`;
+        let starClass = '';
+        let starDisplay = '';
+        if (rec.star === 5) { starClass = 'record-star5'; starDisplay = '<span style="color:#FFD700;">★★★★★</span>'; }
+        else if (rec.star === 4) { starClass = 'record-star4'; starDisplay = '<span style="color:#C084FC;">★★★★</span>'; }
+        else { starClass = 'record-star3'; starDisplay = '<span style="color:#AAAAAA;">★★★</span>'; }
+        html += `<div class="record-item ${starClass}"><span>${escapeHtml(rec.name)}</span><span class="dialog-star-label">${starDisplay}</span></div>`;
     }
     recordListDiv.innerHTML = html;
 }
@@ -496,7 +597,9 @@ async function tenPull() {
 function openSettingsModal() { settingsModal.classList.add('active'); }
 function closeSettingsModal() { settingsModal.classList.remove('active'); }
 async function addStarJade() { let amount = parseInt(addJadeAmountInput.value); if (isNaN(amount) || amount <= 0) { showTip('请输入有效的星琼数量'); return; } starJade += amount; updateUI(); if (currentUser) await supabaseClient.from('user_resources').update({ star_jade: starJade }).eq('user_id', currentUser.id); showTip(`成功添加 ${amount} 星琼`); }
+async function subStarJade() { let amount = parseInt(addJadeAmountInput.value); if (isNaN(amount) || amount <= 0) { showTip('请输入有效的星琼数量'); return; } if (starJade < amount) { showTip('星琼不足，无法减少'); return; } starJade -= amount; updateUI(); if (currentUser) await supabaseClient.from('user_resources').update({ star_jade: starJade }).eq('user_id', currentUser.id); showTip(`成功减少 ${amount} 星琼`); }
 async function addTickets() { let amount = parseInt(addTicketAmountInput.value); if (isNaN(amount) || amount <= 0) { showTip('请输入有效的专票数量'); return; } tickets += amount; updateUI(); if (currentUser) await supabaseClient.from('user_resources').update({ tickets: tickets }).eq('user_id', currentUser.id); showTip(`成功添加 ${amount} 张星轨专票`); }
+async function subTickets() { let amount = parseInt(addTicketAmountInput.value); if (isNaN(amount) || amount <= 0) { showTip('请输入有效的专票数量'); return; } if (tickets < amount) { showTip('星轨专票不足，无法减少'); return; } tickets -= amount; updateUI(); if (currentUser) await supabaseClient.from('user_resources').update({ tickets: tickets }).eq('user_id', currentUser.id); showTip(`成功减少 ${amount} 张星轨专票`); }
 async function resetConstellations() { if (!isAdmin) { showTip('权限不足，只有管理员可以重置星魂'); return; } if (!confirm('⚠️ 确定要清空所有角色星魂数据吗？此操作不可恢复！')) return; if (!currentUser) return; await supabaseClient.from('user_constellations').delete().eq('user_id', currentUser.id); constellationsMap.clear(); updateStatsModalContent(); showTip('所有星魂已重置'); }
 async function resetHistory() { if (!isAdmin) { showTip('权限不足，只有管理员可以清空历史记录'); return; } if (!confirm('⚠️ 确定要清空所有抽卡记录和统计吗？此操作不可恢复！')) return; if (!currentUser) return; const { error } = await supabaseClient.from('gacha_history').delete().eq('user_id', currentUser.id); if (error) { console.error('删除历史记录失败:', error); showTip('删除失败：' + error.message); return; } gachaHistory = []; renderHistoryModal(); resetStatistics(); showTip('抽卡记录已清空'); await loadUserData(); }
 function openRecordModal() { renderHistoryModal(); recordModal.classList.add('active'); }
@@ -516,7 +619,8 @@ function bindEvents() {
     const switchBtn = document.getElementById('fakeSwitchBtn'); if (switchBtn) switchBtn.addEventListener('click', () => { const newSkin = currentSkinId === 'lujiangjun' ? 'pige' : 'lujiangjun'; switchSkin(newSkin); });
     const settingsBtn = document.getElementById('settingsBtn'); if (settingsBtn) settingsBtn.addEventListener('click', openSettingsModal);
     closeSettingsBtn.addEventListener('click', closeSettingsModal); settingsModal.addEventListener('click', (e) => { if(e.target === settingsModal) closeSettingsModal(); });
-    confirmAddJadeBtn.addEventListener('click', addStarJade); confirmAddTicketBtn.addEventListener('click', addTickets);
+    confirmAddJadeBtn.addEventListener('click', addStarJade); confirmSubJadeBtn.addEventListener('click', subStarJade);
+    confirmAddTicketBtn.addEventListener('click', addTickets); confirmSubTicketBtn.addEventListener('click', subTickets);
     resetConstellationsBtn.addEventListener('click', resetConstellations); resetHistoryBtn.addEventListener('click', resetHistory);
 }
 async function initAuth() {
