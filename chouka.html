@@ -373,15 +373,16 @@
             <div class="info-content">
                 <p><span class="highlight-gold">✨ 统计页面说明 ✨</span><br>
                 只有在 <strong>第一次获得某个角色</strong> 时，该角色才会出现在统计页面的“已获角色命座”列表中，并且角色的名字会以<span class="highlight-gold">金色高亮</span>显示（在统计弹窗中，角色名和命座等级均为金色）。</p>
-                <p><span class="highlight-gold">⭐ 重复获得角色（未满6命）⭐</span><br>
-                再次获得已经拥有的角色时，将提升该角色的命座等级，并额外获得星琼补偿：<br>
-                • 五星角色重复 → 补偿 <span style="color:orange;">320</span> 星琼<br>
-                • 四星角色重复 → 补偿 <span style="color:orange;">64</span> 星琼<br>
-                每提升1命，都会在抽卡结果中显示提升提示。</p>
-                <p><span class="highlight-gold">💰 满星魂溢出补偿（6命后）💰</span><br>
-                当角色已经达到<span class="highlight-gold">6命</span>后，再次获得该角色时，不再提升命座，自动转换为星琼补偿：<br>
-                • 五星角色重复 → 补偿 <span style="color:orange;">800</span> 星琼<br>
-                • 四星角色重复 → 补偿 <span style="color:orange;">160</span> 星琼<br>
+                <p><span class="highlight-gold">⭐ 重复获得角色（命座系统）⭐</span><br>
+                当角色已经未达到<span class="highlight-gold">溢出状态</span>时，再次获得该角色时，会自动转换为星琼补偿：<br>
+                • 五星角色重复 → 补偿 <span style="color:orange; font-size: 16px;">320</span> 星琼<br>
+                • 四星角色重复 → 补偿 <span style="color:orange; font-size: 16px;">64</span> 星琼<br>
+                补偿的星琼会直接添加到您的账户中，并在抽卡结果中显示转化提示。</p><br>
+                再次获得已经拥有的角色时，将提升该角色的命座等级（最高6命）。每提升1命，都会在抽卡结果中显示提升提示。</p><br>
+                <p><span class="highlight-gold">💰 满星魂溢出补偿 💰</span><br>
+                当角色已经达到<span class="highlight-gold">6命</span>后，再次获得该角色时，会自动转换为星琼补偿：<br>
+                • 五星角色重复 → 补偿 <span style="color:orange; font-size: 16px;">800</span> 星琼<br>
+                • 四星角色重复 → 补偿 <span style="color:orange; font-size: 16px;">160</span> 星琼<br>
                 补偿的星琼会直接添加到您的账户中，并在抽卡结果中显示转化提示。</p>
                 <p style="margin-top: 16px; text-align: center;">💡 祝您欧气满满，每抽都出金！</p>
             </div>
@@ -416,10 +417,6 @@ const SOFT_PITY_START = 74;
 const COST_SINGLE_TICKET = 1;
 const COST_TEN_TICKET = 10;
 const EXCHANGE_RATE = 160;
-// 未满命补偿（命座+星琼）
-const NON_OVERFLOW_COMPENSATION_5 = 320;
-const NON_OVERFLOW_COMPENSATION_4 = 64;
-// 满命溢出补偿（仅星琼）
 const OVERFLOW_COMPENSATION_5 = 800;
 const OVERFLOW_COMPENSATION_4 = 160;
 
@@ -640,22 +637,15 @@ async function saveConstellation(characterName, level) {
     }
 }
 
-// 处理角色获得：未满6命时提升命座+给予未溢出补偿；满6命时仅给予溢出补偿
 async function processCharacterObtain(characterName, starLevel) {
     const currentLevel = constellationsMap.get(characterName) || 0;
     if (currentLevel < 6) {
         const newLevel = currentLevel + 1;
         constellationsMap.set(characterName, newLevel);
         await saveConstellation(characterName, newLevel);
-        // 未满命：给予命座 + 星琼补偿（320/64）
-        const compensation = (starLevel === 5) ? NON_OVERFLOW_COMPENSATION_5 : NON_OVERFLOW_COMPENSATION_4;
-        starJade += compensation;
-        updateUI();
-        await saveAfterDraw([]);
-        showTip(`${characterName} 命座提升至 ${newLevel} 阶，并获得 ${compensation} 星琼补偿！`);
-        return { action: 'constellation', newLevel, compensation };
+        showTip(`${characterName} 命座提升至 ${newLevel} 阶！`);
+        return { action: 'constellation', newLevel };
     } else {
-        // 满命溢出：仅补偿（800/160），不再提升命座
         const compensation = (starLevel === 5) ? OVERFLOW_COMPENSATION_5 : OVERFLOW_COMPENSATION_4;
         starJade += compensation;
         updateUI();
@@ -1027,7 +1017,7 @@ async function performSingleDrawWithConstellation() {
     if (resultStar >= 4) {
         const res = await processCharacterObtain(resultName, resultStar);
         if (res.action === 'constellation') {
-            constellationMsg = `命座 ${res.newLevel} + ${res.compensation}星琼`;
+            constellationMsg = `命座 ${res.newLevel}`;
         } else if (res.action === 'overflow') {
             constellationMsg = `满命转化 ${res.compensation}星琼`;
         }
