@@ -51,7 +51,7 @@
         .action-buttons { display: flex; justify-content: flex-end; gap: 12px; flex-shrink: 0; align-items: center; }
         .action-btn { background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); border: 1px solid #ffbc6e; border-radius: 40px; padding: 6px 16px; font-size: 0.85rem; color: #ffdfaa; cursor: pointer; transition: 0.1s; display: flex; align-items: center; gap: 6px; }
         .action-btn:active { transform: scale(0.96); }
-        .settings-btn {
+        .info-btn, .settings-btn {
             width: 36px;
             height: 36px;
             border-radius: 50%;
@@ -66,7 +66,7 @@
             font-size: 1.2rem;
             transition: 0.1s;
         }
-        .settings-btn:active { transform: scale(0.96); }
+        .info-btn:active, .settings-btn:active { transform: scale(0.96); }
         .splash-img-container { flex: 1; display: flex; justify-content: center; align-items: center; min-height: 0; overflow: hidden; }
         .splash-img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: 36px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); background: #0b0719; }
         .splash-caption { text-align: center; color: #ffd9a5; font-size: 0.85rem; letter-spacing: 1px; font-weight: 500; flex-shrink: 0; }
@@ -147,7 +147,7 @@
             0% { opacity: 0.7; transform: scale(0.99); }
             100% { opacity: 1; transform: scale(1); }
         }
-        @media (max-width: 800px) { .landscape-wrapper { padding: 12px; gap: 12px; } .left-panel-scroll { padding: 12px; } .pool-name { font-size: 1.2rem; } .jade-amount { font-size: 0.9rem; } .ticket-amount { font-size: 0.85rem; } .gacha-btn { font-size: 0.85rem; padding: 8px 0; } .toast-notice { font-size: 0.75rem; padding: 6px 12px; white-space: normal; max-width: 70%; } .action-btn { font-size: 0.7rem; padding: 4px 12px; } .settings-btn { width: 30px; height: 30px; font-size: 1rem; } .splash-img { max-height: 35vh; } .uid-badge { font-size: 0.6rem; margin-bottom: 12px; } .stats-grid { grid-template-columns: 1fr; } .constellation-section { max-height: 180px; } }
+        @media (max-width: 800px) { .landscape-wrapper { padding: 12px; gap: 12px; } .left-panel-scroll { padding: 12px; } .pool-name { font-size: 1.2rem; } .jade-amount { font-size: 0.9rem; } .ticket-amount { font-size: 0.85rem; } .gacha-btn { font-size: 0.85rem; padding: 8px 0; } .toast-notice { font-size: 0.75rem; padding: 6px 12px; white-space: normal; max-width: 70%; } .action-btn { font-size: 0.7rem; padding: 4px 12px; } .info-btn, .settings-btn { width: 30px; height: 30px; font-size: 1rem; } .splash-img { max-height: 35vh; } .uid-badge { font-size: 0.6rem; margin-bottom: 12px; } .stats-grid { grid-template-columns: 1fr; } .constellation-section { max-height: 180px; } }
         .record-list::-webkit-scrollbar, .dialog-content::-webkit-scrollbar, .left-panel-scroll::-webkit-scrollbar, .constellation-section::-webkit-scrollbar, #statsModal .modal-body::-webkit-scrollbar { width: 4px; }
         .record-list::-webkit-scrollbar-track, .dialog-content::-webkit-scrollbar-track, .left-panel-scroll::-webkit-scrollbar-track, .constellation-section::-webkit-scrollbar-track, #statsModal .modal-body::-webkit-scrollbar-track { background: rgba(255,255,200,0.1); }
         .record-list::-webkit-scrollbar-thumb, .dialog-content::-webkit-scrollbar-thumb, .left-panel-scroll::-webkit-scrollbar-thumb, .constellation-section::-webkit-scrollbar-thumb, #statsModal .modal-body::-webkit-scrollbar-thumb { background: #ffbc6e; border-radius: 10px; }
@@ -156,6 +156,24 @@
         .login-loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(12px); z-index: 2000; display: flex; justify-content: center; align-items: center; flex-direction: column; color: #ffdfaa; font-size: 1.2rem; gap: 20px; }
         .login-loading .spinner { width: 50px; height: 50px; border: 4px solid rgba(255,200,100,0.3); border-top-color: #ffbc6e; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        /* 介绍弹窗内容样式 */
+        .info-content {
+            text-align: left;
+            line-height: 1.6;
+        }
+        .info-content p {
+            margin: 12px 0;
+        }
+        .info-content .highlight-gold {
+            color: gold;
+            font-weight: bold;
+        }
+        .info-content ul {
+            margin-left: 20px;
+        }
+        .info-content li {
+            margin: 8px 0;
+        }
     </style>
 </head>
 <body>
@@ -218,6 +236,7 @@
     <div class="right-panel">
         <div class="character-splash">
             <div class="action-buttons">
+                <div class="info-btn" id="infoBtn">?</div>
                 <div class="settings-btn" id="settingsBtn">⚙️</div>
                 <div class="action-btn" id="statsBtn">📊 统计</div>
                 <div class="action-btn" id="exchangeBtn">🎫 兑换</div>
@@ -283,7 +302,7 @@
 <div id="recordModal" class="modal-mask">
     <div class="record-modal">
         <div class="modal-header">
-            <span>📜 跃迁记录 (最多2000条)</span>
+            <span>📜 跃迁记录 (最多500条)</span>
             <button class="close-modal" id="closeModalBtn">✖</button>
         </div>
         <div id="recordList" class="record-list">
@@ -343,6 +362,33 @@
     </div>
 </div>
 
+<!-- 介绍弹窗 -->
+<div id="infoModal" class="modal-mask">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>❓ 抽卡规则说明</h3>
+            <button class="close-modal" id="closeInfoBtn">✖</button>
+        </div>
+        <div class="modal-body">
+            <div class="info-content">
+                <p><span class="highlight-gold">✨ 统计页面说明 ✨</span><br>
+                只有在 <strong>第一次获得某个角色</strong> 时，该角色才会出现在统计页面的“已获角色命座”列表中，并且角色的名字会以<span class="highlight-gold">金色高亮</span>显示（在统计弹窗中，角色名和命座等级均为金色）。</p>
+                <p><span class="highlight-gold">⭐ 重复获得角色（未满6命）⭐</span><br>
+                再次获得已经拥有的角色时，将提升该角色的命座等级，并额外获得星琼补偿：<br>
+                • 五星角色重复 → 补偿 <span style="color:orange;">320</span> 星琼<br>
+                • 四星角色重复 → 补偿 <span style="color:orange;">64</span> 星琼<br>
+                每提升1命，都会在抽卡结果中显示提升提示。</p>
+                <p><span class="highlight-gold">💰 满星魂溢出补偿（6命后）💰</span><br>
+                当角色已经达到<span class="highlight-gold">6命</span>后，再次获得该角色时，不再提升命座，自动转换为星琼补偿：<br>
+                • 五星角色重复 → 补偿 <span style="color:orange;">800</span> 星琼<br>
+                • 四星角色重复 → 补偿 <span style="color:orange;">160</span> 星琼<br>
+                补偿的星琼会直接添加到您的账户中，并在抽卡结果中显示转化提示。</p>
+                <p style="margin-top: 16px; text-align: center;">💡 祝您欧气满满，每抽都出金！</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="toastNotice" class="toast-notice"></div>
 
 <script>
@@ -370,11 +416,12 @@ const SOFT_PITY_START = 74;
 const COST_SINGLE_TICKET = 1;
 const COST_TEN_TICKET = 10;
 const EXCHANGE_RATE = 160;
-const OVERFLOW_COMPENSATION_5 = 1600;
+// 未满命补偿（命座+星琼）
+const NON_OVERFLOW_COMPENSATION_5 = 320;
+const NON_OVERFLOW_COMPENSATION_4 = 64;
+// 满命溢出补偿（仅星琼）
+const OVERFLOW_COMPENSATION_5 = 800;
 const OVERFLOW_COMPENSATION_4 = 160;
-
-// 历史记录最大保存条数
-const MAX_HISTORY = 2000;
 
 // 全局状态
 let currentUser = null;
@@ -527,6 +574,11 @@ const confirmAddTicketBtn = document.getElementById('confirmAddTicketBtn');
 const resetConstellationsBtn = document.getElementById('resetConstellationsBtn');
 const resetHistoryBtn = document.getElementById('resetHistoryBtn');
 
+// 介绍弹窗元素
+const infoModal = document.getElementById('infoModal');
+const infoBtn = document.getElementById('infoBtn');
+const closeInfoBtn = document.getElementById('closeInfoBtn');
+
 splashImg.onerror = () => { splashImg.src = "https://xiaochen1235789.github.io/images/changjinglu.webp"; };
 
 let toastTimeout = null;
@@ -588,15 +640,22 @@ async function saveConstellation(characterName, level) {
     }
 }
 
+// 处理角色获得：未满6命时提升命座+给予未溢出补偿；满6命时仅给予溢出补偿
 async function processCharacterObtain(characterName, starLevel) {
     const currentLevel = constellationsMap.get(characterName) || 0;
     if (currentLevel < 6) {
         const newLevel = currentLevel + 1;
         constellationsMap.set(characterName, newLevel);
         await saveConstellation(characterName, newLevel);
-        showTip(`${characterName} 命座提升至 ${newLevel} 阶！`);
-        return { action: 'constellation', newLevel };
+        // 未满命：给予命座 + 星琼补偿（320/64）
+        const compensation = (starLevel === 5) ? NON_OVERFLOW_COMPENSATION_5 : NON_OVERFLOW_COMPENSATION_4;
+        starJade += compensation;
+        updateUI();
+        await saveAfterDraw([]);
+        showTip(`${characterName} 命座提升至 ${newLevel} 阶，并获得 ${compensation} 星琼补偿！`);
+        return { action: 'constellation', newLevel, compensation };
     } else {
+        // 满命溢出：仅补偿（800/160），不再提升命座
         const compensation = (starLevel === 5) ? OVERFLOW_COMPENSATION_5 : OVERFLOW_COMPENSATION_4;
         starJade += compensation;
         updateUI();
@@ -727,41 +786,6 @@ function updateCountdown() {
 setInterval(updateCountdown, 1000);
 updateCountdown();
 
-// 确保历史记录不超过 MAX_HISTORY 条（删除数据库中最旧的记录）
-async function trimHistoryToLimit() {
-    if (!currentUser) return;
-    try {
-        // 获取当前总记录数
-        const { count, error: countError } = await supabaseClient
-            .from('gacha_history')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', currentUser.id);
-        if (countError) throw countError;
-        if (count > MAX_HISTORY) {
-            const excess = count - MAX_HISTORY;
-            // 查询需要删除的最旧记录ID
-            const { data: toDelete, error: selectError } = await supabaseClient
-                .from('gacha_history')
-                .select('id')
-                .eq('user_id', currentUser.id)
-                .order('created_at', { ascending: true })
-                .limit(excess);
-            if (selectError) throw selectError;
-            if (toDelete && toDelete.length) {
-                const idsToDelete = toDelete.map(r => r.id);
-                const { error: delError } = await supabaseClient
-                    .from('gacha_history')
-                    .delete()
-                    .in('id', idsToDelete);
-                if (delError) throw delError;
-                console.log(`已删除 ${idsToDelete.length} 条最旧历史记录，保持总数不超过 ${MAX_HISTORY}`);
-            }
-        }
-    } catch (err) {
-        console.error('清理历史记录失败:', err);
-    }
-}
-
 async function loadUserData() {
     if (!currentUser) return;
     if (isLoadingData) return;
@@ -804,19 +828,19 @@ async function loadUserData() {
         fourStarPity = stateData.four_star_pity;
         guaranteedUp = stateData.guaranteed_up;
 
-        // 确保历史记录总数不超过 MAX_HISTORY（删除多余旧记录）
-        await trimHistoryToLimit();
-
-        // 加载最新的 MAX_HISTORY 条记录
-        let { data: historyData, error: histErr } = await supabaseClient
-            .from('gacha_history')
-            .select('item_name, star_level, created_at')
-            .eq('user_id', currentUser.id)
-            .order('created_at', { ascending: false })
-            .limit(MAX_HISTORY);
-        if (!histErr) {
-            gachaHistory = (historyData || []).map(h => ({ name: h.item_name, star: h.star_level, time: h.created_at }));
-        } else {
+        try {
+            let { data: historyData, error: histErr } = await supabaseClient
+                .from('gacha_history')
+                .select('item_name, star_level, created_at')
+                .eq('user_id', currentUser.id)
+                .order('created_at', { ascending: false })
+                .limit(500);
+            if (!histErr) {
+                gachaHistory = (historyData || []).map(h => ({ name: h.item_name, star: h.star_level, time: h.created_at }));
+            } else {
+                gachaHistory = [];
+            }
+        } catch (e) {
             gachaHistory = [];
         }
 
@@ -844,6 +868,7 @@ async function loadUserData() {
         // 设置管理员权限
         if (currentUser.id === ADMIN_USER_ID) {
             isAdmin = true;
+            // 启用管理员按钮
             resetHistoryBtn.disabled = false;
             resetHistoryBtn.style.opacity = '1';
             resetHistoryBtn.style.cursor = 'pointer';
@@ -852,6 +877,7 @@ async function loadUserData() {
             resetConstellationsBtn.style.cursor = 'pointer';
         } else {
             isAdmin = false;
+            // 禁用管理员按钮
             resetHistoryBtn.disabled = true;
             resetHistoryBtn.style.opacity = '0.5';
             resetHistoryBtn.style.cursor = 'not-allowed';
@@ -898,20 +924,6 @@ async function saveAfterDraw(resultList) {
                 created_at: new Date().toISOString()
             }));
             await supabaseClient.from('gacha_history').insert(historyInserts);
-            // 插入后清理超出 MAX_HISTORY 的旧记录
-            await trimHistoryToLimit();
-            // 重新加载最新的 MAX_HISTORY 条记录以保持前端数组一致
-            const { data: freshHistory, error: freshErr } = await supabaseClient
-                .from('gacha_history')
-                .select('item_name, star_level, created_at')
-                .eq('user_id', currentUser.id)
-                .order('created_at', { ascending: false })
-                .limit(MAX_HISTORY);
-            if (!freshErr && freshHistory) {
-                gachaHistory = freshHistory.map(h => ({ name: h.item_name, star: h.star_level, time: h.created_at }));
-                renderHistoryModal();
-                rebuildStatsFromHistory();
-            }
         }
     } catch (err) {
         console.error('保存数据失败:', err);
@@ -921,7 +933,7 @@ async function saveAfterDraw(resultList) {
 
 function addHistoryRecord(itemName, starLevel) {
     gachaHistory.unshift({ name: itemName, star: starLevel });
-    if (gachaHistory.length > MAX_HISTORY) gachaHistory.pop();
+    if (gachaHistory.length > 500) gachaHistory.pop();
     renderHistoryModal();
 }
 
@@ -1015,7 +1027,7 @@ async function performSingleDrawWithConstellation() {
     if (resultStar >= 4) {
         const res = await processCharacterObtain(resultName, resultStar);
         if (res.action === 'constellation') {
-            constellationMsg = `命座 ${res.newLevel}`;
+            constellationMsg = `命座 ${res.newLevel} + ${res.compensation}星琼`;
         } else if (res.action === 'overflow') {
             constellationMsg = `满命转化 ${res.compensation}星琼`;
         }
@@ -1166,7 +1178,9 @@ async function resetConstellations() {
     }
     if (!confirm('⚠️ 确定要清空所有角色命座数据吗？此操作不可恢复！')) return;
     if (!currentUser) return;
+    // 清空数据库
     await supabaseClient.from('user_constellations').delete().eq('user_id', currentUser.id);
+    // 清空本地
     constellationsMap.clear();
     updateStatsModalContent();
     showTip('所有命座已重置');
@@ -1178,16 +1192,19 @@ async function resetHistory() {
     }
     if (!confirm('⚠️ 确定要清空所有抽卡记录和统计吗？此操作不可恢复！')) return;
     if (!currentUser) return;
+    // 清空数据库历史
     const { error } = await supabaseClient.from('gacha_history').delete().eq('user_id', currentUser.id);
     if (error) {
         console.error('删除历史记录失败:', error);
         showTip('删除失败：' + error.message);
         return;
     }
+    // 清空本地
     gachaHistory = [];
     renderHistoryModal();
     resetStatistics();
     showTip('抽卡记录已清空');
+    // 可选：重新加载一次数据确认
     await loadUserData();
 }
 
@@ -1247,11 +1264,17 @@ function openStatsModal() {
 function closeStatsModal() {
     statsModal.classList.remove('active');
 }
+function openInfoModal() {
+    infoModal.classList.add('active');
+}
+function closeInfoModal() {
+    infoModal.classList.remove('active');
+}
 
 function preventScrollRefresh() {
     document.body.addEventListener('touchmove', function(e) {
         const target = e.target;
-        const isScrollable = target.closest('.record-list') || target.closest('.dialog-content') || target.closest('.left-panel-scroll') || target.closest('#statsModal .modal-body') || target.closest('#settingsModal .modal-body');
+        const isScrollable = target.closest('.record-list') || target.closest('.dialog-content') || target.closest('.left-panel-scroll') || target.closest('#statsModal .modal-body') || target.closest('#settingsModal .modal-body') || target.closest('#infoModal .modal-body');
         if (!isScrollable) e.preventDefault();
     }, { passive: false });
 }
@@ -1296,6 +1319,12 @@ function bindEvents() {
     confirmExchangeBtn.addEventListener('click', performExchange);
     exchangeAmountInput.addEventListener('input', updateExchangePreview);
     
+    // 介绍弹窗
+    infoBtn.addEventListener('click', openInfoModal);
+    closeInfoBtn.addEventListener('click', closeInfoModal);
+    infoModal.addEventListener('click', (e) => { if(e.target === infoModal) closeInfoModal(); });
+    
+    // 视觉切换按钮
     const switchBtn = document.getElementById('fakeSwitchBtn');
     if (switchBtn) {
         switchBtn.addEventListener('click', () => {
@@ -1304,6 +1333,7 @@ function bindEvents() {
         });
     }
     
+    // 设置按钮
     const settingsBtn = document.getElementById('settingsBtn');
     if (settingsBtn) {
         settingsBtn.addEventListener('click', openSettingsModal);
