@@ -7,24 +7,22 @@
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://xiaochen1235789.github.io/styles/main.css">
-    <!-- Cropper.js 样式与脚本 -->
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
     <style>
-        /* ========== 核心样式（精简优化） ========== */
         :root {
             --bg: #121212;
             --card-bg: #1e3a2f;
             --card-bg-hover: #284a3c;
             --text-main: #e0e0e0;
             --text-highlight: #81c784;
-            --text-secondary: #99aabb;
+            --text-secondary: #b0c4d0;
             --radius: 12px;
+            --gap: 16px;
             --special-color: #ffd700;
             --border-color: #3d725f;
-            --shadow: 0 8px 24px rgba(0,0,0,0.3);
-            --shadow-hover: 0 12px 32px rgba(0,0,0,0.4);
+            --shadow: 0 8px 20px rgba(0,0,0,0.25);
+            --shadow-hover: 0 12px 28px rgba(0,0,0,0.35);
             --transition-fast: 0.2s ease;
             --transition-normal: 0.3s ease;
             --supabase-blue: #3ecf8e;
@@ -54,7 +52,8 @@
             width: 100%;
             height: 100%;
             background: radial-gradient(circle at 20% 50%, rgba(30, 58, 47, 0.2) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 20%, rgba(62, 207, 142, 0.15) 0%, transparent 50%);
+                        radial-gradient(circle at 80% 20%, rgba(62, 207, 142, 0.12) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 80%, rgba(138, 75, 175, 0.08) 0%, transparent 50%);
             z-index: -1;
             pointer-events: none;
         }
@@ -132,7 +131,7 @@
             overflow: hidden;
             position: relative;
             z-index: 2;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 0 20px rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
             transition: var(--transition-normal);
         }
         
@@ -196,26 +195,8 @@
             margin-bottom: 12px;
             display: flex;
             align-items: center;
-            flex-wrap: wrap;
             gap: 15px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-        
-        .user-days-badge {
-            font-size: 1rem;
-            background: rgba(62, 207, 142, 0.2);
-            backdrop-filter: blur(4px);
-            padding: 6px 12px;
-            border-radius: 40px;
-            font-weight: 500;
-            color: #c8f0d0;
-            border-left: 3px solid var(--text-highlight);
-            letter-spacing: 1px;
-        }
-        
-        .user-days-badge i {
-            margin-right: 6px;
-            font-size: 0.9rem;
         }
         
         .username-edit {
@@ -245,7 +226,7 @@
         }
         
         .user-bio {
-            color: #a8d0b9;
+            color: #c8e6d9;
             margin-top: 15px;
             max-width: 600px;
             line-height: 1.6;
@@ -269,6 +250,77 @@
         
         .edit-bio:hover {
             background: rgba(129, 199, 132, 0.1);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            transition: all var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-hover);
+            border-color: var(--text-highlight);
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, transparent, rgba(129, 199, 132, 0.05), transparent);
+            opacity: 0;
+            transition: var(--transition-normal);
+        }
+        
+        .stat-card:hover::before {
+            opacity: 1;
+        }
+        
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(129, 199, 132, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+            color: var(--text-highlight);
+            transition: var(--transition-normal);
+        }
+        
+        .stat-card:hover .stat-icon {
+            transform: scale(1.1) rotate(10deg);
+            background: rgba(129, 199, 132, 0.2);
+        }
+        
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: var(--text-highlight);
+            margin-bottom: 8px;
+        }
+        
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
         }
         
         .settings-section {
@@ -328,6 +380,7 @@
             background: var(--card-bg-hover);
             border-color: var(--text-highlight);
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
         
         .btn-primary {
@@ -335,6 +388,10 @@
             color: var(--bg);
             border-color: var(--text-highlight);
             font-weight: 600;
+        }
+        
+        .btn-primary:hover {
+            background: #6ab56f;
         }
         
         .settings-item {
@@ -378,13 +435,13 @@
         }
         
         .danger-zone::before {
-            content: '⚠';
+            content: '⚠️';
             position: absolute;
-            top: -20px;
-            right: -20px;
-            font-size: 8rem;
-            color: rgba(248, 113, 113, 0.1);
-            transform: rotate(15deg);
+            bottom: -10px;
+            right: -10px;
+            font-size: 5rem;
+            opacity: 0.08;
+            pointer-events: none;
         }
         
         .danger-title {
@@ -413,6 +470,7 @@
         .danger-btn:hover {
             background: rgba(248, 113, 113, 0.1);
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(248, 113, 113, 0.2);
         }
         
         @media (max-width: 768px) {
@@ -422,8 +480,14 @@
             .avatar-container { width: 100px; height: 100px; }
             .avatar { width: 100px; height: 100px; }
             .username { font-size: 1.8rem; }
-            .user-days-badge { font-size: 0.8rem; padding: 4px 10px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .settings-item { flex-direction: column; align-items: flex-start; gap: 20px; }
+            .user-info { width: 100%; }
+        }
+        
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .section-header { flex-direction: column; align-items: flex-start; gap: 15px; }
         }
         
         .loading {
@@ -453,8 +517,8 @@
             position: fixed;
             bottom: 40px;
             right: 40px;
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
             background: var(--text-highlight);
             color: var(--bg);
             border: none;
@@ -463,7 +527,7 @@
             display: none;
             align-items: center;
             justify-content: center;
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             box-shadow: var(--shadow);
             transition: all var(--transition-normal);
             z-index: 999;
@@ -473,7 +537,6 @@
             transform: translateY(-5px) scale(1.1);
         }
         
-        /* 模态框通用 */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -563,8 +626,16 @@
         .btn-cancel { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); }
         .btn-save { background: var(--text-highlight); color: var(--bg); border: none; }
         
-        /* 裁剪专用 */
-        .crop-buttons { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+        .cropper-container {
+            margin: 0 auto;
+            max-height: 60vh;
+        }
+        .crop-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
         
         .top-nav {
             background: var(--card-bg);
@@ -572,10 +643,11 @@
             display: flex;
             align-items: center;
             gap: 20px;
-            border-bottom: 2px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
             position: sticky;
             top: 0;
             z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         .nav-title { font-size: 1.5rem; font-weight: bold; color: var(--text-highlight); margin-right: auto; }
         .nav-link { color: var(--text-main); text-decoration: none; padding: 8px 16px; border-radius: var(--radius); transition: var(--transition-fast); }
@@ -610,6 +682,11 @@
             transition: transform 0.4s ease;
             max-width: 300px;
             backdrop-filter: blur(10px);
+            font-weight: 500;
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -634,17 +711,16 @@
                         </div>
                     </div>
                     <div class="user-info">
-                        <div class="username">
-                            <span id="displayUsername">加载中...</span>
-                            <span class="user-days-badge"><i class="fas fa-calendar-alt"></i> 已来到六哥荣耀 <span id="userDaysInline">0</span> 天</span>
-                            <button class="username-edit" onclick="openUsernameModal()"><i class="fas fa-edit"></i></button>
-                        </div>
+                        <div class="username"><span id="displayUsername">加载中...</span><button class="username-edit" onclick="openUsernameModal()"><i class="fas fa-edit"></i></button></div>
                         <div class="user-email" id="userEmail">加载中...</div>
                         <div class="user-bio"><span id="userBio">这个人很懒，什么都没有写...</span><button class="edit-bio" onclick="openBioModal()">编辑</button></div>
                     </div>
                 </div>
             </div>
-            <!-- 统计区域已移除（浏览次数已删除，注册天数移至用户名旁） -->
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-icon"><i class="fas fa-user"></i></div><div class="stat-value" id="userDays">0</div><div class="stat-label">已注册天数</div></div>
+                <div class="stat-card"><div class="stat-icon"><i class="fas fa-eye"></i></div><div class="stat-value" id="viewCount">0</div><div class="stat-label">浏览次数</div></div>
+            </div>
             <div class="section-header"><div class="section-title"><i class="fas fa-cog"></i><span>账号设置</span></div></div>
             <div class="settings-section">
                 <div class="settings-item"><div><div class="settings-label">修改密码</div><div class="settings-desc">定期修改密码可以提高账号安全性</div></div><button class="btn" onclick="openPasswordModal()"><i class="fas fa-key"></i>修改密码</button></div>
@@ -654,83 +730,113 @@
             </div>
         </div>
     </div>
-    
     <!-- 裁剪头像模态框 -->
     <div class="modal-overlay" id="cropModal">
         <div class="modal" style="max-width: 700px;">
-            <div class="modal-header"><div class="modal-title"><i class="fas fa-crop-alt"></i> 裁剪头像</div><button class="modal-close" id="closeCropModalBtn">&times;</button></div>
-            <div class="form-group"><div style="background: #1a1f2e; border-radius: 8px; overflow: hidden;"><img id="cropImage" style="max-width: 100%; display: block;" alt="裁剪预览"></div></div>
-            <div class="crop-buttons"><button class="btn btn-cancel" id="cancelCropBtn">取消</button><button class="btn btn-primary" id="confirmCropBtn"><i class="fas fa-check"></i> 确认裁剪并上传</button></div>
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-crop-alt"></i> 裁剪头像</div>
+                <button class="modal-close" id="closeCropModalBtn">&times;</button>
+            </div>
+            <div class="form-group">
+                <div style="background: #1a1f2e; border-radius: 8px; overflow: hidden;">
+                    <img id="cropImage" style="max-width: 100%; display: block;" alt="裁剪预览">
+                </div>
+            </div>
+            <div class="crop-buttons">
+                <button class="btn btn-cancel" id="cancelCropBtn">取消</button>
+                <button class="btn btn-primary" id="confirmCropBtn"><i class="fas fa-check"></i> 确认裁剪并上传</button>
+            </div>
         </div>
     </div>
 
     <!-- 其他模态框 -->
-    <div class="modal-overlay" id="usernameModal"><div class="modal"><div class="modal-header"><div class="modal-title">修改用户名</div><button class="modal-close closeModalBtn" data-modal="usernameModal">&times;</button></div><div class="form-group"><label class="form-label">新用户名</label><input type="text" class="form-input" id="newUsername" maxlength="20"></div><div class="form-actions"><button class="btn btn-cancel closeModalBtn" data-modal="usernameModal">取消</button><button class="btn btn-save" id="saveUsername">保存</button></div></div></div>
-    <div class="modal-overlay" id="bioModal"><div class="modal"><div class="modal-header"><div class="modal-title">修改个人简介</div><button class="modal-close closeModalBtn" data-modal="bioModal">&times;</button></div><div class="form-group"><label class="form-label">个人简介</label><textarea class="form-textarea" id="newBio" maxlength="200"></textarea></div><div class="form-actions"><button class="btn btn-cancel closeModalBtn" data-modal="bioModal">取消</button><button class="btn btn-save" id="saveBio">保存</button></div></div></div>
-    <div class="modal-overlay" id="passwordModal"><div class="modal"><div class="modal-header"><div class="modal-title">修改密码</div><button class="modal-close closeModalBtn" data-modal="passwordModal">&times;</button></div><div class="form-group"><label class="form-label">当前密码</label><input type="password" class="form-input" id="currentPassword"></div><div class="form-group"><label class="form-label">新密码</label><input type="password" class="form-input" id="newPassword"></div><div class="form-group"><label class="form-label">确认新密码</label><input type="password" class="form-input" id="confirmPassword"></div><div class="form-actions"><button class="btn btn-cancel closeModalBtn" data-modal="passwordModal">取消</button><button class="btn btn-save" id="savePassword">更新密码</button></div></div></div>
-    <div class="modal-overlay" id="deleteAccountModal"><div class="modal"><div class="modal-header"><div class="modal-title" style="color:#f87171;"><i class="fas fa-exclamation-triangle"></i>确认注销账号</div><button class="modal-close closeModalBtn" data-modal="deleteAccountModal">&times;</button></div><div><p>请输入您的邮箱地址以确认：</p></div><div class="form-group"><input type="email" class="form-input" id="confirmEmail" placeholder="输入您的邮箱地址"></div><div class="form-actions"><button class="btn btn-cancel closeModalBtn" data-modal="deleteAccountModal">取消</button><button class="btn danger-btn" id="confirmDeleteAccount">确认注销</button></div></div></div>
+    <div class="modal-overlay" id="usernameModal"><div class="modal"><div class="modal-header"><div class="modal-title">修改用户名</div><button class="modal-close close-modal-btn" data-modal="usernameModal">&times;</button></div><div class="form-group"><label class="form-label">新用户名</label><input type="text" class="form-input" id="newUsername" maxlength="20"></div><div class="form-actions"><button class="btn btn-cancel close-modal-btn" data-modal="usernameModal">取消</button><button class="btn btn-save" id="saveUsername">保存</button></div></div></div>
+    <div class="modal-overlay" id="bioModal"><div class="modal"><div class="modal-header"><div class="modal-title">修改个人简介</div><button class="modal-close close-modal-btn" data-modal="bioModal">&times;</button></div><div class="form-group"><label class="form-label">个人简介</label><textarea class="form-textarea" id="newBio" maxlength="200"></textarea></div><div class="form-actions"><button class="btn btn-cancel close-modal-btn" data-modal="bioModal">取消</button><button class="btn btn-save" id="saveBio">保存</button></div></div></div>
+    <div class="modal-overlay" id="passwordModal"><div class="modal"><div class="modal-header"><div class="modal-title">修改密码</div><button class="modal-close close-modal-btn" data-modal="passwordModal">&times;</button></div><div class="form-group"><label class="form-label">当前密码</label><input type="password" class="form-input" id="currentPassword"></div><div class="form-group"><label class="form-label">新密码</label><input type="password" class="form-input" id="newPassword"></div><div class="form-group"><label class="form-label">确认新密码</label><input type="password" class="form-input" id="confirmPassword"></div><div class="form-actions"><button class="btn btn-cancel close-modal-btn" data-modal="passwordModal">取消</button><button class="btn btn-save" id="savePassword">更新密码</button></div></div></div>
+    <div class="modal-overlay" id="deleteAccountModal"><div class="modal"><div class="modal-header"><div class="modal-title" style="color:#f87171;"><i class="fas fa-exclamation-triangle"></i>确认注销账号</div><button class="modal-close close-modal-btn" data-modal="deleteAccountModal">&times;</button></div><div><p>请输入您的邮箱地址以确认：</p></div><div class="form-group"><input type="email" class="form-input" id="confirmEmail" placeholder="输入您的邮箱地址"></div><div class="form-actions"><button class="btn btn-cancel close-modal-btn" data-modal="deleteAccountModal">取消</button><button class="btn danger-btn" id="confirmDeleteAccount">确认注销</button></div></div></div>
     <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fas fa-chevron-up"></i></button>
 
     <script>
-        // ---------- 核心变量 ----------
         let supabaseClient = null, currentUser = null, userProfile = null;
         let cropper = null;
+        let selectedFile = null;
+        let isUploading = false;  // 防重复上传标志
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
         
-        // 辅助函数
-        function $(id) { return document.getElementById(id); }
+        function safeSetText(id, text, def='') { let e=document.getElementById(id); if(e) e.textContent=text||def; }
+        function safeGetElement(id) { return document.getElementById(id); }
+        
+        let notificationTimeout = null;
         function showNotification(msg, type='info') {
-            let n = $('notification');
-            if(!n){ n = document.createElement('div'); n.id='notification'; document.body.appendChild(n); }
-            n.textContent = msg; 
-            n.style.background = type==='error'?'#f87171':type==='success'?'#10b981':'#3b82f6';
-            n.style.transform = 'translateX(0)'; 
-            setTimeout(()=>{ n.style.transform = 'translateX(120%)'; }, 3000);
+            let n = safeGetElement('notification');
+            if(!n) { n = document.createElement('div'); n.id = 'notification'; document.body.appendChild(n); }
+            n.textContent = msg;
+            n.style.background = type==='error' ? '#f87171' : (type==='success' ? '#10b981' : '#3b82f6');
+            n.style.color = '#fff';
+            n.style.transform = 'translateX(0)';
+            if(notificationTimeout) clearTimeout(notificationTimeout);
+            notificationTimeout = setTimeout(() => { if(n) n.style.transform = 'translateX(120%)'; }, 3000);
         }
-        function showSyncNotice() { let sn=$('syncNotice'); if(sn){ sn.classList.add('show'); setTimeout(()=>sn.classList.remove('show'),3000); } }
+        
+        function showSyncNotice() { 
+            let sn = safeGetElement('syncNotice'); 
+            if(sn) { sn.classList.add('show'); setTimeout(()=>sn.classList.remove('show'), 3000); } 
+        }
+        
         function cacheUserProfile(username, avatarUrl) { 
-            if(username) localStorage.setItem('cachedUsername',username); 
-            if(avatarUrl) localStorage.setItem('cachedAvatar',avatarUrl); 
-            localStorage.setItem('profileLastUpdated',Date.now()); 
-            if(window.opener && !window.opener.closed) window.opener.postMessage({type:'PROFILE_UPDATED',username,avatarUrl},'*'); 
+            if(username) localStorage.setItem('cachedUsername', username); 
+            if(avatarUrl) localStorage.setItem('cachedAvatar', avatarUrl); 
+            localStorage.setItem('profileLastUpdated', Date.now()); 
+            if(window.opener && !window.opener.closed) window.opener.postMessage({type:'PROFILE_UPDATED', username, avatarUrl}, '*'); 
             showSyncNotice(); 
         }
+        
         function updateAvatarDisplay(imageUrl) {
-            const avatarDiv = $('userAvatar');
+            const avatarDiv = safeGetElement('userAvatar');
             if(!avatarDiv) return;
-            if(imageUrl && imageUrl.trim()!==''){
-                avatarDiv.innerHTML = `<img src="${imageUrl}" alt="头像" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null;this.style.display='none';document.getElementById('avatarPlaceholder').style.display='flex';">`;
-                const placeholder = $('avatarPlaceholder');
-                if(placeholder) placeholder.style.display = 'none';
+            if(imageUrl && imageUrl.trim() !== '') {
+                avatarDiv.innerHTML = `<img src="${imageUrl}" alt="头像" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">`;
+                // 重新创建占位符元素以便后续可能使用
+                const newPlaceholder = document.createElement('div');
+                newPlaceholder.className = 'avatar-placeholder';
+                newPlaceholder.id = 'avatarPlaceholder';
+                newPlaceholder.style.display = 'none';
+                newPlaceholder.textContent = (userProfile?.username || currentUser?.email?.charAt(0) || 'U').charAt(0).toUpperCase();
+                avatarDiv.appendChild(newPlaceholder);
             } else {
                 const letter = (userProfile?.username || currentUser?.email?.charAt(0) || 'U').charAt(0).toUpperCase();
                 avatarDiv.innerHTML = `<div class="avatar-placeholder" id="avatarPlaceholder" style="display:flex;">${letter}</div>`;
             }
         }
+        
         function updateNavbar() {
-            const navDiv = $('userNavSection'); if(!navDiv) return;
+            const navDiv = safeGetElement('userNavSection'); 
+            if(!navDiv) return;
             const username = userProfile?.username || currentUser?.email?.split('@')[0] || '用户';
             const avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
             const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">` : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--supabase-blue),var(--supabase-purple));display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${username.charAt(0).toUpperCase()}</div>`;
             navDiv.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">${avatarHtml}<span style="color:var(--text-highlight);">${username}</span><button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:var(--radius);cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
-            $('logoutBtn')?.addEventListener('click', async()=>{ await supabaseClient.auth.signOut(); localStorage.removeItem('cachedUsername');localStorage.removeItem('cachedAvatar'); window.location.href='index.html'; });
+            document.getElementById('logoutBtn')?.addEventListener('click', async() => { await supabaseClient.auth.signOut(); localStorage.removeItem('cachedUsername'); localStorage.removeItem('cachedAvatar'); window.location.href = 'index.html'; });
         }
         
-        // 头像存储清理
         async function deleteOldAvatarFiles(userId) {
             try {
-                const { data: files } = await supabaseClient.storage.from('avatars').list(userId);
-                if(!files || files.length === 0) return;
-                const paths = files.map(f=>`${userId}/${f.name}`);
+                const { data: files, error } = await supabaseClient.storage.from('avatars').list(userId);
+                if(error || !files || files.length === 0) return;
+                const paths = files.map(f => `${userId}/${f.name}`);
                 if(paths.length) await supabaseClient.storage.from('avatars').remove(paths);
-            } catch(e){ console.warn(e); }
+            } catch(e) { console.warn('删除旧头像失败', e); }
         }
         
-        // 上传裁剪图片
         async function uploadCroppedImage(blob) {
             if(!currentUser) { showNotification('用户未登录','error'); return false; }
-            const fileName = `avatar_${Date.now()}.png`;
+            if(isUploading) { showNotification('正在上传中，请稍后','error'); return false; }
+            isUploading = true;
+            const confirmBtn = document.getElementById('confirmCropBtn');
+            if(confirmBtn) confirmBtn.disabled = true;
+            const ext = 'png';
+            const fileName = `avatar_${Date.now()}.${ext}`;
             const filePath = `${currentUser.id}/${fileName}`;
             try {
                 showNotification('正在上传新头像...','info');
@@ -747,10 +853,39 @@
                 updateNavbar();
                 showNotification('头像上传成功','success');
                 return true;
-            } catch(err) { showNotification('上传失败: '+err.message,'error'); return false; }
+            } catch(err) {
+                console.error(err);
+                showNotification('上传失败: '+err.message,'error');
+                return false;
+            } finally {
+                isUploading = false;
+                if(confirmBtn) confirmBtn.disabled = false;
+            }
         }
         
-        // 裁剪流程
+        function initCropperModal(file) {
+            const img = document.getElementById('cropImage');
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                img.src = e.target.result;
+                if(cropper) cropper.destroy();
+                img.onload = () => {
+                    cropper = new Cropper(img, {
+                        aspectRatio: 1,
+                        viewMode: 1,
+                        dragMode: 'move',
+                        cropBoxMovable: true,
+                        cropBoxResizable: true,
+                        background: false,
+                        autoCropArea: 0.8,
+                        responsive: true,
+                    });
+                    openModal('cropModal');
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+        
         window.openAvatarUpload = function() {
             const input = document.createElement('input');
             input.type = 'file';
@@ -758,140 +893,211 @@
             input.onchange = (e) => {
                 const file = e.target.files[0];
                 if(!file) return;
-                if(file.size > 5*1024*1024) { showNotification('图片大小不能超过5MB','error'); return; }
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const img = $('cropImage');
-                    img.src = ev.target.result;
-                    if(cropper) cropper.destroy();
-                    img.onload = () => {
-                        cropper = new Cropper(img, { aspectRatio:1, viewMode:1, dragMode:'move', cropBoxMovable:true, cropBoxResizable:true, autoCropArea:0.8 });
-                        openModal('cropModal');
-                    };
-                };
-                reader.readAsDataURL(file);
+                if(file.size > 5 * 1024 * 1024) { showNotification('图片大小不能超过5MB','error'); return; }
+                const validTypes = ['image/jpeg','image/png','image/gif','image/webp'];
+                if(!validTypes.includes(file.type)){ showNotification('仅支持JPG/PNG/GIF/WEBP格式','error'); return; }
+                selectedFile = file;
+                initCropperModal(file);
                 input.remove();
             };
+            input.oncancel = () => { input.remove(); };
             document.body.appendChild(input);
             input.click();
         };
+        
         async function confirmCropAndUpload() {
-            if(!cropper) return;
-            const canvas = cropper.getCroppedCanvas({ width:500, height:500, imageSmoothingEnabled:true });
-            if(!canvas) { showNotification('裁剪失败','error'); return; }
+            if(!cropper) { showNotification('裁剪器未初始化','error'); return; }
+            const canvas = cropper.getCroppedCanvas({ width: 500, height: 500, imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
+            if(!canvas) { showNotification('无法获取裁剪区域','error'); return; }
             canvas.toBlob(async (blob) => {
-                if(!blob) return;
+                if(!blob) { showNotification('生成图片失败','error'); return; }
                 closeModal('cropModal');
                 await uploadCroppedImage(blob);
                 if(cropper) { cropper.destroy(); cropper = null; }
             }, 'image/png', 0.92);
         }
-        function cancelCrop() { if(cropper){ cropper.destroy(); cropper=null; } closeModal('cropModal'); }
         
-        // 加载用户资料（天数内联）
-        async function loadUserProfile() {
-            const { data: profile, error } = await supabaseClient.from('user_profiles').select('*').eq('id',currentUser.id).single();
-            if(error && error.code==='PGRST116'){ 
-                await supabaseClient.from('user_profiles').insert({ id:currentUser.id, username:currentUser.email.split('@')[0], bio:'这个人很懒，什么都没有写...' }); 
-                return loadUserProfile(); 
+        function cancelCrop() {
+            if(cropper) { cropper.destroy(); cropper = null; }
+            closeModal('cropModal');
+        }
+        
+        async function loadUserProfile(retryCount = 0) {
+            const { data: profile, error } = await supabaseClient.from('user_profiles').select('*').eq('id', currentUser.id).single();
+            if(error && error.code === 'PGRST116') {
+                // 记录不存在，尝试创建
+                const { error: insertError } = await supabaseClient.from('user_profiles').insert({ 
+                    id: currentUser.id, 
+                    username: currentUser.email.split('@')[0], 
+                    bio: '这个人很懒，什么都没有写...' 
+                });
+                if(insertError && retryCount < 2) {
+                    setTimeout(() => loadUserProfile(retryCount + 1), 500);
+                    return;
+                } else if(insertError) {
+                    showNotification('创建用户资料失败，请刷新重试', 'error');
+                    return;
+                }
+                return loadUserProfile(retryCount + 1);
             }
-            if(profile){
+            if(profile) {
                 userProfile = profile;
                 const username = profile.username || currentUser.email.split('@')[0];
-                $('displayUsername').innerText = username;
-                $('userEmail').innerText = currentUser.email;
-                $('userBio').innerText = profile.bio || '这个人很懒，什么都没有写...';
-                $('createdAt').innerText = new Date(currentUser.created_at).toLocaleString('zh-CN');
+                safeSetText('displayUsername', username);
+                safeSetText('userEmail', currentUser.email);
+                safeSetText('userBio', profile.bio || '这个人很懒，什么都没有写...');
+                safeSetText('createdAt', new Date(currentUser.created_at).toLocaleString('zh-CN'));
                 const days = Math.floor((new Date() - new Date(currentUser.created_at)) / (1000*3600*24));
-                $('userDaysInline').innerText = days;
-                if(profile.avatar_url && profile.avatar_url.trim()!==''){
+                safeSetText('userDays', days);
+                if(profile.avatar_url && profile.avatar_url.trim() !== '') {
                     localStorage.setItem('userAvatar', profile.avatar_url);
                     updateAvatarDisplay(profile.avatar_url);
-                } else { updateAvatarDisplay(null); }
+                } else {
+                    localStorage.removeItem('userAvatar');
+                    updateAvatarDisplay(null);
+                }
                 cacheUserProfile(username, profile.avatar_url);
                 updateNavbar();
             }
         }
         
-        async function updateLastLogin() {
-            await supabaseClient.from('user_stats').update({ last_login:new Date().toISOString() }).eq('user_id',currentUser.id);
-            $('lastLogin').innerText = new Date().toLocaleString('zh-CN');
+        async function loadUserStats() {
+            const { data:stats } = await supabaseClient.from('user_stats').select('view_count').eq('user_id', currentUser.id).single();
+            if(stats) safeSetText('viewCount', stats.view_count || 0);
         }
         
-        // 账户操作
+        async function updateLastLogin() {
+            const { error } = await supabaseClient.from('user_stats').upsert({ 
+                user_id: currentUser.id, 
+                last_login: new Date().toISOString(),
+                view_count: 0 
+            }, { onConflict: 'user_id' });
+            if(!error) safeSetText('lastLogin', new Date().toLocaleString('zh-CN'));
+        }
+        
         async function updateUsername() {
-            const newName = $('newUsername').value.trim();
-            if(!newName || newName.length<2 || newName.length>20){ showNotification('用户名长度2-20字符','error'); return; }
+            const newName = document.getElementById('newUsername').value.trim();
+            if(!newName || newName.length < 2 || newName.length > 20) { showNotification('用户名长度2-20字符','error'); return; }
             try {
-                await supabaseClient.auth.updateUser({ data:{ username:newName } });
-                await supabaseClient.from('user_profiles').update({ username:newName }).eq('id',currentUser.id);
+                // 先更新 profile 表，再更新 auth，保持一致性
+                const { error: profileError } = await supabaseClient.from('user_profiles').update({ username: newName }).eq('id', currentUser.id);
+                if(profileError) throw profileError;
+                const { error: authError } = await supabaseClient.auth.updateUser({ data: { username: newName } });
+                if(authError) throw authError;
                 userProfile.username = newName;
-                $('displayUsername').innerText = newName;
-                cacheUserProfile(newName, userProfile.avatar_url);
+                safeSetText('displayUsername', newName);
+                const avatar = userProfile.avatar_url;
+                cacheUserProfile(newName, avatar);
                 updateNavbar();
                 closeModal('usernameModal');
                 showNotification('用户名更新成功','success');
-            } catch(e){ showNotification('更新失败','error'); }
+            } catch(e) { 
+                showNotification('更新失败: '+e.message, 'error'); 
+            }
         }
+        
         async function updateBio() {
-            const newBio = $('newBio').value.trim();
-            await supabaseClient.from('user_profiles').update({ bio:newBio }).eq('id',currentUser.id);
+            const newBio = document.getElementById('newBio').value.trim();
+            await supabaseClient.from('user_profiles').update({ bio: newBio }).eq('id', currentUser.id);
             userProfile.bio = newBio;
-            $('userBio').innerText = newBio;
+            safeSetText('userBio', newBio);
             closeModal('bioModal');
             showNotification('简介更新成功','success');
         }
-        async function updatePassword(){
-            const cur=$('currentPassword').value, np=$('newPassword').value, cp=$('confirmPassword').value;
-            if(!cur||!np||!cp){ showNotification('请填写所有字段','error'); return; }
-            if(np.length<6){ showNotification('密码至少6位','error'); return; }
-            if(np!==cp){ showNotification('两次密码不一致','error'); return; }
-            const { error:signErr } = await supabaseClient.auth.signInWithPassword({ email:currentUser.email, password:cur });
-            if(signErr){ showNotification('当前密码错误','error'); return; }
-            const { error } = await supabaseClient.auth.updateUser({ password:np });
-            if(error) showNotification('修改失败','error');
-            else { showNotification('密码已更新，请重新登录','success'); setTimeout(()=>supabaseClient.auth.signOut(),1500); }
+        
+        async function updatePassword() {
+            const cur = document.getElementById('currentPassword').value;
+            const np = document.getElementById('newPassword').value;
+            const cp = document.getElementById('confirmPassword').value;
+            if(!cur || !np || !cp) { showNotification('请填写所有字段','error'); return; }
+            if(np.length < 6) { showNotification('密码至少6位','error'); return; }
+            if(np !== cp) { showNotification('两次密码不一致','error'); return; }
+            const { error: signErr } = await supabaseClient.auth.signInWithPassword({ email: currentUser.email, password: cur });
+            if(signErr) { showNotification('当前密码错误','error'); return; }
+            const { error } = await supabaseClient.auth.updateUser({ password: np });
+            if(error) { showNotification('修改失败','error'); } 
+            else { 
+                showNotification('密码已更新，请重新登录','success'); 
+                setTimeout(() => supabaseClient.auth.signOut(), 1500);
+            }
             closeModal('passwordModal');
         }
-        function deleteAccount(){ showNotification('账号删除功能需后端支持，请联系管理员','warning'); closeModal('deleteAccountModal'); }
         
-        // 模态控制
-        function openModal(id){ let m=$(id); if(m){ m.classList.add('show'); document.body.style.overflow='hidden'; } }
-        function closeModal(id){ let m=$(id); if(m){ m.classList.remove('show'); document.body.style.overflow=''; } }
-        window.openUsernameModal = ()=> { $('newUsername').value=userProfile?.username||''; openModal('usernameModal'); };
-        window.openBioModal = ()=> { $('newBio').value=userProfile?.bio||''; openModal('bioModal'); };
-        window.openPasswordModal = ()=> openModal('passwordModal');
-        window.openDeleteAccountModal = ()=> { $('confirmEmail').value=currentUser?.email||''; openModal('deleteAccountModal'); };
+        async function deleteAccount() {
+            const confirmEmail = document.getElementById('confirmEmail').value;
+            if(confirmEmail !== currentUser.email) {
+                showNotification('邮箱地址不匹配', 'error');
+                return;
+            }
+            showNotification('账号删除功能需后端支持，请联系管理员','warning');
+            closeModal('deleteAccountModal');
+        }
         
-        // 初始化
+        function openModal(id) { 
+            let m = safeGetElement(id); 
+            if(m) { m.classList.add('show'); document.body.style.overflow = 'hidden'; } 
+        }
+        function closeModal(id) { 
+            let m = safeGetElement(id); 
+            if(m) { m.classList.remove('show'); document.body.style.overflow = ''; } 
+        }
+        
+        window.openUsernameModal = () => { 
+            document.getElementById('newUsername').value = userProfile?.username || ''; 
+            openModal('usernameModal'); 
+        };
+        window.openBioModal = () => { 
+            document.getElementById('newBio').value = userProfile?.bio || ''; 
+            openModal('bioModal'); 
+        };
+        window.openPasswordModal = () => openModal('passwordModal');
+        window.openDeleteAccountModal = () => { 
+            document.getElementById('confirmEmail').value = currentUser?.email || ''; 
+            openModal('deleteAccountModal'); 
+        };
+        
         async function initializeProfile() {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            const { data:{ user }, error } = await supabaseClient.auth.getUser();
-            if(error || !user){ showNotification('请先登录','error'); setTimeout(()=>window.location.href='login-real.html',1500); return; }
+            const { data: { user }, error } = await supabaseClient.auth.getUser();
+            if(error || !user) { 
+                showNotification('请先登录','error'); 
+                setTimeout(() => window.location.href = 'login-real.html', 1500); 
+                return; 
+            }
             currentUser = user;
             await updateLastLogin();
             await loadUserProfile();
-            $('loading').style.display = 'none';
-            $('profileContent').style.display = 'block';
+            await loadUserStats();
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('profileContent').style.display = 'block';
             
-            // 绑定事件
-            $('saveUsername')?.addEventListener('click', updateUsername);
-            $('saveBio')?.addEventListener('click', updateBio);
-            $('savePassword')?.addEventListener('click', updatePassword);
-            $('confirmDeleteAccount')?.addEventListener('click', deleteAccount);
-            $('confirmCropBtn')?.addEventListener('click', confirmCropAndUpload);
-            $('cancelCropBtn')?.addEventListener('click', cancelCrop);
-            $('closeCropModalBtn')?.addEventListener('click', cancelCrop);
-            // 通用关闭按钮
-            document.querySelectorAll('.closeModalBtn').forEach(btn => {
-                btn.addEventListener('click', (e) => { const modalId = btn.getAttribute('data-modal'); if(modalId) closeModal(modalId); });
+            // 绑定保存按钮事件
+            document.getElementById('saveUsername')?.addEventListener('click', updateUsername);
+            document.getElementById('saveBio')?.addEventListener('click', updateBio);
+            document.getElementById('savePassword')?.addEventListener('click', updatePassword);
+            document.getElementById('confirmDeleteAccount')?.addEventListener('click', deleteAccount);
+            document.getElementById('confirmCropBtn')?.addEventListener('click', confirmCropAndUpload);
+            document.getElementById('cancelCropBtn')?.addEventListener('click', cancelCrop);
+            document.getElementById('closeCropModalBtn')?.addEventListener('click', cancelCrop);
+            
+            // 统一关闭模态框：使用 .close-modal-btn 或点击遮罩
+            document.querySelectorAll('.close-modal-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const modalId = btn.getAttribute('data-modal');
+                    if(modalId) closeModal(modalId);
+                });
             });
             document.querySelectorAll('.modal-overlay').forEach(modal => {
-                modal.addEventListener('click', function(e){ if(e.target === this) closeModal(this.id); });
+                modal.addEventListener('click', function(e) { if(e.target === this) closeModal(this.id); });
             });
-            window.addEventListener('scroll', ()=>{ let btn=document.querySelector('.back-to-top'); if(btn) btn.style.display = window.scrollY>300 ? 'flex' : 'none'; });
+            
+            window.addEventListener('scroll', () => { 
+                let btn = document.querySelector('.back-to-top'); 
+                if(btn) btn.style.display = window.scrollY > 300 ? 'flex' : 'none'; 
+            });
         }
-        document.addEventListener('DOMContentLoaded', ()=> setTimeout(initializeProfile, 100));
+        
+        document.addEventListener('DOMContentLoaded', () => setTimeout(initializeProfile, 100));
     </script>
 </body>
 </html>
