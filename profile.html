@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>个人主页 - 六哥荣耀WIKI</title>
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
-    <!-- 引入外部 CSS -->
     <link rel="stylesheet" href="/css/zhuye.css">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -47,6 +46,8 @@
                         </div>
                         <div class="user-email" id="userEmail">加载中...</div>
                         <div class="user-bio"><span id="userBio">这个人很懒，什么都没有写...</span><button class="edit-bio" onclick="openBioModal()">编辑</button></div>
+                        <!-- 身份显示行（纯颜色文字） -->
+                        <div class="user-role" id="userRoleDisplay"></div>
                     </div>
                 </div>
             </div>
@@ -83,7 +84,7 @@
         </div>
     </div>
 
-    <!-- 商店模态框（内容动态加载 shop-panel.html） -->
+    <!-- 商店模态框 -->
     <div class="modal-overlay" id="shopModal">
         <div class="modal" style="max-width: 600px;">
             <div class="modal-header">
@@ -104,6 +105,17 @@
     <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fas fa-chevron-up"></i></button>
 
     <script>
+        // ========== 角色配置（纯文字颜色，无图标） ==========
+        const ROLE_CONFIG = {
+            owner: { name: '站长', color: '#f97316' },   // 橙色
+            admin: { name: '管理员', color: '#60a5fa' },  // 淡蓝色
+            user:  { name: '普通用户', color: '#9ca3af' } // 淡灰色
+        };
+        function getRoleDisplay(role) {
+            const safeRole = (role && ROLE_CONFIG[role]) ? role : 'user';
+            return ROLE_CONFIG[safeRole];
+        }
+
         let supabaseClient = null, currentUser = null, userProfile = null;
         let cropper = null, selectedFile = null, isUploading = false;
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
@@ -150,17 +162,20 @@
             }
         }
         
+        // 更新导航栏（带角色颜色文字）
         function updateNavbar() {
             const navDiv = safeGetElement('userNavSection'); 
             if(!navDiv) return;
             const username = userProfile?.username || currentUser?.email?.split('@')[0] || '用户';
+            const roleInfo = getRoleDisplay(userProfile?.role);
             const avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
             const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">` : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--supabase-blue),var(--supabase-purple));display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${username.charAt(0).toUpperCase()}</div>`;
-            navDiv.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">${avatarHtml}<span style="color:var(--text-highlight);">${username}</span><button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:var(--radius);cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
+            const usernameHtml = `<span style="color:${roleInfo.color};">${username}</span> <span style="font-size:0.75rem; color:${roleInfo.color};">(${roleInfo.name})</span>`;
+            navDiv.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">${avatarHtml}${usernameHtml}<button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:var(--radius);cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
             document.getElementById('logoutBtn')?.addEventListener('click', async() => { await supabaseClient.auth.signOut(); localStorage.removeItem('cachedUsername'); localStorage.removeItem('cachedAvatar'); window.location.href = 'index.html'; });
         }
         
-        // 头像上传裁剪
+        // 头像上传裁剪（与原有逻辑一致）
         async function deleteOldAvatarFiles(userId) {
             try {
                 const { data: files, error } = await supabaseClient.storage.from('avatars').list(userId);
@@ -241,11 +256,11 @@
         }
         function cancelCrop() { if(cropper){ cropper.destroy(); cropper=null; } closeModal('cropModal'); }
         
-        // 用户资料加载
+        // 加载用户资料（含角色信息）
         async function loadUserProfile(retryCount = 0) {
             const { data: profile, error } = await supabaseClient.from('user_profiles').select('*').eq('id', currentUser.id).single();
             if(error && error.code === 'PGRST116') {
-                const { error: insertError } = await supabaseClient.from('user_profiles').insert({ id: currentUser.id, username: currentUser.email.split('@')[0], bio: '这个人很懒，什么都没有写...' });
+                const { error: insertError } = await supabaseClient.from('user_profiles').insert({ id: currentUser.id, username: currentUser.email.split('@')[0], bio: '这个人很懒，什么都没有写...', role: 'user' });
                 if(insertError && retryCount < 2) { setTimeout(() => loadUserProfile(retryCount + 1), 500); return; }
                 else if(insertError) { showNotification('创建用户资料失败，请刷新重试', 'error'); return; }
                 return loadUserProfile(retryCount + 1);
@@ -253,7 +268,13 @@
             if(profile) {
                 userProfile = profile;
                 const username = profile.username || currentUser.email.split('@')[0];
-                safeSetText('displayUsername', username);
+                // 显示用户名 + 角色（颜色文字）
+                const roleInfo = getRoleDisplay(profile.role);
+                const usernameSpan = document.getElementById('displayUsername');
+                if(usernameSpan) {
+                    usernameSpan.innerHTML = `${username} <span style="font-size: 0.8rem; font-weight: normal; color: ${roleInfo.color};">(${roleInfo.name})</span>`;
+                    usernameSpan.style.color = roleInfo.color;
+                }
                 safeSetText('userEmail', currentUser.email);
                 safeSetText('userBio', profile.bio || '这个人很懒，什么都没有写...');
                 safeSetText('createdAt', new Date(currentUser.created_at).toLocaleString('zh-CN'));
@@ -264,6 +285,13 @@
                     localStorage.setItem('userAvatar', profile.avatar_url);
                     updateAvatarDisplay(profile.avatar_url);
                 } else { localStorage.removeItem('userAvatar'); updateAvatarDisplay(null); }
+                
+                // 显示身份单独一行
+                let roleRow = document.getElementById('userRoleDisplay');
+                if(roleRow) {
+                    roleRow.innerHTML = `<span style="color: ${roleInfo.color};">身份：${roleInfo.name}</span>`;
+                }
+                
                 cacheUserProfile(username, profile.avatar_url);
                 updateNavbar();
             }
@@ -469,7 +497,13 @@
                 const { error: authError } = await supabaseClient.auth.updateUser({ data: { username: newName } });
                 if(authError) throw authError;
                 userProfile.username = newName;
-                safeSetText('displayUsername', newName);
+                // 重新刷新显示角色
+                const roleInfo = getRoleDisplay(userProfile.role);
+                const usernameSpan = document.getElementById('displayUsername');
+                if(usernameSpan) {
+                    usernameSpan.innerHTML = `${newName} <span style="font-size: 0.8rem; font-weight: normal; color: ${roleInfo.color};">(${roleInfo.name})</span>`;
+                    usernameSpan.style.color = roleInfo.color;
+                }
                 cacheUserProfile(newName, userProfile.avatar_url);
                 updateNavbar();
                 closeModal('usernameModal');
