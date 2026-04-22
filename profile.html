@@ -10,6 +10,39 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
+    <style>
+        /* 头像上移微调 */
+        .profile-banner .banner-content {
+            padding-top: 20px !important;
+        }
+        /* 身份徽章样式 */
+        .role-badge-box {
+            display: inline-block;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(4px);
+            border-radius: 30px;
+            padding: 4px 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        /* 管理后台按钮样式 */
+        .admin-link {
+            background: rgba(59,130,246,0.2);
+            color: #60a5fa;
+            border-radius: 30px;
+            padding: 6px 14px;
+            font-size: 0.85rem;
+            transition: 0.2s;
+            margin-left: 12px;
+            text-decoration: none;
+        }
+        .admin-link:hover {
+            background: rgba(59,130,246,0.4);
+            color: #93c5fd;
+        }
+    </style>
 </head>
 <body>
     <nav class="top-nav">
@@ -34,6 +67,7 @@
                     <div class="user-info">
                         <div class="username">
                             <span id="displayUsername">加载中...</span>
+                            <span id="roleBadge" class="role-badge-box" style="display: none;"></span>
                             <button class="username-edit" onclick="openUsernameModal()"><i class="fas fa-edit"></i></button>
                             <div class="register-days" id="registerDaysWrapper">
                                 <i class="fas fa-calendar-alt"></i>
@@ -46,8 +80,6 @@
                         </div>
                         <div class="user-email" id="userEmail">加载中...</div>
                         <div class="user-bio"><span id="userBio">这个人很懒，什么都没有写...</span><button class="edit-bio" onclick="openBioModal()">编辑</button></div>
-                        <!-- 身份显示行（纯颜色文字） -->
-                        <div class="user-role" id="userRoleDisplay"></div>
                     </div>
                 </div>
             </div>
@@ -105,11 +137,11 @@
     <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fas fa-chevron-up"></i></button>
 
     <script>
-        // ========== 角色配置（纯文字颜色，无图标） ==========
+        // ========== 角色配置（纯文字颜色 + 背景徽章） ==========
         const ROLE_CONFIG = {
-            owner: { name: '站长', color: '#f97316' },   // 橙色
-            admin: { name: '管理员', color: '#60a5fa' },  // 淡蓝色
-            user:  { name: '普通用户', color: '#9ca3af' } // 淡灰色
+            owner: { name: '站长', color: '#f97316', bg: 'rgba(249,115,22,0.2)' },
+            admin: { name: '管理员', color: '#60a5fa', bg: 'rgba(96,165,250,0.2)' },
+            user:  { name: '普通用户', color: '#9ca3af', bg: 'rgba(156,163,175,0.2)' }
         };
         function getRoleDisplay(role) {
             const safeRole = (role && ROLE_CONFIG[role]) ? role : 'user';
@@ -162,7 +194,7 @@
             }
         }
         
-        // 更新导航栏（带角色颜色文字）
+        // 更新导航栏（包含管理后台按钮）
         function updateNavbar() {
             const navDiv = safeGetElement('userNavSection'); 
             if(!navDiv) return;
@@ -171,7 +203,14 @@
             const avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
             const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">` : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--supabase-blue),var(--supabase-purple));display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${username.charAt(0).toUpperCase()}</div>`;
             const usernameHtml = `<span style="color:${roleInfo.color};">${username}</span> <span style="font-size:0.75rem; color:${roleInfo.color};">(${roleInfo.name})</span>`;
-            navDiv.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">${avatarHtml}${usernameHtml}<button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:var(--radius);cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
+            
+            // 管理后台按钮（仅站长和管理员可见）
+            let adminBtnHtml = '';
+            if (userProfile && (userProfile.role === 'owner' || userProfile.role === 'admin')) {
+                adminBtnHtml = `<a href="./admin.html" class="admin-link"><i class="fas fa-cog"></i> 管理后台</a>`;
+            }
+            
+            navDiv.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">${avatarHtml}${usernameHtml}${adminBtnHtml}<button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:var(--radius);cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
             document.getElementById('logoutBtn')?.addEventListener('click', async() => { await supabaseClient.auth.signOut(); localStorage.removeItem('cachedUsername'); localStorage.removeItem('cachedAvatar'); window.location.href = 'index.html'; });
         }
         
@@ -268,13 +307,23 @@
             if(profile) {
                 userProfile = profile;
                 const username = profile.username || currentUser.email.split('@')[0];
-                // 显示用户名 + 角色（颜色文字）
                 const roleInfo = getRoleDisplay(profile.role);
+                
+                // 显示用户名 + 颜色
                 const usernameSpan = document.getElementById('displayUsername');
                 if(usernameSpan) {
-                    usernameSpan.innerHTML = `${username} <span style="font-size: 0.8rem; font-weight: normal; color: ${roleInfo.color};">(${roleInfo.name})</span>`;
+                    usernameSpan.innerHTML = username;
                     usernameSpan.style.color = roleInfo.color;
                 }
+                // 显示身份徽章（带背景的小框）
+                const roleBadge = document.getElementById('roleBadge');
+                if(roleBadge) {
+                    roleBadge.style.display = 'inline-block';
+                    roleBadge.style.backgroundColor = roleInfo.bg;
+                    roleBadge.style.color = roleInfo.color;
+                    roleBadge.textContent = roleInfo.name;
+                }
+                
                 safeSetText('userEmail', currentUser.email);
                 safeSetText('userBio', profile.bio || '这个人很懒，什么都没有写...');
                 safeSetText('createdAt', new Date(currentUser.created_at).toLocaleString('zh-CN'));
@@ -285,12 +334,6 @@
                     localStorage.setItem('userAvatar', profile.avatar_url);
                     updateAvatarDisplay(profile.avatar_url);
                 } else { localStorage.removeItem('userAvatar'); updateAvatarDisplay(null); }
-                
-                // 显示身份单独一行
-                let roleRow = document.getElementById('userRoleDisplay');
-                if(roleRow) {
-                    roleRow.innerHTML = `<span style="color: ${roleInfo.color};">身份：${roleInfo.name}</span>`;
-                }
                 
                 cacheUserProfile(username, profile.avatar_url);
                 updateNavbar();
@@ -497,12 +540,18 @@
                 const { error: authError } = await supabaseClient.auth.updateUser({ data: { username: newName } });
                 if(authError) throw authError;
                 userProfile.username = newName;
-                // 重新刷新显示角色
+                // 重新刷新显示
                 const roleInfo = getRoleDisplay(userProfile.role);
                 const usernameSpan = document.getElementById('displayUsername');
                 if(usernameSpan) {
-                    usernameSpan.innerHTML = `${newName} <span style="font-size: 0.8rem; font-weight: normal; color: ${roleInfo.color};">(${roleInfo.name})</span>`;
+                    usernameSpan.innerHTML = newName;
                     usernameSpan.style.color = roleInfo.color;
+                }
+                const roleBadge = document.getElementById('roleBadge');
+                if(roleBadge) {
+                    roleBadge.style.backgroundColor = roleInfo.bg;
+                    roleBadge.style.color = roleInfo.color;
+                    roleBadge.textContent = roleInfo.name;
                 }
                 cacheUserProfile(newName, userProfile.avatar_url);
                 updateNavbar();
