@@ -10,7 +10,6 @@
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
     <style>
-        /* ========== 原有样式保持不变，仅修改商店按钮相关位置 ========== */
         :root {
             --bg: #121212;
             --card-bg: #1e3a2f;
@@ -142,7 +141,6 @@
             flex: 1;
             padding-bottom: 10px;
         }
-        /* 商店按钮样式 - 放在注册天数后面 */
         .shop-button {
             background: linear-gradient(135deg, #ffb347, #ff8c00);
             border: none;
@@ -200,6 +198,20 @@
             gap: 8px;
         }
         .register-days i { font-size: 1rem; }
+        /* 活跃度显示样式 - 头像旁边 */
+        .active-points {
+            display: inline-flex;
+            align-items: center;
+            background: linear-gradient(135deg, #ffd966, #ffb347);
+            color: #2c2c2c;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            gap: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        .active-points i { color: #ffeb3b; text-shadow: 0 0 2px rgba(0,0,0,0.5); }
         .user-email {
             color: var(--text-secondary);
             font-size: 1.1rem;
@@ -230,6 +242,73 @@
             transition: var(--transition-fast);
         }
         .edit-bio:hover { background: rgba(129, 199, 132, 0.1); }
+        /* 签到卡片 */
+        .checkin-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 20px 30px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .checkin-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .streak-box {
+            background: rgba(0,0,0,0.4);
+            border-radius: 60px;
+            padding: 8px 20px;
+            text-align: center;
+        }
+        .streak-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--special-color);
+            line-height: 1;
+        }
+        .streak-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .checkin-btn {
+            background: linear-gradient(135deg, var(--supabase-blue), var(--supabase-purple));
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 60px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .checkin-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+        }
+        .checkin-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            filter: grayscale(0.2);
+        }
+        .reward-preview {
+            font-size: 0.85rem;
+            color: var(--text-highlight);
+            background: rgba(0,0,0,0.3);
+            padding: 8px 16px;
+            border-radius: 40px;
+        }
         .settings-section {
             background: var(--card-bg);
             border-radius: var(--radius);
@@ -371,6 +450,8 @@
             .username { font-size: 1.8rem; flex-direction: column; align-items: flex-start; gap: 10px; }
             .register-days { margin-left: 0; }
             .shop-button { margin-left: 0; margin-top: 8px; }
+            .active-points { margin-top: 5px; }
+            .checkin-card { flex-direction: column; align-items: stretch; }
             .settings-item { flex-direction: column; align-items: flex-start; gap: 20px; }
             .user-info { width: 100%; }
         }
@@ -536,7 +617,6 @@
             font-weight: 500;
         }
         button:disabled { opacity: 0.6; cursor: not-allowed; }
-        /* 商店商品卡片 */
         .shop-item {
             background: rgba(0,0,0,0.2);
             border-radius: var(--radius);
@@ -615,13 +695,29 @@
                                 <i class="fas fa-calendar-alt"></i>
                                 <span id="userDaysText">已来到六哥荣耀 0 天</span>
                             </div>
-                            <!-- 商店按钮放在注册天数后面 -->
+                            <!-- 活跃度显示（头像旁边） -->
+                            <div class="active-points" id="activePointsDisplay">
+                                <i class="fas fa-bolt"></i> 活跃度: <span id="activePointsValue">0</span>
+                            </div>
                             <button class="shop-button" id="openShopBtn"><i class="fas fa-store"></i> 商店</button>
                         </div>
                         <div class="user-email" id="userEmail">加载中...</div>
                         <div class="user-bio"><span id="userBio">这个人很懒，什么都没有写...</span><button class="edit-bio" onclick="openBioModal()">编辑</button></div>
                     </div>
                 </div>
+            </div>
+            <!-- 签到卡片 -->
+            <div class="checkin-card">
+                <div class="checkin-info">
+                    <div class="streak-box">
+                        <div class="streak-number" id="streakDays">0</div>
+                        <div class="streak-label">连续签到</div>
+                    </div>
+                    <div class="reward-preview" id="rewardPreview">今日签到奖励: --</div>
+                </div>
+                <button class="checkin-btn" id="checkinBtn">
+                    <i class="fas fa-calendar-check"></i> 签到
+                </button>
             </div>
             <!-- 账号设置区域 -->
             <div class="section-header"><div class="section-title"><i class="fas fa-cog"></i><span>账号设置</span></div></div>
@@ -634,7 +730,7 @@
         </div>
     </div>
 
-    <!-- 裁剪头像模态框（原有） -->
+    <!-- 裁剪头像模态框 -->
     <div class="modal-overlay" id="cropModal">
         <div class="modal" style="max-width: 700px;">
             <div class="modal-header"><div class="modal-title"><i class="fas fa-crop-alt"></i> 裁剪头像</div><button class="modal-close" id="closeCropModalBtn">&times;</button></div>
@@ -643,7 +739,7 @@
         </div>
     </div>
 
-    <!-- 商店模态框（货币图标改为图片） -->
+    <!-- 商店模态框 -->
     <div class="modal-overlay" id="shopModal">
         <div class="modal" style="max-width: 600px;">
             <div class="modal-header">
@@ -663,13 +759,11 @@
                 </div>
                 <div style="font-size: 0.8rem; color: var(--text-secondary);">点击货币查看介绍</div>
             </div>
-            <div id="shopItemsList">
-                <!-- 测试商品会动态生成 -->
-            </div>
+            <div id="shopItemsList"></div>
         </div>
     </div>
 
-    <!-- 货币介绍弹框（文本改为正确道具名称） -->
+    <!-- 货币介绍弹框 -->
     <div class="modal-overlay" id="currencyInfoModal">
         <div class="modal" style="max-width: 400px;">
             <div class="modal-header">
@@ -680,7 +774,7 @@
         </div>
     </div>
 
-    <!-- 其他模态框（用户名、简介、密码、注销）保持不变 -->
+    <!-- 其他模态框 -->
     <div class="modal-overlay" id="usernameModal"><div class="modal"><div class="modal-header"><div class="modal-title">修改用户名</div><button class="modal-close close-modal-btn" data-modal="usernameModal">&times;</button></div><div class="form-group"><label class="form-label">新用户名</label><input type="text" class="form-input" id="newUsername" maxlength="20"></div><div class="form-actions"><button class="btn btn-cancel close-modal-btn" data-modal="usernameModal">取消</button><button class="btn btn-save" id="saveUsername">保存</button></div></div></div>
     <div class="modal-overlay" id="bioModal"><div class="modal"><div class="modal-header"><div class="modal-title">修改个人简介</div><button class="modal-close close-modal-btn" data-modal="bioModal">&times;</button></div><div class="form-group"><label class="form-label">个人简介</label><textarea class="form-textarea" id="newBio" maxlength="200"></textarea></div><div class="form-actions"><button class="btn btn-cancel close-modal-btn" data-modal="bioModal">取消</button><button class="btn btn-save" id="saveBio">保存</button></div></div></div>
     <div class="modal-overlay" id="passwordModal"><div class="modal"><div class="modal-header"><div class="modal-title">修改密码</div><button class="modal-close close-modal-btn" data-modal="passwordModal">&times;</button></div><div class="form-group"><label class="form-label">当前密码</label><input type="password" class="form-input" id="currentPassword"></div><div class="form-group"><label class="form-label">新密码</label><input type="password" class="form-input" id="newPassword"></div><div class="form-group"><label class="form-label">确认新密码</label><input type="password" class="form-input" id="confirmPassword"></div><div class="form-actions"><button class="btn btn-cancel close-modal-btn" data-modal="passwordModal">取消</button><button class="btn btn-save" id="savePassword">更新密码</button></div></div></div>
@@ -858,42 +952,177 @@
             if(!error) safeSetText('lastLogin', new Date().toLocaleString('zh-CN'));
         }
         
-        // 货币相关函数（字段名 candy_crumbles, rainbow_lollipops 不变）
-        let userCurrency = { candy_crumbles: 0, rainbow_lollipops: 0 };
+        // ================== 签到系统 ==================
+        let userStats = { candy_crumbles: 0, rainbow_lollipops: 0, active_points: 0, last_checkin_date: null, checkin_streak: 0 };
         
-        async function loadUserCurrency() {
-            if(!currentUser) return;
-            const { data, error } = await supabaseClient.from('user_stats').select('candy_crumbles, rainbow_lollipops').eq('user_id', currentUser.id).single();
-            if(error && error.code === 'PGRST116') {
-                await supabaseClient.from('user_stats').upsert({ user_id: currentUser.id, candy_crumbles: 100, rainbow_lollipops: 5 });
-                return loadUserCurrency();
-            }
-            if(data) {
-                userCurrency.candy_crumbles = data.candy_crumbles ?? 100;
-                userCurrency.rainbow_lollipops = data.rainbow_lollipops ?? 5;
-                updateShopBalanceDisplay();
+        // 计算签到奖励 (根据连续天数)
+        function getCheckinRewards(streak) {
+            // 注意：streak 是即将签到成功后的新连续天数（即签到前连续天数+1）
+            // 规则按实际签到后连续天数来给奖励
+            if (streak === 1) return { candy: 3, rainbow: 0, active: 2 };      // 第1天
+            if (streak === 2) return { candy: 5, rainbow: 0, active: 2 };
+            if (streak === 3) return { candy: 7, rainbow: 0, active: 2 };
+            if (streak === 4) return { candy: 9, rainbow: 0, active: 2 };
+            if (streak === 5) return { candy: 10, rainbow: 0, active: 2 };
+            if (streak === 6) return { candy: 12, rainbow: 0, active: 2 };
+            if (streak === 7) return { candy: 15, rainbow: 1, active: 5 };     // 第7天
+            if (streak >= 8 && streak <= 14) return { candy: 10 + Math.floor((streak-8)*2), rainbow: 2, active: 8 }; // 8~14天: 10~24糖果
+            if (streak === 15) return { candy: 30, rainbow: 5, active: 15 };
+            if (streak >= 16 && streak <= 29) return { candy: 50, rainbow: 10, active: 10 };
+            if (streak === 30) return { candy: 100, rainbow: 20, active: 50 };
+            if (streak >= 31) return { candy: 80, rainbow: 15, active: 20 };
+            return { candy: 5, rainbow: 0, active: 1 }; // fallback
+        }
+        
+        // 更新前端显示的奖励预览
+        function updateRewardPreview() {
+            const streak = userStats.checkin_streak || 0;
+            const tomorrowStreak = streak + 1;
+            const rewards = getCheckinRewards(tomorrowStreak);
+            const previewElem = document.getElementById('rewardPreview');
+            if(previewElem) {
+                previewElem.innerHTML = `明日签到奖励: 🍬${rewards.candy}糖果碎 ${rewards.rainbow>0?`🌈+${rewards.rainbow}棒糖` : ''} ⚡+${rewards.active}活跃度`;
             }
         }
         
+        // 加载用户统计（包含签到数据和活跃度）
+        async function loadUserStats() {
+            if(!currentUser) return;
+            const { data, error } = await supabaseClient.from('user_stats').select('candy_crumbles, rainbow_lollipops, active_points, last_checkin_date, checkin_streak').eq('user_id', currentUser.id).single();
+            if(error && error.code === 'PGRST116') {
+                // 初始化记录
+                await supabaseClient.from('user_stats').upsert({ 
+                    user_id: currentUser.id, 
+                    candy_crumbles: 100, 
+                    rainbow_lollipops: 5, 
+                    active_points: 0,
+                    last_checkin_date: null,
+                    checkin_streak: 0
+                });
+                return loadUserStats();
+            }
+            if(data) {
+                userStats.candy_crumbles = data.candy_crumbles ?? 100;
+                userStats.rainbow_lollipops = data.rainbow_lollipops ?? 5;
+                userStats.active_points = data.active_points ?? 0;
+                userStats.last_checkin_date = data.last_checkin_date;
+                userStats.checkin_streak = data.checkin_streak ?? 0;
+                
+                // 更新界面显示
+                updateActivePointsDisplay();
+                updateShopBalanceDisplay();
+                document.getElementById('streakDays').innerText = userStats.checkin_streak;
+                updateRewardPreview();
+                
+                // 检查今日是否已签到
+                const today = new Date().toISOString().slice(0,10);
+                const hasCheckedToday = (userStats.last_checkin_date === today);
+                const checkinBtn = document.getElementById('checkinBtn');
+                if(checkinBtn) {
+                    if(hasCheckedToday) {
+                        checkinBtn.disabled = true;
+                        checkinBtn.innerHTML = '<i class="fas fa-check-circle"></i> 今日已签到';
+                    } else {
+                        checkinBtn.disabled = false;
+                        checkinBtn.innerHTML = '<i class="fas fa-calendar-check"></i> 签到';
+                    }
+                }
+            }
+        }
+        
+        function updateActivePointsDisplay() {
+            const activeSpan = document.getElementById('activePointsValue');
+            if(activeSpan) activeSpan.innerText = userStats.active_points;
+        }
+        
+        // 执行签到
+        async function performCheckin() {
+            if(!currentUser) { showNotification('请先登录', 'error'); return; }
+            const checkinBtn = document.getElementById('checkinBtn');
+            if(checkinBtn.disabled) {
+                showNotification('今天已经签到过了！', 'warning');
+                return;
+            }
+            
+            const today = new Date().toISOString().slice(0,10);
+            const lastDate = userStats.last_checkin_date;
+            let newStreak = 1;
+            if(lastDate) {
+                const last = new Date(lastDate);
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = yesterday.toISOString().slice(0,10);
+                if(lastDate === yesterdayStr) {
+                    newStreak = (userStats.checkin_streak || 0) + 1;
+                } else if(lastDate === today) {
+                    showNotification('今日已签到', 'warning');
+                    return;
+                } else {
+                    newStreak = 1; // 中断连续
+                }
+            }
+            
+            const rewards = getCheckinRewards(newStreak);
+            // 更新数据
+            const newCandy = userStats.candy_crumbles + rewards.candy;
+            const newRainbow = userStats.rainbow_lollipops + rewards.rainbow;
+            const newActive = userStats.active_points + rewards.active;
+            
+            const { error } = await supabaseClient.from('user_stats').update({
+                candy_crumbles: newCandy,
+                rainbow_lollipops: newRainbow,
+                active_points: newActive,
+                last_checkin_date: today,
+                checkin_streak: newStreak
+            }).eq('user_id', currentUser.id);
+            
+            if(error) {
+                showNotification('签到失败: ' + error.message, 'error');
+                return;
+            }
+            
+            // 更新本地数据
+            userStats.candy_crumbles = newCandy;
+            userStats.rainbow_lollipops = newRainbow;
+            userStats.active_points = newActive;
+            userStats.last_checkin_date = today;
+            userStats.checkin_streak = newStreak;
+            
+            // 刷新界面
+            updateActivePointsDisplay();
+            updateShopBalanceDisplay();
+            document.getElementById('streakDays').innerText = newStreak;
+            updateRewardPreview();
+            checkinBtn.disabled = true;
+            checkinBtn.innerHTML = '<i class="fas fa-check-circle"></i> 今日已签到';
+            
+            showNotification(`签到成功！获得 🍬${rewards.candy} 糖果碎 ${rewards.rainbow>0?`🌈+${rewards.rainbow} 棒糖 ` : ''}⚡+${rewards.active} 活跃度`, 'success');
+        }
+        
+        // 货币相关函数（商店用）
+        let userCurrency = { candy_crumbles: 0, rainbow_lollipops: 0 };
+        function loadUserCurrency() { // 与loadUserStats重复，但保留兼容
+            return loadUserStats();
+        }
         function updateShopBalanceDisplay() {
             const candySpan = document.getElementById('candyCrumblesBalance');
             const rainbowSpan = document.getElementById('rainbowLollipopsBalance');
-            if(candySpan) candySpan.textContent = userCurrency.candy_crumbles;
-            if(rainbowSpan) rainbowSpan.textContent = userCurrency.rainbow_lollipops;
+            if(candySpan) candySpan.textContent = userStats.candy_crumbles;
+            if(rainbowSpan) rainbowSpan.textContent = userStats.rainbow_lollipops;
         }
         
         async function purchaseItem(itemId, priceCandy, priceRainbow) {
             if(!currentUser) { showNotification('请先登录', 'error'); return false; }
-            if(priceCandy > 0 && userCurrency.candy_crumbles < priceCandy) {
+            if(priceCandy > 0 && userStats.candy_crumbles < priceCandy) {
                 showNotification(`糖果碎不足，需要 ${priceCandy} 个`, 'error');
                 return false;
             }
-            if(priceRainbow > 0 && userCurrency.rainbow_lollipops < priceRainbow) {
+            if(priceRainbow > 0 && userStats.rainbow_lollipops < priceRainbow) {
                 showNotification(`超级棒糖不足，需要 ${priceRainbow} 个`, 'error');
                 return false;
             }
-            const newCandy = userCurrency.candy_crumbles - priceCandy;
-            const newRainbow = userCurrency.rainbow_lollipops - priceRainbow;
+            const newCandy = userStats.candy_crumbles - priceCandy;
+            const newRainbow = userStats.rainbow_lollipops - priceRainbow;
             const { error } = await supabaseClient.from('user_stats').update({
                 candy_crumbles: newCandy,
                 rainbow_lollipops: newRainbow
@@ -902,14 +1131,13 @@
                 showNotification('购买失败: ' + error.message, 'error');
                 return false;
             }
-            userCurrency.candy_crumbles = newCandy;
-            userCurrency.rainbow_lollipops = newRainbow;
+            userStats.candy_crumbles = newCandy;
+            userStats.rainbow_lollipops = newRainbow;
             updateShopBalanceDisplay();
             showNotification('购买成功！', 'success');
             return true;
         }
         
-        // 渲染商店商品（只有一个测试物品）
         function renderShopItems() {
             const container = document.getElementById('shopItemsList');
             if(!container) return;
@@ -927,7 +1155,6 @@
             });
         }
         
-        // 货币介绍弹框（文本改为正确道具名称）
         function showCurrencyInfo(currencyType) {
             const titleElem = document.getElementById('currencyInfoTitle');
             const contentElem = document.getElementById('currencyInfoContent');
@@ -1003,7 +1230,7 @@
             currentUser = user;
             await updateLastLogin();
             await loadUserProfile();
-            await loadUserCurrency();
+            await loadUserStats();  // 加载统计（含签到、活跃度、货币）
             document.getElementById('loading').style.display = 'none';
             document.getElementById('profileContent').style.display = 'block';
             
@@ -1043,6 +1270,9 @@
                 modal.addEventListener('click', function(e) { if(e.target === this) closeModal(this.id); });
             });
             window.addEventListener('scroll', () => { let btn = document.querySelector('.back-to-top'); if(btn) btn.style.display = window.scrollY>300?'flex':'none'; });
+            
+            // 签到按钮事件
+            document.getElementById('checkinBtn')?.addEventListener('click', performCheckin);
         }
         document.addEventListener('DOMContentLoaded', () => setTimeout(initializeProfile, 100));
     </script>
