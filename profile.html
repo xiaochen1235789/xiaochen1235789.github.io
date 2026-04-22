@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>个人主页 - 六哥荣耀WIKI</title>
+    <title>我的个人主页 - 六哥荣耀WIKI</title>
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +28,6 @@
             --supabase-blue: #3ecf8e;
             --supabase-purple: #8a4baf;
         }
-        
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
         body {
             background: var(--bg);
@@ -36,6 +35,10 @@
             line-height: 1.6;
             min-height: 100vh;
             overflow-x: hidden;
+        }
+        /* 防止下拉刷新 */
+        html, body {
+            overscroll-behavior: contain;
         }
         body::before {
             content: '';
@@ -198,7 +201,6 @@
             gap: 8px;
         }
         .register-days i { font-size: 1rem; }
-        /* 活跃度显示样式 - 头像旁边 */
         .active-points {
             display: inline-flex;
             align-items: center;
@@ -242,7 +244,6 @@
             transition: var(--transition-fast);
         }
         .edit-bio:hover { background: rgba(129, 199, 132, 0.1); }
-        /* 签到卡片 */
         .checkin-card {
             background: var(--card-bg);
             border-radius: var(--radius);
@@ -517,7 +518,7 @@
             background: var(--card-bg);
             border-radius: var(--radius);
             padding: 30px;
-            max-width: 550px;
+            max-width: 600px;
             width: 90%;
             max-height: 85vh;
             overflow-y: auto;
@@ -617,54 +618,6 @@
             font-weight: 500;
         }
         button:disabled { opacity: 0.6; cursor: not-allowed; }
-        .shop-item {
-            background: rgba(0,0,0,0.2);
-            border-radius: var(--radius);
-            padding: 15px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .shop-item-info { flex: 1; }
-        .shop-item-name { font-size: 1.1rem; font-weight: bold; color: var(--text-highlight); }
-        .shop-item-price { font-size: 0.9rem; color: var(--text-secondary); margin-top: 5px; }
-        .price-icon { margin-right: 5px; }
-        .currency-clickable {
-            cursor: pointer;
-            transition: transform 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(0,0,0,0.3);
-            padding: 6px 14px;
-            border-radius: 40px;
-        }
-        .currency-clickable:hover { transform: scale(1.05); background: rgba(0,0,0,0.5); }
-        .currency-clickable img {
-            width: 24px;
-            height: 24px;
-            object-fit: contain;
-            border-radius: 4px;
-        }
-        .balance-row {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-        .balance-item {
-            background: rgba(0,0,0,0.3);
-            border-radius: 40px;
-            padding: 8px 20px;
-            font-size: 1.2rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
     </style>
 </head>
 <body>
@@ -695,7 +648,6 @@
                                 <i class="fas fa-calendar-alt"></i>
                                 <span id="userDaysText">已来到六哥荣耀 0 天</span>
                             </div>
-                            <!-- 活跃度显示（头像旁边） -->
                             <div class="active-points" id="activePointsDisplay">
                                 <i class="fas fa-bolt"></i> 活跃度: <span id="activePointsValue">0</span>
                             </div>
@@ -713,7 +665,7 @@
                         <div class="streak-number" id="streakDays">0</div>
                         <div class="streak-label">连续签到</div>
                     </div>
-                    <div class="reward-preview" id="rewardPreview">今日签到奖励: --</div>
+                    <div class="reward-preview" id="rewardPreview">明日签到奖励: --</div>
                 </div>
                 <button class="checkin-btn" id="checkinBtn">
                     <i class="fas fa-calendar-check"></i> 签到
@@ -739,38 +691,16 @@
         </div>
     </div>
 
-    <!-- 商店模态框 -->
+    <!-- 商店模态框（内容动态加载 shop-panel.html） -->
     <div class="modal-overlay" id="shopModal">
         <div class="modal" style="max-width: 600px;">
             <div class="modal-header">
                 <div class="modal-title"><i class="fas fa-store"></i> 商店</div>
                 <button class="modal-close" id="closeShopModalBtn">&times;</button>
             </div>
-            <div style="text-align: center; margin-bottom: 20px;">
-                <div class="balance-row">
-                    <div class="balance-item currency-clickable" data-currency="candy">
-                        <img src="http://xiaochen1235789.github.io/images/Crushed_sugar.webp" alt="糖果碎" style="width: 28px; height: 28px; border-radius: 6px;">
-                        糖果碎: <span id="candyCrumblesBalance">0</span>
-                    </div>
-                    <div class="balance-item currency-clickable" data-currency="rainbow">
-                        <img src="http://xiaochen1235789.github.io/images/Super_Sweet.webp" alt="超级棒糖" style="width: 28px; height: 28px; border-radius: 6px;">
-                        超级棒糖: <span id="rainbowLollipopsBalance">0</span>
-                    </div>
-                </div>
-                <div style="font-size: 0.8rem; color: var(--text-secondary);">点击货币查看介绍</div>
+            <div id="shopContentContainer" style="min-height: 200px;">
+                <div style="text-align: center; padding: 20px;">加载商店中...</div>
             </div>
-            <div id="shopItemsList"></div>
-        </div>
-    </div>
-
-    <!-- 货币介绍弹框 -->
-    <div class="modal-overlay" id="currencyInfoModal">
-        <div class="modal" style="max-width: 400px;">
-            <div class="modal-header">
-                <div class="modal-title" id="currencyInfoTitle">货币介绍</div>
-                <button class="modal-close" id="closeCurrencyInfoBtn">&times;</button>
-            </div>
-            <div id="currencyInfoContent" style="line-height: 1.6;"></div>
         </div>
     </div>
 
@@ -955,26 +885,22 @@
         // ================== 签到系统 ==================
         let userStats = { candy_crumbles: 0, rainbow_lollipops: 0, active_points: 0, last_checkin_date: null, checkin_streak: 0 };
         
-        // 计算签到奖励 (根据连续天数)
         function getCheckinRewards(streak) {
-            // 注意：streak 是即将签到成功后的新连续天数（即签到前连续天数+1）
-            // 规则按实际签到后连续天数来给奖励
-            if (streak === 1) return { candy: 3, rainbow: 0, active: 2 };      // 第1天
+            if (streak === 1) return { candy: 3, rainbow: 0, active: 2 };
             if (streak === 2) return { candy: 5, rainbow: 0, active: 2 };
             if (streak === 3) return { candy: 7, rainbow: 0, active: 2 };
             if (streak === 4) return { candy: 9, rainbow: 0, active: 2 };
             if (streak === 5) return { candy: 10, rainbow: 0, active: 2 };
             if (streak === 6) return { candy: 12, rainbow: 0, active: 2 };
-            if (streak === 7) return { candy: 15, rainbow: 1, active: 5 };     // 第7天
-            if (streak >= 8 && streak <= 14) return { candy: 10 + Math.floor((streak-8)*2), rainbow: 2, active: 8 }; // 8~14天: 10~24糖果
+            if (streak === 7) return { candy: 15, rainbow: 1, active: 5 };
+            if (streak >= 8 && streak <= 14) return { candy: 10 + Math.floor((streak-8)*2), rainbow: 2, active: 8 };
             if (streak === 15) return { candy: 30, rainbow: 5, active: 15 };
             if (streak >= 16 && streak <= 29) return { candy: 50, rainbow: 10, active: 10 };
             if (streak === 30) return { candy: 100, rainbow: 20, active: 50 };
             if (streak >= 31) return { candy: 80, rainbow: 15, active: 20 };
-            return { candy: 5, rainbow: 0, active: 1 }; // fallback
+            return { candy: 5, rainbow: 0, active: 1 };
         }
         
-        // 更新前端显示的奖励预览
         function updateRewardPreview() {
             const streak = userStats.checkin_streak || 0;
             const tomorrowStreak = streak + 1;
@@ -985,12 +911,10 @@
             }
         }
         
-        // 加载用户统计（包含签到数据和活跃度）
         async function loadUserStats() {
             if(!currentUser) return;
             const { data, error } = await supabaseClient.from('user_stats').select('candy_crumbles, rainbow_lollipops, active_points, last_checkin_date, checkin_streak').eq('user_id', currentUser.id).single();
             if(error && error.code === 'PGRST116') {
-                // 初始化记录
                 await supabaseClient.from('user_stats').upsert({ 
                     user_id: currentUser.id, 
                     candy_crumbles: 100, 
@@ -1008,13 +932,11 @@
                 userStats.last_checkin_date = data.last_checkin_date;
                 userStats.checkin_streak = data.checkin_streak ?? 0;
                 
-                // 更新界面显示
                 updateActivePointsDisplay();
                 updateShopBalanceDisplay();
                 document.getElementById('streakDays').innerText = userStats.checkin_streak;
                 updateRewardPreview();
                 
-                // 检查今日是否已签到
                 const today = new Date().toISOString().slice(0,10);
                 const hasCheckedToday = (userStats.last_checkin_date === today);
                 const checkinBtn = document.getElementById('checkinBtn');
@@ -1035,7 +957,6 @@
             if(activeSpan) activeSpan.innerText = userStats.active_points;
         }
         
-        // 执行签到
         async function performCheckin() {
             if(!currentUser) { showNotification('请先登录', 'error'); return; }
             const checkinBtn = document.getElementById('checkinBtn');
@@ -1048,7 +969,6 @@
             const lastDate = userStats.last_checkin_date;
             let newStreak = 1;
             if(lastDate) {
-                const last = new Date(lastDate);
                 const yesterday = new Date();
                 yesterday.setDate(yesterday.getDate() - 1);
                 const yesterdayStr = yesterday.toISOString().slice(0,10);
@@ -1058,12 +978,11 @@
                     showNotification('今日已签到', 'warning');
                     return;
                 } else {
-                    newStreak = 1; // 中断连续
+                    newStreak = 1;
                 }
             }
             
             const rewards = getCheckinRewards(newStreak);
-            // 更新数据
             const newCandy = userStats.candy_crumbles + rewards.candy;
             const newRainbow = userStats.rainbow_lollipops + rewards.rainbow;
             const newActive = userStats.active_points + rewards.active;
@@ -1081,14 +1000,12 @@
                 return;
             }
             
-            // 更新本地数据
             userStats.candy_crumbles = newCandy;
             userStats.rainbow_lollipops = newRainbow;
             userStats.active_points = newActive;
             userStats.last_checkin_date = today;
             userStats.checkin_streak = newStreak;
             
-            // 刷新界面
             updateActivePointsDisplay();
             updateShopBalanceDisplay();
             document.getElementById('streakDays').innerText = newStreak;
@@ -1099,73 +1016,49 @@
             showNotification(`签到成功！获得 🍬${rewards.candy} 糖果碎 ${rewards.rainbow>0?`🌈+${rewards.rainbow} 棒糖 ` : ''}⚡+${rewards.active} 活跃度`, 'success');
         }
         
-        // 货币相关函数（商店用）
-        let userCurrency = { candy_crumbles: 0, rainbow_lollipops: 0 };
-        function loadUserCurrency() { // 与loadUserStats重复，但保留兼容
-            return loadUserStats();
-        }
+        // 商店相关（暴露给 shop-panel.html 使用的全局函数）
         function updateShopBalanceDisplay() {
-            const candySpan = document.getElementById('candyCrumblesBalance');
-            const rainbowSpan = document.getElementById('rainbowLollipopsBalance');
-            if(candySpan) candySpan.textContent = userStats.candy_crumbles;
-            if(rainbowSpan) rainbowSpan.textContent = userStats.rainbow_lollipops;
+            // 此函数用于同步主页面显示的货币余额，商店模块会通过全局变量直接访问 userStats
+            if(window.shopModule && window.shopModule.updateBalance) {
+                window.shopModule.updateBalance(userStats.candy_crumbles, userStats.rainbow_lollipops);
+            }
         }
         
-        async function purchaseItem(itemId, priceCandy, priceRainbow) {
-            if(!currentUser) { showNotification('请先登录', 'error'); return false; }
-            if(priceCandy > 0 && userStats.candy_crumbles < priceCandy) {
-                showNotification(`糖果碎不足，需要 ${priceCandy} 个`, 'error');
-                return false;
-            }
-            if(priceRainbow > 0 && userStats.rainbow_lollipops < priceRainbow) {
-                showNotification(`超级棒糖不足，需要 ${priceRainbow} 个`, 'error');
-                return false;
-            }
-            const newCandy = userStats.candy_crumbles - priceCandy;
-            const newRainbow = userStats.rainbow_lollipops - priceRainbow;
-            const { error } = await supabaseClient.from('user_stats').update({
-                candy_crumbles: newCandy,
-                rainbow_lollipops: newRainbow
-            }).eq('user_id', currentUser.id);
-            if(error) {
-                showNotification('购买失败: ' + error.message, 'error');
-                return false;
-            }
+        // 暴露给子模块的全局接口
+        window.getCurrentUserId = () => currentUser?.id;
+        window.getUserStats = () => userStats;
+        window.updateUserStatsAfterPurchase = async (newCandy, newRainbow) => {
             userStats.candy_crumbles = newCandy;
             userStats.rainbow_lollipops = newRainbow;
             updateShopBalanceDisplay();
-            showNotification('购买成功！', 'success');
-            return true;
-        }
+        };
+        window.showNotification = showNotification;
+        window.supabaseClient = supabaseClient; // 让子模块能访问 supabase
         
-        function renderShopItems() {
-            const container = document.getElementById('shopItemsList');
+        // 加载商店内容
+        async function loadShopContent() {
+            const container = document.getElementById('shopContentContainer');
             if(!container) return;
-            container.innerHTML = `
-                <div class="shop-item">
-                    <div class="shop-item-info">
-                        <div class="shop-item-name"><i class="fas fa-question-circle"></i> 神秘测试糖果</div>
-                        <div class="shop-item-price"><span class="price-icon"><img src="http://xiaochen1235789.github.io/images/Crushed_sugar.webp" alt="糖果碎" style="width: 20px; height: 20px; vertical-align: middle;"></span> 价格: 10 糖果碎</div>
-                    </div>
-                    <button class="btn btn-primary" id="buyTestItemBtn">购买</button>
-                </div>
-            `;
-            document.getElementById('buyTestItemBtn')?.addEventListener('click', async () => {
-                await purchaseItem('test_item', 10, 0);
-            });
-        }
-        
-        function showCurrencyInfo(currencyType) {
-            const titleElem = document.getElementById('currencyInfoTitle');
-            const contentElem = document.getElementById('currencyInfoContent');
-            if(currencyType === 'candy') {
-                titleElem.innerHTML = '<img src="http://xiaochen1235789.github.io/images/Crushed_sugar.webp" alt="糖果碎" style="width: 28px; height: 28px; vertical-align: middle;"> 糖果碎';
-                contentElem.innerHTML = '🍬 糖果碎是六哥荣耀世界中的通用货币，可以通过日常活动、签到、抽卡模拟器等方式获得。用来在商店购买各种小道具～';
-            } else if(currencyType === 'rainbow') {
-                titleElem.innerHTML = '<img src="http://xiaochen1235789.github.io/images/Super_Sweet.webp" alt="超级棒糖" style="width: 28px; height: 28px; vertical-align: middle;"> 超级棒糖';
-                contentElem.innerHTML = '🌈 超级棒糖是稀有货币，闪耀着七彩光芒。只有完成特殊任务或欧气爆发时才能获得！可以兑换珍稀商品。';
+            try {
+                const response = await fetch('shop-panel.html');
+                if(!response.ok) throw new Error('加载商店失败');
+                const html = await response.text();
+                container.innerHTML = html;
+                // 执行脚本（确保作用域）
+                const scripts = container.querySelectorAll('script');
+                scripts.forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    if(oldScript.src) {
+                        newScript.src = oldScript.src;
+                    } else {
+                        newScript.textContent = oldScript.textContent;
+                    }
+                    document.body.appendChild(newScript);
+                    oldScript.remove();
+                });
+            } catch(err) {
+                container.innerHTML = `<div style="text-align:center;padding:20px;color:#f87171;">加载商店失败: ${err.message}</div>`;
             }
-            openModal('currencyInfoModal');
         }
         
         // 模态框控制
@@ -1225,12 +1118,13 @@
         // 初始化
         async function initializeProfile() {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            window.supabaseClient = supabaseClient; // 确保子模块可用
             const { data: { user }, error } = await supabaseClient.auth.getUser();
             if(error || !user) { showNotification('请先登录','error'); setTimeout(()=>window.location.href='login-real.html',1500); return; }
             currentUser = user;
             await updateLastLogin();
             await loadUserProfile();
-            await loadUserStats();  // 加载统计（含签到、活跃度、货币）
+            await loadUserStats();
             document.getElementById('loading').style.display = 'none';
             document.getElementById('profileContent').style.display = 'block';
             
@@ -1244,21 +1138,11 @@
             
             const openShopBtn = document.getElementById('openShopBtn');
             const closeShopModalBtn = document.getElementById('closeShopModalBtn');
-            openShopBtn?.addEventListener('click', () => {
-                renderShopItems();
-                updateShopBalanceDisplay();
+            openShopBtn?.addEventListener('click', async () => {
+                await loadShopContent();
                 openModal('shopModal');
             });
             closeShopModalBtn?.addEventListener('click', () => closeModal('shopModal'));
-            
-            document.querySelectorAll('.currency-clickable').forEach(el => {
-                el.addEventListener('click', (e) => {
-                    const currency = el.getAttribute('data-currency');
-                    if(currency === 'candy') showCurrencyInfo('candy');
-                    else if(currency === 'rainbow') showCurrencyInfo('rainbow');
-                });
-            });
-            document.getElementById('closeCurrencyInfoBtn')?.addEventListener('click', () => closeModal('currencyInfoModal'));
             
             document.querySelectorAll('.close-modal-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -1271,7 +1155,6 @@
             });
             window.addEventListener('scroll', () => { let btn = document.querySelector('.back-to-top'); if(btn) btn.style.display = window.scrollY>300?'flex':'none'; });
             
-            // 签到按钮事件
             document.getElementById('checkinBtn')?.addEventListener('click', performCheckin);
         }
         document.addEventListener('DOMContentLoaded', () => setTimeout(initializeProfile, 100));
