@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>管理后台 - 六哥荣耀WIKI</title>
+    <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0f1117;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #e2e8f0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        /* 顶部导航 */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1a1f2e;
+            padding: 12px 24px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .logo {
+            font-size: 1.4rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #3b82f6, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .nav-links a {
+            color: #94a3b8;
+            text-decoration: none;
+            margin-left: 20px;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover {
+            color: #f97316;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .user-role-badge {
+            font-size: 0.85rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: #2d3748;
+        }
+        .logout-btn {
+            background: transparent;
+            border: 1px solid rgba(248,113,113,0.4);
+            color: #f87171;
+            padding: 6px 14px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .logout-btn:hover {
+            background: rgba(248,113,113,0.1);
+        }
+        /* 卡片 */
+        .card {
+            background: #1a1f2e;
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #2d3748;
+            padding-bottom: 12px;
+        }
+        .card-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        /* 表格 */
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .user-table th, .user-table td {
+            padding: 14px 12px;
+            text-align: left;
+            border-bottom: 1px solid #2d3748;
+        }
+        .user-table th {
+            color: #94a3b8;
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+        .user-table tr:hover {
+            background: rgba(59,130,246,0.05);
+        }
+        /* 角色徽章 */
+        .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .role-owner { background: rgba(249,115,22,0.2); color: #f97316; }
+        .role-admin { background: rgba(96,165,250,0.2); color: #60a5fa; }
+        .role-user  { background: rgba(156,163,175,0.2); color: #9ca3af; }
+        /* 操作按钮 */
+        .action-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 6px 10px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            margin-right: 6px;
+        }
+        .edit-role {
+            color: #60a5fa;
+        }
+        .edit-role:hover {
+            background: rgba(96,165,250,0.15);
+        }
+        .delete-user {
+            color: #f87171;
+        }
+        .delete-user:hover {
+            background: rgba(248,113,113,0.15);
+        }
+        .disabled-action {
+            color: #4b5563;
+            cursor: not-allowed;
+        }
+        /* 模态框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transition: all 0.2s;
+        }
+        .modal-overlay.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        .modal {
+            background: #1e2438;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 450px;
+            padding: 24px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.4);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .modal-header h3 {
+            font-size: 1.3rem;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.8rem;
+            cursor: pointer;
+        }
+        .modal-close:hover {
+            color: #fff;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #cbd5e1;
+        }
+        .form-select, .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            background: #0f1117;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            color: #e2e8f0;
+            font-size: 0.95rem;
+        }
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 8px 18px;
+            border-radius: 30px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-secondary {
+            background: #334155;
+            color: #e2e8f0;
+        }
+        .btn-danger {
+            background: #f87171;
+            color: white;
+        }
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #94a3b8;
+        }
+        .notification {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #3b82f6;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 40px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+            z-index: 1100;
+        }
+        .notification.show {
+            transform: translateX(0);
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #4b5563;
+            font-size: 0.8rem;
+        }
+        @media (max-width: 768px) {
+            .user-table th, .user-table td {
+                padding: 10px 6px;
+                font-size: 0.8rem;
+            }
+            .action-btn {
+                padding: 4px 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="top-bar">
+        <div class="logo-area">
+            <div class="logo">六哥荣耀WIKI · 管理后台</div>
+            <div class="nav-links">
+                <a href="./profile.html">个人主页</a>
+                <a href="./index.html">首页</a>
+            </div>
+        </div>
+        <div class="user-info" id="userInfoArea">
+            <span id="currentUserRoleBadge"></span>
+            <button class="logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> 退出</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2><i class="fas fa-users"></i> 用户管理</h2>
+            <span style="font-size:0.85rem; color:#94a3b8;">总用户数: <span id="totalUsers">0</span></span>
+        </div>
+        <div id="usersListArea">
+            <div class="loading"><i class="fas fa-spinner fa-pulse"></i> 加载用户列表中...</div>
+        </div>
+    </div>
+    <footer>© 六哥荣耀WIKI · 管理权限由数据库RLS严格保护</footer>
+</div>
+
+<!-- 修改角色模态框 -->
+<div id="roleModal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-user-tag"></i> 修改用户角色</h3>
+            <button class="modal-close" id="closeRoleModalBtn">&times;</button>
+        </div>
+        <div class="form-group">
+            <label class="form-label">用户: <span id="roleTargetUsername"></span></label>
+            <select id="newRoleSelect" class="form-select">
+                <option value="user">普通用户</option>
+                <option value="admin">管理员</option>
+                <!-- 站长不可通过界面设置，防止意外 -->
+            </select>
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-secondary" id="cancelRoleBtn">取消</button>
+            <button class="btn btn-primary" id="confirmRoleBtn">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认模态框 -->
+<div id="deleteModal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 style="color:#f87171;"><i class="fas fa-exclamation-triangle"></i> 删除用户</h3>
+            <button class="modal-close" id="closeDeleteModalBtn">&times;</button>
+        </div>
+        <p>确定要永久删除用户 <strong id="deleteTargetUsername"></strong> 吗？</p>
+        <p style="font-size:0.85rem; color:#fca5a5; margin-top:12px;">⚠️ 此操作将删除该用户的个人资料和统计数据，<br>但不会删除Auth认证账户（需手动在Supabase控制台处理）。</p>
+        <div class="form-actions">
+            <button class="btn btn-secondary" id="cancelDeleteBtn">取消</button>
+            <button class="btn btn-danger" id="confirmDeleteBtn">确认删除</button>
+        </div>
+    </div>
+</div>
+
+<div id="notification" class="notification"></div>
+
+<script>
+    const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
+    let supabase;
+    let currentUser = null;
+    let currentUserRole = null;      // 'owner', 'admin', 'user'
+    let allUsers = [];
+
+    // 角色颜色配置
+    const roleConfig = {
+        owner: { name: '站长', color: '#f97316', class: 'role-owner' },
+        admin: { name: '管理员', color: '#60a5fa', class: 'role-admin' },
+        user:  { name: '普通用户', color: '#9ca3af', class: 'role-user' }
+    };
+
+    // 工具函数
+    function showNotification(msg, type = 'info') {
+        const notif = document.getElementById('notification');
+        notif.textContent = msg;
+        notif.style.background = type === 'error' ? '#f87171' : (type === 'success' ? '#10b981' : '#3b82f6');
+        notif.classList.add('show');
+        setTimeout(() => notif.classList.remove('show'), 3000);
+    }
+
+    // 检查权限并重定向
+    async function checkAuthAndRole() {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user) {
+            showNotification('请先登录', 'error');
+            setTimeout(() => window.location.href = 'login-real.html', 1500);
+            return false;
+        }
+        currentUser = user;
+
+        // 获取用户角色
+        const { data: profile, error: profileErr } = await supabase
+            .from('user_profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+        if (profileErr || !profile) {
+            showNotification('无法获取用户角色', 'error');
+            setTimeout(() => window.location.href = 'index.html', 1500);
+            return false;
+        }
+        currentUserRole = profile.role;
+        if (currentUserRole !== 'owner' && currentUserRole !== 'admin') {
+            showNotification('无权限访问管理后台', 'error');
+            setTimeout(() => window.location.href = 'index.html', 1500);
+            return false;
+        }
+        return true;
+    }
+
+    // 获取所有用户列表 (从user_profiles + 补充user_stats的活跃度)
+    async function fetchAllUsers() {
+        // 获取所有user_profiles
+        let { data: profiles, error } = await supabase
+            .from('user_profiles')
+            .select('id, username, role, avatar_url, created_at')
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+
+        // 获取所有user_stats中的活跃度 (可选)
+        const { data: stats, error: statsErr } = await supabase
+            .from('user_stats')
+            .select('user_id, active_points, checkin_streak');
+        if (statsErr) console.warn('获取统计数据失败', statsErr);
+
+        const statsMap = new Map();
+        if (stats) {
+            stats.forEach(s => statsMap.set(s.user_id, { active: s.active_points || 0, streak: s.checkin_streak || 0 }));
+        }
+
+        const users = profiles.map(p => ({
+            id: p.id,
+            username: p.username || '未命名',
+            role: p.role || 'user',
+            avatar: p.avatar_url,
+            created_at: p.created_at,
+            active_points: statsMap.get(p.id)?.active || 0,
+            streak: statsMap.get(p.id)?.streak || 0
+        }));
+        return users;
+    }
+
+    // 渲染用户表格
+    function renderUsersTable(users) {
+        const container = document.getElementById('usersListArea');
+        if (!users.length) {
+            container.innerHTML = '<div class="loading">暂无用户数据</div>';
+            return;
+        }
+        const isOwner = (currentUserRole === 'owner');
+        const table = document.createElement('table');
+        table.className = 'user-table';
+        table.innerHTML = `
+            <thead>
+                <tr><th>用户名</th><th>角色</th><th>活跃度</th><th>连续签到</th><th>注册时间</th><th>操作</th></tr>
+            </thead>
+            <tbody id="userTableBody"></tbody>
+        `;
+        const tbody = table.querySelector('#userTableBody');
+        users.forEach(user => {
+            const roleInfo = roleConfig[user.role] || roleConfig.user;
+            const createdDate = user.created_at ? new Date(user.created_at).toLocaleDateString('zh-CN') : '未知';
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td><strong>${escapeHtml(user.username)}</strong><br><span style="font-size:0.7rem; color:#64748b;">${user.id.slice(0,8)}...</span></td>
+                <td><span class="role-badge ${roleInfo.class}">${roleInfo.name}</span></td>
+                <td>⚡ ${user.active_points}</td>
+                <td>🔥 ${user.streak}天</td>
+                <td>${createdDate}</td>
+                <td id="actions-${user.id}"></td>
+            `;
+            const actionsCell = row.cells[5];
+            if (isOwner) {
+                // 站长可以修改角色（但不能修改自己的角色，防止锁死；也不能修改另一个owner）
+                const disableRoleEdit = (user.role === 'owner') || (user.id === currentUser.id);
+                const roleBtn = document.createElement('button');
+                roleBtn.innerHTML = '<i class="fas fa-edit"></i> 角色';
+                roleBtn.className = 'action-btn edit-role';
+                if (disableRoleEdit) {
+                    roleBtn.disabled = true;
+                    roleBtn.classList.add('disabled-action');
+                    roleBtn.title = '不能修改站长角色或自身';
+                } else {
+                    roleBtn.onclick = () => openRoleModal(user);
+                }
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerHTML = '<i class="fas fa-trash"></i> 删除';
+                deleteBtn.className = 'action-btn delete-user';
+                if (user.id === currentUser.id) {
+                    deleteBtn.disabled = true;
+                    deleteBtn.classList.add('disabled-action');
+                    deleteBtn.title = '不能删除自己';
+                } else {
+                    deleteBtn.onclick = () => openDeleteModal(user);
+                }
+                actionsCell.appendChild(roleBtn);
+                actionsCell.appendChild(deleteBtn);
+            } else {
+                // 管理员只读，无操作按钮
+                actionsCell.innerHTML = '<span style="color:#64748b;">只读</span>';
+            }
+        });
+        container.innerHTML = '';
+        container.appendChild(table);
+        document.getElementById('totalUsers').innerText = users.length;
+    }
+
+    function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+
+    // 模态框全局变量
+    let currentEditingUser = null;
+    let currentDeletingUser = null;
+
+    function openRoleModal(user) {
+        currentEditingUser = user;
+        document.getElementById('roleTargetUsername').innerText = user.username;
+        const select = document.getElementById('newRoleSelect');
+        select.value = user.role === 'owner' ? 'user' : (user.role === 'admin' ? 'admin' : 'user');
+        openModal('roleModal');
+    }
+
+    function openDeleteModal(user) {
+        currentDeletingUser = user;
+        document.getElementById('deleteTargetUsername').innerText = user.username;
+        openModal('deleteModal');
+    }
+
+    async function updateUserRole() {
+        if (!currentEditingUser) return;
+        const newRole = document.getElementById('newRoleSelect').value;
+        if (newRole === currentEditingUser.role) {
+            closeModal('roleModal');
+            return;
+        }
+        try {
+            const { error } = await supabase
+                .from('user_profiles')
+                .update({ role: newRole })
+                .eq('id', currentEditingUser.id);
+            if (error) throw error;
+            showNotification(`已将 ${currentEditingUser.username} 的角色改为 ${roleConfig[newRole].name}`, 'success');
+            closeModal('roleModal');
+            await refreshUserList();
+        } catch (err) {
+            showNotification(`修改失败: ${err.message}`, 'error');
+        }
+    }
+
+    async function deleteUser() {
+        if (!currentDeletingUser) return;
+        const userId = currentDeletingUser.id;
+        try {
+            // 先删除 user_stats 记录
+            await supabase.from('user_stats').delete().eq('user_id', userId);
+            // 再删除 user_profiles 记录
+            const { error } = await supabase.from('user_profiles').delete().eq('id', userId);
+            if (error) throw error;
+            showNotification(`已删除用户 ${currentDeletingUser.username}`, 'success');
+            closeModal('deleteModal');
+            await refreshUserList();
+        } catch (err) {
+            showNotification(`删除失败: ${err.message}`, 'error');
+        }
+    }
+
+    async function refreshUserList() {
+        try {
+            allUsers = await fetchAllUsers();
+            renderUsersTable(allUsers);
+        } catch (err) {
+            showNotification('刷新列表失败', 'error');
+            console.error(err);
+        }
+    }
+
+    // 模态框控制
+    function openModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.classList.add('show');
+    }
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.classList.remove('show');
+        currentEditingUser = null;
+        currentDeletingUser = null;
+    }
+
+    // 显示顶部当前用户信息
+    async function updateTopBar() {
+        if (!currentUser) return;
+        const { data: profile } = await supabase.from('user_profiles').select('username, role').eq('id', currentUser.id).single();
+        const username = profile?.username || currentUser.email.split('@')[0];
+        const roleInfo = roleConfig[currentUserRole] || roleConfig.user;
+        const badgeHtml = `<span class="user-role-badge" style="color:${roleInfo.color};">${username} (${roleInfo.name})</span>`;
+        document.getElementById('currentUserRoleBadge').innerHTML = badgeHtml;
+    }
+
+    // 退出登录
+    async function logout() {
+        await supabase.auth.signOut();
+        window.location.href = 'index.html';
+    }
+
+    // 初始化
+    async function init() {
+        const ok = await checkAuthAndRole();
+        if (!ok) return;
+        await updateTopBar();
+        await refreshUserList();
+        // 绑定事件
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        document.getElementById('closeRoleModalBtn').addEventListener('click', () => closeModal('roleModal'));
+        document.getElementById('cancelRoleBtn').addEventListener('click', () => closeModal('roleModal'));
+        document.getElementById('confirmRoleBtn').addEventListener('click', updateUserRole);
+        document.getElementById('closeDeleteModalBtn').addEventListener('click', () => closeModal('deleteModal'));
+        document.getElementById('cancelDeleteBtn').addEventListener('click', () => closeModal('deleteModal'));
+        document.getElementById('confirmDeleteBtn').addEventListener('click', deleteUser);
+        // 点击遮罩关闭
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) closeModal(overlay.id);
+            });
+        });
+    }
+
+    init();
+</script>
+</body>
+</html>
