@@ -297,14 +297,18 @@
             color: #4b5563;
             font-size: 0.8rem;
         }
+        .resource-img {
+            width: 20px;
+            height: 20px;
+            vertical-align: middle;
+            margin-right: 4px;
+        }
         .resource-value {
             font-weight: 500;
             display: inline-flex;
             align-items: center;
             gap: 4px;
         }
-        .candy-icon { color: #fbbf24; }
-        .rainbow-icon { color: #f472b6; }
         @media (max-width: 768px) {
             .user-table th, .user-table td {
                 padding: 10px 6px;
@@ -396,11 +400,11 @@
             <label class="form-label">用户: <strong id="resourceTargetUsername"></strong></label>
         </div>
         <div class="form-group">
-            <label class="form-label"><i class="fas fa-candy-cane candy-icon"></i> 糖果碎数量</label>
+            <label class="form-label"><img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp" class="resource-img" alt="糖果碎"> 糖果碎数量</label>
             <input type="number" id="newCandyValue" class="form-input-number" min="0" step="1" value="0">
         </div>
         <div class="form-group">
-            <label class="form-label"><i class="fas fa-lollipop rainbow-icon"></i> 超级棒糖数量</label>
+            <label class="form-label"><img src="https://xiaochen1235789.github.io/images/Super_Sweet.webp" class="resource-img" alt="超级棒糖"> 超级棒糖数量</label>
             <input type="number" id="newRainbowValue" class="form-input-number" min="0" step="1" value="0">
         </div>
         <div class="form-actions">
@@ -413,9 +417,12 @@
 <div id="notification" class="notification"></div>
 
 <script>
+    // Supabase 配置
     const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-    let supabase;
+    
+    // 全局变量
+    let supabaseClient;
     let currentUser = null;
     let currentUserRole = null;      // 'owner', 'admin', 'user'
     let allUsers = [];
@@ -438,8 +445,8 @@
 
     // 权限校验 + 获取当前用户
     async function checkAuthAndRole() {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        const { data: { user }, error } = await supabase.auth.getUser();
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const { data: { user }, error } = await supabaseClient.auth.getUser();
         if (error || !user) {
             showNotification('请先登录', 'error');
             setTimeout(() => window.location.href = 'login-real.html', 1500);
@@ -447,7 +454,7 @@
         }
         currentUser = user;
 
-        const { data: profile, error: profileErr } = await supabase
+        const { data: profile, error: profileErr } = await supabaseClient
             .from('user_profiles')
             .select('role')
             .eq('id', user.id)
@@ -468,15 +475,13 @@
 
     // 获取所有用户信息 (包含糖果碎，超级棒糖，活跃度，签到等)
     async function fetchAllUsers() {
-        // 获取所有 user_profiles
-        let { data: profiles, error } = await supabase
+        let { data: profiles, error } = await supabaseClient
             .from('user_profiles')
             .select('id, username, role, avatar_url, created_at')
             .order('created_at', { ascending: false });
         if (error) throw error;
 
-        // 获取所有 user_stats 中的资产和活跃数据
-        const { data: stats, error: statsErr } = await supabase
+        const { data: stats, error: statsErr } = await supabaseClient
             .from('user_stats')
             .select('user_id, candy_crumbles, rainbow_lollipops, active_points, checkin_streak');
         if (statsErr) console.warn('获取统计数据失败', statsErr);
@@ -508,7 +513,7 @@
         return users;
     }
 
-    // 渲染表格 (增加糖果碎和超级棒糖列，管理员/站长可调整资源)
+    // 渲染表格
     function renderUsersTable(users) {
         const container = document.getElementById('usersListArea');
         if (!users.length) {
@@ -524,7 +529,16 @@
         table.className = 'user-table';
         table.innerHTML = `
             <thead>
-                <tr><th>用户名</th><th>角色</th><th>糖果碎 🍬</th><th>超级棒糖 🌈</th><th>活跃度</th><th>连续签到</th><th>注册时间</th><th>操作</th></tr>
+                <tr>
+                    <th>用户名</th>
+                    <th>角色</th>
+                    <th>糖果碎 🍬</th>
+                    <th>超级棒糖 🌈</th>
+                    <th>活跃度</th>
+                    <th>连续签到</th>
+                    <th>注册时间</th>
+                    <th>操作</th>
+                </tr>
             </thead>
             <tbody id="userTableBody"></tbody>
         `;
@@ -534,12 +548,11 @@
             const createdDate = user.created_at ? new Date(user.created_at).toLocaleDateString('zh-CN') : '未知';
             const row = tbody.insertRow();
             
-            // 用户名列
             row.innerHTML = `
                 <td><strong>${escapeHtml(user.username)}</strong><br><span style="font-size:0.7rem; color:#64748b;">${user.id.slice(0,8)}...</span></td>
                 <td><span class="role-badge ${roleInfo.class}">${roleInfo.name}</span></td>
-                <td><span class="resource-value"><i class="fas fa-candy-cane candy-icon"></i> ${user.candy_crumbles}</span></td>
-                <td><span class="resource-value"><i class="fas fa-lollipop rainbow-icon"></i> ${user.rainbow_lollipops}</span></td>
+                <td><span class="resource-value"><img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp" class="resource-img" alt="糖果碎"> ${user.candy_crumbles}</span></td>
+                <td><span class="resource-value"><img src="https://xiaochen1235789.github.io/images/Super_Sweet.webp" class="resource-img" alt="超级棒糖"> ${user.rainbow_lollipops}</span></td>
                 <td>⚡ ${user.active_points}</td>
                 <td>🔥 ${user.streak}天</td>
                 <td>${createdDate}</td>
@@ -550,7 +563,6 @@
             actionsCell.style.flexWrap = 'wrap';
             actionsCell.style.gap = '6px';
             
-            // 站长专属：角色编辑 + 删除按钮
             if (isOwner) {
                 const disableRoleEdit = (user.role === 'owner') || (user.id === currentUser.id);
                 const roleBtn = document.createElement('button');
@@ -578,7 +590,6 @@
                 actionsCell.appendChild(deleteBtn);
             }
             
-            // 管理员/站长均可调整资源（糖果碎，超级棒糖）
             if (isAdminOrOwner) {
                 const resourceBtn = document.createElement('button');
                 resourceBtn.innerHTML = '<i class="fas fa-chart-line"></i> 调整资产';
@@ -587,7 +598,6 @@
                 actionsCell.appendChild(resourceBtn);
             }
             
-            // 如果是普通管理员但没有站长权限，又不属于上述情况 => 显示只读提示
             if (!isOwner && !isAdminOrOwner) {
                 actionsCell.innerHTML = '<span style="color:#64748b;">只读</span>';
             }
@@ -625,7 +635,7 @@
             return;
         }
         try {
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('user_profiles')
                 .update({ role: newRole })
                 .eq('id', currentEditingUser.id);
@@ -649,9 +659,8 @@
         if (!currentDeletingUser) return;
         const userId = currentDeletingUser.id;
         try {
-            // 删除 user_stats 和 user_profiles
-            await supabase.from('user_stats').delete().eq('user_id', userId);
-            const { error } = await supabase.from('user_profiles').delete().eq('id', userId);
+            await supabaseClient.from('user_stats').delete().eq('user_id', userId);
+            const { error } = await supabaseClient.from('user_profiles').delete().eq('id', userId);
             if (error) throw error;
             showNotification(`已删除用户 ${currentDeletingUser.username}`, 'success');
             closeModal('deleteModal');
@@ -679,8 +688,7 @@
             return;
         }
         try {
-            // 使用 upsert 更新或创建资产记录（保留其他字段）
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('user_stats')
                 .upsert({ 
                     user_id: currentResourceUser.id, 
@@ -715,7 +723,6 @@
     function closeModal(id) {
         const modal = document.getElementById(id);
         if (modal) modal.classList.remove('show');
-        // 清除临时变量
         if (id === 'roleModal') currentEditingUser = null;
         if (id === 'deleteModal') currentDeletingUser = null;
         if (id === 'resourceModal') currentResourceUser = null;
@@ -724,7 +731,7 @@
     // 顶部显示用户信息
     async function updateTopBar() {
         if (!currentUser) return;
-        const { data: profile } = await supabase.from('user_profiles').select('username, role').eq('id', currentUser.id).single();
+        const { data: profile } = await supabaseClient.from('user_profiles').select('username, role').eq('id', currentUser.id).single();
         const username = profile?.username || currentUser.email.split('@')[0];
         const roleInfo = roleConfig[currentUserRole] || roleConfig.user;
         const badgeHtml = `<span class="user-role-badge" style="color:${roleInfo.color};">${username} (${roleInfo.name})</span>`;
@@ -732,7 +739,7 @@
     }
 
     async function logout() {
-        await supabase.auth.signOut();
+        await supabaseClient.auth.signOut();
         window.location.href = 'index.html';
     }
 
@@ -743,25 +750,20 @@
         await updateTopBar();
         await refreshUserList();
         
-        // 绑定各种关闭/确认事件
         document.getElementById('logoutBtn').addEventListener('click', logout);
         
-        // 角色模态框
         document.getElementById('closeRoleModalBtn').addEventListener('click', () => closeModal('roleModal'));
         document.getElementById('cancelRoleBtn').addEventListener('click', () => closeModal('roleModal'));
         document.getElementById('confirmRoleBtn').addEventListener('click', updateUserRole);
         
-        // 删除模态框
         document.getElementById('closeDeleteModalBtn').addEventListener('click', () => closeModal('deleteModal'));
         document.getElementById('cancelDeleteBtn').addEventListener('click', () => closeModal('deleteModal'));
         document.getElementById('confirmDeleteBtn').addEventListener('click', deleteUser);
         
-        // 资源调整模态框
         document.getElementById('closeResourceModalBtn').addEventListener('click', () => closeModal('resourceModal'));
         document.getElementById('cancelResourceBtn').addEventListener('click', () => closeModal('resourceModal'));
         document.getElementById('confirmResourceBtn').addEventListener('click', updateUserResources);
         
-        // 点击遮罩关闭
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) closeModal(overlay.id);
