@@ -77,10 +77,8 @@
     // ==================== 配置 ====================
     const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-    // 管理员邮箱列表（请修改为你的邮箱）
-    const ADMIN_EMAILS = ['1714400176@qq.com'];  // ⚠️ 必须改成你自己的邮箱
-    
-    // 使用不同的全局变量名，避免冲突
+    const ADMIN_EMAILS = ['1714400176@qq.com'];  // 管理员邮箱
+
     let supabaseAdmin = null;
     let currentAdminUser = null;
     let currentTable = 'characters';
@@ -88,7 +86,7 @@
     let editingTable = null;
     let currentDataCache = {};
 
-    // 表字段配置
+    // 表字段配置（不变）
     const TABLE_SCHEMA = {
         characters: {
             fields: [
@@ -137,23 +135,20 @@
             return;
         }
         currentAdminUser = user;
-        // 检查管理员权限
         if (!ADMIN_EMAILS.includes(user.email)) {
             alert('您没有管理员权限，请使用管理员账号登录');
             window.location.href = 'index.html';
             return;
         }
         document.getElementById('adminUserEmail').innerText = user.email;
-        // 加载默认表数据
         await loadTableData('characters');
-        // 绑定标签切换事件
+        
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const table = btn.dataset.table;
                 switchTable(table);
             });
         });
-        // 绑定搜索事件
         document.getElementById('search-characters').addEventListener('input', () => filterTable('characters'));
         document.getElementById('search-light_cones').addEventListener('input', () => filterTable('light_cones'));
         document.getElementById('search-materials').addEventListener('input', () => filterTable('materials'));
@@ -170,16 +165,18 @@
     }
 
     async function loadTableData(table) {
-        const { data, error } = await supabaseAdmin.from(table).select('*').order('display_order', { ascending: true });
-        if (error) {
-            console.error(error);
-            showNotification('加载数据失败', 'error');
-            return;
+        try {
+            const { data, error } = await supabaseAdmin.from(table).select('*').order('display_order', { ascending: true });
+            if (error) throw error;
+            currentDataCache[table] = data || [];
+            renderTable(table, currentDataCache[table]);
+        } catch (err) {
+            console.error(`加载${table}数据失败:`, err);
+            showNotification(`加载${getTableChinese(table)}数据失败`, 'error');
         }
-        currentDataCache[table] = data;
-        renderTable(table, data);
     }
 
+    // 安全的渲染函数，避免任何因数据格式导致的崩溃
     function renderTable(table, data) {
         const container = document.getElementById(`${table}-table-container`);
         if (!container) return;
@@ -187,7 +184,7 @@
             container.innerHTML = '<div class="empty-data">暂无数据，点击右上角添加</div>';
             return;
         }
-        // 动态表头
+        // 定义表头
         let headers = [];
         if (table === 'characters') headers = ['name', 'description', 'element', 'path', 'rarity', 'version', 'image_url', 'detail_url', 'is_limited', 'display_order'];
         else if (table === 'light_cones') headers = ['name', 'description', 'path', 'character_id', 'image_url', 'detail_url', 'display_order'];
@@ -196,23 +193,41 @@
         let html = '<table class="data-table"><thead><tr>';
         headers.forEach(h => html += `<th>${h}</th>`);
         html += '<th>操作</th></tr></thead><tbody>';
-        data.forEach(row => {
+        
+        for (const row of data) {
             html += '<tr>';
-            headers.forEach(h => {
+            for (const h of headers) {
                 let val = row[h];
-                if (val === undefined) val = '';
-                if (h === 'image_url' && val) val = `<img src="${val}" class="table-img" onerror="this.style.display='none'">`;
-                if (h === 'is_limited') val = val ? '是' : '否';
+                if (val === undefined || val === null) val = '';
+                // 特殊处理图片和布尔值
+                if (h === 'image_url' && val) {
+                    val = `<img src="${escapeHtml(String(val))}" class="table-img" onerror="this.style.display='none'" alt="img">`;
+                } else if (h === 'is_limited') {
+                    val = val ? '是' : '否';
+                } else {
+                    val = escapeHtml(String(val));
+                }
                 html += `<td title="${val}">${val}</td>`;
-            });
+            }
             html += `<td class="action-buttons">
                 <button class="edit-btn" onclick="showEditForm('${table}', ${row.id})"><i class="fas fa-edit"></i> 编辑</button>
                 <button class="delete-btn" onclick="deleteRecord('${table}', ${row.id})"><i class="fas fa-trash"></i> 删除</button>
             </td>`;
             html += '</tr>';
-        });
+        }
         html += '</tbody></table>';
         container.innerHTML = html;
+    }
+
+    // 辅助函数：转义HTML
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
     }
 
     function filterTable(table) {
@@ -260,16 +275,17 @@
             const div = document.createElement('div');
             div.className = 'form-field';
             div.innerHTML = `
-                <label>${field.label}</label>
+                <label>${escapeHtml(field.label)}</label>
                 ${field.type === 'checkbox' 
-                    ? `<input type="checkbox" name="${field.name}" ${value ? 'checked' : ''}>`
-                    : `<input type="${field.type}" name="${field.name}" value="${value ?? ''}" ${field.required ? 'required' : ''}>`
+                    ? `<input type="checkbox" name="${escapeHtml(field.name)}" ${value ? 'checked' : ''}>`
+                    : `<input type="${field.type}" name="${escapeHtml(field.name)}" value="${escapeHtml(String(value ?? ''))}" ${field.required ? 'required' : ''}>`
                 }
             `;
             container.appendChild(div);
         });
     }
 
+    // 修复的核心：拆分成功提示与刷新操作，避免刷新时的异常覆盖成功提示
     async function submitForm(e) {
         e.preventDefault();
         const form = e.target;
@@ -282,25 +298,34 @@
             } else {
                 let val = formData.get(field.name);
                 if (field.type === 'number') val = val ? Number(val) : 0;
-                data[field.name] = val;
+                data[field.name] = val === undefined ? '' : val;
             }
         }
+        
         try {
+            let result;
             if (editingId) {
-                const { error } = await supabaseAdmin.from(editingTable).update(data).eq('id', editingId);
-                if (error) throw error;
-                showNotification('更新成功', 'success');
+                result = await supabaseAdmin.from(editingTable).update(data).eq('id', editingId);
             } else {
-                const { error } = await supabaseAdmin.from(editingTable).insert([data]);
-                if (error) throw error;
-                showNotification('添加成功', 'success');
+                result = await supabaseAdmin.from(editingTable).insert([data]);
             }
+            if (result.error) throw result.error;
+            
+            // 操作成功，先关闭模态框并显示成功通知
             closeFormModal();
-            await loadTableData(editingTable);
-            filterTable(editingTable);
+            showNotification(editingId ? '更新成功' : '添加成功', 'success');
+            
+            // 然后尝试刷新表格（即使刷新过程中出错也不影响用户对成功的感知）
+            try {
+                await loadTableData(editingTable);
+                filterTable(editingTable);
+            } catch (refreshErr) {
+                console.error('刷新表格数据时出错:', refreshErr);
+                // 不覆盖成功通知，仅控制台记录
+            }
         } catch (err) {
             console.error(err);
-            showNotification('操作失败: ' + err.message, 'error');
+            showNotification('操作失败: ' + (err.message || '未知错误'), 'error');
         }
     }
 
@@ -311,8 +336,12 @@
             showNotification('删除失败', 'error');
         } else {
             showNotification('删除成功', 'success');
-            await loadTableData(table);
-            filterTable(table);
+            try {
+                await loadTableData(table);
+                filterTable(table);
+            } catch (refreshErr) {
+                console.error('刷新数据失败:', refreshErr);
+            }
         }
     }
 
@@ -331,7 +360,7 @@
     function showNotification(msg, type) {
         const notif = document.createElement('div');
         notif.className = `notification ${type}`;
-        notif.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${msg}`;
+        notif.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${escapeHtml(msg)}`;
         document.body.appendChild(notif);
         setTimeout(() => notif.classList.add('show'), 10);
         setTimeout(() => {
