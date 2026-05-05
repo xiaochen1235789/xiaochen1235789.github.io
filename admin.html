@@ -7,7 +7,7 @@
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/admin.css">
+    <link rel="stylesheet" href="admin.css">
 </head>
 <body>
 <div class="admin-container">
@@ -19,7 +19,6 @@
         </div>
     </div>
 
-    <!-- 顶部标签页 -->
     <div class="table-tabs">
         <button class="tab-btn active" data-tab="user">👥 用户管理</button>
         <button class="tab-btn" data-tab="characters">📖 角色管理</button>
@@ -27,18 +26,14 @@
         <button class="tab-btn" data-tab="materials">🧪 材料管理</button>
     </div>
 
-    <!-- 用户管理面板 -->
     <div id="user-panel" class="panel active-panel">
         <div class="toolbar">
             <input type="text" id="searchUsers" class="search-input" placeholder="搜索用户名...">
             <span style="color: var(--text-secondary);">总用户数: <span id="totalUsers">0</span></span>
         </div>
-        <div id="usersListArea" class="table-container">
-            <div class="loading">加载中...</div>
-        </div>
+        <div id="usersListArea" class="table-container"><div class="loading">加载中...</div></div>
     </div>
 
-    <!-- 角色管理面板 -->
     <div id="characters-panel" class="panel">
         <div class="toolbar">
             <input type="text" id="search-characters" class="search-input" placeholder="搜索角色名...">
@@ -47,7 +42,6 @@
         <div id="characters-table-container" class="table-container"></div>
     </div>
 
-    <!-- 光锥管理面板 -->
     <div id="lightcones-panel" class="panel">
         <div class="toolbar">
             <input type="text" id="search-lightcones" class="search-input" placeholder="搜索光锥名...">
@@ -56,7 +50,6 @@
         <div id="lightcones-table-container" class="table-container"></div>
     </div>
 
-    <!-- 材料管理面板 -->
     <div id="materials-panel" class="panel">
         <div class="toolbar">
             <input type="text" id="search-materials" class="search-input" placeholder="搜索材料名...">
@@ -66,7 +59,6 @@
     </div>
 </div>
 
-<!-- 通用模态框（动态内容） -->
 <div id="genericModal" class="modal" style="display: none;">
     <div class="modal-overlay" onclick="closeModal()"></div>
     <div class="modal-content">
@@ -97,22 +89,16 @@
     let allUsers = [];
     let currentDataCache = { characters: [], light_cones: [], materials: [] };
     
-    // 当前操作的上下文（用于内容管理）
-    let currentContentTable = null;   // 'characters', 'light_cones', 'materials'
+    let currentContentTable = null;
     let editingContentId = null;
-    
-    // 用户管理编辑目标
     let editingUserId = null;
-    let editingUserData = null;
     
-    // 角色配置
     const roleConfig = {
         owner: { name: '站长', class: 'role-owner' },
         admin: { name: '管理员', class: 'role-admin' },
         user:  { name: '普通用户', class: 'role-user' }
     };
     
-    // 表字段配置（与之前一致）
     const TABLE_SCHEMA = {
         characters: {
             fields: [
@@ -151,7 +137,6 @@
         }
     };
     
-    // ==================== 工具函数 ====================
     function showNotification(msg, type = 'info') {
         const notif = document.createElement('div');
         notif.className = `notification ${type}`;
@@ -166,15 +151,9 @@
     
     function escapeHtml(str) {
         if (!str) return '';
-        return str.replace(/[&<>]/g, m => {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
+        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
     }
     
-    // 清空模态框
     function closeModal() {
         document.getElementById('genericModal').style.display = 'none';
         document.body.classList.remove('modal-open');
@@ -191,7 +170,6 @@
         document.body.classList.add('modal-open');
     }
     
-    // ==================== 权限校验 ====================
     async function checkAuthAndRole() {
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const { data: { user }, error } = await supabase.auth.getUser();
@@ -212,7 +190,6 @@
         return true;
     }
     
-    // ==================== 用户管理模块 ====================
     async function fetchAllUsers() {
         const { data: profiles, error } = await supabase
             .from('user_profiles')
@@ -253,7 +230,7 @@
                 </td>
             </tr>`;
         });
-        html += '</tbody></table>';
+        html += '</tbody></td>';
         container.innerHTML = html;
         document.getElementById('totalUsers').innerText = users.length;
     }
@@ -265,7 +242,6 @@
         } catch (err) { showNotification('刷新用户列表失败', 'error'); }
     }
     
-    // 修改角色模态框
     window.openUserRoleModal = (userId, username, currentRole) => {
         editingUserId = userId;
         const selectOptions = `<option value="user" ${currentRole === 'user' ? 'selected' : ''}>普通用户</option>
@@ -285,7 +261,6 @@
         };
     };
     
-    // 调整资产模态框
     window.openUserResourceModal = (userId, username, candy, rainbow) => {
         editingUserId = userId;
         const fields = `<div class="form-field"><label>用户：${escapeHtml(username)}</label></div>
@@ -315,7 +290,6 @@
         else { showNotification(`已删除用户 ${username}`, 'success'); refreshUserList(); }
     };
     
-    // ==================== 内容管理模块（角色/光锥/材料） ====================
     async function loadContentTable(table) {
         try {
             const { data, error } = await supabase.from(table).select('*').order('display_order', { ascending: true });
@@ -352,7 +326,8 @@
             html += `<td class="action-buttons">
                 <button class="edit-btn" onclick="editContentItem('${table}', ${row.id})"><i class="fas fa-edit"></i> 编辑</button>
                 <button class="delete-btn" onclick="deleteContentItem('${table}', ${row.id})"><i class="fas fa-trash"></i> 删除</button>
-            </td></tr>`;
+            </td>`;
+            html += '</tr>';
         }
         html += '</tbody></table>';
         container.innerHTML = html;
@@ -431,7 +406,6 @@
         return map[table] || table;
     }
     
-    // 标签页切换
     function switchTab(tabId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
@@ -443,7 +417,6 @@
         else if (tabId === 'materials') loadContentTable('materials');
     }
     
-    // 绑定事件
     function bindEvents() {
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -462,7 +435,6 @@
         document.getElementById('logoutBtn').onclick = async () => { await supabase.auth.signOut(); window.location.href = 'index.html'; };
     }
     
-    // 启动
     async function init() {
         if (!await checkAuthAndRole()) return;
         bindEvents();
