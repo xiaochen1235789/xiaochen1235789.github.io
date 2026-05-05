@@ -8,6 +8,45 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/admin.css">
+    <style>
+        /* 额外确保表格包裹良好 */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 10px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            min-width: 600px;
+            background: var(--card-bg);
+        }
+        .data-table th, .data-table td {
+            border: 1px solid var(--border-color);
+            padding: 8px 10px;
+            text-align: left;
+            vertical-align: middle;
+        }
+        .data-table th {
+            background: #2a3a35;
+            color: var(--text-highlight);
+            font-weight: 600;
+        }
+        .data-table tr:hover {
+            background: rgba(129, 199, 132, 0.1);
+        }
+        .table-img {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .empty-data {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+    </style>
 </head>
 <body>
 <div class="admin-container">
@@ -26,6 +65,7 @@
         <button class="tab-btn" data-tab="materials">🧪 材料管理</button>
     </div>
 
+    <!-- 用户管理面板 -->
     <div id="user-panel" class="panel active-panel">
         <div class="toolbar">
             <input type="text" id="searchUsers" class="search-input" placeholder="搜索用户名...">
@@ -34,6 +74,7 @@
         <div id="usersListArea" class="table-container"><div class="loading">加载中...</div></div>
     </div>
 
+    <!-- 角色管理面板 -->
     <div id="characters-panel" class="panel">
         <div class="toolbar">
             <input type="text" id="search-characters" class="search-input" placeholder="搜索角色名...">
@@ -42,6 +83,7 @@
         <div id="characters-table-container" class="table-container"></div>
     </div>
 
+    <!-- 光锥管理面板 -->
     <div id="light_cones-panel" class="panel">
         <div class="toolbar">
             <input type="text" id="search-light_cones" class="search-input" placeholder="搜索光锥名...">
@@ -50,6 +92,7 @@
         <div id="light_cones-table-container" class="table-container"></div>
     </div>
 
+    <!-- 材料管理面板 -->
     <div id="materials-panel" class="panel">
         <div class="toolbar">
             <input type="text" id="search-materials" class="search-input" placeholder="搜索材料名...">
@@ -59,6 +102,7 @@
     </div>
 </div>
 
+<!-- 模态框 -->
 <div id="genericModal" class="modal" style="display: none;">
     <div class="modal-overlay" onclick="closeModal()"></div>
     <div class="modal-content">
@@ -79,90 +123,75 @@
 </div>
 
 <script>
-    // ==================== Supabase 配置 ====================
+    // ==================== 配置 ====================
     const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-    const OWNER_ID = '2e617135-daa2-4619-a7df-dacd425da881';  // 站长固定ID
+    const OWNER_ID = '2e617135-daa2-4619-a7df-dacd425da881';
 
-    let supabaseAdmin = null;          // 改用 supabaseAdmin 避免全局冲突
+    let supabaseAdmin = null;
     let currentUser = null;
     let currentUserRole = null;
     let allUsers = [];
     let currentDataCache = { characters: [], light_cones: [], materials: [] };
-    
     let currentContentTable = null;
     let editingContentId = null;
     let editingUserId = null;
-    
+
     const roleConfig = {
         owner: { name: '站长', class: 'role-owner' },
         admin: { name: '管理员', class: 'role-admin' },
         user:  { name: '普通用户', class: 'role-user' }
     };
-    
+
     const TABLE_SCHEMA = {
-        characters: {
-            fields: [
-                { name: 'name', label: '角色名', type: 'text', required: true },
-                { name: 'description', label: '描述', type: 'text' },
-                { name: 'element', label: '属性', type: 'text' },
-                { name: 'path', label: '命途', type: 'text' },
-                { name: 'rarity', label: '星级', type: 'number', default: 5 },
-                { name: 'version', label: '版本', type: 'text' },
-                { name: 'image_url', label: '图片URL', type: 'text' },
-                { name: 'detail_url', label: '详情页URL', type: 'text' },
-                { name: 'is_limited', label: '限定', type: 'checkbox', default: true },
-                { name: 'display_order', label: '排序', type: 'number', default: 0 }
-            ]
-        },
-        light_cones: {
-            fields: [
-                { name: 'name', label: '光锥名', type: 'text', required: true },
-                { name: 'description', label: '描述', type: 'text' },
-                { name: 'path', label: '命途', type: 'text' },
-                { name: 'character_id', label: '关联角色ID', type: 'number' },
-                { name: 'image_url', label: '图片URL', type: 'text' },
-                { name: 'detail_url', label: '详情页URL', type: 'text' },
-                { name: 'display_order', label: '排序', type: 'number', default: 0 }
-            ]
-        },
-        materials: {
-            fields: [
-                { name: 'name', label: '材料名', type: 'text', required: true },
-                { name: 'description', label: '描述', type: 'text' },
-                { name: 'rarity', label: '稀有度(green/blue/purple/gold)', type: 'text' },
-                { name: 'image_url', label: '图片URL', type: 'text' },
-                { name: 'detail_url', label: '详情页URL', type: 'text' },
-                { name: 'display_order', label: '排序', type: 'number', default: 0 }
-            ]
-        }
+        characters: { fields: [
+            { name: 'name', label: '角色名', type: 'text', required: true },
+            { name: 'description', label: '描述', type: 'text' },
+            { name: 'element', label: '属性', type: 'text' },
+            { name: 'path', label: '命途', type: 'text' },
+            { name: 'rarity', label: '星级', type: 'number', default: 5 },
+            { name: 'version', label: '版本', type: 'text' },
+            { name: 'image_url', label: '图片URL', type: 'text' },
+            { name: 'detail_url', label: '详情页URL', type: 'text' },
+            { name: 'is_limited', label: '限定', type: 'checkbox', default: true },
+            { name: 'display_order', label: '排序', type: 'number', default: 0 }
+        ] },
+        light_cones: { fields: [
+            { name: 'name', label: '光锥名', type: 'text', required: true },
+            { name: 'description', label: '描述', type: 'text' },
+            { name: 'path', label: '命途', type: 'text' },
+            { name: 'character_id', label: '关联角色ID', type: 'number' },
+            { name: 'image_url', label: '图片URL', type: 'text' },
+            { name: 'detail_url', label: '详情页URL', type: 'text' },
+            { name: 'display_order', label: '排序', type: 'number', default: 0 }
+        ] },
+        materials: { fields: [
+            { name: 'name', label: '材料名', type: 'text', required: true },
+            { name: 'description', label: '描述', type: 'text' },
+            { name: 'rarity', label: '稀有度(green/blue/purple/gold)', type: 'text' },
+            { name: 'image_url', label: '图片URL', type: 'text' },
+            { name: 'detail_url', label: '详情页URL', type: 'text' },
+            { name: 'display_order', label: '排序', type: 'number', default: 0 }
+        ] }
     };
-    
+
     function showNotification(msg, type = 'info') {
         const notif = document.createElement('div');
         notif.className = `notification ${type}`;
         notif.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${escapeHtml(msg)}`;
         document.body.appendChild(notif);
         setTimeout(() => notif.classList.add('show'), 10);
-        setTimeout(() => {
-            notif.classList.remove('show');
-            setTimeout(() => notif.remove(), 300);
-        }, 3000);
+        setTimeout(() => { notif.classList.remove('show'); setTimeout(() => notif.remove(), 300); }, 3000);
     }
-    
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
     }
-    
     function closeModal() {
         document.getElementById('genericModal').style.display = 'none';
         document.body.classList.remove('modal-open');
-        editingContentId = null;
-        editingUserId = null;
-        currentContentTable = null;
+        editingContentId = null; editingUserId = null; currentContentTable = null;
     }
-    
     function openModal(title, fieldsHtml) {
         const modal = document.getElementById('genericModal');
         document.getElementById('modalTitle').innerText = title;
@@ -170,82 +199,45 @@
         modal.style.display = 'flex';
         document.body.classList.add('modal-open');
     }
-    
+
+    // 权限校验
     async function checkAuthAndRole() {
         supabaseAdmin = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const { data: { user }, error } = await supabaseAdmin.auth.getUser();
-        if (error || !user) {
-            showNotification('请先登录', 'error');
-            setTimeout(() => window.location.href = 'login-real.html', 1500);
-            return false;
-        }
+        if (error || !user) { showNotification('请先登录', 'error'); setTimeout(() => window.location.href = 'login-real.html', 1500); return false; }
         currentUser = user;
-        
-        // 站长保护：若当前用户是站长ID，强制修复角色为 owner
         if (currentUser.id === OWNER_ID) {
-            const { error: updateErr } = await supabaseAdmin
-                .from('user_profiles')
-                .update({ role: 'owner' })
-                .eq('id', OWNER_ID);
-            if (updateErr) console.warn('站长角色修复失败', updateErr);
+            await supabaseAdmin.from('user_profiles').update({ role: 'owner' }).eq('id', OWNER_ID);
             currentUserRole = 'owner';
         } else {
             const { data: profile } = await supabaseAdmin.from('user_profiles').select('role').eq('id', user.id).single();
             currentUserRole = profile?.role || 'user';
         }
-        
-        if (currentUserRole !== 'owner' && currentUserRole !== 'admin') {
-            showNotification('无权限访问管理后台', 'error');
-            setTimeout(() => window.location.href = 'index.html', 1500);
-            return false;
-        }
+        if (currentUserRole !== 'owner' && currentUserRole !== 'admin') { showNotification('无权限', 'error'); setTimeout(() => window.location.href = 'index.html', 1500); return false; }
         document.getElementById('adminUserEmail').innerText = user.email;
         return true;
     }
-    
-    // ==================== 用户管理 ====================
+
+    // 用户管理
     async function fetchAllUsers() {
-        const { data: profiles, error } = await supabaseAdmin
-            .from('user_profiles')
-            .select('id, username, role, avatar_url, created_at')
-            .order('created_at', { ascending: false });
-        if (error) throw error;
+        const { data: profiles } = await supabaseAdmin.from('user_profiles').select('id, username, role, created_at').order('created_at', { ascending: false });
         const { data: stats } = await supabaseAdmin.from('user_stats').select('user_id, candy_crumbles, rainbow_lollipops, active_points, checkin_streak');
-        const statsMap = new Map();
-        if (stats) stats.forEach(s => statsMap.set(s.user_id, { candy: s.candy_crumbles ?? 100, rainbow: s.rainbow_lollipops ?? 5, active: s.active_points ?? 0, streak: s.checkin_streak ?? 0 }));
-        return profiles.map(p => {
-            // 站长ID强制显示 role = owner
-            const finalRole = p.id === OWNER_ID ? 'owner' : p.role;
-            return {
-                ...p,
-                role: finalRole,
-                candy_crumbles: statsMap.get(p.id)?.candy ?? 100,
-                rainbow_lollipops: statsMap.get(p.id)?.rainbow ?? 5,
-                active_points: statsMap.get(p.id)?.active ?? 0,
-                streak: statsMap.get(p.id)?.streak ?? 0
-            };
-        });
+        const statsMap = new Map(stats?.map(s => [s.user_id, { candy: s.candy_crumbles ?? 100, rainbow: s.rainbow_lollipops ?? 5, active: s.active_points ?? 0, streak: s.checkin_streak ?? 0 }]));
+        return profiles.map(p => ({ ...p, role: p.id === OWNER_ID ? 'owner' : p.role, candy_crumbles: statsMap.get(p.id)?.candy ?? 100, rainbow_lollipops: statsMap.get(p.id)?.rainbow ?? 5, active_points: statsMap.get(p.id)?.active ?? 0, streak: statsMap.get(p.id)?.streak ?? 0 }));
     }
-    
     function renderUsersTable(users) {
         const container = document.getElementById('usersListArea');
         if (!users.length) { container.innerHTML = '<div class="empty-data">暂无用户</div>'; return; }
-        let html = '<table class="data-table"><thead><tr><th>用户名</th><th>角色</th><th>糖果碎 🍬</th><th>超级棒糖 🌈</th><th>活跃度</th><th>签到</th><th>注册时间</th><th>操作</th></tr></thead><tbody>';
+        let html = '<table class="data-table"><thead><tr><th>用户名</th><th>角色</th><th>糖果碎</th><th>超级棒糖</th><th>活跃度</th><th>签到</th><th>注册时间</th><th>操作</th></tr></thead><tbody>';
         users.forEach(u => {
             const roleInfo = roleConfig[u.role] || roleConfig.user;
             const createdDate = u.created_at ? new Date(u.created_at).toLocaleDateString('zh-CN') : '未知';
-            const isOwnerUser = u.id === OWNER_ID;
-            const isCurrentUser = u.id === currentUser.id;
-            const canEditRole = (currentUserRole === 'owner' && !isOwnerUser) || (currentUserRole === 'admin' && !isOwnerUser && !isCurrentUser);
+            const canEditRole = (currentUserRole === 'owner' && u.id !== OWNER_ID) || (currentUserRole === 'admin' && u.id !== OWNER_ID && u.id !== currentUser.id);
             const canDelete = (currentUserRole === 'owner' && u.id !== OWNER_ID && u.id !== currentUser.id);
-            
             html += `<tr>
                 <td><strong>${escapeHtml(u.username)}</strong><br><span style="font-size:0.7rem;">${u.id.slice(0,8)}...</span></td>
                 <td><span class="role-badge ${roleInfo.class}">${roleInfo.name}</span></td>
-                <td>🍬 ${u.candy_crumbles}</td>
-                <td>🌈 ${u.rainbow_lollipops}</td>
-                <td>⚡ ${u.active_points}</td>
-                <td>🔥 ${u.streak}天</td>
+                <td>🍬 ${u.candy_crumbles}</td><td>🌈 ${u.rainbow_lollipops}</td><td>⚡ ${u.active_points}</td><td>🔥 ${u.streak}天</td>
                 <td>${createdDate}</td>
                 <td class="action-buttons">
                     ${canEditRole ? `<button class="edit-btn" onclick="openUserRoleModal('${u.id}', '${escapeHtml(u.username)}', '${u.role}')"><i class="fas fa-user-tag"></i> 改角色</button>` : ''}
@@ -254,103 +246,69 @@
                 </td>
             </tr>`;
         });
-        html += '</tbody><table>';
+        html += '</tbody></table>';
         container.innerHTML = html;
         document.getElementById('totalUsers').innerText = users.length;
     }
-    
-    async function refreshUserList() {
-        try {
-            allUsers = await fetchAllUsers();
-            renderUsersTable(allUsers);
-        } catch (err) { showNotification('刷新用户列表失败', 'error'); }
-    }
-    
+    async function refreshUserList() { try { allUsers = await fetchAllUsers(); renderUsersTable(allUsers); } catch(e) { showNotification('刷新失败', 'error'); } }
     window.openUserRoleModal = async (userId, username, currentRole) => {
-        if (userId === OWNER_ID) { showNotification('无法修改站长的角色', 'error'); return; }
-        if (userId === currentUser.id) { showNotification('不能修改自己的角色', 'error'); return; }
+        if (userId === OWNER_ID || userId === currentUser.id) { showNotification('无法修改此用户角色', 'error'); return; }
         editingUserId = userId;
-        let selectOptions = `<option value="user" ${currentRole === 'user' ? 'selected' : ''}>普通用户</option>
-                             <option value="admin" ${currentRole === 'admin' ? 'selected' : ''}>管理员</option>`;
-        if (currentUserRole === 'owner') {
-            selectOptions += `<option value="owner" ${currentRole === 'owner' ? 'selected' : ''}>站长</option>`;
-        }
-        const fields = `<div class="form-field"><label>用户：${escapeHtml(username)}</label>
-                        <select id="newRoleSelect" class="form-select">${selectOptions}</select></div>`;
-        openModal('修改用户角色', fields);
-        const form = document.getElementById('modalForm');
-        form.onsubmit = async (e) => {
+        let selectOptions = `<option value="user" ${currentRole === 'user' ? 'selected' : ''}>普通用户</option><option value="admin" ${currentRole === 'admin' ? 'selected' : ''}>管理员</option>`;
+        if (currentUserRole === 'owner') selectOptions += `<option value="owner" ${currentRole === 'owner' ? 'selected' : ''}>站长</option>`;
+        openModal('修改用户角色', `<div class="form-field"><label>用户：${escapeHtml(username)}</label><select id="newRoleSelect" class="form-select">${selectOptions}</select></div>`);
+        document.getElementById('modalForm').onsubmit = async (e) => {
             e.preventDefault();
             const newRole = document.getElementById('newRoleSelect').value;
             if (newRole === currentRole) { closeModal(); return; }
-            if (newRole === 'owner' && currentUserRole !== 'owner') {
-                showNotification('只有站长才能授予站长角色', 'error');
-                return;
-            }
             const { error } = await supabaseAdmin.from('user_profiles').update({ role: newRole }).eq('id', userId);
             if (error) showNotification('修改失败', 'error');
             else { showNotification('角色已更新', 'success'); await refreshUserList(); closeModal(); }
         };
     };
-    
     window.openUserResourceModal = async (userId, username, candy, rainbow) => {
         editingUserId = userId;
-        const fields = `<div class="form-field"><label>用户：${escapeHtml(username)}</label></div>
-                        <div class="form-field"><label>🍬 糖果碎</label><input type="number" id="candyVal" class="form-input-number" value="${candy}" min="0"></div>
-                        <div class="form-field"><label>🌈 超级棒糖</label><input type="number" id="rainbowVal" class="form-input-number" value="${rainbow}" min="0"></div>`;
-        openModal('调整用户资产', fields);
-        const form = document.getElementById('modalForm');
-        form.onsubmit = async (e) => {
+        openModal('调整用户资产', `<div class="form-field"><label>用户：${escapeHtml(username)}</label></div>
+            <div class="form-field"><label>🍬 糖果碎</label><input type="number" id="candyVal" value="${candy}" min="0"></div>
+            <div class="form-field"><label>🌈 超级棒糖</label><input type="number" id="rainbowVal" value="${rainbow}" min="0"></div>`);
+        document.getElementById('modalForm').onsubmit = async (e) => {
             e.preventDefault();
-            const newCandy = parseInt(document.getElementById('candyVal').value, 10);
-            const newRainbow = parseInt(document.getElementById('rainbowVal').value, 10);
-            if (isNaN(newCandy) || isNaN(newRainbow) || newCandy < 0 || newRainbow < 0) {
-                showNotification('请输入非负整数', 'error');
-                return;
-            }
+            const newCandy = parseInt(document.getElementById('candyVal').value,10), newRainbow = parseInt(document.getElementById('rainbowVal').value,10);
+            if (isNaN(newCandy) || isNaN(newRainbow) || newCandy<0 || newRainbow<0) { showNotification('请输入非负整数', 'error'); return; }
             const { error } = await supabaseAdmin.from('user_stats').upsert({ user_id: userId, candy_crumbles: newCandy, rainbow_lollipops: newRainbow }, { onConflict: 'user_id' });
             if (error) showNotification('更新失败', 'error');
             else { showNotification('资产已更新', 'success'); await refreshUserList(); closeModal(); }
         };
     };
-    
     window.deleteUserById = async (userId, username) => {
-        if (userId === OWNER_ID) { showNotification('无法删除站长', 'error'); return; }
-        if (userId === currentUser.id) { showNotification('不能删除自己', 'error'); return; }
-        if (!confirm(`确定要永久删除用户「${username}」吗？此操作不可恢复。`)) return;
+        if (userId === OWNER_ID || userId === currentUser.id) { showNotification('无法删除此用户', 'error'); return; }
+        if (!confirm(`确定永久删除「${username}」吗？`)) return;
         await supabaseAdmin.from('user_stats').delete().eq('user_id', userId);
-        const { error } = await supabaseAdmin.from('user_profiles').delete().eq('id', userId);
-        if (error) showNotification('删除失败', 'error');
-        else { showNotification(`已删除用户 ${username}`, 'success'); await refreshUserList(); }
+        await supabaseAdmin.from('user_profiles').delete().eq('id', userId);
+        showNotification('已删除用户', 'success'); await refreshUserList();
     };
-    
-    // ==================== 内容管理 ====================
+
+    // 内容管理（修复表格包裹）
     async function loadContentTable(table) {
         try {
             const { data, error } = await supabaseAdmin.from(table).select('*').order('display_order', { ascending: true });
             if (error) throw error;
             currentDataCache[table] = data || [];
             renderContentTable(table, currentDataCache[table]);
-        } catch (err) {
-            showNotification(`加载${table}失败`, 'error');
-        }
+        } catch (err) { showNotification(`加载${table}失败`, 'error'); }
     }
-    
     function renderContentTable(table, data) {
         const container = document.getElementById(`${table}-table-container`);
-        if (!container) {
-            console.warn(`Container not found: ${table}-table-container`);
-            return;
-        }
+        if (!container) return;
         if (!data.length) { container.innerHTML = '<div class="empty-data">暂无数据，点击添加</div>'; return; }
         let headers = [];
         if (table === 'characters') headers = ['name', 'description', 'element', 'path', 'rarity', 'version', 'image_url', 'detail_url', 'is_limited', 'display_order'];
         else if (table === 'light_cones') headers = ['name', 'description', 'path', 'character_id', 'image_url', 'detail_url', 'display_order'];
         else headers = ['name', 'description', 'rarity', 'image_url', 'detail_url', 'display_order'];
         
-        let html = '<table class="data-table"><thead><tr>';
+        let html = '<div style="overflow-x:auto;"><table class="data-table"><thead><tr>';
         headers.forEach(h => html += `<th>${h}</th>`);
-        html += '<th>操作</th></table></thead><tbody>';
+        html += '<th>操作</th></tr></thead><tbody>';
         for (const row of data) {
             html += '<tr>';
             for (const h of headers) {
@@ -364,51 +322,36 @@
             html += `<td class="action-buttons">
                 <button class="edit-btn" onclick="editContentItem('${table}', ${row.id})"><i class="fas fa-edit"></i> 编辑</button>
                 <button class="delete-btn" onclick="deleteContentItem('${table}', ${row.id})"><i class="fas fa-trash"></i> 删除</button>
-            </tr>`;
+            </td></tr>`;
         }
-        html += '</tbody></table>';
+        html += '</tbody></table></div>';
         container.innerHTML = html;
     }
-    
     function filterContentTable(table) {
-        const inputEl = document.getElementById(`search-${table}`);
-        if (!inputEl) {
-            console.warn(`Search input not found: search-${table}`);
-            return;
-        }
-        const keyword = inputEl.value.trim().toLowerCase();
+        const input = document.getElementById(`search-${table}`);
+        if (!input) return;
+        const keyword = input.value.trim().toLowerCase();
         const data = currentDataCache[table] || [];
         if (!keyword) renderContentTable(table, data);
         else renderContentTable(table, data.filter(item => item.name && item.name.toLowerCase().includes(keyword)));
     }
-    
     function showContentForm(table, existingData = null) {
-        currentContentTable = table;
-        editingContentId = existingData ? existingData.id : null;
+        currentContentTable = table; editingContentId = existingData ? existingData.id : null;
         const schema = TABLE_SCHEMA[table];
-        if (!schema) return;
         let fieldsHtml = '';
-        schema.fields.forEach(field => {
-            let value = existingData ? existingData[field.name] : (field.default !== undefined ? field.default : '');
-            if (field.type === 'checkbox') value = value === true || value === 1;
-            const inputHtml = field.type === 'checkbox' 
-                ? `<input type="checkbox" name="${field.name}" ${value ? 'checked' : ''}>`
-                : `<input type="${field.type}" name="${field.name}" value="${escapeHtml(String(value ?? ''))}" ${field.required ? 'required' : ''}>`;
-            fieldsHtml += `<div class="form-field"><label>${escapeHtml(field.label)}</label>${inputHtml}</div>`;
+        schema.fields.forEach(f => {
+            let value = existingData ? existingData[f.name] : (f.default !== undefined ? f.default : '');
+            if (f.type === 'checkbox') value = value === true || value === 1;
+            fieldsHtml += `<div class="form-field"><label>${f.label}</label>${f.type === 'checkbox' ? `<input type="checkbox" name="${f.name}" ${value ? 'checked' : ''}>` : `<input type="${f.type}" name="${f.name}" value="${escapeHtml(String(value ?? ''))}" ${f.required ? 'required' : ''}>`}</div>`;
         });
         openModal(existingData ? '编辑' + getTableChinese(table) : '添加' + getTableChinese(table), fieldsHtml);
-        const form = document.getElementById('modalForm');
-        form.onsubmit = async (e) => {
+        document.getElementById('modalForm').onsubmit = async (e) => {
             e.preventDefault();
-            const formData = new FormData(form);
+            const formData = new FormData(e.target);
             const data = {};
-            for (let field of schema.fields) {
-                if (field.type === 'checkbox') data[field.name] = formData.get(field.name) === 'on';
-                else {
-                    let val = formData.get(field.name);
-                    if (field.type === 'number') val = val ? Number(val) : 0;
-                    data[field.name] = val === undefined ? '' : val;
-                }
+            for (let f of schema.fields) {
+                if (f.type === 'checkbox') data[f.name] = formData.get(f.name) === 'on';
+                else { let val = formData.get(f.name); if (f.type === 'number') val = val ? Number(val) : 0; data[f.name] = val ?? ''; }
             }
             try {
                 let result;
@@ -419,73 +362,49 @@
                 closeModal();
                 await loadContentTable(table);
                 filterContentTable(table);
-            } catch (err) {
-                showNotification('操作失败: ' + err.message, 'error');
-            }
+            } catch (err) { showNotification('操作失败: ' + err.message, 'error'); }
         };
     }
-    
     window.editContentItem = async (table, id) => {
         const { data, error } = await supabaseAdmin.from(table).select('*').eq('id', id).single();
-        if (error) { showNotification('加载数据失败', 'error'); return; }
+        if (error) { showNotification('加载失败', 'error'); return; }
         showContentForm(table, data);
     };
-    
     window.deleteContentItem = async (table, id) => {
-        if (!confirm('确定删除吗？不可恢复')) return;
+        if (!confirm('确定删除？')) return;
         const { error } = await supabaseAdmin.from(table).delete().eq('id', id);
         if (error) showNotification('删除失败', 'error');
-        else {
-            showNotification('删除成功', 'success');
-            await loadContentTable(table);
-            filterContentTable(table);
-        }
+        else { showNotification('删除成功', 'success'); await loadContentTable(table); filterContentTable(table); }
     };
-    
-    function getTableChinese(table) {
-        const map = { characters: '角色', light_cones: '光锥', materials: '材料' };
-        return map[table] || table;
-    }
-    
+    function getTableChinese(table) { const map = { characters: '角色', light_cones: '光锥', materials: '材料' }; return map[table] || table; }
+
     function switchTab(tabId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
-        if (activeBtn) activeBtn.classList.add('active');
+        document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
         document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active-panel'));
-        const targetPanel = document.getElementById(`${tabId}-panel`);
-        if (targetPanel) targetPanel.classList.add('active-panel');
+        document.getElementById(`${tabId}-panel`).classList.add('active-panel');
         if (tabId === 'user') refreshUserList();
         else if (tabId === 'characters') loadContentTable('characters');
         else if (tabId === 'light_cones') loadContentTable('light_cones');
         else if (tabId === 'materials') loadContentTable('materials');
     }
-    
     function bindEvents() {
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-        });
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
         document.getElementById('searchUsers').addEventListener('input', () => {
             const kw = document.getElementById('searchUsers').value.trim().toLowerCase();
             if (!kw) renderUsersTable(allUsers);
             else renderUsersTable(allUsers.filter(u => u.username.toLowerCase().includes(kw)));
         });
-        const searchCharacters = document.getElementById('search-characters');
-        if (searchCharacters) searchCharacters.addEventListener('input', () => filterContentTable('characters'));
-        const searchLightCones = document.getElementById('search-light_cones');
-        if (searchLightCones) searchLightCones.addEventListener('input', () => filterContentTable('light_cones'));
-        const searchMaterials = document.getElementById('search-materials');
-        if (searchMaterials) searchMaterials.addEventListener('input', () => filterContentTable('materials'));
+        ['characters', 'light_cones', 'materials'].forEach(t => {
+            const input = document.getElementById(`search-${t}`);
+            if (input) input.addEventListener('input', () => filterContentTable(t));
+        });
         document.getElementById('addCharacterBtn').onclick = () => showContentForm('characters');
         document.getElementById('addLightconeBtn').onclick = () => showContentForm('light_cones');
         document.getElementById('addMaterialBtn').onclick = () => showContentForm('materials');
         document.getElementById('logoutBtn').onclick = async () => { await supabaseAdmin.auth.signOut(); window.location.href = 'index.html'; };
     }
-    
-    async function init() {
-        if (!await checkAuthAndRole()) return;
-        bindEvents();
-        await refreshUserList();
-    }
+    async function init() { if (await checkAuthAndRole()) { bindEvents(); await refreshUserList(); } }
     init();
 </script>
 </body>
