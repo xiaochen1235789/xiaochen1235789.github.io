@@ -22,7 +22,7 @@
     <div class="table-tabs">
         <button class="tab-btn active" data-tab="user">👥 用户管理</button>
         <button class="tab-btn" data-tab="characters">📖 角色管理</button>
-        <button class="tab-btn" data-tab="lightcones">✨ 光锥管理</button>
+        <button class="tab-btn" data-tab="light_cones">✨ 光锥管理</button>
         <button class="tab-btn" data-tab="materials">🧪 材料管理</button>
     </div>
 
@@ -42,12 +42,12 @@
         <div id="characters-table-container" class="table-container"></div>
     </div>
 
-    <div id="lightcones-panel" class="panel">
+    <div id="light_cones-panel" class="panel">
         <div class="toolbar">
-            <input type="text" id="search-lightcones" class="search-input" placeholder="搜索光锥名...">
+            <input type="text" id="search-light_cones" class="search-input" placeholder="搜索光锥名...">
             <button class="add-btn" id="addLightconeBtn"><i class="fas fa-plus"></i> 添加光锥</button>
         </div>
-        <div id="lightcones-table-container" class="table-container"></div>
+        <div id="light_cones-table-container" class="table-container"></div>
     </div>
 
     <div id="materials-panel" class="panel">
@@ -79,14 +79,14 @@
 </div>
 
 <script>
-    // ==================== Supabase 配置 ====================
+    // ==================== 配置 ====================
     const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
+    const OWNER_ID = '2e617135-daa2-4619-a7df-dacd425da881';  // 站长固定ID，不可修改角色，不可删除
     
-    // 使用 supabaseAdmin 避免与任何全局 supabase 变量冲突
     let supabaseAdmin = null;
     let currentUser = null;
-    let currentUserRole = null;     // 'owner', 'admin', 'user'
+    let currentUserRole = null;
     let allUsers = [];
     let currentDataCache = { characters: [], light_cones: [], materials: [] };
     
@@ -180,8 +180,20 @@
             return false;
         }
         currentUser = user;
-        const { data: profile } = await supabaseAdmin.from('user_profiles').select('role').eq('id', user.id).single();
-        currentUserRole = profile?.role || 'user';
+        
+        // 如果是站长ID，强制修复角色为 owner
+        if (currentUser.id === OWNER_ID) {
+            const { error: updateErr } = await supabaseAdmin
+                .from('user_profiles')
+                .update({ role: 'owner' })
+                .eq('id', OWNER_ID);
+            if (updateErr) console.warn('站长角色修复失败', updateErr);
+            currentUserRole = 'owner';
+        } else {
+            const { data: profile } = await supabaseAdmin.from('user_profiles').select('role').eq('id', user.id).single();
+            currentUserRole = profile?.role || 'user';
+        }
+        
         if (currentUserRole !== 'owner' && currentUserRole !== 'admin') {
             showNotification('无权限访问管理后台', 'error');
             setTimeout(() => window.location.href = 'index.html', 1500);
@@ -200,13 +212,18 @@
         const { data: stats } = await supabaseAdmin.from('user_stats').select('user_id, candy_crumbles, rainbow_lollipops, active_points, checkin_streak');
         const statsMap = new Map();
         if (stats) stats.forEach(s => statsMap.set(s.user_id, { candy: s.candy_crumbles ?? 100, rainbow: s.rainbow_lollipops ?? 5, active: s.active_points ?? 0, streak: s.checkin_streak ?? 0 }));
-        return profiles.map(p => ({
-            ...p,
-            candy_crumbles: statsMap.get(p.id)?.candy ?? 100,
-            rainbow_lollipops: statsMap.get(p.id)?.rainbow ?? 5,
-            active_points: statsMap.get(p.id)?.active ?? 0,
-            streak: statsMap.get(p.id)?.streak ?? 0
-        }));
+        return profiles.map(p => {
+            // 站长ID强制显示 role = owner
+            const finalRole = p.id === OWNER_ID ? 'owner' : p.role;
+            return {
+                ...p,
+                role: finalRole,
+                candy_crumbles: statsMap.get(p.id)?.candy ?? 100,
+                rainbow_lollipops: statsMap.get(p.id)?.rainbow ?? 5,
+                active_points: statsMap.get(p.id)?.active ?? 0,
+                streak: statsMap.get(p.id)?.streak ?? 0
+            };
+        });
     }
     
     function renderUsersTable(users) {
@@ -216,6 +233,11 @@
         users.forEach(u => {
             const roleInfo = roleConfig[u.role] || roleConfig.user;
             const createdDate = u.created_at ? new Date(u.created_at).toLocaleDateString('zh-CN') : '未知';
+            const isOwnerUser = u.id === OWNER_ID;
+            const isCurrentUser = u.id === currentUser.id;
+            const canEditRole = (currentUserRole === 'owner' && !isOwnerUser) || (currentUserRole === 'admin' && !isOwnerUser && !isCurrentUser);
+            const canDelete = (currentUserRole === 'owner' && u.id !== OWNER_ID && u.id !== currentUser.id);
+            
             html += `<tr>
                 <td><strong>${escapeHtml(u.username)}</strong><br><span style="font-size:0.7rem;">${u.id.slice(0,8)}...</span></td>
                 <td><span class="role-badge ${roleInfo.class}">${roleInfo.name}</span></td>
@@ -225,9 +247,9 @@
                 <td>🔥 ${u.streak}天</td>
                 <td>${createdDate}</td>
                 <td class="action-buttons">
-                    <button class="edit-btn" onclick="openUserRoleModal('${u.id}', '${escapeHtml(u.username)}', '${u.role}')"><i class="fas fa-user-tag"></i> 改角色</button>
+                    ${canEditRole ? `<button class="edit-btn" onclick="openUserRoleModal('${u.id}', '${escapeHtml(u.username)}', '${u.role}')"><i class="fas fa-user-tag"></i> 改角色</button>` : ''}
                     <button class="edit-btn" onclick="openUserResourceModal('${u.id}', '${escapeHtml(u.username)}', ${u.candy_crumbles}, ${u.rainbow_lollipops})"><i class="fas fa-coins"></i> 调资产</button>
-                    ${currentUserRole === 'owner' && u.id !== currentUser.id ? `<button class="delete-btn" onclick="deleteUserById('${u.id}', '${escapeHtml(u.username)}')"><i class="fas fa-trash"></i> 删除</button>` : ''}
+                    ${canDelete ? `<button class="delete-btn" onclick="deleteUserById('${u.id}', '${escapeHtml(u.username)}')"><i class="fas fa-trash"></i> 删除</button>` : ''}
                 </td>
             </tr>`;
         });
@@ -244,10 +266,20 @@
     }
     
     window.openUserRoleModal = async (userId, username, currentRole) => {
+        if (userId === OWNER_ID) {
+            showNotification('无法修改站长的角色', 'error');
+            return;
+        }
+        if (userId === currentUser.id) {
+            showNotification('不能修改自己的角色', 'error');
+            return;
+        }
         editingUserId = userId;
-        const selectOptions = `<option value="user" ${currentRole === 'user' ? 'selected' : ''}>普通用户</option>
-                               <option value="admin" ${currentRole === 'admin' ? 'selected' : ''}>管理员</option>
-                               ${currentUserRole === 'owner' ? `<option value="owner" ${currentRole === 'owner' ? 'selected' : ''}>站长</option>` : ''}`;
+        let selectOptions = `<option value="user" ${currentRole === 'user' ? 'selected' : ''}>普通用户</option>
+                             <option value="admin" ${currentRole === 'admin' ? 'selected' : ''}>管理员</option>`;
+        if (currentUserRole === 'owner') {
+            selectOptions += `<option value="owner" ${currentRole === 'owner' ? 'selected' : ''}>站长</option>`;
+        }
         const fields = `<div class="form-field"><label>用户：${escapeHtml(username)}</label>
                         <select id="newRoleSelect" class="form-select">${selectOptions}</select></div>`;
         openModal('修改用户角色', fields);
@@ -256,6 +288,10 @@
             e.preventDefault();
             const newRole = document.getElementById('newRoleSelect').value;
             if (newRole === currentRole) { closeModal(); return; }
+            if (newRole === 'owner' && currentUserRole !== 'owner') {
+                showNotification('只有站长才能授予站长角色', 'error');
+                return;
+            }
             const { error } = await supabaseAdmin.from('user_profiles').update({ role: newRole }).eq('id', userId);
             if (error) showNotification('修改失败', 'error');
             else { showNotification('角色已更新', 'success'); await refreshUserList(); closeModal(); }
@@ -284,6 +320,8 @@
     };
     
     window.deleteUserById = async (userId, username) => {
+        if (userId === OWNER_ID) { showNotification('无法删除站长', 'error'); return; }
+        if (userId === currentUser.id) { showNotification('不能删除自己', 'error'); return; }
         if (!confirm(`确定要永久删除用户「${username}」吗？此操作不可恢复。`)) return;
         await supabaseAdmin.from('user_stats').delete().eq('user_id', userId);
         const { error } = await supabaseAdmin.from('user_profiles').delete().eq('id', userId);
@@ -311,7 +349,7 @@
         else if (table === 'light_cones') headers = ['name', 'description', 'path', 'character_id', 'image_url', 'detail_url', 'display_order'];
         else headers = ['name', 'description', 'rarity', 'image_url', 'detail_url', 'display_order'];
         
-        let html = '<table class="data-table"><thead><tr>';
+        let html = '<table class="data-table"><thead></table>';
         headers.forEach(h => html += `<th>${h}</th>`);
         html += '<th>操作</th></tr></thead><tbody>';
         for (const row of data) {
@@ -330,12 +368,17 @@
             </td>`;
             html += '</tr>';
         }
-        html += '</tbody><table>';
+        html += '</tbody></table>';
         container.innerHTML = html;
     }
     
     function filterContentTable(table) {
-        const keyword = document.getElementById(`search-${table}`).value.trim().toLowerCase();
+        const inputEl = document.getElementById(`search-${table}`);
+        if (!inputEl) {
+            console.warn(`未找到搜索框: search-${table}`);
+            return;
+        }
+        const keyword = inputEl.value.trim().toLowerCase();
         const data = currentDataCache[table] || [];
         if (!keyword) renderContentTable(table, data);
         else renderContentTable(table, data.filter(item => item.name && item.name.toLowerCase().includes(keyword)));
@@ -408,12 +451,14 @@
     
     function switchTab(tabId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+        const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+        if (activeBtn) activeBtn.classList.add('active');
         document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active-panel'));
-        document.getElementById(`${tabId}-panel`).classList.add('active-panel');
+        const targetPanel = document.getElementById(`${tabId}-panel`);
+        if (targetPanel) targetPanel.classList.add('active-panel');
         if (tabId === 'user') refreshUserList();
         else if (tabId === 'characters') loadContentTable('characters');
-        else if (tabId === 'lightcones') loadContentTable('light_cones');
+        else if (tabId === 'light_cones') loadContentTable('light_cones');
         else if (tabId === 'materials') loadContentTable('materials');
     }
     
@@ -426,9 +471,14 @@
             if (!kw) renderUsersTable(allUsers);
             else renderUsersTable(allUsers.filter(u => u.username.toLowerCase().includes(kw)));
         });
-        document.getElementById('search-characters').addEventListener('input', () => filterContentTable('characters'));
-        document.getElementById('search-lightcones').addEventListener('input', () => filterContentTable('light_cones'));
-        document.getElementById('search-materials').addEventListener('input', () => filterContentTable('materials'));
+        // 搜索框事件：确保元素存在后再绑定
+        const searchCharacters = document.getElementById('search-characters');
+        if (searchCharacters) searchCharacters.addEventListener('input', () => filterContentTable('characters'));
+        const searchLightCones = document.getElementById('search-light_cones');
+        if (searchLightCones) searchLightCones.addEventListener('input', () => filterContentTable('light_cones'));
+        const searchMaterials = document.getElementById('search-materials');
+        if (searchMaterials) searchMaterials.addEventListener('input', () => filterContentTable('materials'));
+        
         document.getElementById('addCharacterBtn').onclick = () => showContentForm('characters');
         document.getElementById('addLightconeBtn').onclick = () => showContentForm('light_cones');
         document.getElementById('addMaterialBtn').onclick = () => showContentForm('materials');
