@@ -1,8 +1,6 @@
 /**
- * frame-system.js
- * 头像框系统：样式注入 + 购买/装备逻辑，支持每个用户每框限购一次
- * 依赖：Supabase客户端已全局可用 (window.supabaseClient)
- * 依赖：用户会话 (window.currentUser)
+ * frame-system.js - 头像框系统（样式注入 + 购买/装备逻辑）
+ * 支持每个用户每框限购一次，依赖 Supabase 客户端和当前用户全局变量
  */
 (function() {
     // ========== 1. 动态注入头像框样式 ==========
@@ -76,39 +74,34 @@
         { id: 'fire',   name: '烈焰之心', price_candy: 220, price_rainbow: 3, description: '炽热火焰之环', cssClass: 'frame-fire' }
     ];
 
-    // 辅助函数
     function getFrameById(id) {
         return FRAMES.find(f => f.id === id) || FRAMES[0];
     }
 
-    // 应用头像框样式到 .avatar 元素
     function applyFrameClass(frameId) {
         const avatarDiv = document.querySelector('.avatar');
         if (!avatarDiv) return;
-        // 移除所有 frame-xxx 类
+        // 移除所有 frame- 开头的类
         const classesToRemove = Array.from(avatarDiv.classList).filter(c => c.startsWith('frame-'));
         classesToRemove.forEach(c => avatarDiv.classList.remove(c));
-        // 添加新类
         const frame = getFrameById(frameId);
         if (frame && frame.cssClass) {
             avatarDiv.classList.add(frame.cssClass);
         }
     }
 
-    // ========== 3. 数据库操作（需全局 supabaseClient 和 currentUser） ==========
+    // ========== 3. 数据库操作 ==========
     async function ensureUserFrameFields(userId) {
-        // 确保 user_profiles 表有 owned_frames 和 equipped_frame 字段（首次访问时初始化）
         const { data, error } = await window.supabaseClient
             .from('user_profiles')
             .select('owned_frames, equipped_frame')
             .eq('id', userId)
             .single();
         if (error && error.code === 'PGRST116') {
-            // 记录不存在，稍后会在 loadUserProfile 中创建，这里忽略
+            // 记录不存在，等待外层创建即可
             return;
         }
         if (!error && (data.owned_frames === null || data.owned_frames === undefined)) {
-            // 初始化字段
             await window.supabaseClient
                 .from('user_profiles')
                 .update({ owned_frames: ['nature'], equipped_frame: 'nature' })
@@ -116,7 +109,6 @@
         }
     }
 
-    // 加载用户拥有的头像框列表和当前装备的框
     async function loadUserFrames(userId) {
         const { data, error } = await window.supabaseClient
             .from('user_profiles')
@@ -132,11 +124,9 @@
         return { owned, equipped };
     }
 
-    // 装备头像框（切换）
     async function equipFrame(frameId) {
         if (!window.currentUser) throw new Error('未登录');
         const userId = window.currentUser.id;
-        // 先检查是否拥有
         const { owned } = await loadUserFrames(userId);
         if (!owned.includes(frameId)) {
             throw new Error('您尚未拥有该头像框，无法装备');
@@ -147,71 +137,68 @@
             .eq('id', userId);
         if (error) throw error;
         applyFrameClass(frameId);
-        // 可选：通知刷新页面其他部分
         if (window.onFrameEquipped) window.onFrameEquipped(frameId);
         return true;
     }
 
-    // 购买头像框（扣币+添加到 owned_frames）
     async function purchaseFrame(frameId, currentStats, updateStatsCallback) {
         if (!window.currentUser) throw new Error('未登录');
         const userId = window.currentUser.id;
         const frame = getFrameById(frameId);
         if (!frame) throw new Error('头像框不存在');
-        // 检查是否已拥有
         const { owned } = await loadUserFrames(userId);
         if (owned.includes(frameId)) {
             throw new Error('您已经拥有该头像框，不能重复购买');
         }
-        // 检查货币
         if (frame.price_candy > 0 && currentStats.candy_crumbles < frame.price_candy) {
             throw new Error(`糖果碎不足，需要 ${frame.price_candy} 个`);
         }
         if (frame.price_rainbow > 0 && currentStats.rainbow_lollipops < frame.price_rainbow) {
             throw new Error(`超级棒糖不足，需要 ${frame.price_rainbow} 个`);
         }
-        // 执行事务：先扣币，再添加 owned_frames
         const newCandy = currentStats.candy_crumbles - frame.price_candy;
         const newRainbow = currentStats.rainbow_lollipops - frame.price_rainbow;
-        // 更新 user_stats
+        // 更新货币
         const { error: statsError } = await window.supabaseClient
             .from('user_stats')
             .update({ candy_crumbles: newCandy, rainbow_lollipops: newRainbow })
             .eq('user_id', userId);
         if (statsError) throw statsError;
-        // 更新 user_profiles.owned_frames
+        // 添加头像框
         const newOwned = [...owned, frameId];
         const { error: profileError } = await window.supabaseClient
             .from('user_profiles')
             .update({ owned_frames: newOwned })
             .eq('id', userId);
         if (profileError) throw profileError;
-        // 更新本地状态
         if (updateStatsCallback) {
             updateStatsCallback(newCandy, newRainbow);
         }
-        // 自动装备新购买的框（可选）
+        // 自动装备
         await equipFrame(frameId);
         return true;
     }
 
-    // 对外暴露的 API
+    // ========== 4. 对外 API 与就绪信号 ==========
+    let readyResolve;
+    const readyPromise = new Promise((resolve) => { readyResolve = resolve; });
+
     window.FrameSystem = {
         FRAMES,
         getFrameById,
         loadUserFrames,
         equipFrame,
         purchaseFrame,
-        applyFrameClass,   // 用于手动刷新
-        ensureUserFrameFields
+        applyFrameClass,
+        ensureUserFrameFields,
+        ready: readyPromise,
+        isReady: false
     };
 
-    // 4. 自动初始化：当页面加载且用户登录后，加载装备的头像框并应用
     async function autoInit() {
-        // 等待 supabaseClient 和 currentUser 准备好（由主页脚本设置）
         let retries = 0;
         while (!window.supabaseClient || !window.currentUser) {
-            if (retries > 30) return; // 3秒超时
+            if (retries > 30) return;
             await new Promise(r => setTimeout(r, 100));
             retries++;
         }
@@ -219,11 +206,14 @@
             await ensureUserFrameFields(window.currentUser.id);
             const { equipped } = await loadUserFrames(window.currentUser.id);
             applyFrameClass(equipped);
+            window.FrameSystem.isReady = true;
+            readyResolve();
         } catch (err) {
             console.warn('头像框自动初始化失败', err);
+            readyResolve();
         }
     }
-    // 等待 DOM 加载完成后再执行
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', autoInit);
     } else {
