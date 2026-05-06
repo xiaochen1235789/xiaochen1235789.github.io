@@ -258,7 +258,7 @@
 
     // 杂项管理相关
     let selectedMiscUserId = null;
-    let currentUserFrames = [];      // 当前选中用户拥有的头像框 id 列表
+    let currentUserFrames = [];
 
     const roleConfig = {
         owner: { name: '站长', class: 'role-owner' },
@@ -508,14 +508,16 @@
         // 需要删除的：在 existing 中但不在 ownedFrameIds 中（注意，不能删除默认框）
         const toRemove = existing.filter(id => !ownedFrameIds.includes(id) && id !== 'frame_default');
         
+        // 逐个添加（使用 upsert 避免重复）
         for (const frameId of toAdd) {
-            await supabaseAdmin.from('user_frames').insert({
+            await supabaseAdmin.from('user_frames').upsert({
                 user_id: userId,
                 frame_id: frameId,
                 equipped: false,
                 purchased_at: new Date().toISOString()
-            }).onConflict('user_id, frame_id', { ignoreDuplicates: true });
+            }, { onConflict: 'user_id, frame_id', ignoreDuplicates: true });
         }
+        // 删除移除的项（但跳过默认框）
         for (const frameId of toRemove) {
             await supabaseAdmin.from('user_frames').delete().eq('user_id', userId).eq('frame_id', frameId);
         }
@@ -532,7 +534,6 @@
     async function refreshMiscPanel() {
         const selectEl = document.getElementById('miscUserSelect');
         if (!selectEl) return;
-        // 填充用户下拉框
         const users = allUsers.length ? allUsers : await fetchAllUsers();
         if (!allUsers.length) allUsers = users;
         selectEl.innerHTML = '<option value="">-- 选择用户 --</option>' + users.map(u => `<option value="${u.id}" ${selectedMiscUserId === u.id ? 'selected' : ''}>${escapeHtml(u.username)} (${u.id.slice(0,8)})</option>`).join('');
@@ -570,11 +571,11 @@
             }
             await updateUserAssets(userId, newCandy, newRainbow);
             showNotification('资产已更新', 'success');
-            await refreshUserList();  // 同步用户表显示
+            await refreshUserList();
             await loadMiscUserData(userId);
         });
         
-        // 渲染头像框管理（复选框列表）
+        // 渲染头像框管理
         let framesHtml = '<div class="frames-grid">';
         for (const frame of FRAMES_LIST) {
             const isOwned = currentUserFrames.includes(frame.id);
@@ -598,22 +599,23 @@
             });
             await updateUserFrames(userId, newOwned);
             showNotification('头像框拥有状态已更新', 'success');
-            await loadMiscUserData(userId);  // 刷新显示
-            await refreshUserList();          // 不需要但这不影响
+            await loadMiscUserData(userId);
         });
     }
 
     function initMiscPanel() {
         const selectEl = document.getElementById('miscUserSelect');
-        selectEl.addEventListener('change', async (e) => {
-            selectedMiscUserId = e.target.value;
-            if (selectedMiscUserId) {
-                await loadMiscUserData(selectedMiscUserId);
-            } else {
-                document.getElementById('assetControlArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
-                document.getElementById('framesManagementArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
-            }
-        });
+        if (selectEl) {
+            selectEl.addEventListener('change', async (e) => {
+                selectedMiscUserId = e.target.value;
+                if (selectedMiscUserId) {
+                    await loadMiscUserData(selectedMiscUserId);
+                } else {
+                    document.getElementById('assetControlArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
+                    document.getElementById('framesManagementArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
+                }
+            });
+        }
         refreshMiscPanel();
     }
 
