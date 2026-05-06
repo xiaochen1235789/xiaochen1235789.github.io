@@ -1,182 +1,225 @@
 <div class="shop-panel">
     <style>
-        .balance-row {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-        .balance-item {
-            background: rgba(0,0,0,0.3);
-            border-radius: 40px;
-            padding: 8px 20px;
-            font-size: 1.2rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .currency-clickable {
-            cursor: pointer;
-            transition: transform 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(0,0,0,0.3);
-            padding: 6px 14px;
-            border-radius: 40px;
-        }
-        .currency-clickable:hover { transform: scale(1.05); background: rgba(0,0,0,0.5); }
-        .currency-clickable img {
-            width: 24px;
-            height: 24px;
-            object-fit: contain;
-            border-radius: 4px;
-        }
-        .shop-item {
-            background: rgba(0,0,0,0.2);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .shop-item-info { flex: 1; }
-        .shop-item-name { font-size: 1.1rem; font-weight: bold; color: #81c784; }
-        .shop-item-price { font-size: 0.9rem; color: #b0c4d0; margin-top: 5px; }
+        .balance-row { display: flex; gap: 20px; justify-content: center; margin-bottom: 25px; flex-wrap: wrap; }
+        .balance-item { background: rgba(0,0,0,0.3); border-radius: 40px; padding: 8px 20px; font-size: 1.2rem; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: transform 0.2s; }
+        .balance-item:hover { transform: scale(1.05); background: rgba(0,0,0,0.5); }
+        .balance-item img { width: 28px; height: 28px; border-radius: 6px; }
+        .shop-section { margin-top: 25px; }
+        .shop-section h3 { font-size: 1.3rem; color: #81c784; margin-bottom: 15px; border-left: 4px solid #81c784; padding-left: 12px; }
+        .frame-item { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        .frame-info { flex: 1; }
+        .frame-name { font-size: 1.1rem; font-weight: bold; color: #81c784; display: flex; align-items: center; gap: 10px; }
+        .frame-desc { font-size: 0.85rem; color: #b0c4d0; margin-top: 5px; }
+        .frame-price { font-size: 0.9rem; margin-top: 5px; }
         .price-icon { margin-right: 5px; }
-        .btn-primary {
-            background: #81c784;
-            color: #121212;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .btn-primary:hover { background: #6ab56f; }
+        .btn-equip { background: #3b82f6; color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; }
+        .btn-equip:hover { background: #2563eb; }
+        .btn-owned { background: #4b5563; color: #9ca3af; border: none; padding: 6px 14px; border-radius: 20px; cursor: default; }
+        .btn-buy { background: #81c784; color: #121212; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-weight: bold; }
+        .btn-buy:hover { background: #6ab56f; }
+        .error-message { color: #f87171; text-align: center; padding: 20px; }
+        .retry-btn { background: #81c784; border: none; color: #121212; padding: 8px 16px; border-radius: 20px; cursor: pointer; margin-top: 10px; }
     </style>
+
     <div style="text-align: center; margin-bottom: 20px;">
         <div class="balance-row">
-            <div class="balance-item currency-clickable" data-currency="candy">
-                <img src="http://xiaochen1235789.github.io/images/Crushed_sugar.webp" alt="糖果碎" style="width: 28px; height: 28px; border-radius: 6px;">
+            <div class="balance-item" data-currency="candy">
+                <img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp" alt="糖果碎">
                 糖果碎: <span id="shopCandyBalance">0</span>
             </div>
-            <div class="balance-item currency-clickable" data-currency="rainbow">
-                <img src="http://xiaochen1235789.github.io/images/Super_Sweet.webp" alt="超级棒糖" style="width: 28px; height: 28px; border-radius: 6px;">
+            <div class="balance-item" data-currency="rainbow">
+                <img src="https://xiaochen1235789.github.io/images/Super_Sweet.webp" alt="超级棒糖">
                 超级棒糖: <span id="shopRainbowBalance">0</span>
             </div>
         </div>
         <div style="font-size: 0.8rem; color: #b0c4d0;">点击货币查看介绍</div>
     </div>
-    <div id="shopItemsList">
-        <div class="shop-item">
-            <div class="shop-item-info">
-                <div class="shop-item-name"><i class="fas fa-question-circle"></i> 神秘测试糖果</div>
-                <div class="shop-item-price"><span class="price-icon"><img src="http://xiaochen1235789.github.io/images/Crushed_sugar.webp" alt="糖果碎" style="width: 20px; height: 20px; vertical-align: middle;"></span> 价格: 10 糖果碎</div>
-            </div>
-            <button class="btn-primary" id="buyTestItemBtn">购买</button>
+
+    <!-- 头像框商店区域 -->
+    <div class="shop-section">
+        <h3><i class="fas fa-image"></i> 个性头像框</h3>
+        <div id="framesList">
+            <div style="text-align:center; padding:20px;">⏳ 加载头像框中...</div>
         </div>
     </div>
 </div>
 
 <script>
-    // 商店独立脚本，通过父页面暴露的全局函数获取用户数据和执行购买
     (function() {
-        // 获取父页面的用户数据
         let currentUserId = null;
         let userStats = null;
-        let candySpan, rainbowSpan;
-        
-        function refreshBalance() {
-            if(!userStats) return;
-            if(candySpan) candySpan.innerText = userStats.candy_crumbles;
-            if(rainbowSpan) rainbowSpan.innerText = userStats.rainbow_lollipops;
-        }
-        
-        async function purchaseItem(itemId, priceCandy, priceRainbow) {
-            if(!currentUserId) {
-                parent.showNotification('请先登录', 'error');
-                return false;
-            }
-            if(priceCandy > 0 && userStats.candy_crumbles < priceCandy) {
-                parent.showNotification(`糖果碎不足，需要 ${priceCandy} 个`, 'error');
-                return false;
-            }
-            if(priceRainbow > 0 && userStats.rainbow_lollipops < priceRainbow) {
-                parent.showNotification(`超级棒糖不足，需要 ${priceRainbow} 个`, 'error');
-                return false;
-            }
-            const newCandy = userStats.candy_crumbles - priceCandy;
-            const newRainbow = userStats.rainbow_lollipops - priceRainbow;
-            
-            // 调用父页面的 supabase 更新
-            const { data, error } = await parent.supabaseClient
-                .from('user_stats')
-                .update({ candy_crumbles: newCandy, rainbow_lollipops: newRainbow })
-                .eq('user_id', currentUserId);
-            if(error) {
-                parent.showNotification('购买失败: ' + error.message, 'error');
-                return false;
-            }
-            // 更新本地数据
-            userStats.candy_crumbles = newCandy;
-            userStats.rainbow_lollipops = newRainbow;
-            refreshBalance();
-            // 通知父页面更新主页面的显示
-            if(parent.updateUserStatsAfterPurchase) {
-                parent.updateUserStatsAfterPurchase(newCandy, newRainbow);
-            }
-            parent.showNotification('购买成功！', 'success');
-            return true;
-        }
-        
-        function showCurrencyInfo(currencyType) {
-            // 复用父页面的货币介绍弹框
-            if(parent.showCurrencyInfoModal) {
-                parent.showCurrencyInfoModal(currencyType);
-            } else {
-                // 简单弹窗备用
-                if(currencyType === 'candy') alert('糖果碎是通用货币，可通过签到、活动获得。');
-                else alert('超级棒糖是稀有货币，连续签到7天可获得。');
+        let ownedFrames = [];
+        let equippedFrame = null;
+        let initComplete = false;
+
+        // 显示错误并允许重试
+        function showError(msg, showRetry = true) {
+            const container = document.getElementById('framesList');
+            if (container) {
+                container.innerHTML = `<div class="error-message">⚠️ ${msg}</div>
+                    ${showRetry ? '<div style="text-align:center;"><button class="retry-btn" id="retryInitBtn">重新加载</button></div>' : ''}`;
+                if (showRetry) {
+                    document.getElementById('retryInitBtn')?.addEventListener('click', () => {
+                        document.getElementById('framesList').innerHTML = '<div style="text-align:center; padding:20px;">⏳ 重新加载中...</div>';
+                        init();
+                    });
+                }
             }
         }
-        
-        // 初始化商店模块
-        window.shopModule = {
-            updateBalance: (candy, rainbow) => {
-                if(candy !== undefined) userStats.candy_crumbles = candy;
-                if(rainbow !== undefined) userStats.rainbow_lollipops = rainbow;
-                refreshBalance();
+
+        async function refreshUserData() {
+            if (!currentUserId) return;
+            try {
+                // 获取货币
+                const { data: stats, error: statsErr } = await parent.supabaseClient
+                    .from('user_stats')
+                    .select('candy_crumbles, rainbow_lollipops')
+                    .eq('user_id', currentUserId)
+                    .single();
+                if (statsErr) throw statsErr;
+                if (stats) {
+                    userStats = stats;
+                    document.getElementById('shopCandyBalance').innerText = userStats.candy_crumbles;
+                    document.getElementById('shopRainbowBalance').innerText = userStats.rainbow_lollipops;
+                }
+                // 获取头像框数据
+                if (!parent.FrameSystem) throw new Error('FrameSystem 未加载，请刷新页面重试');
+                const frameData = await parent.FrameSystem.loadUserFrames(currentUserId);
+                ownedFrames = frameData.owned;
+                equippedFrame = frameData.equipped;
+                renderFramesList();
+            } catch (err) {
+                console.error('刷新商店数据失败', err);
+                showError('加载数据失败: ' + err.message);
             }
-        };
-        
-        // 等待父页面数据就绪
-        function init() {
-            currentUserId = parent.getCurrentUserId();
-            userStats = parent.getUserStats();
-            if(!currentUserId || !userStats) {
-                setTimeout(init, 100);
+        }
+
+        function renderFramesList() {
+            const container = document.getElementById('framesList');
+            if (!container) return;
+            const allFrames = parent.FrameSystem.FRAMES;
+            if (!allFrames || allFrames.length === 0) {
+                container.innerHTML = '<div class="error-message">暂无头像框商品</div>';
                 return;
             }
-            candySpan = document.getElementById('shopCandyBalance');
-            rainbowSpan = document.getElementById('shopRainbowBalance');
-            refreshBalance();
-            
-            document.getElementById('buyTestItemBtn')?.addEventListener('click', () => {
-                purchaseItem('test_item', 10, 0);
+            container.innerHTML = '';
+            for (const frame of allFrames) {
+                const isOwned = ownedFrames.includes(frame.id);
+                const isEquipped = (equippedFrame === frame.id);
+                const priceHtml = (frame.price_candy > 0 || frame.price_rainbow > 0) ?
+                    `<span class="frame-price">
+                        <span class="price-icon"><img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp" width="16" style="vertical-align: middle;"></span> ${frame.price_candy} 
+                        ${frame.price_rainbow > 0 ? `<span class="price-icon"><img src="https://xiaochen1235789.github.io/images/Super_Sweet.webp" width="16" style="vertical-align: middle;"></span> ${frame.price_rainbow}` : ''}
+                    </span>` : '免费';
+
+                let actionButton = '';
+                if (isOwned) {
+                    if (isEquipped) {
+                        actionButton = '<button class="btn-owned" disabled>已装备</button>';
+                    } else {
+                        actionButton = `<button class="btn-equip" data-frame-id="${frame.id}">装备</button>`;
+                    }
+                } else {
+                    actionButton = `<button class="btn-buy" data-frame-id="${frame.id}">购买</button>`;
+                }
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'frame-item';
+                itemDiv.innerHTML = `
+                    <div class="frame-info">
+                        <div class="frame-name">${frame.name}</div>
+                        <div class="frame-desc">${frame.description}</div>
+                        ${priceHtml}
+                    </div>
+                    ${actionButton}
+                `;
+                container.appendChild(itemDiv);
+            }
+
+            // 绑定购买事件
+            document.querySelectorAll('.btn-buy').forEach(btn => {
+                btn.removeEventListener('click', buyHandler);
+                btn.addEventListener('click', buyHandler);
             });
-            document.querySelectorAll('.currency-clickable').forEach(el => {
+            // 绑定装备事件
+            document.querySelectorAll('.btn-equip').forEach(btn => {
+                btn.removeEventListener('click', equipHandler);
+                btn.addEventListener('click', equipHandler);
+            });
+        }
+
+        async function buyHandler(e) {
+            const btn = e.currentTarget;
+            const frameId = btn.getAttribute('data-frame-id');
+            try {
+                await parent.FrameSystem.purchaseFrame(frameId, userStats, (newCandy, newRainbow) => {
+                    if (userStats) {
+                        userStats.candy_crumbles = newCandy;
+                        userStats.rainbow_lollipops = newRainbow;
+                    }
+                    refreshUserData();
+                    if (parent.updateUserStatsAfterPurchase) {
+                        parent.updateUserStatsAfterPurchase(newCandy, newRainbow);
+                    }
+                    parent.showNotification(`成功购买头像框: ${parent.FrameSystem.getFrameById(frameId).name}`, 'success');
+                });
+            } catch (err) {
+                parent.showNotification(err.message, 'error');
+            }
+        }
+
+        async function equipHandler(e) {
+            const btn = e.currentTarget;
+            const frameId = btn.getAttribute('data-frame-id');
+            try {
+                await parent.FrameSystem.equipFrame(frameId);
+                equippedFrame = frameId;
+                renderFramesList();
+                parent.showNotification('已装备头像框', 'success');
+            } catch (err) {
+                parent.showNotification(err.message, 'error');
+            }
+        }
+
+        function showCurrencyInfo(type) {
+            if (type === 'candy') parent.showNotification('糖果碎：通用货币，签到可获取', 'info');
+            else parent.showNotification('超级棒糖：稀有货币，连续签到或活动获得', 'info');
+        }
+
+        async function init() {
+            let retries = 0;
+            const maxRetries = 30; // 最多等3秒
+            while (!parent.getCurrentUserId || !parent.getUserStats || !parent.FrameSystem) {
+                if (retries >= maxRetries) {
+                    showError('依赖模块未就绪，请刷新页面重试', true);
+                    return;
+                }
+                await new Promise(r => setTimeout(r, 100));
+                retries++;
+            }
+            currentUserId = parent.getCurrentUserId();
+            userStats = parent.getUserStats();
+            if (!currentUserId || !userStats) {
+                // 可能还未登录完成，再等一等
+                setTimeout(() => init(), 200);
+                return;
+            }
+            await refreshUserData();
+            initComplete = true;
+            // 绑定货币介绍
+            document.querySelectorAll('.balance-item').forEach(el => {
                 el.addEventListener('click', (e) => {
-                    const currency = el.getAttribute('data-currency');
-                    if(currency === 'candy') showCurrencyInfo('candy');
-                    else if(currency === 'rainbow') showCurrencyInfo('rainbow');
+                    const type = el.getAttribute('data-currency');
+                    showCurrencyInfo(type);
                 });
             });
         }
-        init();
+
+        // 如果页面已加载完成立即执行，否则等待DOM
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
     })();
 </script>
