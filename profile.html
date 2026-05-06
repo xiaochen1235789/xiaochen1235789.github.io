@@ -6,13 +6,12 @@
     <title>个人主页 - 六哥荣耀WIKI</title>
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <link rel="stylesheet" href="/css/zhuye.css">
-    <script src="/css/frame-system.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
-    <!-- 内嵌商店样式（解决原 shop-panel.html 加载失败问题） -->
     <style>
+        /* 全局样式与商店面板样式（确保商店显示正常） */
         .balance-row { display: flex; gap: 20px; justify-content: center; margin-bottom: 25px; flex-wrap: wrap; }
         .balance-item { background: rgba(0,0,0,0.3); border-radius: 40px; padding: 8px 20px; font-size: 1.2rem; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: transform 0.2s; }
         .balance-item:hover { transform: scale(1.05); background: rgba(0,0,0,0.5); }
@@ -29,6 +28,14 @@
         .btn-owned { background: #4b5563; color: #9ca3af; border: none; padding: 6px 14px; border-radius: 20px; cursor: default; }
         .btn-buy { background: #81c784; color: #121212; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-weight: bold; }
         .btn-buy:hover { background: #6ab56f; }
+        .error-message { color: #f87171; text-align: center; padding: 20px; }
+        .retry-btn { background: #81c784; border: none; color: #121212; padding: 8px 16px; border-radius: 20px; cursor: pointer; margin-top: 10px; }
+        /* 确保头像框容器与预览区兼容 */
+        .avatar-container { position: relative; }
+        .avatar-upload { position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.6); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; }
+        /* 帧系统辅助样式 */
+        .avatar[data-frame] { position: relative; }
+        .avatar-frame { position: absolute; top: -8px; left: -8px; right: -8px; bottom: -8px; pointer-events: none; background-size: contain; background-repeat: no-repeat; background-position: center; z-index: 2; border-radius: 50%; }
     </style>
 </head>
 <body>
@@ -101,7 +108,165 @@
     <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fas fa-chevron-up"></i></button>
 
     <script>
-        // ========== 角色配置 ==========
+        // ========== 头像框系统完整实现（替代frame-system.js）==========
+        window.FrameSystem = (function() {
+            // 头像框列表配置
+            const FRAMES = [
+                { id: 'frame_default', name: '默认头像框', description: '初始边框', price_candy: 0, price_rainbow: 0, cssClass: '' },
+                { id: 'frame_gold', name: '黄金边框', description: '闪耀金色质感', price_candy: 50, price_rainbow: 0, cssClass: 'frame-gold' },
+                { id: 'frame_rainbow', name: '彩虹炫光', description: '七彩流光特效', price_candy: 30, price_rainbow: 3, cssClass: 'frame-rainbow' },
+                { id: 'frame_diamond', name: '钻石星辰', description: '璀璨钻石光环', price_candy: 100, price_rainbow: 5, cssClass: 'frame-diamond' },
+                { id: 'frame_legend', name: '传奇霸主', description: '至尊传说之框', price_candy: 200, price_rainbow: 10, cssClass: 'frame-legend' }
+            ];
+
+            // 获取头像框信息
+            function getFrameById(id) {
+                return FRAMES.find(f => f.id === id);
+            }
+
+            // 加载用户拥有的头像框以及当前装备的
+            async function loadUserFrames(userId) {
+                if (!userId) throw new Error('未登录');
+                const { data, error } = await window.supabaseClient
+                    .from('user_frames')
+                    .select('frame_id, equipped')
+                    .eq('user_id', userId);
+                if (error) {
+                    console.warn('加载头像框数据失败', error);
+                    return { owned: ['frame_default'], equipped: null };
+                }
+                const owned = data.map(item => item.frame_id);
+                if (!owned.includes('frame_default')) owned.push('frame_default');
+                const equippedItem = data.find(item => item.equipped === true);
+                const equipped = equippedItem ? equippedItem.frame_id : 'frame_default';
+                return { owned, equipped };
+            }
+
+            // 确保用户有默认头像框记录
+            async function ensureUserFrameFields(userId) {
+                const { data, error } = await window.supabaseClient
+                    .from('user_frames')
+                    .select('frame_id')
+                    .eq('user_id', userId)
+                    .eq('frame_id', 'frame_default');
+                if (!error && (!data || data.length === 0)) {
+                    await window.supabaseClient.from('user_frames').insert({
+                        user_id: userId,
+                        frame_id: 'frame_default',
+                        equipped: true,
+                        purchased_at: new Date().toISOString()
+                    });
+                }
+                // 确保没有装备任何框时默认装备 default
+                const { data: equipData } = await window.supabaseClient
+                    .from('user_frames')
+                    .select('equipped')
+                    .eq('user_id', userId)
+                    .eq('equipped', true)
+                    .maybeSingle();
+                if (!equipData) {
+                    await window.supabaseClient.from('user_frames')
+                        .update({ equipped: true })
+                        .eq('user_id', userId)
+                        .eq('frame_id', 'frame_default');
+                }
+            }
+
+            // 购买头像框
+            async function purchaseFrame(frameId, userStats, onSuccess) {
+                const frame = getFrameById(frameId);
+                if (!frame) throw new Error('头像框不存在');
+                if (frame.price_candy === 0 && frame.price_rainbow === 0) throw new Error('该头像框不可购买');
+                // 检查是否已拥有
+                const { owned } = await loadUserFrames(window.currentUser.id);
+                if (owned.includes(frameId)) throw new Error('你已经拥有此头像框');
+                // 检查货币是否足够
+                if (userStats.candy_crumbles < frame.price_candy) throw new Error(`糖果碎不足，需要 ${frame.price_candy}`);
+                if (userStats.rainbow_lollipops < frame.price_rainbow) throw new Error(`超级棒糖不足，需要 ${frame.price_rainbow}`);
+
+                // 扣除货币
+                const newCandy = userStats.candy_crumbles - frame.price_candy;
+                const newRainbow = userStats.rainbow_lollipops - frame.price_rainbow;
+                const { error: updateError } = await window.supabaseClient
+                    .from('user_stats')
+                    .update({ candy_crumbles: newCandy, rainbow_lollipops: newRainbow })
+                    .eq('user_id', window.currentUser.id);
+                if (updateError) throw new Error('货币扣除失败');
+
+                // 添加头像框记录（默认未装备）
+                const { error: insertError } = await window.supabaseClient
+                    .from('user_frames')
+                    .insert({ user_id: window.currentUser.id, frame_id: frameId, equipped: false, purchased_at: new Date().toISOString() });
+                if (insertError) throw new Error('添加头像框失败');
+
+                // 更新本地 userStats 对象
+                if (window.userStats) {
+                    window.userStats.candy_crumbles = newCandy;
+                    window.userStats.rainbow_lollipops = newRainbow;
+                }
+                if (onSuccess) onSuccess(newCandy, newRainbow);
+                // 触发全局UI刷新
+                if (window.updateShopBalanceDisplay) window.updateShopBalanceDisplay();
+            }
+
+            // 装备头像框
+            async function equipFrame(frameId) {
+                const userId = window.currentUser.id;
+                // 检查是否拥有
+                const { owned } = await loadUserFrames(userId);
+                if (!owned.includes(frameId)) throw new Error('你尚未拥有此头像框');
+                // 取消当前装备
+                await window.supabaseClient
+                    .from('user_frames')
+                    .update({ equipped: false })
+                    .eq('user_id', userId)
+                    .eq('equipped', true);
+                // 装备新的
+                const { error } = await window.supabaseClient
+                    .from('user_frames')
+                    .update({ equipped: true })
+                    .eq('user_id', userId)
+                    .eq('frame_id', frameId);
+                if (error) throw new Error('装备失败');
+                // 应用头像框样式
+                applyFrameStyle(frameId);
+            }
+
+            // 应用头像框CSS样式（简单模拟，实际可动态添加类）
+            function applyFrameStyle(frameId) {
+                const avatarDiv = document.querySelector('#userAvatar');
+                if (!avatarDiv) return;
+                // 移除已有的框样式类
+                avatarDiv.classList.remove('frame-gold', 'frame-rainbow', 'frame-diamond', 'frame-legend');
+                const frame = getFrameById(frameId);
+                if (frame && frame.cssClass) {
+                    avatarDiv.classList.add(frame.cssClass);
+                }
+                // 也可以添加一个覆盖层图片效果（根据需求）
+            }
+
+            // 全局初始化：从数据库加载装备的框并应用
+            async function initFrameForUser(userId) {
+                if (!userId) return;
+                await ensureUserFrameFields(userId);
+                const { equipped } = await loadUserFrames(userId);
+                if (equipped) applyFrameStyle(equipped);
+            }
+
+            return {
+                FRAMES,
+                getFrameById,
+                loadUserFrames,
+                ensureUserFrameFields,
+                purchaseFrame,
+                equipFrame,
+                applyFrameClass: applyFrameStyle,
+                initFrameForUser,
+                ready: Promise.resolve()
+            };
+        })();
+
+        // ========== 主程序 ==========
         const ROLE_CONFIG = {
             owner: { name: '站长', color: '#f97316' },
             admin: { name: '管理员', color: '#60a5fa' },
@@ -155,6 +320,8 @@
                 const letter = (userProfile?.username || currentUser?.email?.charAt(0) || 'U').charAt(0).toUpperCase();
                 avatarDiv.innerHTML = `<div class="avatar-placeholder" id="avatarPlaceholder" style="display:flex;">${letter}</div>`;
             }
+            // 重新应用头像框样式
+            if (window.FrameSystem) window.FrameSystem.initFrameForUser(currentUser?.id);
         }
         
         function updateNavbar() {
@@ -168,7 +335,6 @@
             navDiv.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">${avatarHtml}${usernameHtml}<button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:var(--radius);cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
             document.getElementById('logoutBtn')?.addEventListener('click', async() => { await supabaseClient.auth.signOut(); localStorage.removeItem('cachedUsername'); localStorage.removeItem('cachedAvatar'); window.location.href = 'index.html'; });
             
-            // 管理后台按钮：仅站长或管理员可见
             const adminLink = document.getElementById('adminLink');
             if (adminLink) {
                 const role = userProfile?.role;
@@ -294,14 +460,8 @@
                 }
                 cacheUserProfile(username, profile.avatar_url);
                 updateNavbar();
-
-                if (window.FrameSystem) {
-                    try {
-                        await window.FrameSystem.ensureUserFrameFields(currentUser.id);
-                        const { equipped } = await window.FrameSystem.loadUserFrames(currentUser.id);
-                        window.FrameSystem.applyFrameClass(equipped);
-                    } catch(e) { console.warn('头像框初始化失败', e); }
-                }
+                // 初始化头像框系统
+                if (window.FrameSystem) await window.FrameSystem.initFrameForUser(currentUser.id);
             }
         }
         
@@ -442,9 +602,10 @@
         }
         
         function updateShopBalanceDisplay() {
-            if(window.shopModule && window.shopModule.updateBalance) {
-                window.shopModule.updateBalance(userStats.candy_crumbles, userStats.rainbow_lollipops);
-            }
+            const candySpan = document.getElementById('shopCandyBalance');
+            const rainbowSpan = document.getElementById('shopRainbowBalance');
+            if(candySpan) candySpan.innerText = userStats.candy_crumbles;
+            if(rainbowSpan) rainbowSpan.innerText = userStats.rainbow_lollipops;
         }
         
         window.getCurrentUserId = () => currentUser?.id;
@@ -455,77 +616,61 @@
             updateShopBalanceDisplay();
         };
         window.showNotification = showNotification;
-        window.supabaseClient = supabaseClient;
+        window.supabaseClient = null; // 稍后赋值
         
-        // 内嵌商店内容（不再 fetch shop-panel.html）
-        function buildShopHTML() {
-            return `
-            <div class="shop-panel">
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div class="balance-row">
-                        <div class="balance-item" data-currency="candy">
-                            <img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp" alt="糖果碎">
-                            糖果碎: <span id="shopCandyBalance">0</span>
+        // 内嵌商店渲染逻辑
+        async function renderShop() {
+            const container = document.getElementById('shopContentContainer');
+            if (!container) return;
+            // 构建HTML结构
+            container.innerHTML = `
+                <div class="shop-panel">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <div class="balance-row">
+                            <div class="balance-item" data-currency="candy">
+                                <img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp" alt="糖果碎">
+                                糖果碎: <span id="shopCandyBalance">0</span>
+                            </div>
+                            <div class="balance-item" data-currency="rainbow">
+                                <img src="https://xiaochen1235789.github.io/images/Super_Sweet.webp" alt="超级棒糖">
+                                超级棒糖: <span id="shopRainbowBalance">0</span>
+                            </div>
                         </div>
-                        <div class="balance-item" data-currency="rainbow">
-                            <img src="https://xiaochen1235789.github.io/images/Super_Sweet.webp" alt="超级棒糖">
-                            超级棒糖: <span id="shopRainbowBalance">0</span>
-                        </div>
+                        <div style="font-size: 0.8rem; color: #b0c4d0;">点击货币查看介绍</div>
                     </div>
-                    <div style="font-size: 0.8rem; color: #b0c4d0;">点击货币查看介绍</div>
+                    <div class="shop-section">
+                        <h3><i class="fas fa-image"></i> 个性头像框</h3>
+                        <div id="framesList">⏳ 加载中...</div>
+                    </div>
                 </div>
-                <div class="shop-section">
-                    <h3><i class="fas fa-image"></i> 个性头像框</h3>
-                    <div id="framesList">⏳ 加载中...</div>
-                </div>
-            </div>
             `;
+            // 绑定货币点击提示
+            document.querySelectorAll('#shopContentContainer .balance-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    const type = el.dataset.currency;
+                    showNotification(type === 'candy' ? '糖果碎：通用货币，签到获取' : '超级棒糖：稀有货币，连续签到获取', 'info');
+                });
+            });
+            // 加载头像框列表
+            await loadFramesList();
+            updateShopBalanceDisplay();
         }
         
-        async function initInlineShop() {
-            let currentUserId = window.currentUser?.id;
-            let userStatsLocal = window.userStats;
-            let ownedFrames = [];
-            let equippedFrame = null;
-            
-            async function refreshUserData() {
-                if (!currentUserId) return;
-                try {
-                    const { data: stats } = await supabaseClient
-                        .from('user_stats')
-                        .select('candy_crumbles, rainbow_lollipops')
-                        .eq('user_id', currentUserId)
-                        .single();
-                    if (stats) {
-                        document.getElementById('shopCandyBalance').innerText = stats.candy_crumbles;
-                        document.getElementById('shopRainbowBalance').innerText = stats.rainbow_lollipops;
-                        if (window.userStats) {
-                            window.userStats.candy_crumbles = stats.candy_crumbles;
-                            window.userStats.rainbow_lollipops = stats.rainbow_lollipops;
-                        }
-                        userStatsLocal = stats;
-                    }
-                    const frameData = await window.FrameSystem.loadUserFrames(currentUserId);
-                    ownedFrames = frameData.owned;
-                    equippedFrame = frameData.equipped;
-                    renderFramesList();
-                } catch (err) {
-                    console.error(err);
-                    document.getElementById('framesList').innerHTML = `<div class="error-message">加载失败: ${err.message}</div>`;
-                }
-            }
-            
-            function renderFramesList() {
-                const container = document.getElementById('framesList');
+        async function loadFramesList() {
+            const framesContainer = document.getElementById('framesList');
+            if (!framesContainer) return;
+            try {
+                const userId = currentUser.id;
+                const { owned, equipped } = await window.FrameSystem.loadUserFrames(userId);
                 const frames = window.FrameSystem.FRAMES;
-                if (!frames || frames.length === 0) {
-                    container.innerHTML = '<div class="error-message">未找到头像框商品</div>';
+                if (!frames.length) {
+                    framesContainer.innerHTML = '<div class="error-message">暂无可用头像框</div>';
                     return;
                 }
                 let html = '';
                 for (const frame of frames) {
-                    const isOwned = ownedFrames.includes(frame.id);
-                    const isEquipped = (equippedFrame === frame.id);
+                    const isOwned = owned.includes(frame.id);
+                    const isEquipped = (equipped === frame.id);
                     const priceHtml = (frame.price_candy > 0 || frame.price_rainbow > 0) ?
                         `<span class="frame-price">
                             <img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp" width="16" style="vertical-align: middle;"> ${frame.price_candy}
@@ -548,60 +693,40 @@
                         </div>
                     `;
                 }
-                container.innerHTML = html;
-                
-                document.querySelectorAll('.btn-buy').forEach(btn => {
-                    btn.onclick = async () => {
+                framesContainer.innerHTML = html;
+                // 绑定购买/装备事件
+                document.querySelectorAll('#framesList .btn-buy').forEach(btn => {
+                    btn.addEventListener('click', async () => {
                         const frameId = btn.dataset.id;
                         try {
-                            await window.FrameSystem.purchaseFrame(frameId, userStatsLocal, (newCandy, newRainbow) => {
-                                if (userStatsLocal) { userStatsLocal.candy_crumbles = newCandy; userStatsLocal.rainbow_lollipops = newRainbow; }
-                                refreshUserData();
-                                if (window.updateUserStatsAfterPurchase) window.updateUserStatsAfterPurchase(newCandy, newRainbow);
+                            await window.FrameSystem.purchaseFrame(frameId, userStats, (newCandy, newRainbow) => {
+                                userStats.candy_crumbles = newCandy;
+                                userStats.rainbow_lollipops = newRainbow;
+                                updateShopBalanceDisplay();
                                 showNotification(`购买成功: ${window.FrameSystem.getFrameById(frameId).name}`, 'success');
+                                loadFramesList(); // 刷新列表
                             });
-                        } catch (err) { showNotification(err.message, 'error'); }
-                    };
+                        } catch (err) {
+                            showNotification(err.message, 'error');
+                        }
+                    });
                 });
-                document.querySelectorAll('.btn-equip').forEach(btn => {
-                    btn.onclick = async () => {
+                document.querySelectorAll('#framesList .btn-equip').forEach(btn => {
+                    btn.addEventListener('click', async () => {
                         const frameId = btn.dataset.id;
                         try {
                             await window.FrameSystem.equipFrame(frameId);
-                            equippedFrame = frameId;
-                            renderFramesList();
                             showNotification('已装备头像框', 'success');
-                        } catch (err) { showNotification(err.message, 'error'); }
-                    };
+                            loadFramesList(); // 刷新装备状态
+                        } catch (err) {
+                            showNotification(err.message, 'error');
+                        }
+                    });
                 });
+            } catch (err) {
+                console.error(err);
+                framesContainer.innerHTML = `<div class="error-message">加载失败: ${err.message}<br><button class="retry-btn" onclick="location.reload()">重试</button></div>`;
             }
-            
-            function showCurrencyInfo(type) {
-                showNotification(type === 'candy' ? '糖果碎：通用货币，签到获取' : '超级棒糖：稀有货币，连续签到获取', 'info');
-            }
-            
-            if (window.FrameSystem?.ready) await window.FrameSystem.ready;
-            if (!window.FrameSystem?.FRAMES) {
-                document.getElementById('framesList').innerHTML = '<div class="error-message">头像框系统未加载，请刷新页面</div>';
-                return;
-            }
-            currentUserId = window.currentUser?.id;
-            userStatsLocal = window.userStats;
-            if (!currentUserId || !userStatsLocal) {
-                setTimeout(() => initInlineShop(), 500);
-                return;
-            }
-            await refreshUserData();
-            document.querySelectorAll('.balance-item').forEach(el => {
-                el.onclick = () => showCurrencyInfo(el.dataset.currency);
-            });
-        }
-        
-        async function loadShopContent() {
-            const container = document.getElementById('shopContentContainer');
-            if(!container) return;
-            container.innerHTML = buildShopHTML();
-            await initInlineShop();
         }
         
         function openModal(id) { let m = safeGetElement(id); if(m) { m.classList.add('show'); document.body.style.overflow = 'hidden'; } }
@@ -686,7 +811,7 @@
             const openShopBtn = document.getElementById('openShopBtn');
             const closeShopModalBtn = document.getElementById('closeShopModalBtn');
             openShopBtn?.addEventListener('click', async () => {
-                await loadShopContent();
+                await renderShop();
                 openModal('shopModal');
             });
             closeShopModalBtn?.addEventListener('click', () => closeModal('shopModal'));
