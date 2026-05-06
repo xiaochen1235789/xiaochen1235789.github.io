@@ -6,13 +6,12 @@
     <title>个人主页 - 六哥荣耀WIKI</title>
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <link rel="stylesheet" href="/css/zhuye.css">
-    <!-- 不再需要外部 frame-system.js -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
     <style>
-        /* 原有样式保持不变，以下补充商店所需样式 */
+        /* 全局样式与商店面板样式 */
         .balance-row { display: flex; gap: 20px; justify-content: center; margin-bottom: 25px; flex-wrap: wrap; }
         .balance-item { background: rgba(0,0,0,0.3); border-radius: 40px; padding: 8px 20px; font-size: 1.2rem; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: transform 0.2s; }
         .balance-item:hover { transform: scale(1.05); background: rgba(0,0,0,0.5); }
@@ -30,7 +29,7 @@
         .btn-buy { background: #81c784; color: #121212; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-weight: bold; }
         .btn-buy:hover { background: #6ab56f; }
         .error-message { color: #f87171; text-align: center; padding: 20px; }
-        /* 头像框辅助样式（示例） */
+        /* 头像框辅助样式 */
         .avatar[data-frame] { position: relative; }
         .frame-gold { box-shadow: 0 0 0 4px gold, 0 0 0 8px rgba(255,215,0,0.5); border-radius: 50%; }
         .frame-rainbow { background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet); padding: 3px; border-radius: 50%; }
@@ -125,7 +124,7 @@
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
         
-        // ========== 头像框系统完整实现（不再依赖外部 frame-system.js） ==========
+        // ========== 头像框系统完整实现（使用 upsert 避免 409 冲突） ==========
         window.FrameSystem = (function() {
             // 头像框商品列表
             const FRAMES = [
@@ -158,30 +157,28 @@
                 return { owned, equipped };
             }
 
-            // 确保默认头像框记录存在
+            // 确保默认头像框记录存在（使用 upsert 避免冲突）
             async function ensureUserFrameFields(userId) {
-                const { data, error } = await window.supabaseClient
+                // 插入默认框，如果已存在则忽略（onConflict + ignoreDuplicates）
+                const { error: upsertError } = await window.supabaseClient
                     .from('user_frames')
-                    .select('frame_id')
-                    .eq('user_id', userId)
-                    .eq('frame_id', 'frame_default');
-                if (!error && (!data || data.length === 0)) {
-                    await window.supabaseClient.from('user_frames').insert({
-                        user_id: userId,
-                        frame_id: 'frame_default',
-                        equipped: true,
-                        purchased_at: new Date().toISOString()
-                    });
-                }
-                // 确保有装备的头像框
-                const { data: equipData } = await window.supabaseClient
+                    .upsert(
+                        { user_id: userId, frame_id: 'frame_default', equipped: true, purchased_at: new Date().toISOString() },
+                        { onConflict: 'user_id, frame_id', ignoreDuplicates: true }
+                    );
+                if (upsertError) console.warn('确保默认头像框失败', upsertError);
+                
+                // 确保至少有一个框是装备状态
+                const { data: equipData, error: equipError } = await window.supabaseClient
                     .from('user_frames')
                     .select('equipped')
                     .eq('user_id', userId)
                     .eq('equipped', true)
                     .maybeSingle();
+                if (equipError) console.warn(equipError);
                 if (!equipData) {
-                    await window.supabaseClient.from('user_frames')
+                    await window.supabaseClient
+                        .from('user_frames')
                         .update({ equipped: true })
                         .eq('user_id', userId)
                         .eq('frame_id', 'frame_default');
@@ -211,10 +208,13 @@
                     .eq('user_id', window.currentUser.id);
                 if (updateError) throw new Error('货币扣除失败');
                 
-                // 添加头像框记录（默认未装备）
+                // 添加头像框记录（使用 upsert 避免冲突）
                 const { error: insertError } = await window.supabaseClient
                     .from('user_frames')
-                    .insert({ user_id: window.currentUser.id, frame_id: frameId, equipped: false, purchased_at: new Date().toISOString() });
+                    .upsert(
+                        { user_id: window.currentUser.id, frame_id: frameId, equipped: false, purchased_at: new Date().toISOString() },
+                        { onConflict: 'user_id, frame_id', ignoreDuplicates: true }
+                    );
                 if (insertError) throw new Error('添加头像框失败');
                 
                 // 更新本地 userStats 对象
@@ -343,7 +343,7 @@
             }
         }
         
-        // 头像上传相关函数（保持不变）
+        // 头像上传相关函数
         async function deleteOldAvatarFiles(userId) {
             try {
                 const { data: files, error } = await supabaseClient.storage.from('avatars').list(userId);
@@ -467,7 +467,7 @@
             if(!error) safeSetText('lastLogin', new Date().toLocaleString('zh-CN'));
         }
         
-        // 签到奖励规则（保持不变）
+        // 签到奖励规则
         function getCheckinRewards(streak) {
             if (streak === 1) return { candy: 3, rainbow: 0, active: 2 };
             if (streak === 2) return { candy: 5, rainbow: 0, active: 2 };
@@ -596,9 +596,9 @@
             updateShopBalanceDisplay();
         };
         window.showNotification = showNotification;
-        window.supabaseClient = null; // 稍后赋值
+        window.supabaseClient = null;
         
-        // 内嵌商店渲染（完全使用内建 FrameSystem）
+        // 内嵌商店渲染
         async function renderShop() {
             const container = document.getElementById('shopContentContainer');
             if (!container) return;
