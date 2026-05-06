@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/admin.css">
     <style>
-        /* 额外确保表格包裹良好 */
+        /* 额外样式 */
         .table-container {
             overflow-x: auto;
             margin-top: 10px;
@@ -46,6 +46,92 @@
             padding: 40px;
             color: var(--text-secondary);
         }
+        /* 杂项管理样式 */
+        .misc-section {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .misc-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--text-highlight);
+            margin-bottom: 15px;
+            border-left: 4px solid #81c784;
+            padding-left: 12px;
+        }
+        .user-selector {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .user-selector .form-field {
+            flex: 1;
+            min-width: 200px;
+        }
+        .asset-control {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .asset-item {
+            background: rgba(0,0,0,0.2);
+            border-radius: 20px;
+            padding: 10px 18px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .asset-item img {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+        }
+        .frames-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+        .frame-checkbox-item {
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+        .frame-checkbox-item:hover {
+            background: rgba(129,199,132,0.2);
+        }
+        .frame-checkbox-item img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .frame-checkbox-item .frame-name {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+        .save-asset-btn, .save-frames-btn {
+            background: #81c784;
+            color: #121212;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .save-asset-btn:hover, .save-frames-btn:hover {
+            background: #6ab56f;
+        }
     </style>
 </head>
 <body>
@@ -63,6 +149,7 @@
         <button class="tab-btn" data-tab="characters">📖 角色管理</button>
         <button class="tab-btn" data-tab="light_cones">✨ 光锥管理</button>
         <button class="tab-btn" data-tab="materials">🧪 材料管理</button>
+        <button class="tab-btn" data-tab="misc">📦 杂项管理</button>
     </div>
 
     <!-- 用户管理面板 -->
@@ -100,9 +187,32 @@
         </div>
         <div id="materials-table-container" class="table-container"></div>
     </div>
+
+    <!-- 杂项管理面板 -->
+    <div id="misc-panel" class="panel">
+        <div class="misc-section">
+            <div class="misc-title"><i class="fas fa-coins"></i> 用户资产调整</div>
+            <div class="user-selector">
+                <div class="form-field">
+                    <label>选择用户</label>
+                    <select id="miscUserSelect" class="form-select"></select>
+                </div>
+            </div>
+            <div id="assetControlArea" class="asset-control">
+                <!-- 动态显示资产调整控件 -->
+            </div>
+        </div>
+
+        <div class="misc-section">
+            <div class="misc-title"><i class="fas fa-image"></i> 头像框拥有管理</div>
+            <div id="framesManagementArea">
+                <p style="color: var(--text-secondary);">请先选择一个用户</p>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- 模态框 -->
+<!-- 模态框（共用） -->
 <div id="genericModal" class="modal" style="display: none;">
     <div class="modal-overlay" onclick="closeModal()"></div>
     <div class="modal-content">
@@ -128,6 +238,15 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
     const OWNER_ID = '2e617135-daa2-4619-a7df-dacd425da881';
 
+    // 头像框列表（与前台保持一致）
+    const FRAMES_LIST = [
+        { id: 'frame_default', name: '默认头像框', description: '初始边框', price_candy: 0, price_rainbow: 0 },
+        { id: 'frame_gold', name: '黄金边框', description: '闪耀金色质感', price_candy: 50, price_rainbow: 0 },
+        { id: 'frame_rainbow', name: '彩虹炫光', description: '七彩流光特效', price_candy: 30, price_rainbow: 3 },
+        { id: 'frame_diamond', name: '钻石星辰', description: '璀璨钻石光环', price_candy: 100, price_rainbow: 5 },
+        { id: 'frame_legend', name: '传奇霸主', description: '至尊传说之框', price_candy: 200, price_rainbow: 10 }
+    ];
+
     let supabaseAdmin = null;
     let currentUser = null;
     let currentUserRole = null;
@@ -136,6 +255,10 @@
     let currentContentTable = null;
     let editingContentId = null;
     let editingUserId = null;
+
+    // 杂项管理相关
+    let selectedMiscUserId = null;
+    let currentUserFrames = [];      // 当前选中用户拥有的头像框 id 列表
 
     const roleConfig = {
         owner: { name: '站长', class: 'role-owner' },
@@ -175,6 +298,7 @@
         ] }
     };
 
+    // ==================== 通用函数 ====================
     function showNotification(msg, type = 'info') {
         const notif = document.createElement('div');
         notif.className = `notification ${type}`;
@@ -218,7 +342,7 @@
         return true;
     }
 
-    // 用户管理
+    // ==================== 用户管理 ====================
     async function fetchAllUsers() {
         const { data: profiles } = await supabaseAdmin.from('user_profiles').select('id, username, role, created_at').order('created_at', { ascending: false });
         const { data: stats } = await supabaseAdmin.from('user_stats').select('user_id, candy_crumbles, rainbow_lollipops, active_points, checkin_streak');
@@ -228,7 +352,7 @@
     function renderUsersTable(users) {
         const container = document.getElementById('usersListArea');
         if (!users.length) { container.innerHTML = '<div class="empty-data">暂无用户</div>'; return; }
-        let html = '<table class="data-table"><thead><tr><th>用户名</th><th>角色</th><th>糖果碎</th><th>超级棒糖</th><th>活跃度</th><th>签到</th><th>注册时间</th><th>操作</th></tr></thead><tbody>';
+        let html = '<table class="data-table"><thead><tr><th>用户名</th><th>角色</th><th>糖果碎</th><th>超级棒糖</th><th>活跃度</th><th>连续签到</th><th>注册时间</th><th>操作</th></tr></thead><tbody>';
         users.forEach(u => {
             const roleInfo = roleConfig[u.role] || roleConfig.user;
             const createdDate = u.created_at ? new Date(u.created_at).toLocaleDateString('zh-CN') : '未知';
@@ -237,11 +361,13 @@
             html += `<tr>
                 <td><strong>${escapeHtml(u.username)}</strong><br><span style="font-size:0.7rem;">${u.id.slice(0,8)}...</span></td>
                 <td><span class="role-badge ${roleInfo.class}">${roleInfo.name}</span></td>
-                <td>🍬 ${u.candy_crumbles}</td><td>🌈 ${u.rainbow_lollipops}</td><td>⚡ ${u.active_points}</td><td>🔥 ${u.streak}天</td>
+                <td>🍬 ${u.candy_crumbles}</td>
+                <td>🌈 ${u.rainbow_lollipops}</td>
+                <td>⚡ ${u.active_points}</td>
+                <td>🔥 ${u.streak}天</td>
                 <td>${createdDate}</td>
                 <td class="action-buttons">
                     ${canEditRole ? `<button class="edit-btn" onclick="openUserRoleModal('${u.id}', '${escapeHtml(u.username)}', '${u.role}')"><i class="fas fa-user-tag"></i> 改角色</button>` : ''}
-                    <button class="edit-btn" onclick="openUserResourceModal('${u.id}', '${escapeHtml(u.username)}', ${u.candy_crumbles}, ${u.rainbow_lollipops})"><i class="fas fa-coins"></i> 调资产</button>
                     ${canDelete ? `<button class="delete-btn" onclick="deleteUserById('${u.id}', '${escapeHtml(u.username)}')"><i class="fas fa-trash"></i> 删除</button>` : ''}
                 </td>
             </tr>`;
@@ -266,29 +392,17 @@
             else { showNotification('角色已更新', 'success'); await refreshUserList(); closeModal(); }
         };
     };
-    window.openUserResourceModal = async (userId, username, candy, rainbow) => {
-        editingUserId = userId;
-        openModal('调整用户资产', `<div class="form-field"><label>用户：${escapeHtml(username)}</label></div>
-            <div class="form-field"><label>🍬 糖果碎</label><input type="number" id="candyVal" value="${candy}" min="0"></div>
-            <div class="form-field"><label>🌈 超级棒糖</label><input type="number" id="rainbowVal" value="${rainbow}" min="0"></div>`);
-        document.getElementById('modalForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const newCandy = parseInt(document.getElementById('candyVal').value,10), newRainbow = parseInt(document.getElementById('rainbowVal').value,10);
-            if (isNaN(newCandy) || isNaN(newRainbow) || newCandy<0 || newRainbow<0) { showNotification('请输入非负整数', 'error'); return; }
-            const { error } = await supabaseAdmin.from('user_stats').upsert({ user_id: userId, candy_crumbles: newCandy, rainbow_lollipops: newRainbow }, { onConflict: 'user_id' });
-            if (error) showNotification('更新失败', 'error');
-            else { showNotification('资产已更新', 'success'); await refreshUserList(); closeModal(); }
-        };
-    };
     window.deleteUserById = async (userId, username) => {
         if (userId === OWNER_ID || userId === currentUser.id) { showNotification('无法删除此用户', 'error'); return; }
         if (!confirm(`确定永久删除「${username}」吗？`)) return;
         await supabaseAdmin.from('user_stats').delete().eq('user_id', userId);
         await supabaseAdmin.from('user_profiles').delete().eq('id', userId);
-        showNotification('已删除用户', 'success'); await refreshUserList();
+        await supabaseAdmin.from('user_frames').delete().eq('user_id', userId);
+        showNotification('已删除用户', 'success'); await refreshUserList(); 
+        if (selectedMiscUserId === userId) refreshMiscPanel();
     };
 
-    // 内容管理（修复表格包裹）
+    // ==================== 内容管理（角色/光锥/材料）====================
     async function loadContentTable(table) {
         try {
             const { data, error } = await supabaseAdmin.from(table).select('*').order('display_order', { ascending: true });
@@ -378,6 +492,132 @@
     };
     function getTableChinese(table) { const map = { characters: '角色', light_cones: '光锥', materials: '材料' }; return map[table] || table; }
 
+    // ==================== 杂项管理 ====================
+    async function loadUserFrames(userId) {
+        if (!userId) return [];
+        const { data, error } = await supabaseAdmin.from('user_frames').select('frame_id').eq('user_id', userId);
+        if (error) return [];
+        return data.map(d => d.frame_id);
+    }
+
+    async function updateUserFrames(userId, ownedFrameIds) {
+        // 获取现有记录
+        const existing = await loadUserFrames(userId);
+        // 需要添加的：在 ownedFrameIds 中但不在 existing 中
+        const toAdd = ownedFrameIds.filter(id => !existing.includes(id));
+        // 需要删除的：在 existing 中但不在 ownedFrameIds 中（注意，不能删除默认框）
+        const toRemove = existing.filter(id => !ownedFrameIds.includes(id) && id !== 'frame_default');
+        
+        for (const frameId of toAdd) {
+            await supabaseAdmin.from('user_frames').insert({
+                user_id: userId,
+                frame_id: frameId,
+                equipped: false,
+                purchased_at: new Date().toISOString()
+            }).onConflict('user_id, frame_id', { ignoreDuplicates: true });
+        }
+        for (const frameId of toRemove) {
+            await supabaseAdmin.from('user_frames').delete().eq('user_id', userId).eq('frame_id', frameId);
+        }
+    }
+
+    async function updateUserAssets(userId, candy, rainbow) {
+        await supabaseAdmin.from('user_stats').upsert({
+            user_id: userId,
+            candy_crumbles: candy,
+            rainbow_lollipops: rainbow
+        }, { onConflict: 'user_id' });
+    }
+
+    async function refreshMiscPanel() {
+        const selectEl = document.getElementById('miscUserSelect');
+        if (!selectEl) return;
+        // 填充用户下拉框
+        const users = allUsers.length ? allUsers : await fetchAllUsers();
+        if (!allUsers.length) allUsers = users;
+        selectEl.innerHTML = '<option value="">-- 选择用户 --</option>' + users.map(u => `<option value="${u.id}" ${selectedMiscUserId === u.id ? 'selected' : ''}>${escapeHtml(u.username)} (${u.id.slice(0,8)})</option>`).join('');
+        if (selectedMiscUserId) {
+            await loadMiscUserData(selectedMiscUserId);
+        } else {
+            document.getElementById('assetControlArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
+            document.getElementById('framesManagementArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
+        }
+    }
+
+    async function loadMiscUserData(userId) {
+        if (!userId) return;
+        // 获取用户资产
+        const { data: stats } = await supabaseAdmin.from('user_stats').select('candy_crumbles, rainbow_lollipops').eq('user_id', userId).single();
+        const candy = stats?.candy_crumbles ?? 100;
+        const rainbow = stats?.rainbow_lollipops ?? 5;
+        // 获取用户拥有的头像框
+        currentUserFrames = await loadUserFrames(userId);
+        if (!currentUserFrames.includes('frame_default')) currentUserFrames.push('frame_default');
+        
+        // 渲染资产调整控件
+        const assetHtml = `
+            <div class="asset-item"><img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp" alt="糖果碎">糖果碎: <input type="number" id="miscCandy" value="${candy}" min="0" style="width:100px; background:#1e2a2a; border:1px solid #3e5a5a; border-radius:8px; padding:4px 8px; color:#fff;"></div>
+            <div class="asset-item"><img src="https://xiaochen1235789.github.io/images/Super_Sweet.webp" alt="超级棒糖">超级棒糖: <input type="number" id="miscRainbow" value="${rainbow}" min="0" style="width:100px; background:#1e2a2a; border:1px solid #3e5a5a; border-radius:8px; padding:4px 8px; color:#fff;"></div>
+            <button class="save-asset-btn" id="saveAssetBtn"><i class="fas fa-save"></i> 保存资产修改</button>
+        `;
+        document.getElementById('assetControlArea').innerHTML = assetHtml;
+        document.getElementById('saveAssetBtn')?.addEventListener('click', async () => {
+            const newCandy = parseInt(document.getElementById('miscCandy').value, 10);
+            const newRainbow = parseInt(document.getElementById('miscRainbow').value, 10);
+            if (isNaN(newCandy) || isNaN(newRainbow) || newCandy < 0 || newRainbow < 0) {
+                showNotification('请输入非负整数', 'error');
+                return;
+            }
+            await updateUserAssets(userId, newCandy, newRainbow);
+            showNotification('资产已更新', 'success');
+            await refreshUserList();  // 同步用户表显示
+            await loadMiscUserData(userId);
+        });
+        
+        // 渲染头像框管理（复选框列表）
+        let framesHtml = '<div class="frames-grid">';
+        for (const frame of FRAMES_LIST) {
+            const isOwned = currentUserFrames.includes(frame.id);
+            const disabledAttr = (frame.id === 'frame_default') ? 'disabled ' : '';
+            framesHtml += `
+                <label class="frame-checkbox-item">
+                    <input type="checkbox" class="frame-checkbox" data-frame-id="${frame.id}" ${isOwned ? 'checked' : ''} ${disabledAttr}>
+                    <div class="frame-name">${escapeHtml(frame.name)}</div>
+                    ${frame.id === 'frame_default' ? '<span style="font-size:0.7rem;">(默认，不可取消)</span>' : ''}
+                </label>
+            `;
+        }
+        framesHtml += '</div><button class="save-frames-btn" id="saveFramesBtn"><i class="fas fa-save"></i> 保存头像框修改</button>';
+        document.getElementById('framesManagementArea').innerHTML = framesHtml;
+        
+        document.getElementById('saveFramesBtn')?.addEventListener('click', async () => {
+            const checkboxes = document.querySelectorAll('.frame-checkbox');
+            const newOwned = [];
+            checkboxes.forEach(cb => {
+                if (cb.checked) newOwned.push(cb.dataset.frameId);
+            });
+            await updateUserFrames(userId, newOwned);
+            showNotification('头像框拥有状态已更新', 'success');
+            await loadMiscUserData(userId);  // 刷新显示
+            await refreshUserList();          // 不需要但这不影响
+        });
+    }
+
+    function initMiscPanel() {
+        const selectEl = document.getElementById('miscUserSelect');
+        selectEl.addEventListener('change', async (e) => {
+            selectedMiscUserId = e.target.value;
+            if (selectedMiscUserId) {
+                await loadMiscUserData(selectedMiscUserId);
+            } else {
+                document.getElementById('assetControlArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
+                document.getElementById('framesManagementArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
+            }
+        });
+        refreshMiscPanel();
+    }
+
+    // ==================== 标签页切换 ====================
     function switchTab(tabId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
@@ -387,7 +627,12 @@
         else if (tabId === 'characters') loadContentTable('characters');
         else if (tabId === 'light_cones') loadContentTable('light_cones');
         else if (tabId === 'materials') loadContentTable('materials');
+        else if (tabId === 'misc') { 
+            refreshMiscPanel(); 
+            initMiscPanel(); 
+        }
     }
+
     function bindEvents() {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
         document.getElementById('searchUsers').addEventListener('input', () => {
@@ -404,7 +649,13 @@
         document.getElementById('addMaterialBtn').onclick = () => showContentForm('materials');
         document.getElementById('logoutBtn').onclick = async () => { await supabaseAdmin.auth.signOut(); window.location.href = 'index.html'; };
     }
-    async function init() { if (await checkAuthAndRole()) { bindEvents(); await refreshUserList(); } }
+
+    async function init() { 
+        if (await checkAuthAndRole()) { 
+            bindEvents(); 
+            await refreshUserList(); 
+        } 
+    }
     init();
 </script>
 </body>
