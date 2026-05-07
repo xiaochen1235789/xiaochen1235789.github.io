@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>六哥荣耀 - 启程之时</title>
+    <title>六哥荣耀 - 星穹启程</title>
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <style>
         :root {
-            /* 崩铁主题变量 */
             --hsr-bg: #0a0a14;
             --hsr-surface: #151525;
             --hsr-card: #1e1e2e;
@@ -19,8 +18,6 @@
             --hsr-danger: #ff4757;
             --hsr-warning: #ff9f43;
             --hsr-success: #1dd1a1;
-            --hsr-energy: #4488ff;
-            --hsr-hp: #ff6b81;
             --hsr-glass: rgba(255, 255, 255, 0.05);
             --hsr-glass-border: rgba(255, 255, 255, 0.1);
         }
@@ -29,6 +26,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            user-select: none;
             -webkit-tap-highlight-color: transparent;
             font-family: 'HYWenHei-85W', 'Microsoft YaHei', sans-serif;
         }
@@ -42,24 +40,24 @@
             position: fixed;
         }
 
-        /* 主界面背景 */
         .main-container {
             width: 100%;
             height: 100%;
             position: relative;
-            background: 
-                radial-gradient(circle at 20% 10%, #1a1a3a 0%, transparent 40%),
-                radial-gradient(circle at 80% 90%, #0f1a2e 0%, transparent 40%),
-                var(--hsr-bg);
-            overflow: hidden;
+            background: radial-gradient(circle at 20% 10%, #1a1a3a 0%, transparent 40%),
+                        radial-gradient(circle at 80% 90%, #0f1a2e 0%, transparent 40%),
+                        var(--hsr-bg);
+            overflow-y: auto;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
         }
 
         /* 星空背景 */
         .stars-bg {
-            position: absolute;
+            position: fixed;
             width: 100%;
             height: 100%;
-            background: transparent;
+            pointer-events: none;
             z-index: 1;
         }
 
@@ -71,27 +69,62 @@
         }
 
         @keyframes twinkle {
-            0% { opacity: 0.3; transform: scale(0.8); }
+            0% { opacity: 0.2; transform: scale(0.8); }
             100% { opacity: 1; transform: scale(1.2); }
         }
 
-        /* 主标题区域 */
-        .title-container {
+        /* 点击粒子容器 */
+        .particle-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10000;
+        }
+
+        .click-particle {
             position: absolute;
-            top: 10%;
-            left: 50%;
-            transform: translateX(-50%);
+            width: 8px;
+            height: 8px;
+            background: radial-gradient(circle, #00d4ff, #0088cc);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: particleExpand 0.6s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes particleExpand {
+            0% {
+                width: 8px;
+                height: 8px;
+                opacity: 0.8;
+            }
+            100% {
+                width: 60px;
+                height: 60px;
+                opacity: 0;
+                filter: blur(4px);
+            }
+        }
+
+        /* 标题容器 */
+        .title-container {
+            position: relative;
             text-align: center;
             z-index: 10;
             width: 90%;
             max-width: 800px;
+            margin: 0 auto;
+            padding-top: 8vh;
         }
 
         .game-title {
             font-size: 3.5rem;
             background: linear-gradient(135deg, #00d4ff, #66e5ff, #ffffff);
-            -webkit-background-clip: text;
             background-clip: text;
+            -webkit-background-clip: text;
             color: transparent;
             margin-bottom: 1rem;
             text-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
@@ -101,19 +134,51 @@
         .game-subtitle {
             font-size: 1.2rem;
             color: var(--hsr-subtext);
-            margin-bottom: 3rem;
+            margin-bottom: 2rem;
             opacity: 0.8;
-            letter-spacing: 1px;
+        }
+
+        /* 顶部音乐控件 */
+        .music-control {
+            position: relative;
+            z-index: 20;
+            display: flex;
+            justify-content: center;
+            margin: 20px auto 30px;
+        }
+
+        .music-btn {
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(16px);
+            border-radius: 40px;
+            padding: 10px 24px;
+            border: 1px solid var(--hsr-primary);
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1rem;
+            color: var(--hsr-primary-light);
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 12px rgba(0, 212, 255, 0.2);
+        }
+
+        .music-btn:hover {
+            background: rgba(0, 212, 255, 0.2);
+            transform: scale(1.02);
+            border-color: var(--hsr-primary-light);
+        }
+
+        .music-btn .status {
+            font-size: 0.9rem;
         }
 
         /* 菜单区域 */
         .menu-container {
-            position: absolute;
-            top: 40%;
-            left: 50%;
-            transform: translateX(-50%);
+            position: relative;
             width: 90%;
             max-width: 400px;
+            margin: 0 auto 40px;
             z-index: 20;
             display: flex;
             flex-direction: column;
@@ -135,6 +200,7 @@
             justify-content: space-between;
             position: relative;
             overflow: hidden;
+            text-decoration: none;
         }
 
         .menu-item::before {
@@ -168,16 +234,15 @@
             opacity: 0.8;
         }
 
-        /* 角色展示 */
+        /* 角色展示区 */
         .character-showcase {
-            position: absolute;
-            bottom: 5%;
-            left: 50%;
-            transform: translateX(-50%);
+            position: relative;
             display: flex;
-            gap: 20px;
+            justify-content: center;
+            gap: 25px;
+            margin: 30px auto 40px;
             z-index: 5;
-            opacity: 0.7;
+            flex-wrap: wrap;
         }
 
         .character-card {
@@ -193,23 +258,42 @@
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
+            overflow: hidden;
+        }
+
+        .character-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.4s;
+        }
+
+        .character-card:hover::after {
+            left: 100%;
         }
 
         .character-card:hover {
             transform: translateY(-10px) scale(1.1);
             border-color: var(--hsr-primary);
             box-shadow: 0 0 30px rgba(0, 212, 255, 0.4);
-            opacity: 1;
         }
 
         .character-name {
             position: absolute;
-            bottom: -25px;
+            bottom: -28px;
             font-size: 0.8rem;
-            color: var(--hsr-subtext);
+            color: var(--hsr-primary-light);
             white-space: nowrap;
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.3s;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 12px;
+            pointer-events: none;
         }
 
         .character-card:hover .character-name {
@@ -218,21 +302,19 @@
 
         /* 底部信息 */
         .footer-info {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
             text-align: center;
             color: var(--hsr-subtext);
-            font-size: 0.9rem;
-            z-index: 5;
-            opacity: 0.5;
+            font-size: 0.8rem;
+            margin: 20px auto 30px;
+            opacity: 0.6;
             width: 100%;
+            pointer-events: none;
+            position: relative;
+            z-index: 5;
         }
 
-        /* 版本号 */
         .version {
-            position: absolute;
+            position: fixed;
             top: 20px;
             right: 20px;
             color: var(--hsr-subtext);
@@ -242,7 +324,7 @@
         }
 
         /* 设置面板 */
-        .settings-panel {
+        .settings-panel, .about-panel {
             position: fixed;
             top: 50%;
             left: 50%;
@@ -260,150 +342,8 @@
             gap: 25px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
         }
-
-        .settings-panel.active {
-            display: flex;
-            animation: panelFadeIn 0.3s ease;
-        }
-
-        @keyframes panelFadeIn {
-            from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
-            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-        }
-
-        .settings-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .settings-title {
-            font-size: 1.8rem;
-            color: var(--hsr-primary);
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            color: var(--hsr-subtext);
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 5px;
-            transition: color 0.2s;
-        }
-
-        .close-btn:hover {
-            color: var(--hsr-text);
-        }
-
-        .setting-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 0;
-            border-bottom: 1px solid var(--hsr-glass-border);
-        }
-
-        .setting-label {
-            font-size: 1.1rem;
-        }
-
-        .setting-control {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .toggle-switch {
-            width: 50px;
-            height: 26px;
-            background: var(--hsr-glass);
-            border-radius: 13px;
-            position: relative;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .toggle-switch.active {
-            background: var(--hsr-primary);
-        }
-
-        .toggle-switch::after {
-            content: '';
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            width: 20px;
-            height: 20px;
-            background: white;
-            border-radius: 50%;
-            transition: transform 0.3s;
-        }
-
-        .toggle-switch.active::after {
-            transform: translateX(24px);
-        }
-
-        .volume-slider {
-            width: 150px;
-            height: 6px;
-            background: var(--hsr-glass);
-            border-radius: 3px;
-            position: relative;
-            cursor: pointer;
-        }
-
-        .volume-fill {
-            position: absolute;
-            height: 100%;
-            background: var(--hsr-primary);
-            border-radius: 3px;
-        }
-
-        .volume-handle {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 16px;
-            height: 16px;
-            background: white;
-            border-radius: 50%;
-            cursor: grab;
-        }
-
-        .volume-handle:active {
-            cursor: grabbing;
-        }
-
-        .settings-actions {
-            display: flex;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .settings-btn {
-            flex: 1;
-            padding: 12px;
-            border: 1px solid var(--hsr-glass-border);
-            border-radius: 10px;
-            background: var(--hsr-glass);
-            color: var(--hsr-text);
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .settings-btn.primary {
-            background: linear-gradient(135deg, var(--hsr-primary), var(--hsr-primary-dark));
-        }
-
-        .settings-btn:hover {
-            border-color: var(--hsr-primary);
-            transform: translateY(-2px);
-        }
-
-        /* 遮罩层 */
+        .settings-panel.active, .about-panel.active { display: flex; animation: panelFadeIn 0.3s ease; }
+        @keyframes panelFadeIn { from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
         .overlay {
             position: fixed;
             top: 0;
@@ -415,80 +355,8 @@
             z-index: 999;
             display: none;
         }
-
-        .overlay.active {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        /* 关于面板 */
-        .about-panel {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 90%;
-            max-width: 600px;
-            background: var(--hsr-surface);
-            border: 1px solid var(--hsr-glass-border);
-            border-radius: 20px;
-            padding: 40px;
-            z-index: 1000;
-            backdrop-filter: blur(30px);
-            display: none;
-            flex-direction: column;
-            gap: 25px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
-
-        .about-panel.active {
-            display: flex;
-        }
-
-        .about-title {
-            font-size: 2rem;
-            text-align: center;
-            color: var(--hsr-primary);
-            margin-bottom: 20px;
-        }
-
-        .about-content {
-            line-height: 1.6;
-            color: var(--hsr-subtext);
-            text-align: center;
-        }
-
-        .about-features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-
-        .feature-item {
-            background: var(--hsr-glass);
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            border: 1px solid var(--hsr-glass-border);
-        }
-
-        .feature-icon {
-            font-size: 2rem;
-            margin-bottom: 10px;
-            color: var(--hsr-primary);
-        }
-
-        .feature-text {
-            font-size: 0.9rem;
-        }
-
-        /* 加载动画 */
+        .overlay.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .loading-screen {
             position: fixed;
             top: 0;
@@ -503,19 +371,12 @@
             justify-content: center;
             transition: opacity 0.5s ease;
         }
-
         .loading-text {
             font-size: 1.5rem;
             color: var(--hsr-primary);
             margin-bottom: 30px;
             animation: pulse 1.5s infinite;
         }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
-
         .loading-bar {
             width: 200px;
             height: 4px;
@@ -524,7 +385,6 @@
             overflow: hidden;
             position: relative;
         }
-
         .loading-progress {
             position: absolute;
             top: 0;
@@ -534,118 +394,66 @@
             border-radius: 2px;
             animation: loading 2s ease-in-out infinite;
         }
-
         @keyframes loading {
             0% { width: 0%; left: 0; }
             50% { width: 100%; left: 0; }
             100% { width: 0%; left: 100%; }
         }
 
-        /* 响应式设计 */
+        /* 响应式 */
         @media (max-width: 768px) {
-            .game-title {
-                font-size: 2.5rem;
-            }
-            
-            .game-subtitle {
-                font-size: 1rem;
-            }
-            
-            .menu-item {
-                padding: 18px 20px;
-                font-size: 1.1rem;
-            }
-            
-            .character-showcase {
-                gap: 15px;
-            }
-            
-            .character-card {
-                width: 60px;
-                height: 60px;
-                font-size: 2rem;
-            }
-            
-            .about-features {
-                grid-template-columns: 1fr;
-            }
+            .game-title { font-size: 2.5rem; }
+            .menu-item { padding: 18px 20px; font-size: 1rem; }
+            .character-card { width: 60px; height: 60px; font-size: 2rem; }
+            .music-btn { padding: 8px 20px; font-size: 0.9rem; }
         }
-
+        @media (max-width: 480px) {
+            .title-container { padding-top: 5vh; }
+            .version { top: 10px; right: 10px; font-size: 0.7rem; }
+        }
         @media (max-height: 600px) {
-            .title-container {
-                top: 5%;
-            }
-            
-            .menu-container {
-                top: 35%;
-            }
-            
-            .character-showcase {
-                display: none;
-            }
-        }
-
-        @media (orientation: landscape) and (max-height: 500px) {
-            .game-title {
-                font-size: 2rem;
-            }
-            
-            .menu-container {
-                top: 50%;
-                transform: translate(-50%, -50%);
-                width: 80%;
-                flex-direction: row;
-                flex-wrap: wrap;
-            }
-            
-            .menu-item {
-                flex: 1;
-                min-width: 150px;
-            }
-            
-            .character-showcase {
-                display: none;
-            }
+            .title-container { padding-top: 3vh; }
+            .character-showcase { margin: 20px auto; }
         }
     </style>
 </head>
 <body>
-    <!-- 加载界面 -->
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-text">跃迁准备中...</div>
-        <div class="loading-bar">
-            <div class="loading-progress"></div>
-        </div>
+        <div class="loading-bar"><div class="loading-progress"></div></div>
     </div>
 
-    <!-- 主界面 -->
     <div class="main-container" id="mainContainer" style="display: none;">
-        <!-- 星空背景 -->
         <div class="stars-bg" id="starsBg"></div>
-        
-        <!-- 主标题 -->
+        <div class="version">v1.2.0</div>
+
         <div class="title-container">
             <h1 class="game-title">六哥荣耀</h1>
             <div class="game-subtitle">星海无垠，命运待启</div>
         </div>
-        
-        <!-- 版本号 -->
-        <div class="version">v1.0.0</div>
-        
-        <!-- 主菜单 -->
+
+        <!-- 音乐控件（实际可播放） -->
+        <div class="music-control">
+            <div class="music-btn" id="musicControlBtn">
+                <span id="musicIcon">🎵</span>
+                <span id="musicStatusText">点击播放音乐</span>
+            </div>
+        </div>
+        <!-- 隐藏的音频元素 -->
+        <audio id="bgmAudio" loop preload="auto" style="display: none;">
+            <!-- 请替换为你的音乐直链，以下是测试用的公开示例链接（非商用测试） -->
+            <source src="https://xiaochen1235789.github.io/ai%20sister/主界面.aac" type="audio/aac">
+        </audio>
+
         <div class="menu-container">
-            <!-- 开始游戏 -->
-<a href="https://xiaochen1235789.github.io/ai sister/select-character.html" class="menu-item">
-    <span>🚀 开始游戏</span>
-    <span class="menu-icon">▶</span>
-</a>
-            
-            <!-- 角色详情按钮 -->
-<a href="https://xiaochen1235789.github.io/ai sister/role-details.html" class="menu-item">
-    <span>🐾 角色详情</span>
-    <span class="menu-icon">▶</span>
-</a>
-            
+            <a href="https://xiaochen1235789.github.io/ai sister/select-character.html" class="menu-item" id="startGameBtn">
+                <span>🚀 开始游戏</span>
+                <span class="menu-icon">▶</span>
+            </a>
+            <a href="https://xiaochen1235789.github.io/ai sister/role-details.html" class="menu-item">
+                <span>🐾 角色详情</span>
+                <span class="menu-icon">▶</span>
+            </a>
             <div class="menu-item" onclick="showSettings()">
                 <span>⚙️ 设置</span>
                 <span class="menu-icon">⚙️</span>
@@ -659,382 +467,341 @@
                 <span class="menu-icon">🚪</span>
             </div>
         </div>
-        
-        <!-- 角色展示 -->
+
         <div class="character-showcase">
-            <div class="character-card">
-                🚀
-                <div class="character-name"></div>
-            </div>
-            <div class="character-card">
-                🛡️
-                <div class="character-name"></div>
-            </div>
-            <div class="character-card">
-                ⚡
-                <div class="character-name"></div>
-            </div>
-            <div class="character-card">
-                💫
-                <div class="character-name"></div>
-            </div>
+            <div class="character-card" data-name="三月七">❄️<div class="character-name">三月七</div></div>
+            <div class="character-card" data-name="丹恒">🗡️<div class="character-name">丹恒</div></div>
+            <div class="character-card" data-name="姬子">☕<div class="character-name">姬子</div></div>
+            <div class="character-card" data-name="瓦尔特">🧥<div class="character-name">瓦尔特</div></div>
         </div>
-        
-        <!-- 底部信息 -->
-        <div class="footer-info">
-            追随星神的轨迹，书写属于你的传奇
-        </div>
+
+        <div class="footer-info">追随星神的轨迹，书写属于你的传奇</div>
     </div>
-    
-    <!-- 设置面板 -->
+
     <div class="overlay" id="overlay"></div>
-    
+
+    <!-- 设置面板 -->
     <div class="settings-panel" id="settingsPanel">
         <div class="settings-header">
             <h2 class="settings-title">游戏设置</h2>
             <button class="close-btn" onclick="hideSettings()">✕</button>
         </div>
-        
         <div class="setting-item">
-            <span class="setting-label">音乐</span>
+            <span class="setting-label">🎵 背景音乐</span>
             <div class="setting-control">
-                <div class="toggle-switch active" onclick="toggleSetting(this)"></div>
-                <div class="volume-slider" onclick="adjustVolume(event, this)">
-                    <div class="volume-fill" style="width: 70%"></div>
-                    <div class="volume-handle" style="left: 65%"></div>
+                <div class="toggle-switch active" id="musicToggle" onclick="toggleMusicSetting()"></div>
+                <div class="volume-slider" id="musicVolumeSlider" onclick="adjustVolume(event, this)">
+                    <div class="volume-fill" style="width: 60%"></div>
+                    <div class="volume-handle" style="left: 58%"></div>
                 </div>
             </div>
         </div>
-        
         <div class="setting-item">
-            <span class="setting-label">音效</span>
-            <div class="setting-control">
-                <div class="toggle-switch active" onclick="toggleSetting(this)"></div>
-                <div class="volume-slider" onclick="adjustVolume(event, this)">
-                    <div class="volume-fill" style="width: 80%"></div>
-                    <div class="volume-handle" style="left: 75%"></div>
-                </div>
-            </div>
+            <span class="setting-label">🔊 音效开关</span>
+            <div class="setting-control"><div class="toggle-switch active" id="sfxToggle" onclick="toggleSfx()"></div></div>
         </div>
-        
         <div class="setting-item">
-            <span class="setting-label">震动反馈</span>
-            <div class="setting-control">
-                <div class="toggle-switch" onclick="toggleSetting(this)"></div>
-            </div>
+            <span class="setting-label">📳 震动反馈</span>
+            <div class="setting-control"><div class="toggle-switch" onclick="toggleSetting(this)"></div></div>
         </div>
-        
         <div class="setting-item">
-            <span class="setting-label">画面质量</span>
-            <div class="setting-control">
-                <select class="quality-select" onchange="changeQuality(this)">
-                    <option value="low">低</option>
-                    <option value="medium" selected>中</option>
-                    <option value="high">高</option>
-                    <option value="ultra">极致</option>
-                </select>
-            </div>
+            <span class="setting-label">🎨 画面质量</span>
+            <div class="setting-control"><select class="quality-select" onchange="changeQuality(this)"><option value="low">低</option><option value="medium" selected>中</option><option value="high">高</option><option value="ultra">极致</option></select></div>
         </div>
-        
         <div class="settings-actions">
             <button class="settings-btn" onclick="resetSettings()">重置</button>
             <button class="settings-btn primary" onclick="saveSettings()">保存</button>
         </div>
     </div>
-    
-    <!-- 关于面板 -->
+
     <div class="about-panel" id="aboutPanel">
-        <h2 class="about-title">关于星穹铁道</h2>
-        
-        <div class="about-content">
-            这是一款基于《崩坏：星穹铁道》战斗机制开发的网页游戏。<br>
-            体验策略战斗的魅力，组建你的小队，探索未知的宇宙！
-        </div>
-        
+        <h2 class="about-title">✨ 关于星穹铁道 ✨</h2>
+        <div class="about-content">基于《崩坏：星穹铁道》世界观，体验回合制策略战斗与角色养成。</div>
         <div class="about-features">
-            <div class="feature-item">
-                <div class="feature-icon">⚔️</div>
-                <div class="feature-text">回合制策略战斗</div>
-            </div>
-            <div class="feature-item">
-                <div class="feature-icon">🌟</div>
-                <div class="feature-text">角色技能搭配</div>
-            </div>
-            <div class="feature-item">
-                <div class="feature-icon">🎮</div>
-                <div class="feature-text">键盘/触控操作</div>
-            </div>
-            <div class="feature-item">
-                <div class="feature-icon">📱</div>
-                <div class="feature-text">响应式设计</div>
-            </div>
+            <div class="feature-item"><div class="feature-icon">⚔️</div><div class="feature-text">策略战斗</div></div>
+            <div class="feature-item"><div class="feature-icon">🌟</div><div class="feature-text">星神之旅</div></div>
+            <div class="feature-item"><div class="feature-icon">🎵</div><div class="feature-text">沉浸音乐</div></div>
+            <div class="feature-item"><div class="feature-icon">📱</div><div class="feature-text">全平台适配</div></div>
         </div>
-        
-        <div class="about-content">
-            开发者：小尘<br>
-            版本：v1.0.0<br>
-            仅供学习交流使用
-        </div>
-        
-        <div class="settings-actions">
-            <button class="settings-btn primary" onclick="hideAbout()">返回</button>
-        </div>
+        <div class="about-content">开发者：小尘 | 版本 v1.2.0 | 仅供学习交流</div>
+        <div class="settings-actions"><button class="settings-btn primary" onclick="hideAbout()">返回</button></div>
     </div>
 
+    <div class="particle-container" id="particleContainer"></div>
+
     <script>
-        // ===================== 初始化主界面 =====================
-        function initMainMenu() {
-            // 隐藏加载界面，显示主界面
-            setTimeout(() => {
-                const loadingScreen = document.getElementById('loadingScreen');
-                const mainContainer = document.getElementById('mainContainer');
-                
-                loadingScreen.style.opacity = '0';
-                setTimeout(() => {
-                    loadingScreen.style.display = 'none';
-                    mainContainer.style.display = 'block';
-                }, 500);
-            }, 1500);
-            
-            // 创建星空背景
-            createStars();
-            
-            // 初始化设置
-            loadSettings();
-            
-            // 添加键盘事件监听
-            document.addEventListener('keydown', handleMenuKeyDown);
+        // ---------- 点击粒子效果 ----------
+        function createClickParticle(x, y) {
+            const container = document.getElementById('particleContainer');
+            if (!container) return;
+            const particle = document.createElement('div');
+            particle.className = 'click-particle';
+            particle.style.left = x + 'px';
+            particle.style.top = y + 'px';
+            container.appendChild(particle);
+            setTimeout(() => particle.remove(), 600);
         }
-        
-        // ===================== 星空背景生成 =====================
-        function createStars() {
-            const starsBg = document.getElementById('starsBg');
-            const starCount = window.innerWidth < 768 ? 50 : 100;
-            
-            for (let i = 0; i < starCount; i++) {
-                const star = document.createElement('div');
-                star.className = 'star';
-                
-                // 随机位置和大小
-                const size = Math.random() * 3 + 1;
-                const x = Math.random() * 100;
-                const y = Math.random() * 100;
-                const duration = Math.random() * 3 + 2;
-                
-                star.style.width = `${size}px`;
-                star.style.height = `${size}px`;
-                star.style.left = `${x}%`;
-                star.style.top = `${y}%`;
-                star.style.opacity = Math.random() * 0.5 + 0.3;
-                star.style.setProperty('--duration', `${duration}s`);
-                
-                starsBg.appendChild(star);
+
+        function handleTap(e) {
+            let clientX, clientY;
+            if (e.touches) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
             }
+            createClickParticle(clientX, clientY);
         }
-        
-        // ===================== 菜单功能 =====================
-        function startGame() {
-            showLoading("正在进入战斗...");
-            
-            // 模拟加载过程
-            setTimeout(() => {
-                // 这里可以跳转到战斗页面
-                window.location.href = 'battle.html';
-                
-                // 或者在当前页面加载战斗界面
-                console.log("开始游戏，跳转到战斗界面");
-                alert("开始游戏！战斗界面将在完整实现中加载。");
-                
-                // 重置加载界面
-                hideLoading();
-            }, 1000);
-        }
-        
-        function showSettings() {
-            document.getElementById('overlay').classList.add('active');
-            document.getElementById('settingsPanel').classList.add('active');
-        }
-        
-        function hideSettings() {
-            document.getElementById('overlay').classList.remove('active');
-            document.getElementById('settingsPanel').classList.remove('active');
-        }
-        
-        function showAbout() {
-            document.getElementById('overlay').classList.add('active');
-            document.getElementById('aboutPanel').classList.add('active');
-        }
-        
-        function hideAbout() {
-            document.getElementById('overlay').classList.remove('active');
-            document.getElementById('aboutPanel').classList.remove('active');
-        }
-        
-        function exitGame() {
-            if (confirm("确定要退出游戏吗？")) {
-                // 如果是网页，关闭当前窗口
-                if (window.opener) {
-                    window.close();
-                } else {
-                    // 否则显示退出消息
-                    showLoading("正在退出...");
-                    setTimeout(() => {
-                        document.body.innerHTML = `
-                            <div style="
-                                width: 100%;
-                                height: 100%;
-                                display: flex;
-                                flex-direction: column;
-                                align-items: center;
-                                justify-content: center;
-                                background: var(--hsr-bg);
-                                color: var(--hsr-primary);
-                                font-size: 1.5rem;
-                                text-align: center;
-                                padding: 20px;
-                            ">
-                                <div style="margin-bottom: 20px;">🚀</div>
-                                <div>感谢游玩星穹铁道</div>
-                                <div style="margin-top: 10px; font-size: 1rem; color: var(--hsr-subtext);">
-                                    期待下次再会，开拓者！
-                                </div>
-                            </div>
-                        `;
-                    }, 1000);
+        document.addEventListener('click', handleTap);
+        document.addEventListener('touchstart', handleTap);
+
+        // ---------- 背景音乐系统（使用 <audio> 元素，支持设置面板控制） ----------
+        const bgmAudio = document.getElementById('bgmAudio');
+        const musicControlBtn = document.getElementById('musicControlBtn');
+        const musicStatusText = document.getElementById('musicStatusText');
+        const musicToggleSwitch = document.getElementById('musicToggle');
+        const musicVolumeSlider = document.querySelector('#musicVolumeSlider .volume-fill');
+
+        let musicEnabled = true;
+        let musicVolume = 0.6;   // 0-1
+
+        // 加载设置
+        function loadAudioSettings() {
+            const savedMusic = localStorage.getItem('hsr_music_enabled');
+            if (savedMusic !== null) musicEnabled = savedMusic === 'true';
+            const savedVol = localStorage.getItem('hsr_music_volume');
+            if (savedVol !== null) musicVolume = parseFloat(savedVol);
+            musicToggleSwitch.classList.toggle('active', musicEnabled);
+            updateMusicVolumeUI(musicVolume * 100);
+            if (bgmAudio) {
+                bgmAudio.volume = musicEnabled ? musicVolume : 0;
+                if (musicEnabled && bgmAudio.paused && !bgmAudio.ended && bgmAudio.src) {
+                    // 不自动播放，等待用户点击音乐控件
                 }
             }
         }
-        
-        // ===================== 设置功能 =====================
-        function toggleSetting(element) {
-            element.classList.toggle('active');
+
+        function updateMusicVolumeUI(percent) {
+            const fill = document.querySelector('#musicVolumeSlider .volume-fill');
+            const handle = document.querySelector('#musicVolumeSlider .volume-handle');
+            if (fill) fill.style.width = `${percent}%`;
+            if (handle) handle.style.left = `${percent}%`;
         }
-        
+
+        function updateMusicVolume(value) {
+            musicVolume = Math.min(1, Math.max(0, value / 100));
+            if (bgmAudio) bgmAudio.volume = musicEnabled ? musicVolume : 0;
+            updateMusicVolumeUI(value);
+            saveSettings();
+        }
+
+        function toggleMusicSetting() {
+            musicEnabled = !musicEnabled;
+            musicToggleSwitch.classList.toggle('active', musicEnabled);
+            if (bgmAudio) {
+                bgmAudio.volume = musicEnabled ? musicVolume : 0;
+                if (musicEnabled && !bgmAudio.paused) {
+                    // 保持播放
+                } else if (musicEnabled && bgmAudio.paused && bgmAudio.src && !bgmAudio.ended) {
+                    // 如果当前是暂停但开关打开，不自动播放，尊重用户暂停操作
+                }
+            }
+            saveSettings();
+            // 更新音乐控件文本
+            if (bgmAudio && !bgmAudio.paused && musicEnabled) {
+                musicStatusText.innerText = '播放中';
+            } else if (bgmAudio && bgmAudio.paused && !bgmAudio.ended) {
+                musicStatusText.innerText = '已暂停';
+            } else if (!musicEnabled) {
+                musicStatusText.innerText = '音乐已关闭';
+            } else {
+                musicStatusText.innerText = '点击播放';
+            }
+        }
+
+        // 音乐控件点击：播放/暂停
+        function toggleMusicPlay() {
+            if (!bgmAudio || !bgmAudio.src) {
+                musicStatusText.innerText = '无音乐链接';
+                return;
+            }
+            if (!musicEnabled) {
+                // 如果音乐总开关关闭，提示或自动开启？这里选择自动开启总开关
+                musicEnabled = true;
+                musicToggleSwitch.classList.add('active');
+                saveSettings();
+            }
+            if (bgmAudio.paused) {
+                bgmAudio.play().then(() => {
+                    musicStatusText.innerText = '播放中';
+                }).catch(e => {
+                    console.warn('播放失败', e);
+                    musicStatusText.innerText = '播放失败';
+                });
+            } else {
+                bgmAudio.pause();
+                musicStatusText.innerText = '已暂停';
+            }
+        }
+
+        if (musicControlBtn) {
+            musicControlBtn.addEventListener('click', toggleMusicPlay);
+        }
+
+        // 音效系统（保留原有简单音效）
+        let audioCtx = null;
+        let sfxEnabled = true;
+        function initAudioContext() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        function playSfx(type) {
+            if (!sfxEnabled) return;
+            initAudioContext();
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = type === 'hover' ? 880 : 660;
+            gain.gain.value = 0.1;
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
+            osc.stop(audioCtx.currentTime + 0.3);
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function toggleSfx() {
+            const toggle = document.getElementById('sfxToggle');
+            sfxEnabled = !sfxEnabled;
+            toggle.classList.toggle('active', sfxEnabled);
+            saveSettings();
+        }
+
+        // 角色卡片点击音效 + 通知
+        document.querySelectorAll('.character-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (sfxEnabled) playSfx('click');
+                const name = card.getAttribute('data-name');
+                showNotification(`✨ ${name} 向你问好，开拓者！`, 1500);
+            });
+        });
+
+        let notifTimeout = null;
+        function showNotification(msg, duration = 2000) {
+            let notif = document.getElementById('floatNotif');
+            if (!notif) {
+                notif = document.createElement('div');
+                notif.id = 'floatNotif';
+                notif.style.cssText = 'position:fixed; bottom:30%; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); color:#00d4ff; padding:8px 20px; border-radius:40px; font-size:0.9rem; z-index:10000; white-space:nowrap; border:1px solid #00d4ff; pointer-events:none; transition:opacity 0.2s;';
+                document.body.appendChild(notif);
+            }
+            notif.textContent = msg;
+            notif.style.opacity = '1';
+            clearTimeout(notifTimeout);
+            notifTimeout = setTimeout(() => { notif.style.opacity = '0'; }, duration);
+        }
+
+        // 菜单功能
+        function showSettings() { document.getElementById('overlay').classList.add('active'); document.getElementById('settingsPanel').classList.add('active'); if (audioCtx && audioCtx.state !== 'running') audioCtx.resume(); }
+        function hideSettings() { closePanels(); }
+        function showAbout() { document.getElementById('overlay').classList.add('active'); document.getElementById('aboutPanel').classList.add('active'); }
+        function hideAbout() { closePanels(); }
+        function closePanels() { document.getElementById('overlay').classList.remove('active'); document.getElementById('settingsPanel').classList.remove('active'); document.getElementById('aboutPanel').classList.remove('active'); }
+
+        function exitGame() {
+            if (confirm("确定要登上星穹列车离开吗？")) {
+                const main = document.getElementById('mainContainer');
+                main.style.transition = 'opacity 1s';
+                main.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.innerHTML = `<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0a14;color:#00d4ff;font-size:1.5rem;">🚀<br>感谢游玩，愿星光照耀你的旅途<br><span style="font-size:0.9rem;margin-top:20px;">页面即将关闭...</span></div>`;
+                    setTimeout(() => { window.close(); }, 2000);
+                }, 800);
+            }
+        }
+
         function adjustVolume(event, slider) {
             const rect = slider.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const percentage = Math.min(Math.max(x / rect.width * 100, 0), 100);
-            
+            let x = event.clientX - rect.left;
+            x = Math.min(Math.max(x, 0), rect.width);
+            const percent = Math.round((x / rect.width) * 100);
             const fill = slider.querySelector('.volume-fill');
             const handle = slider.querySelector('.volume-handle');
-            
-            fill.style.width = `${percentage}%`;
-            handle.style.left = `${percentage}%`;
+            fill.style.width = `${percent}%`;
+            handle.style.left = `${percent}%`;
+            if (slider.id === 'musicVolumeSlider') updateMusicVolume(percent);
         }
-        
-        function changeQuality(select) {
-            console.log("画面质量更改为:", select.value);
-        }
-        
+
+        function changeQuality(select) { console.log("画质:", select.value); }
+        function toggleSetting(el) { el.classList.toggle('active'); }
+
         function resetSettings() {
-            if (confirm("确定要重置所有设置吗？")) {
-                // 重置所有开关
-                document.querySelectorAll('.toggle-switch').forEach(switchEl => {
-                    if (switchEl.parentElement.querySelector('.volume-slider')) {
-                        switchEl.classList.add('active');
-                    } else {
-                        switchEl.classList.remove('active');
-                    }
-                });
-                
-                // 重置音量滑块
-                document.querySelectorAll('.volume-slider').forEach(slider => {
-                    const fill = slider.querySelector('.volume-fill');
-                    const handle = slider.querySelector('.volume-handle');
-                    
-                    const defaultVolume = slider.parentElement.querySelector('.toggle-switch.active') ? 70 : 0;
-                    fill.style.width = `${defaultVolume}%`;
-                    handle.style.left = `${defaultVolume}%`;
-                });
-                
-                // 重置画面质量
-                const qualitySelect = document.querySelector('.quality-select');
-                qualitySelect.value = 'medium';
-                
-                console.log("设置已重置");
-            }
+            musicEnabled = true;
+            musicVolume = 0.6;
+            sfxEnabled = true;
+            document.getElementById('musicToggle').classList.add('active');
+            document.getElementById('sfxToggle').classList.add('active');
+            updateMusicVolume(60);
+            if (bgmAudio) bgmAudio.volume = musicVolume;
+            document.querySelector('.quality-select').value = 'medium';
+            showNotification("设置已重置", 1000);
+            saveSettings();
         }
-        
+
         function saveSettings() {
-            // 保存设置到本地存储
-            const settings = {
-                music: {
-                    enabled: document.querySelector('.toggle-switch.active') ? true : false,
-                    volume: parseInt(document.querySelector('.volume-fill').style.width)
-                },
-                quality: document.querySelector('.quality-select').value
-            };
-            
-            localStorage.setItem('hsr-settings', JSON.stringify(settings));
-            console.log("设置已保存:", settings);
+            localStorage.setItem('hsr_music_enabled', musicEnabled);
+            localStorage.setItem('hsr_sfx_enabled', sfxEnabled);
+            localStorage.setItem('hsr_music_volume', musicVolume);
+            showNotification("设置已保存", 1000);
             hideSettings();
         }
-        
-        function loadSettings() {
-            const savedSettings = localStorage.getItem('hsr-settings');
-            if (savedSettings) {
-                const settings = JSON.parse(savedSettings);
-                console.log("加载设置:", settings);
+
+        // 星空背景
+        function createStars() {
+            const starsBg = document.getElementById('starsBg');
+            starsBg.innerHTML = '';
+            const starCount = Math.min(120, Math.floor(window.innerWidth / 12));
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 3 + 1;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.opacity = Math.random() * 0.6 + 0.2;
+                star.style.setProperty('--duration', `${Math.random() * 3 + 2}s`);
+                starsBg.appendChild(star);
             }
         }
-        
-        // ===================== 加载动画 =====================
-        function showLoading(text) {
-            const loadingScreen = document.getElementById('loadingScreen');
-            const loadingText = loadingScreen.querySelector('.loading-text');
-            
-            loadingText.textContent = text || "加载中...";
-            loadingScreen.style.display = 'flex';
-            loadingScreen.style.opacity = '1';
+
+        // 用户首次交互激活音频上下文（音效用）
+        function enableAudioOnFirstInteraction() {
+            const events = ['click', 'touchstart', 'keydown'];
+            const listener = () => {
+                initAudioContext();
+                events.forEach(ev => document.removeEventListener(ev, listener));
+            };
+            events.forEach(ev => document.addEventListener(ev, listener, { once: true }));
         }
-        
-        function hideLoading() {
-            const loadingScreen = document.getElementById('loadingScreen');
-            loadingScreen.style.opacity = '0';
+        enableAudioOnFirstInteraction();
+
+        function init() {
             setTimeout(() => {
-                loadingScreen.style.display = 'none';
-            }, 500);
+                const loading = document.getElementById('loadingScreen');
+                const main = document.getElementById('mainContainer');
+                loading.style.opacity = '0';
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                    main.style.display = 'block';
+                    createStars();
+                    loadAudioSettings();
+                    setTimeout(() => showNotification("欢迎来到星穹列车，开拓者！", 2000), 500);
+                }, 500);
+            }, 1300);
         }
-        
-        // ===================== 键盘控制 =====================
-        function handleMenuKeyDown(e) {
-            switch(e.key) {
-                case 'Enter':
-                    startGame();
-                    break;
-                case 'Escape':
-                    hideSettings();
-                    hideAbout();
-                    break;
-                case '1':
-                    startGame();
-                    break;
-                case '2':
-                    showSettings();
-                    break;
-                case '3':
-                    showAbout();
-                    break;
-                case '4':
-                    exitGame();
-                    break;
-            }
-        }
-        
-        // ===================== 初始化 =====================
-        window.addEventListener('DOMContentLoaded', initMainMenu);
-        
-        // 阻止右键菜单
-        document.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-        });
-        
-        // 阻止键盘默认行为（除了必要的键）
-        document.addEventListener('keydown', (e) => {
-            if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) {
-                e.preventDefault();
-            }
-        });
-    </script>
-</body>
-</html>
+        window.addEventListener('DOMContentLoaded', i
