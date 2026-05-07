@@ -405,10 +405,11 @@
                 <span id="musicStatusText">点击播放音乐</span>
             </div>
         </div>
+        <!-- 修正后的音频链接：对空格和中文进行正确编码 -->
         <audio id="bgmAudio" loop preload="auto" style="display: none;">
-            <!-- 请替换为你的音乐直链 -->
-            <source src="https://xiaochen1235789.github.io/ai%20sister/%E4%B8%BB%E7%95%8C%E9%9D%A2.aac" type="audio/aac">
+            <source src="https://xiaochen1235789.github.io/ai%20sister/%E4%B8%BB%E7%95%8C%E9%9D%A2.m4a" type="audio/mp4">
             <source src="https://xiaochen1235789.github.io/ai%20sister/%E4%B8%BB%E7%95%8C%E9%9D%A2.mp3" type="audio/mpeg">
+            <source src="https://xiaochen1235789.github.io/ai%20sister/%E4%B8%BB%E7%95%8C%E9%9D%A2.ogg" type="audio/ogg">
         </audio>
 
         <div class="menu-container">
@@ -529,7 +530,7 @@
         
         let musicEnabled = true;
         let musicVolume = 0.6;
-        let autoPlayAttempted = false;   // 标记是否已尝试自动播放
+        let autoPlayAttempted = false;
 
         // 加载设置
         function loadAudioSettings() {
@@ -563,11 +564,7 @@
             musicToggleSwitch.classList.toggle('active', musicEnabled);
             if (bgmAudio) {
                 bgmAudio.volume = musicEnabled ? musicVolume : 0;
-                if (musicEnabled && !bgmAudio.paused) {
-                    // 保持播放
-                } else if (musicEnabled && bgmAudio.paused && bgmAudio.src && !bgmAudio.ended) {
-                    // 开关打开但处于暂停状态 – 不自动播放，尊重用户
-                }
+                // 如果音乐开关从关变开，且当前处于暂停状态，不自动播放（尊重用户）
             }
             saveSettings();
             // 更新UI文本
@@ -582,9 +579,9 @@
             }
         }
 
-        // 核心播放函数，统一处理播放逻辑
+        // 核心播放函数
         function attemptPlay(callback) {
-            if (!bgmAudio || !bgmAudio.src) {
+            if (!bgmAudio) {
                 if (callback) callback(false);
                 return false;
             }
@@ -598,7 +595,7 @@
                     musicStatusText.innerText = '播放中';
                     if (callback) callback(true);
                 }).catch(err => {
-                    console.warn('自动播放被阻止，等待用户交互', err);
+                    console.warn('播放失败，可能需要用户交互', err);
                     musicStatusText.innerText = '点击播放';
                     if (callback) callback(false);
                 });
@@ -608,8 +605,8 @@
 
         // 手动点击播放/暂停
         function toggleMusicPlay() {
-            if (!bgmAudio || !bgmAudio.src) {
-                musicStatusText.innerText = '无音乐链接';
+            if (!bgmAudio) {
+                musicStatusText.innerText = '音频元素不存在';
                 return;
             }
             if (!musicEnabled) {
@@ -637,7 +634,7 @@
             autoPlayAttempted = true;
             attemptPlay((success) => {
                 if (!success && musicEnabled) {
-                    // 播放失败，等待首次用户交互
+                    // 播放失败（通常是因为浏览器策略），等待首次用户交互
                     const onceClick = () => {
                         attemptPlay();
                         document.removeEventListener('click', onceClick);
@@ -788,7 +785,7 @@
         }
         enableAudioOnFirstInteraction();
 
-        // 保底初始化：确保加载界面消失，并触发自动播放
+        // 保底初始化
         function init() {
             setTimeout(() => {
                 const loading = document.getElementById('loadingScreen');
@@ -799,8 +796,7 @@
                     if (main) main.style.display = 'block';
                     createStars();
                     loadAudioSettings();
-                    // 尝试自动播放音乐
-                    autoPlayMusic();
+                    autoPlayMusic();  // 尝试自动播放
                     setTimeout(() => showNotification("欢迎来到星穹列车，开拓者！", 2000), 500);
                 }, 500);
             }, 1300);
