@@ -6,6 +6,7 @@
     <title>六哥荣耀 - 星穹启程</title>
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <style>
+        
         :root {
             --hsr-bg: #0a0a14;
             --hsr-surface: #151525;
@@ -52,7 +53,6 @@
             scroll-behavior: smooth;
         }
 
-        /* 星空背景 */
         .stars-bg {
             position: fixed;
             width: 100%;
@@ -73,7 +73,6 @@
             100% { opacity: 1; transform: scale(1.2); }
         }
 
-        /* 点击粒子容器 */
         .particle-container {
             position: fixed;
             top: 0;
@@ -96,20 +95,10 @@
         }
 
         @keyframes particleExpand {
-            0% {
-                width: 8px;
-                height: 8px;
-                opacity: 0.8;
-            }
-            100% {
-                width: 60px;
-                height: 60px;
-                opacity: 0;
-                filter: blur(4px);
-            }
+            0% { width: 8px; height: 8px; opacity: 0.8; }
+            100% { width: 60px; height: 60px; opacity: 0; filter: blur(4px); }
         }
 
-        /* 标题容器 */
         .title-container {
             position: relative;
             text-align: center;
@@ -138,7 +127,6 @@
             opacity: 0.8;
         }
 
-        /* 顶部音乐控件 */
         .music-control {
             position: relative;
             z-index: 20;
@@ -169,11 +157,6 @@
             border-color: var(--hsr-primary-light);
         }
 
-        .music-btn .status {
-            font-size: 0.9rem;
-        }
-
-        /* 菜单区域 */
         .menu-container {
             position: relative;
             width: 90%;
@@ -225,16 +208,6 @@
             box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
         }
 
-        .menu-item:active {
-            transform: translateX(10px) scale(0.98);
-        }
-
-        .menu-icon {
-            font-size: 1.5rem;
-            opacity: 0.8;
-        }
-
-        /* 角色展示区 */
         .character-showcase {
             position: relative;
             display: flex;
@@ -300,7 +273,6 @@
             opacity: 1;
         }
 
-        /* 底部信息 */
         .footer-info {
             text-align: center;
             color: var(--hsr-subtext);
@@ -309,8 +281,6 @@
             opacity: 0.6;
             width: 100%;
             pointer-events: none;
-            position: relative;
-            z-index: 5;
         }
 
         .version {
@@ -323,7 +293,6 @@
             opacity: 0.5;
         }
 
-        /* 设置面板 */
         .settings-panel, .about-panel {
             position: fixed;
             top: 50%;
@@ -400,7 +369,6 @@
             100% { width: 0%; left: 100%; }
         }
 
-        /* 响应式 */
         @media (max-width: 768px) {
             .game-title { font-size: 2.5rem; }
             .menu-item { padding: 18px 20px; font-size: 1rem; }
@@ -426,23 +394,21 @@
     <div class="main-container" id="mainContainer" style="display: none;">
         <div class="stars-bg" id="starsBg"></div>
         <div class="version">v1.2.0</div>
-
         <div class="title-container">
             <h1 class="game-title">六哥荣耀</h1>
             <div class="game-subtitle">星海无垠，命运待启</div>
         </div>
 
-        <!-- 音乐控件（实际可播放） -->
         <div class="music-control">
             <div class="music-btn" id="musicControlBtn">
                 <span id="musicIcon">🎵</span>
                 <span id="musicStatusText">点击播放音乐</span>
             </div>
         </div>
-        <!-- 隐藏的音频元素 -->
         <audio id="bgmAudio" loop preload="auto" style="display: none;">
-            <!-- 请替换为你的音乐直链，以下是测试用的公开示例链接（非商用测试） -->
-            <source src="https://xiaochen1235789.github.io/ai%20sister/主界面.aac" type="audio/aac">
+            <!-- 请替换为你的音乐直链 -->
+            <source src="https://xiaochen1235789.github.io/ai%20sister/%E4%B8%BB%E7%95%8C%E9%9D%A2.aac" type="audio/aac">
+            <source src="https://xiaochen1235789.github.io/ai%20sister/%E4%B8%BB%E7%95%8C%E9%9D%A2.mp3" type="audio/mpeg">
         </audio>
 
         <div class="menu-container">
@@ -480,7 +446,6 @@
 
     <div class="overlay" id="overlay"></div>
 
-    <!-- 设置面板 -->
     <div class="settings-panel" id="settingsPanel">
         <div class="settings-header">
             <h2 class="settings-title">游戏设置</h2>
@@ -556,15 +521,15 @@
         document.addEventListener('click', handleTap);
         document.addEventListener('touchstart', handleTap);
 
-        // ---------- 背景音乐系统（使用 <audio> 元素，支持设置面板控制） ----------
+        // ---------- 背景音乐系统 ----------
         const bgmAudio = document.getElementById('bgmAudio');
         const musicControlBtn = document.getElementById('musicControlBtn');
         const musicStatusText = document.getElementById('musicStatusText');
         const musicToggleSwitch = document.getElementById('musicToggle');
-        const musicVolumeSlider = document.querySelector('#musicVolumeSlider .volume-fill');
-
+        
         let musicEnabled = true;
-        let musicVolume = 0.6;   // 0-1
+        let musicVolume = 0.6;
+        let autoPlayAttempted = false;   // 标记是否已尝试自动播放
 
         // 加载设置
         function loadAudioSettings() {
@@ -576,9 +541,6 @@
             updateMusicVolumeUI(musicVolume * 100);
             if (bgmAudio) {
                 bgmAudio.volume = musicEnabled ? musicVolume : 0;
-                if (musicEnabled && bgmAudio.paused && !bgmAudio.ended && bgmAudio.src) {
-                    // 不自动播放，等待用户点击音乐控件
-                }
             }
         }
 
@@ -604,11 +566,11 @@
                 if (musicEnabled && !bgmAudio.paused) {
                     // 保持播放
                 } else if (musicEnabled && bgmAudio.paused && bgmAudio.src && !bgmAudio.ended) {
-                    // 如果当前是暂停但开关打开，不自动播放，尊重用户暂停操作
+                    // 开关打开但处于暂停状态 – 不自动播放，尊重用户
                 }
             }
             saveSettings();
-            // 更新音乐控件文本
+            // 更新UI文本
             if (bgmAudio && !bgmAudio.paused && musicEnabled) {
                 musicStatusText.innerText = '播放中';
             } else if (bgmAudio && bgmAudio.paused && !bgmAudio.ended) {
@@ -620,25 +582,45 @@
             }
         }
 
-        // 音乐控件点击：播放/暂停
+        // 核心播放函数，统一处理播放逻辑
+        function attemptPlay(callback) {
+            if (!bgmAudio || !bgmAudio.src) {
+                if (callback) callback(false);
+                return false;
+            }
+            if (!musicEnabled) {
+                if (callback) callback(false);
+                return false;
+            }
+            const playPromise = bgmAudio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    musicStatusText.innerText = '播放中';
+                    if (callback) callback(true);
+                }).catch(err => {
+                    console.warn('自动播放被阻止，等待用户交互', err);
+                    musicStatusText.innerText = '点击播放';
+                    if (callback) callback(false);
+                });
+            }
+            return true;
+        }
+
+        // 手动点击播放/暂停
         function toggleMusicPlay() {
             if (!bgmAudio || !bgmAudio.src) {
                 musicStatusText.innerText = '无音乐链接';
                 return;
             }
             if (!musicEnabled) {
-                // 如果音乐总开关关闭，提示或自动开启？这里选择自动开启总开关
+                // 如果总开关关闭，自动打开
                 musicEnabled = true;
                 musicToggleSwitch.classList.add('active');
                 saveSettings();
+                bgmAudio.volume = musicVolume;
             }
             if (bgmAudio.paused) {
-                bgmAudio.play().then(() => {
-                    musicStatusText.innerText = '播放中';
-                }).catch(e => {
-                    console.warn('播放失败', e);
-                    musicStatusText.innerText = '播放失败';
-                });
+                attemptPlay();
             } else {
                 bgmAudio.pause();
                 musicStatusText.innerText = '已暂停';
@@ -649,7 +631,25 @@
             musicControlBtn.addEventListener('click', toggleMusicPlay);
         }
 
-        // 音效系统（保留原有简单音效）
+        // 自动播放：页面加载完成后尝试，如果失败则等待用户第一次点击任意位置
+        function autoPlayMusic() {
+            if (autoPlayAttempted) return;
+            autoPlayAttempted = true;
+            attemptPlay((success) => {
+                if (!success && musicEnabled) {
+                    // 播放失败，等待首次用户交互
+                    const onceClick = () => {
+                        attemptPlay();
+                        document.removeEventListener('click', onceClick);
+                        document.removeEventListener('touchstart', onceClick);
+                    };
+                    document.addEventListener('click', onceClick);
+                    document.addEventListener('touchstart', onceClick);
+                }
+            });
+        }
+
+        // ---------- 音效系统 ----------
         let audioCtx = null;
         let sfxEnabled = true;
         function initAudioContext() {
@@ -680,7 +680,6 @@
             saveSettings();
         }
 
-        // 角色卡片点击音效 + 通知
         document.querySelectorAll('.character-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -779,7 +778,6 @@
             }
         }
 
-        // 用户首次交互激活音频上下文（音效用）
         function enableAudioOnFirstInteraction() {
             const events = ['click', 'touchstart', 'keydown'];
             const listener = () => {
@@ -790,18 +788,26 @@
         }
         enableAudioOnFirstInteraction();
 
+        // 保底初始化：确保加载界面消失，并触发自动播放
         function init() {
             setTimeout(() => {
                 const loading = document.getElementById('loadingScreen');
                 const main = document.getElementById('mainContainer');
-                loading.style.opacity = '0';
+                if (loading) loading.style.opacity = '0';
                 setTimeout(() => {
-                    loading.style.display = 'none';
-                    main.style.display = 'block';
+                    if (loading) loading.style.display = 'none';
+                    if (main) main.style.display = 'block';
                     createStars();
                     loadAudioSettings();
+                    // 尝试自动播放音乐
+                    autoPlayMusic();
                     setTimeout(() => showNotification("欢迎来到星穹列车，开拓者！", 2000), 500);
                 }, 500);
             }, 1300);
         }
-        window.addEventListener('DOMContentLoaded', i
+
+        window.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('contextmenu', e => e.preventDefault());
+    </script>
+</body>
+</html>
