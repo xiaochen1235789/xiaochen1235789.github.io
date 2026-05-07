@@ -27,11 +27,63 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <title>六哥荣耀WIKI</title>
     <!-- 外部 CSS -->
-    <link rel="stylesheet" href="/css/zhuye0.css">
+    <link rel="stylesheet" href="./css/zhuye0.css">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* 面包屑样式补充（确保与深色主题协调） */
+        .breadcrumb {
+            max-width: 1200px;
+            margin: 12px auto 0;
+            padding: 8px 16px;
+            background: var(--card-bg, #1e3a2f);
+            border-radius: var(--radius, 6px);
+            box-shadow: var(--shadow, 0 4px 12px rgba(0,0,0,0.3));
+            font-size: 0.9rem;
+        }
+        .breadcrumb ul {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0;
+            padding: 0;
+        }
+        .breadcrumb li {
+            display: inline-flex;
+            align-items: center;
+        }
+        .breadcrumb li:not(:last-child)::after {
+            content: "›";
+            margin: 0 8px;
+            color: var(--text-secondary, #99aabb);
+            font-size: 1.1em;
+        }
+        .breadcrumb a {
+            color: var(--text-highlight, #81c784);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+            color: var(--special-color, #ffd700);
+        }
+        .breadcrumb .current {
+            color: var(--text-main, #e0e0e0);
+            font-weight: 500;
+        }
+        @media (max-width: 768px) {
+            .breadcrumb {
+                font-size: 0.8rem;
+                padding: 6px 12px;
+                margin-top: 8px;
+            }
+            .breadcrumb li:not(:last-child)::after {
+                margin: 0 5px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div id="global-loading">
@@ -44,10 +96,10 @@
     <nav class="top-nav" aria-label="主要导航">
         <div class="nav-title"><span>六哥荣耀WIKI</span></div>
         <a href="profile.html" class="nav-link">个人主页</a>
-        <a href="#character" class="nav-link" data-target="character">角色</a>
+        <a href="profile.html" class="nav-link" target="_blank">个人主页</a>
+<a href="chouka.html" class="nav-link" target="_blank">抽卡模拟器</a>
         <a href="#lightcone" class="nav-link" data-target="lightcone">光锥</a>
         <a href="#material" class="nav-link" data-target="material">养成材料</a>
-        <a href="chouka.html" class="nav-link">抽卡模拟器</a>
         <a href="javascript:void(0)" class="nav-link" onclick="openChangelogModal()" id="changelog-link" title="查看更新日志">
             <i class="fas fa-history" style="margin-right: 6px;"></i>更新日志
         </a>
@@ -55,6 +107,14 @@
             <a href="login-real.html" class="nav-link">登录/注册</a>
         </div>
     </nav>
+
+    <!-- ==================== 面包屑导航 ==================== -->
+    <nav class="breadcrumb" aria-label="面包屑导航">
+        <ul id="breadcrumb-list">
+            <li><a href="/">首页</a></li>
+        </ul>
+    </nav>
+
     <div class="search-container">
         <input type="text" id="search-input" placeholder="搜索角色/光锥/材料（支持关键词模糊匹配）" aria-label="搜索内容">
         <div class="search-icon">🔍</div>
@@ -395,6 +455,82 @@
                 return m;
             });
         }
+
+        // ==================== 面包屑导航（完整配置，所有角色统一为“角色详情”） ====================
+        (function() {
+            // 配置：页面路径 -> 面包屑数组（从“首页”之后开始）
+            const breadcrumbConfig = {
+                // 根目录下的角色详情页
+                '/yunli-detail.html':          ['角色详情', '云璃'],
+                '/luguan-detail.html':         ['角色详情', '鹿将军'],
+                '/pige-detail.html':           ['角色详情', '皮哥'],
+                '/jiazijie-detail.html':       ['角色详情', '夹子姐'],
+                '/han-detail.html':            ['角色详情', '涵'],
+                '/yuzhiboyan-detail.html':     ['角色详情', '宇智波言'],
+                '/banxierencheng-detail.html': ['角色详情', '半械人成'],
+                '/meng-detail.html':           ['角色详情', '梦'],
+                '/shenshengpige-detail.html':  ['角色详情', '神圣·皮哥'],
+                '/tianmingrenhouge-detail.html':['角色详情', '天命人·猴哥'],
+                // 子文件夹 2.0下~2.0终末
+                '/2.0下~2.0终末/ying.html':    ['角色详情', '萤'],
+                '/2.0下~2.0终末/goudan.html':  ['角色详情', '瑜哥'],
+                '/2.0下~2.0终末/xiaomi.html':  ['角色详情', '小咪'],
+                // 子文件夹 4.0~4.0终末
+                '/4.0~4.0终末/maolaoda.html':  ['角色详情', '猫老大'],
+                // 光锥详情页
+                '/Light cone data/changjinglu.html': ['光锥列表', '快乐的路一天'],
+                '/Light cone data/xiaomi.html':      ['光锥列表', '幻灵猫魅'],
+                // 材料详情页
+                '/materials_html/清风碎片.html':  ['养成材料', '清风碎片'],
+                '/materials_html/御风晶片.html':  ['养成材料', '御风晶片'],
+                '/materials_html/万风核心.html':  ['养成材料', '万风核心'],
+                '/materials_html/纯白祈愿结晶.html': ['养成材料', '纯白祈愿结晶']
+            };
+
+            function getCurrentPath() {
+                let path = window.location.pathname;
+                path = decodeURIComponent(path);
+                if (!path.startsWith('/')) path = '/' + path;
+                return path;
+            }
+
+            function generateBreadcrumb() {
+                const breadcrumbUl = document.getElementById('breadcrumb-list');
+                if (!breadcrumbUl) return;
+
+                const currentPath = getCurrentPath();
+                const crumbs = breadcrumbConfig[currentPath];
+
+                // 清空并重新构建
+                breadcrumbUl.innerHTML = '';
+                const homeLi = document.createElement('li');
+                homeLi.innerHTML = '<a href="/">首页</a>';
+                breadcrumbUl.appendChild(homeLi);
+
+                if (!crumbs) {
+                    // 未配置的页面只显示首页，可选最后一个元素显示文件名
+                    const fileName = currentPath.split('/').pop() || '当前页面';
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span class="current">${escapeHtml(fileName)}</span>`;
+                    breadcrumbUl.appendChild(li);
+                    return;
+                }
+
+                for (let i = 0; i < crumbs.length; i++) {
+                    const crumb = crumbs[i];
+                    const li = document.createElement('li');
+                    if (i === crumbs.length - 1) {
+                        li.innerHTML = `<span class="current">${escapeHtml(crumb)}</span>`;
+                    } else {
+                        // 中间层暂时指向 #，如果有对应列表页可以修改该链接
+                        li.innerHTML = `<a href="#">${escapeHtml(crumb)}</a>`;
+                    }
+                    breadcrumbUl.appendChild(li);
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', generateBreadcrumb);
+        })();
 
         // ==================== 页面初始化 ====================
         async function initializePage() {
