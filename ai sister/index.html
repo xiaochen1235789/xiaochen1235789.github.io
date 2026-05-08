@@ -6,7 +6,6 @@
     <title>六哥荣耀 - 星穹启程</title>
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <style>
-        
         :root {
             --hsr-bg: #0a0a14;
             --hsr-surface: #151525;
@@ -369,6 +368,120 @@
             100% { width: 0%; left: 100%; }
         }
 
+        /* 设置面板内样式 */
+        .settings-header, .about-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--hsr-subtext);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--hsr-glass-border);
+        }
+        .setting-label {
+            font-size: 1rem;
+        }
+        .setting-control {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .toggle-switch {
+            width: 44px;
+            height: 24px;
+            background: #444;
+            border-radius: 30px;
+            position: relative;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .toggle-switch.active {
+            background: var(--hsr-primary);
+        }
+        .toggle-switch::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: 0.2s;
+        }
+        .toggle-switch.active::after {
+            left: 22px;
+        }
+        .volume-slider {
+            width: 120px;
+            height: 4px;
+            background: #444;
+            border-radius: 4px;
+            position: relative;
+            cursor: pointer;
+        }
+        .volume-fill {
+            position: absolute;
+            height: 100%;
+            background: var(--hsr-primary);
+            border-radius: 4px;
+            width: 0%;
+        }
+        .volume-handle {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            top: -4px;
+            left: 0%;
+            transform: translateX(-50%);
+            pointer-events: none;
+        }
+        .quality-select {
+            background: var(--hsr-glass);
+            border: 1px solid var(--hsr-glass-border);
+            color: var(--hsr-text);
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .settings-actions {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .settings-btn {
+            background: var(--hsr-glass);
+            border: 1px solid var(--hsr-glass-border);
+            padding: 8px 20px;
+            border-radius: 30px;
+            color: var(--hsr-text);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .settings-btn.primary {
+            background: var(--hsr-primary);
+            color: #000;
+            border: none;
+        }
+        .volume-value {
+            font-size: 0.8rem;
+            min-width: 45px;
+            text-align: right;
+        }
+
         @media (max-width: 768px) {
             .game-title { font-size: 2.5rem; }
             .menu-item { padding: 18px 20px; font-size: 1rem; }
@@ -393,7 +506,7 @@
 
     <div class="main-container" id="mainContainer" style="display: none;">
         <div class="stars-bg" id="starsBg"></div>
-        <div class="version">v1.2.0</div>
+        <div class="version">v1.3.0</div>
         <div class="title-container">
             <h1 class="game-title">六哥荣耀</h1>
             <div class="game-subtitle">星海无垠，命运待启</div>
@@ -447,17 +560,18 @@
 
     <div class="settings-panel" id="settingsPanel">
         <div class="settings-header">
-            <h2 class="settings-title">游戏设置</h2>
+            <h2>游戏设置</h2>
             <button class="close-btn" onclick="hideSettings()">✕</button>
         </div>
         <div class="setting-item">
             <span class="setting-label">🎵 背景音乐</span>
             <div class="setting-control">
                 <div class="toggle-switch active" id="musicToggle" onclick="toggleMusicSetting()"></div>
-                <div class="volume-slider" id="musicVolumeSlider" onclick="adjustVolume(event, this)">
+                <div class="volume-slider" id="musicVolumeSlider">
                     <div class="volume-fill" style="width: 60%"></div>
-                    <div class="volume-handle" style="left: 58%"></div>
+                    <div class="volume-handle" style="left: 60%"></div>
                 </div>
+                <span class="volume-value" id="volumePercent">60%</span>
             </div>
         </div>
         <div class="setting-item">
@@ -466,11 +580,11 @@
         </div>
         <div class="setting-item">
             <span class="setting-label">📳 震动反馈</span>
-            <div class="setting-control"><div class="toggle-switch" onclick="toggleSetting(this)"></div></div>
+            <div class="setting-control"><div class="toggle-switch" id="vibeToggle" onclick="toggleVibration()"></div></div>
         </div>
         <div class="setting-item">
             <span class="setting-label">🎨 画面质量</span>
-            <div class="setting-control"><select class="quality-select" onchange="changeQuality(this)"><option value="low">低</option><option value="medium" selected>中</option><option value="high">高</option><option value="ultra">极致</option></select></div>
+            <div class="setting-control"><select class="quality-select" id="qualitySelect" onchange="changeQuality()"><option value="low">低</option><option value="medium" selected>中</option><option value="high">高</option><option value="ultra">极致</option></select></div>
         </div>
         <div class="settings-actions">
             <button class="settings-btn" onclick="resetSettings()">重置</button>
@@ -479,15 +593,15 @@
     </div>
 
     <div class="about-panel" id="aboutPanel">
-        <h2 class="about-title">✨ 关于星穹铁道 ✨</h2>
+        <h2>✨ 关于星穹铁道 ✨</h2>
         <div class="about-content">基于《崩坏：星穹铁道》世界观，体验回合制策略战斗与角色养成。</div>
         <div class="about-features">
-            <div class="feature-item"><div class="feature-icon">⚔️</div><div class="feature-text">策略战斗</div></div>
-            <div class="feature-item"><div class="feature-icon">🌟</div><div class="feature-text">星神之旅</div></div>
-            <div class="feature-item"><div class="feature-icon">🎵</div><div class="feature-text">沉浸音乐</div></div>
-            <div class="feature-item"><div class="feature-icon">📱</div><div class="feature-text">全平台适配</div></div>
+            <div class="feature-item"><span>⚔️ 策略战斗</span></div>
+            <div class="feature-item"><span>🌟 星神之旅</span></div>
+            <div class="feature-item"><span>🎵 沉浸音乐</span></div>
+            <div class="feature-item"><span>📱 全平台适配</span></div>
         </div>
-        <div class="about-content">开发者：小尘 | 版本 v1.2.0 | 仅供学习交流</div>
+        <div class="about-content">开发者：小尘 | 版本 v1.3.0 | 仅供学习交流</div>
         <div class="settings-actions"><button class="settings-btn primary" onclick="hideAbout()">返回</button></div>
     </div>
 
@@ -520,99 +634,208 @@
         document.addEventListener('click', handleTap);
         document.addEventListener('touchstart', handleTap);
 
-        // ---------- 背景音乐系统 ----------
+        // ---------- 增强版音乐系统（支持150%音量）----------
         const bgmAudio = document.getElementById('bgmAudio');
         const musicControlBtn = document.getElementById('musicControlBtn');
         const musicStatusText = document.getElementById('musicStatusText');
         const musicToggleSwitch = document.getElementById('musicToggle');
         
         let musicEnabled = true;
-        let musicVolume = 0.6;
-        let autoPlayAttempted = false;
+        let musicVolumePercent = 60;   // 存储 0-150
+        let sfxEnabled = true;
+        let vibrationEnabled = true;
+        let quality = 'medium';
+
+        // Web Audio 相关
+        let audioCtx = null;
+        let sourceNode = null;
+        let gainNode = null;
+        let isWebAudioActive = false;
+
+        // 初始化 Web Audio 上下文并连接 <audio> 元素
+        async function initWebAudioForBGM() {
+            if (!bgmAudio) return;
+            if (audioCtx && audioCtx.state !== 'closed') return;
+            
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            gainNode = audioCtx.createGain();
+            gainNode.connect(audioCtx.destination);
+            
+            // 创建 MediaElementSource
+            try {
+                if (sourceNode) {
+                    try { sourceNode.disconnect(); } catch(e) {}
+                }
+                sourceNode = audioCtx.createMediaElementSource(bgmAudio);
+                sourceNode.connect(gainNode);
+                isWebAudioActive = true;
+                // 恢复当前音量设置
+                applyVolumePercent(musicVolumePercent);
+                // 如果音乐正在播放，需要保持播放状态（注意AudioContext挂起）
+                if (!bgmAudio.paused && audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+            } catch(e) {
+                console.warn("Web Audio 连接失败，回退到原生音量", e);
+                isWebAudioActive = false;
+                // 回退：原生音量最大1，超过100%无效
+                let nativeVol = Math.min(1, musicVolumePercent / 100);
+                bgmAudio.volume = musicEnabled ? nativeVol : 0;
+            }
+        }
+
+        // 应用音量百分比 (0-150)
+        function applyVolumePercent(percent) {
+            musicVolumePercent = Math.min(150, Math.max(0, percent));
+            if (!musicEnabled) return;
+            if (isWebAudioActive && gainNode) {
+                let gain = musicVolumePercent / 100;
+                gainNode.gain.value = gain;
+                // 原生音量设为1，完全由gain控制
+                bgmAudio.volume = 1;
+            } else {
+                let nativeVol = Math.min(1, musicVolumePercent / 100);
+                bgmAudio.volume = nativeVol;
+            }
+            // 更新UI显示
+            const percentSpan = document.getElementById('volumePercent');
+            if (percentSpan) percentSpan.innerText = Math.round(musicVolumePercent) + '%';
+            const fill = document.querySelector('#musicVolumeSlider .volume-fill');
+            const handle = document.querySelector('#musicVolumeSlider .volume-handle');
+            if (fill) fill.style.width = (musicVolumePercent / 150 * 100) + '%';
+            if (handle) handle.style.left = (musicVolumePercent / 150 * 100) + '%';
+            
+            // 超过100%提示
+            if (musicVolumePercent > 100) {
+                showNotification("⚠️ 音量已超过100%，可能失真", 1500);
+            }
+        }
+
+        function updateMusicVolumeUIFromPercent() {
+            const percent = musicVolumePercent;
+            const fill = document.querySelector('#musicVolumeSlider .volume-fill');
+            const handle = document.querySelector('#musicVolumeSlider .volume-handle');
+            if (fill) fill.style.width = (percent / 150 * 100) + '%';
+            if (handle) handle.style.left = (percent / 150 * 100) + '%';
+            const span = document.getElementById('volumePercent');
+            if (span) span.innerText = Math.round(percent) + '%';
+        }
+
+        // 音量滑动条交互
+        function setupVolumeSlider() {
+            const slider = document.getElementById('musicVolumeSlider');
+            if (!slider) return;
+            const updateFromEvent = (e) => {
+                const rect = slider.getBoundingClientRect();
+                let x = (e.clientX - rect.left) / rect.width;
+                x = Math.min(1, Math.max(0, x));
+                let newPercent = Math.round(x * 150);
+                applyVolumePercent(newPercent);
+                saveSettings(); // 实时保存
+            };
+            slider.addEventListener('click', updateFromEvent);
+            slider.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                updateFromEvent(e.touches[0]);
+            });
+            slider.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                updateFromEvent(e.touches[0]);
+            });
+        }
 
         // 加载设置
         function loadAudioSettings() {
             const savedMusic = localStorage.getItem('hsr_music_enabled');
             if (savedMusic !== null) musicEnabled = savedMusic === 'true';
-            const savedVol = localStorage.getItem('hsr_music_volume');
-            if (savedVol !== null) musicVolume = parseFloat(savedVol);
+            const savedVol = localStorage.getItem('hsr_music_volume_percent');
+            if (savedVol !== null) musicVolumePercent = parseFloat(savedVol);
+            const savedSfx = localStorage.getItem('hsr_sfx_enabled');
+            if (savedSfx !== null) sfxEnabled = savedSfx === 'true';
+            const savedVibe = localStorage.getItem('hsr_vibration_enabled');
+            if (savedVibe !== null) vibrationEnabled = savedVibe === 'true';
+            const savedQuality = localStorage.getItem('hsr_quality');
+            if (savedQuality !== null) quality = savedQuality;
+            
             musicToggleSwitch.classList.toggle('active', musicEnabled);
-            updateMusicVolumeUI(musicVolume * 100);
+            document.getElementById('sfxToggle').classList.toggle('active', sfxEnabled);
+            const vibeToggle = document.getElementById('vibeToggle');
+            if (vibeToggle) vibeToggle.classList.toggle('active', vibrationEnabled);
+            const qSelect = document.getElementById('qualitySelect');
+            if (qSelect) qSelect.value = quality;
+            
+            applyVolumePercent(musicVolumePercent);
             if (bgmAudio) {
-                bgmAudio.volume = musicEnabled ? musicVolume : 0;
+                bgmAudio.volume = musicEnabled ? (isWebAudioActive ? 1 : Math.min(1, musicVolumePercent/100)) : 0;
+                if (!musicEnabled) bgmAudio.volume = 0;
             }
-        }
-
-        function updateMusicVolumeUI(percent) {
-            const fill = document.querySelector('#musicVolumeSlider .volume-fill');
-            const handle = document.querySelector('#musicVolumeSlider .volume-handle');
-            if (fill) fill.style.width = `${percent}%`;
-            if (handle) handle.style.left = `${percent}%`;
-        }
-
-        function updateMusicVolume(value) {
-            musicVolume = Math.min(1, Math.max(0, value / 100));
-            if (bgmAudio) bgmAudio.volume = musicEnabled ? musicVolume : 0;
-            updateMusicVolumeUI(value);
-            saveSettings();
+            changeQuality(); // 应用画质
         }
 
         function toggleMusicSetting() {
             musicEnabled = !musicEnabled;
             musicToggleSwitch.classList.toggle('active', musicEnabled);
             if (bgmAudio) {
-                bgmAudio.volume = musicEnabled ? musicVolume : 0;
-                // 如果音乐开关从关变开，且当前处于暂停状态，不自动播放（尊重用户）
+                if (musicEnabled) {
+                    if (isWebAudioActive && gainNode) gainNode.gain.value = musicVolumePercent / 100;
+                    else bgmAudio.volume = Math.min(1, musicVolumePercent/100);
+                    // 如果之前因为关闭而暂停，尝试恢复播放
+                    if (bgmAudio.paused && !autoPlayAttemptedFlag) {
+                        autoPlayMusic();
+                    }
+                } else {
+                    if (isWebAudioActive && gainNode) gainNode.gain.value = 0;
+                    else bgmAudio.volume = 0;
+                }
             }
             saveSettings();
-            // 更新UI文本
-            if (bgmAudio && !bgmAudio.paused && musicEnabled) {
-                musicStatusText.innerText = '播放中';
-            } else if (bgmAudio && bgmAudio.paused && !bgmAudio.ended) {
-                musicStatusText.innerText = '已暂停';
-            } else if (!musicEnabled) {
-                musicStatusText.innerText = '音乐已关闭';
-            } else {
-                musicStatusText.innerText = '点击播放';
-            }
+            updateMusicStatusText();
         }
 
-        // 核心播放函数
-        function attemptPlay(callback) {
-            if (!bgmAudio) {
-                if (callback) callback(false);
-                return false;
+        function updateMusicStatusText() {
+            if (!bgmAudio) return;
+            if (!musicEnabled) musicStatusText.innerText = '音乐已关闭';
+            else if (!bgmAudio.paused) musicStatusText.innerText = '播放中';
+            else musicStatusText.innerText = '已暂停';
+        }
+
+        // 核心播放函数（支持Web Audio）
+        let autoPlayAttemptedFlag = false;
+        async function attemptPlay(callback) {
+            if (!bgmAudio) { if(callback) callback(false); return false; }
+            if (!musicEnabled) { if(callback) callback(false); return false; }
+            // 确保Web Audio已初始化
+            if (!isWebAudioActive && audioCtx === null) {
+                await initWebAudioForBGM();
             }
-            if (!musicEnabled) {
-                if (callback) callback(false);
-                return false;
+            if (audioCtx && audioCtx.state === 'suspended') {
+                await audioCtx.resume();
             }
-            const playPromise = bgmAudio.play();
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
+            try {
+                const playPromise = bgmAudio.play();
+                if (playPromise) {
+                    await playPromise;
                     musicStatusText.innerText = '播放中';
                     if (callback) callback(true);
-                }).catch(err => {
-                    console.warn('播放失败，可能需要用户交互', err);
+                } else {
                     musicStatusText.innerText = '点击播放';
-                    if (callback) callback(false);
-                });
+                    if(callback) callback(false);
+                }
+            } catch(err) {
+                console.warn('播放失败', err);
+                musicStatusText.innerText = '点击播放';
+                if(callback) callback(false);
             }
-            return true;
         }
 
-        // 手动点击播放/暂停
         function toggleMusicPlay() {
-            if (!bgmAudio) {
-                musicStatusText.innerText = '音频元素不存在';
-                return;
-            }
+            if (!bgmAudio) return;
             if (!musicEnabled) {
-                // 如果总开关关闭，自动打开
                 musicEnabled = true;
                 musicToggleSwitch.classList.add('active');
                 saveSettings();
-                bgmAudio.volume = musicVolume;
+                if (isWebAudioActive && gainNode) gainNode.gain.value = musicVolumePercent/100;
+                else bgmAudio.volume = Math.min(1, musicVolumePercent/100);
             }
             if (bgmAudio.paused) {
                 attemptPlay();
@@ -621,18 +844,13 @@
                 musicStatusText.innerText = '已暂停';
             }
         }
+        if (musicControlBtn) musicControlBtn.addEventListener('click', toggleMusicPlay);
 
-        if (musicControlBtn) {
-            musicControlBtn.addEventListener('click', toggleMusicPlay);
-        }
-
-        // 自动播放：页面加载完成后尝试，如果失败则等待用户第一次点击任意位置
         function autoPlayMusic() {
-            if (autoPlayAttempted) return;
-            autoPlayAttempted = true;
+            if (autoPlayAttemptedFlag) return;
+            autoPlayAttemptedFlag = true;
             attemptPlay((success) => {
                 if (!success && musicEnabled) {
-                    // 播放失败（通常是因为浏览器策略），等待首次用户交互
                     const onceClick = () => {
                         attemptPlay();
                         document.removeEventListener('click', onceClick);
@@ -645,43 +863,114 @@
         }
 
         // ---------- 音效系统 ----------
-        let audioCtx = null;
-        let sfxEnabled = true;
-        function initAudioContext() {
-            if (audioCtx) return;
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let sfxAudioCtx = null;
+        function initSfxContext() {
+            if (sfxAudioCtx) return;
+            sfxAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
         function playSfx(type) {
             if (!sfxEnabled) return;
-            initAudioContext();
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
+            initSfxContext();
+            if (!sfxAudioCtx) return;
+            const osc = sfxAudioCtx.createOscillator();
+            const gain = sfxAudioCtx.createGain();
             osc.type = 'sine';
             osc.frequency.value = type === 'hover' ? 880 : 660;
             gain.gain.value = 0.1;
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(sfxAudioCtx.destination);
             osc.start();
-            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
-            osc.stop(audioCtx.currentTime + 0.3);
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+            gain.gain.exponentialRampToValueAtTime(0.00001, sfxAudioCtx.currentTime + 0.3);
+            osc.stop(sfxAudioCtx.currentTime + 0.3);
+            if (sfxAudioCtx.state === 'suspended') sfxAudioCtx.resume();
         }
 
         function toggleSfx() {
-            const toggle = document.getElementById('sfxToggle');
             sfxEnabled = !sfxEnabled;
-            toggle.classList.toggle('active', sfxEnabled);
+            const toggle = document.getElementById('sfxToggle');
+            if (toggle) toggle.classList.toggle('active', sfxEnabled);
             saveSettings();
         }
 
+        // 震动反馈
+        function vibratePattern(pattern = 50) {
+            if (vibrationEnabled && navigator.vibrate) {
+                navigator.vibrate(pattern);
+            }
+        }
+
+        function toggleVibration() {
+            vibrationEnabled = !vibrationEnabled;
+            const toggle = document.getElementById('vibeToggle');
+            if (toggle) toggle.classList.toggle('active', vibrationEnabled);
+            saveSettings();
+            showNotification(vibrationEnabled ? "震动反馈已开启" : "震动反馈已关闭", 1000);
+        }
+
+        // 画质切换：影响星星数量、背景模糊等
+        function changeQuality() {
+            const select = document.getElementById('qualitySelect');
+            if (select) quality = select.value;
+            else quality = 'medium';
+            localStorage.setItem('hsr_quality', quality);
+            // 重新生成星星
+            createStars();
+            // 调整背景模糊/特效
+            const mainContainer = document.getElementById('mainContainer');
+            if (quality === 'low') {
+                mainContainer.style.backdropFilter = 'none';
+                document.querySelectorAll('.menu-item, .music-btn').forEach(el => {
+                    el.style.backdropFilter = 'none';
+                });
+            } else {
+                mainContainer.style.backdropFilter = '';
+                document.querySelectorAll('.menu-item, .music-btn').forEach(el => {
+                    el.style.backdropFilter = '';
+                });
+            }
+            if (quality === 'ultra') {
+                // 增加额外粒子效果（略）
+            }
+        }
+
+        // 星空背景生成（根据画质调整数量）
+        function createStars() {
+            const starsBg = document.getElementById('starsBg');
+            if (!starsBg) return;
+            starsBg.innerHTML = '';
+            let starCount = 80;
+            if (quality === 'low') starCount = 30;
+            else if (quality === 'medium') starCount = 80;
+            else if (quality === 'high') starCount = 120;
+            else if (quality === 'ultra') starCount = 180;
+            starCount = Math.min(starCount, Math.floor(window.innerWidth / 8));
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 3 + 1;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.opacity = Math.random() * 0.6 + 0.2;
+                star.style.setProperty('--duration', `${Math.random() * 3 + 2}s`);
+                starsBg.appendChild(star);
+            }
+        }
+
+        // 角色卡片点击增加震动
         document.querySelectorAll('.character-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (sfxEnabled) playSfx('click');
+                vibratePattern(30);
                 const name = card.getAttribute('data-name');
                 showNotification(`✨ ${name} 向你问好，开拓者！`, 1500);
             });
+        });
+        // 菜单项点击震动 (通过事件委托)
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', () => vibratePattern(20));
         });
 
         let notifTimeout = null;
@@ -699,12 +988,23 @@
             notifTimeout = setTimeout(() => { notif.style.opacity = '0'; }, duration);
         }
 
-        // 菜单功能
-        function showSettings() { document.getElementById('overlay').classList.add('active'); document.getElementById('settingsPanel').classList.add('active'); if (audioCtx && audioCtx.state !== 'running') audioCtx.resume(); }
+        // 设置面板控制
+        function showSettings() {
+            document.getElementById('overlay').classList.add('active');
+            document.getElementById('settingsPanel').classList.add('active');
+            if (sfxAudioCtx && sfxAudioCtx.state !== 'running') sfxAudioCtx.resume();
+        }
         function hideSettings() { closePanels(); }
-        function showAbout() { document.getElementById('overlay').classList.add('active'); document.getElementById('aboutPanel').classList.add('active'); }
+        function showAbout() {
+            document.getElementById('overlay').classList.add('active');
+            document.getElementById('aboutPanel').classList.add('active');
+        }
         function hideAbout() { closePanels(); }
-        function closePanels() { document.getElementById('overlay').classList.remove('active'); document.getElementById('settingsPanel').classList.remove('active'); document.getElementById('aboutPanel').classList.remove('active'); }
+        function closePanels() {
+            document.getElementById('overlay').classList.remove('active');
+            document.getElementById('settingsPanel').classList.remove('active');
+            document.getElementById('aboutPanel').classList.remove('active');
+        }
 
         function exitGame() {
             if (confirm("确定要登上星穹列车离开吗？")) {
@@ -718,73 +1018,42 @@
             }
         }
 
-        function adjustVolume(event, slider) {
-            const rect = slider.getBoundingClientRect();
-            let x = event.clientX - rect.left;
-            x = Math.min(Math.max(x, 0), rect.width);
-            const percent = Math.round((x / rect.width) * 100);
-            const fill = slider.querySelector('.volume-fill');
-            const handle = slider.querySelector('.volume-handle');
-            fill.style.width = `${percent}%`;
-            handle.style.left = `${percent}%`;
-            if (slider.id === 'musicVolumeSlider') updateMusicVolume(percent);
-        }
-
-        function changeQuality(select) { console.log("画质:", select.value); }
-        function toggleSetting(el) { el.classList.toggle('active'); }
-
         function resetSettings() {
             musicEnabled = true;
-            musicVolume = 0.6;
+            musicVolumePercent = 60;
             sfxEnabled = true;
+            vibrationEnabled = true;
+            quality = 'medium';
             document.getElementById('musicToggle').classList.add('active');
             document.getElementById('sfxToggle').classList.add('active');
-            updateMusicVolume(60);
-            if (bgmAudio) bgmAudio.volume = musicVolume;
-            document.querySelector('.quality-select').value = 'medium';
+            const vibeToggle = document.getElementById('vibeToggle');
+            if (vibeToggle) vibeToggle.classList.add('active');
+            document.getElementById('qualitySelect').value = 'medium';
+            applyVolumePercent(60);
+            if (bgmAudio) {
+                if (isWebAudioActive && gainNode) gainNode.gain.value = musicVolumePercent/100;
+                else bgmAudio.volume = Math.min(1, musicVolumePercent/100);
+            }
+            changeQuality();
             showNotification("设置已重置", 1000);
             saveSettings();
         }
 
         function saveSettings() {
             localStorage.setItem('hsr_music_enabled', musicEnabled);
+            localStorage.setItem('hsr_music_volume_percent', musicVolumePercent);
             localStorage.setItem('hsr_sfx_enabled', sfxEnabled);
-            localStorage.setItem('hsr_music_volume', musicVolume);
+            localStorage.setItem('hsr_vibration_enabled', vibrationEnabled);
+            localStorage.setItem('hsr_quality', quality);
             showNotification("设置已保存", 1000);
             hideSettings();
         }
 
-        // 星空背景
-        function createStars() {
-            const starsBg = document.getElementById('starsBg');
-            starsBg.innerHTML = '';
-            const starCount = Math.min(120, Math.floor(window.innerWidth / 12));
-            for (let i = 0; i < starCount; i++) {
-                const star = document.createElement('div');
-                star.className = 'star';
-                const size = Math.random() * 3 + 1;
-                star.style.width = `${size}px`;
-                star.style.height = `${size}px`;
-                star.style.left = `${Math.random() * 100}%`;
-                star.style.top = `${Math.random() * 100}%`;
-                star.style.opacity = Math.random() * 0.6 + 0.2;
-                star.style.setProperty('--duration', `${Math.random() * 3 + 2}s`);
-                starsBg.appendChild(star);
-            }
-        }
-
-        function enableAudioOnFirstInteraction() {
-            const events = ['click', 'touchstart', 'keydown'];
-            const listener = () => {
-                initAudioContext();
-                events.forEach(ev => document.removeEventListener(ev, listener));
-            };
-            events.forEach(ev => document.addEventListener(ev, listener, { once: true }));
-        }
-        enableAudioOnFirstInteraction();
-
-        // 保底初始化
-        function init() {
+        // 初始化函数
+        async function init() {
+            await initWebAudioForBGM();
+            setupVolumeSlider();
+            loadAudioSettings();
             setTimeout(() => {
                 const loading = document.getElementById('loadingScreen');
                 const main = document.getElementById('mainContainer');
@@ -793,8 +1062,7 @@
                     if (loading) loading.style.display = 'none';
                     if (main) main.style.display = 'block';
                     createStars();
-                    loadAudioSettings();
-                    autoPlayMusic();  // 尝试自动播放
+                    autoPlayMusic();
                     setTimeout(() => showNotification("欢迎来到星穹列车，开拓者！", 2000), 500);
                 }, 500);
             }, 1300);
