@@ -1,14 +1,14 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>六哥荣耀 - 组建小队</title>
+    <title>六哥荣耀 · 鹿馆出征</title>
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <!-- 引入游戏数据 -->
     <script src="game-data.js"></script>
     <style>
+        /* 原有样式保持不变，只调整部分尺寸以适配单人队伍 */
         :root {
             --hsr-bg: #0a0a14;
             --hsr-surface: #151525;
@@ -44,7 +44,6 @@
             position: fixed;
         }
 
-        /* 背景 */
         .selection-container {
             width: 100%;
             height: 100%;
@@ -57,7 +56,6 @@
             position: relative;
         }
 
-        /* 返回按钮 */
         .back-button {
             position: fixed;
             top: 20px;
@@ -84,7 +82,6 @@
             box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
         }
 
-        /* 标题 */
         .page-title {
             text-align: center;
             margin: 40px 0 30px;
@@ -104,10 +101,9 @@
         .page-title p {
             color: var(--hsr-subtext);
             opacity: 0.8;
-            font-size: 1.1rem;
+            font-size: 1rem;
         }
 
-        /* 队伍提示 */
         .team-info {
             text-align: center;
             margin-bottom: 30px;
@@ -143,7 +139,6 @@
             font-size: 1.2rem;
         }
 
-        /* 已选角色区域 */
         .selected-area {
             max-width: 1000px;
             margin: 0 auto 40px;
@@ -192,12 +187,6 @@
             transform: translateY(-5px);
         }
 
-        .empty-slot .slot-icon {
-            font-size: 2rem;
-            margin-bottom: 10px;
-            opacity: 0.5;
-        }
-
         .character-slot {
             background: var(--hsr-surface);
             border: 2px solid var(--hsr-glass-border);
@@ -214,11 +203,6 @@
             border-color: var(--hsr-primary);
             box-shadow: 0 10px 30px rgba(0, 212, 255, 0.2);
             transform: translateY(-5px);
-        }
-
-        .character-slot.selected {
-            border-color: var(--hsr-success);
-            box-shadow: 0 10px 30px rgba(29, 209, 161, 0.3);
         }
 
         .slot-avatar {
@@ -276,7 +260,6 @@
             opacity: 1;
         }
 
-        /* 角色选择区域 */
         .character-select {
             max-width: 1000px;
             margin: 0 auto;
@@ -347,11 +330,6 @@
             background: rgba(29, 209, 161, 0.05);
         }
 
-        .character-card.selected .card-status {
-            background: var(--hsr-success);
-            color: white;
-        }
-
         .card-header {
             display: flex;
             align-items: center;
@@ -415,11 +393,6 @@
             font-size: 0.9rem;
         }
 
-        .stat-value {
-            color: var(--hsr-text);
-            font-weight: 600;
-        }
-
         .card-skills {
             margin-top: 10px;
         }
@@ -448,7 +421,6 @@
             border: 1px solid rgba(29, 209, 161, 0.3);
         }
 
-        /* 行动按钮 */
         .action-buttons {
             position: fixed;
             bottom: 30px;
@@ -511,38 +483,31 @@
             box-shadow: 0 15px 40px rgba(0, 212, 255, 0.4);
         }
 
-        /* 提示信息 */
         .message-box {
             position: fixed;
             bottom: 120px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(20px);
             border: 1px solid var(--hsr-glass-border);
             border-radius: 12px;
-            padding: 15px 25px;
+            padding: 12px 24px;
             color: var(--hsr-warning);
             font-size: 0.95rem;
             display: none;
             align-items: center;
             gap: 10px;
             animation: slideUp 0.3s ease;
-            z-index: 100;
+            z-index: 200;
+            white-space: nowrap;
         }
 
         @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateX(-50%) translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(-50%) translateY(0);
-            }
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
 
-        /* 角色详情预览 */
         .character-preview {
             position: fixed;
             top: 50%;
@@ -563,902 +528,402 @@
             animation: panelFadeIn 0.3s ease;
         }
 
-        .character-preview.active {
-            display: flex;
-        }
+        .character-preview.active { display: flex; }
 
-        .preview-header {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
+        .preview-header { display: flex; align-items: center; gap: 20px; }
+        .preview-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--hsr-primary), var(--hsr-primary-dark)); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; }
+        .preview-info h3 { font-size: 1.5rem; margin-bottom: 5px; }
+        .preview-tags { display: flex; gap: 10px; flex-wrap: wrap; }
+        .preview-tag { padding: 4px 12px; background: rgba(0,212,255,0.15); border-radius: 12px; font-size:0.85rem; color: var(--hsr-primary); border:1px solid rgba(0,212,255,0.3); }
+        .preview-stats { display: grid; grid-template-columns: repeat(2,1fr); gap:15px; padding:20px; background:var(--hsr-glass); border-radius:15px; }
+        .preview-stat { display: flex; justify-content: space-between; font-size:0.95rem; }
+        .preview-skills { padding:20px; background:var(--hsr-glass); border-radius:15px; }
+        .preview-skills h4 { margin-bottom:15px; color:var(--hsr-primary); }
+        .preview-skill { margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--hsr-glass-border); font-size:0.9rem; }
+        .preview-actions { display: flex; gap:15px; }
+        .preview-btn { flex:1; padding:12px; border-radius:10px; border:none; cursor:pointer; font-weight:600; }
+        .preview-cancel { background:var(--hsr-glass); color:var(--hsr-text); border:1px solid var(--hsr-glass-border); }
+        .preview-select { background:linear-gradient(135deg, var(--hsr-primary), var(--hsr-primary-dark)); color:white; }
 
-        .preview-avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--hsr-primary), var(--hsr-primary-dark));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.5rem;
-        }
-
-        .preview-info h3 {
-            font-size: 1.5rem;
-            margin-bottom: 5px;
-        }
-
-        .preview-tags {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .preview-tag {
-            padding: 4px 12px;
-            background: rgba(0, 212, 255, 0.15);
-            border-radius: 12px;
-            font-size: 0.85rem;
-            color: var(--hsr-primary);
-            border: 1px solid rgba(0, 212, 255, 0.3);
-        }
-
-        .preview-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            padding: 20px;
-            background: var(--hsr-glass);
-            border-radius: 15px;
-        }
-
-        .preview-stat {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.95rem;
-        }
-
-        .stat-label {
-            color: var(--hsr-subtext);
-        }
-
-        .stat-value {
-            color: var(--hsr-text);
-            font-weight: 600;
-        }
-
-        .preview-skills {
-            padding: 20px;
-            background: var(--hsr-glass);
-            border-radius: 15px;
-        }
-
-        .preview-skills h4 {
-            margin-bottom: 15px;
-            color: var(--hsr-primary);
-            font-size: 1.1rem;
-        }
-
-        .preview-skill {
-            margin-bottom: 12px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--hsr-glass-border);
-            font-size: 0.9rem;
-        }
-
-        .preview-skill:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-        }
-
-        .skill-name {
-            font-weight: 600;
-            color: var(--hsr-text);
-            margin-bottom: 4px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .skill-desc {
-            color: var(--hsr-subtext);
-            font-size: 0.85rem;
-            line-height: 1.4;
-        }
-
-        .preview-actions {
-            display: flex;
-            gap: 15px;
-        }
-
-        .preview-btn {
-            flex: 1;
-            padding: 12px;
-            border-radius: 10px;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.95rem;
-        }
-
-        .preview-cancel {
-            background: var(--hsr-glass);
-            color: var(--hsr-text);
-            border: 1px solid var(--hsr-glass-border);
-        }
-
-        .preview-select {
-            background: linear-gradient(135deg, var(--hsr-primary), var(--hsr-primary-dark));
-            color: white;
-            border: 1px solid transparent;
-        }
-
-        /* 响应式设计 */
         @media (max-width: 768px) {
-            .page-title h1 {
-                font-size: 2rem;
-            }
-            
-            .character-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-                gap: 15px;
-            }
-            
-            .selected-characters {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-                align-items: stretch;
-                padding: 0 20px;
-            }
-            
-            .action-btn {
-                min-width: auto;
-            }
-            
-            .character-card {
-                padding: 15px;
-            }
-            
-            .card-header {
-                flex-direction: column;
-                text-align: center;
-                gap: 10px;
-            }
-            
-            .card-info {
-                text-align: center;
-            }
-            
-            .card-stats {
-                grid-template-columns: 1fr;
-                gap: 8px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .selected-characters {
-                grid-template-columns: 1fr;
-            }
-            
-            .character-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .page-title {
-                margin: 20px 0;
-            }
-            
-            .selection-container {
-                padding: 10px;
-            }
-        }
-
-        /* 滚动条样式 */
-        .selection-container::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .selection-container::-webkit-scrollbar-track {
-            background: var(--hsr-glass);
-            border-radius: 4px;
-        }
-
-        .selection-container::-webkit-scrollbar-thumb {
-            background: var(--hsr-primary);
-            border-radius: 4px;
-        }
-
-        .selection-container::-webkit-scrollbar-thumb:hover {
-            background: var(--hsr-primary-light);
+            .selected-characters { grid-template-columns: 1fr; }
+            .character-grid { grid-template-columns: 1fr; }
+            .action-buttons { flex-direction: column; align-items: stretch; }
+            .message-box { white-space: normal; width: 80%; text-align: center; bottom: 100px; }
         }
     </style>
 </head>
 <body>
-    <a href="https://xiaochen1235789.github.io/ai sister/index.html" class="back-button">
-        ← 返回主菜单
-    </a>
+    <a href="https://xiaochen1235789.github.io/ai sister/index.html" class="back-button">← 返回主菜单</a>
     
     <div class="selection-container">
         <div class="page-title">
-            <h1>组建你的小队</h1>
-            <p>选择4名角色组成你的战斗队伍</p>
+            <h1>鹿将军 · 独行试炼</h1>
+            <p>选择鹿馆，独自踏上星穹之旅</p>
         </div>
         
         <div class="team-info">
-            <h3>队伍配置提示</h3>
-            <p>建议队伍包含：1个坦克、1个治疗、2个输出</p>
+            <h3>⚡ 单人出征</h3>
+            <p>鹿馆将独自面对强敌，无需组队</p>
             <div class="team-count">
                 <span>已选择：</span>
                 <span class="count" id="selectedCount">0</span>
-                <span>/4</span>
+                <span>/1</span>
             </div>
         </div>
         
-        <!-- 已选角色区域 -->
+        <!-- 已选角色区域（只显示一个槽位） -->
         <div class="selected-area">
             <div class="selected-title">
                 <span>🛡️</span>
-                <span>你的队伍</span>
+                <span>出战角色</span>
             </div>
-            <div class="selected-characters" id="selectedCharacters">
-                <!-- 动态生成空位 -->
-            </div>
+            <div class="selected-characters" id="selectedCharacters"></div>
         </div>
         
-        <!-- 角色选择区域 -->
+        <!-- 角色选择区域（只显示鹿馆） -->
         <div class="character-select">
-            <h3>
-                <span>🌟</span>
-                <span>可用角色</span>
-            </h3>
-            <div class="character-grid" id="characterGrid">
-                <!-- 动态生成角色卡 -->
-            </div>
+            <h3><span>🌟</span><span>可用角色</span></h3>
+            <div class="character-grid" id="characterGrid"></div>
         </div>
         
-        <!-- 行动按钮 -->
         <div class="action-buttons">
-            <button class="action-btn reset-btn" onclick="resetSelection()">
-                <span>🔄</span>
-                <span>重置选择</span>
-            </button>
-            <button class="action-btn start-btn" id="startBtn" onclick="startBattle()" disabled>
-                <span>🚀</span>
-                <span>开始战斗</span>
-            </button>
+            <button class="action-btn reset-btn" onclick="resetSelection()">🔄 重置</button>
+            <button class="action-btn start-btn" id="startBtn" onclick="startBattle()" disabled>🚀 开始战斗</button>
         </div>
         
-        <!-- 提示信息 -->
         <div class="message-box" id="messageBox"></div>
     </div>
     
-    <!-- 角色详情预览 -->
+    <!-- 角色详情预览（仅用于鹿馆） -->
     <div class="character-preview" id="characterPreview">
         <div class="preview-header">
-            <div class="preview-avatar" id="previewAvatar">🚀</div>
+            <div class="preview-avatar" id="previewAvatar">🦌</div>
             <div class="preview-info">
-                <h3 id="previewName">角色名</h3>
+                <h3 id="previewName">鹿管</h3>
                 <div class="preview-tags">
-                    <span class="preview-tag" id="previewPath">命途</span>
-                    <span class="preview-tag" id="previewElement">属性</span>
-                    <span class="preview-tag" id="previewRarity">稀有度</span>
+                    <span class="preview-tag" id="previewPath">巡猎</span>
+                    <span class="preview-tag" id="previewElement">💨 风</span>
+                    <span class="preview-tag" id="previewRarity">⭐⭐⭐⭐⭐</span>
                 </div>
             </div>
         </div>
-        
         <div class="preview-stats">
-            <div class="preview-stat">
-                <span class="stat-label">生命值</span>
-                <span class="stat-value" id="previewHP">1500</span>
-            </div>
-            <div class="preview-stat">
-                <span class="stat-label">攻击力</span>
-                <span class="stat-value" id="previewAttack">120</span>
-            </div>
-            <div class="preview-stat">
-                <span class="stat-label">防御力</span>
-                <span class="stat-value" id="previewDefense">80</span>
-            </div>
-            <div class="preview-stat">
-                <span class="stat-label">速度</span>
-                <span class="stat-value" id="previewSpeed">100</span>
-            </div>
-            <div class="preview-stat">
-                <span class="stat-label">暴击率</span>
-                <span class="stat-value" id="previewCritRate">0%</span>
-            </div>
-            <div class="preview-stat">
-                <span class="stat-label">暴击伤害</span>
-                <span class="stat-value" id="previewCritDamage">0%</span>
-            </div>
+            <div class="preview-stat"><span>生命值</span><span id="previewHP">-</span></div>
+            <div class="preview-stat"><span>攻击力</span><span id="previewAttack">-</span></div>
+            <div class="preview-stat"><span>防御力</span><span id="previewDefense">-</span></div>
+            <div class="preview-stat"><span>速度</span><span id="previewSpeed">-</span></div>
+            <div class="preview-stat"><span>暴击率</span><span id="previewCritRate">-</span></div>
+            <div class="preview-stat"><span>暴击伤害</span><span id="previewCritDamage">-</span></div>
         </div>
-        
         <div class="preview-skills">
             <h4>技能</h4>
-            <div class="preview-skill" id="previewSkill1"></div>
-            <div class="preview-skill" id="previewSkill2"></div>
-            <div class="preview-skill" id="previewSkill3"></div>
-            <div class="preview-skill" id="previewSkill4"></div>
+            <div id="previewSkill1" class="preview-skill"></div>
+            <div id="previewSkill2" class="preview-skill"></div>
+            <div id="previewSkill3" class="preview-skill"></div>
+            <div id="previewSkill4" class="preview-skill"></div>
         </div>
-        
         <div class="preview-actions">
-            <button class="preview-btn preview-cancel" onclick="closePreview()">
-                取消
-            </button>
-            <button class="preview-btn preview-select" onclick="selectFromPreview()">
-                加入队伍
-            </button>
+            <button class="preview-btn preview-cancel" onclick="closePreview()">取消</button>
+            <button class="preview-btn preview-select" onclick="selectFromPreview()">加入队伍</button>
         </div>
     </div>
-<script>
-    // 从游戏数据获取角色
-    function getGameCharacters() {
-        if (typeof GameData === 'undefined' || !GameData.characters) {
-            console.warn('游戏数据未加载，使用备用数据');
-            return getFallbackCharacters();
-        }
+
+    <script>
+        // 队伍最大人数改为 1
+        const MAX_TEAM_SIZE = 1;
         
-        // 为每个角色分配对应的表情符号
-        const characterEmojis = {
-            'luguan': '🦌',
-            'fire_guard': '🛡️',
-            'quantum_mage': '🌌',
-            'lightning_healer': '⚡',
-            'ice_assassin': '❄️',
-            'physical_warrior': '⚔️'
-        };
-        
-        return GameData.characters.map((char, index) => ({
-            id: index,
-            gameId: char.id,
-            name: char.name,
-            // 使用预设的表情符号，而不是HTML链接
-            avatar: characterEmojis[char.id] || '⭐',
-            path: char.path,
-            element: getElementName(char.element || 'wind'),
-            rarity: char.rarity === 5 ? '⭐⭐⭐⭐⭐' : '⭐⭐⭐⭐',
-            hp: char.maxHp,
-            attack: char.attack,
-            defense: char.defense,
-            speed: char.speed,
-            critRate: Math.round((char.critRate || 0) * 100) + '%',
-            critDamage: Math.round((char.critDamage || 1.5) * 100) + '%',
-            skills: char.skills.map(skill => ({
-                name: skill.name,
-                icon: skill.icon,
-                description: skill.description
-            })),
-            description: getCharacterDescription(char)
-        }));
-    }
-
-    // 获取元素名称
-    function getElementName(element) {
-        const elements = {
-            'wind': '💨 风',
-            'fire': '🔥 火',
-            'ice': '❄️ 冰',
-            'lightning': '⚡ 雷',
-            'quantum': '🌌 量子',
-            'physical': '💪 物理',
-            'imaginary': '✨ 虚数'
-        };
-        return elements[element] || '💫 未知';
-    }
-
-    // 获取角色描述
-    function getCharacterDescription(character) {
-        if (character.path === '巡猎') return '高速单体输出';
-        if (character.path === '存护') return '优秀的防御者';
-        if (character.path === '丰饶') return '治疗与支援';
-        if (character.path === '智识') return '范围伤害专家';
-        if (character.path === '虚无') return '控制与削弱';
-        if (character.path === '毁灭') return '均衡的输出者';
-        return '冒险的旅者';
-    }
-
-    // 备用角色数据（如果游戏数据未加载）
-    function getFallbackCharacters() {
-        return [
-            {
+        // 只返回鹿馆角色（硬编码，不依赖 GameData 中的多角色）
+        function getGameCharacters() {
+            // 优先从 GameData 中获取鹿馆的真实属性（如果可用）
+            let luguanFromData = null;
+            if (typeof GameData !== 'undefined' && GameData.characters && GameData.characters.length > 0) {
+                const original = GameData.characters.find(c => c.id === 'luguan');
+                if (original) {
+                    luguanFromData = original;
+                }
+            }
+            
+            if (luguanFromData) {
+                // 转换为前端所需格式
+                return [{
+                    id: 0,
+                    gameId: luguanFromData.id,
+                    name: luguanFromData.name,
+                    avatar: '🦌',
+                    path: luguanFromData.path,
+                    element: getElementName(luguanFromData.element),
+                    rarity: luguanFromData.rarity === 5 ? '⭐⭐⭐⭐⭐' : '⭐⭐⭐⭐',
+                    hp: luguanFromData.maxHp,
+                    attack: luguanFromData.attack,
+                    defense: luguanFromData.defense,
+                    speed: luguanFromData.speed,
+                    critRate: Math.round((luguanFromData.critRate || 0.05) * 100) + '%',
+                    critDamage: Math.round((luguanFromData.critDamage || 1.5) * 100) + '%',
+                    skills: (luguanFromData.skills || []).map(s => ({
+                        name: s.name,
+                        icon: s.icon,
+                        description: s.description
+                    })),
+                    description: '高速风系巡猎，单体爆发'
+                }];
+            }
+            
+            // 后备数据（直接硬编码鹿馆）
+            return [{
                 id: 0,
                 gameId: 'luguan',
-                name: "鹿管",
-                avatar: "🦌",
-                path: "巡猎",
-                element: "💨 风",
-                rarity: "⭐⭐⭐⭐⭐",
+                name: '鹿管',
+                avatar: '🦌',
+                path: '巡猎',
+                element: '💨 风',
+                rarity: '⭐⭐⭐⭐⭐',
                 hp: 9999,
                 attack: 2900,
                 defense: 800,
                 speed: 140,
-                critRate: "80%",
-                critDamage: "175%",
+                critRate: '80%',
+                critDamage: '175%',
                 skills: [
-                    {name: "迅风斩", icon: "⚔️", description: "单体风属性伤害110%"},
-                    {name: "风之挑衅", icon: "🌀", description: "单体伤害，降低目标防御"},
-                    {name: "狂风终结", icon: "💥", description: "单体高伤害，对负面目标伤害提高"},
-                    {name: "防御", icon: "🛡️", description: "减少下次受到的伤害"}
+                    {name: '迅风斩', icon: '⚔️', description: '单体风属性伤害110%'},
+                    {name: '风之挑衅', icon: '🌀', description: '单体伤害，降低目标防御'},
+                    {name: '狂风终结', icon: '💥', description: '单体高伤害，对负面目标伤害提高'},
+                    {name: '防御', icon: '🛡️', description: '减少下次受到的伤害'}
                 ],
-                description: "高速单体输出"
-            },
-            {
-                id: 1,
-                gameId: 'fire_guard',
-                name: "炎盾护卫",
-                avatar: "🛡️",
-                path: "存护",
-                element: "🔥 火",
-                rarity: "⭐⭐⭐⭐",
-                hp: 15000,
-                attack: 1800,
-                defense: 1600,
-                speed: 100,
-                critRate: "5%",
-                critDamage: "150%",
-                skills: [
-                    {name: "烈焰盾击", icon: "🔥", description: "单体火属性伤害，附带嘲讽"},
-                    {name: "炽热屏障", icon: "🛡️", description: "提供护盾"},
-                    {name: "熔岩爆发", icon: "🌋", description: "群体火属性伤害，嘲讽所有敌人"},
-                    {name: "坚守阵地", icon: "🏰", description: "大幅提升防御力"}
-                ],
-                description: "优秀的防御者"
-            },
-            {
-                id: 2,
-                gameId: 'quantum_mage',
-                name: "量子术士",
-                avatar: "🌌",
-                path: "智识",
-                element: "🌌 量子",
-                rarity: "⭐⭐⭐⭐⭐",
-                hp: 7500,
-                attack: 3200,
-                defense: 600,
-                speed: 110,
-                critRate: "30%",
-                critDamage: "180%",
-                skills: [
-                    {name: "量子飞弹", icon: "⚛️", description: "单体量子属性伤害"},
-                    {name: "维度坍缩", icon: "🌀", description: "对随机目标进行3次量子攻击"},
-                    {name: "黑洞奇点", icon: "🕳️", description: "群体量子属性伤害，概率禁锢"},
-                    {name: "量子护盾", icon: "✨", description: "生成量子护盾吸收伤害"}
-                ],
-                description: "范围伤害专家"
-            },
-            {
-                id: 3,
-                gameId: 'lightning_healer',
-                name: "雷鸣医者",
-                avatar: "⚡",
-                path: "丰饶",
-                element: "⚡ 雷",
-                rarity: "⭐⭐⭐⭐",
-                hp: 9000,
-                attack: 1500,
-                defense: 900,
-                speed: 120,
-                critRate: "10%",
-                critDamage: "150%",
-                skills: [
-                    {name: "电疗之触", icon: "⚡", description: "单体雷属性伤害，附带微量治疗"},
-                    {name: "复苏雷雨", icon: "🌧️", description: "治疗全体队友"},
-                    {name: "天雷净化", icon: "☇", description: "群体雷属性伤害，清除负面状态"},
-                    {name: "静电屏障", icon: "⚡", description: "生成静电屏障减少伤害"}
-                ],
-                description: "治疗与支援"
-            },
-            {
-                id: 4,
-                gameId: 'ice_assassin',
-                name: "寒冰刺客",
-                avatar: "❄️",
-                path: "巡猎",
-                element: "❄️ 冰",
-                rarity: "⭐⭐⭐⭐",
-                hp: 8500,
-                attack: 2600,
-                defense: 700,
-                speed: 150,
-                critRate: "40%",
-                critDamage: "190%",
-                skills: [
-                    {name: "寒冰刺", icon: "❄️", description: "单体冰属性伤害，概率冻结"},
-                    {name: "霜华连击", icon: "🥶", description: "单体冰属性伤害，连续攻击2次"},
-                    {name: "绝对零度", icon: "🧊", description: "单体超高冰属性伤害，必中冻结"},
-                    {name: "冰镜反射", icon: "🪞", description: "进入隐身状态"}
-                ],
-                description: "高速单体输出"
-            },
-            {
-                id: 5,
-                gameId: 'physical_warrior',
-                name: "钢铁战士",
-                avatar: "⚔️",
-                path: "毁灭",
-                element: "💪 物理",
-                rarity: "⭐⭐⭐⭐",
-                hp: 12000,
-                attack: 2200,
-                defense: 1200,
-                speed: 105,
-                critRate: "20%",
-                critDamage: "160%",
-                skills: [
-                    {name: "重锤猛击", icon: "🔨", description: "单体物理伤害，附带破防"},
-                    {name: "旋风斩", icon: "🌀", description: "群体物理伤害"},
-                    {name: "狂暴冲锋", icon: "💥", description: "单体物理伤害，伤害随生命值降低而提高"},
-                    {name: "钢铁意志", icon: "🦾", description: "提升攻击力和防御力"}
-                ],
-                description: "均衡的输出者"
-            }
-        ];
-    }
+                description: '高速单体输出'
+            }];
+        }
 
+        function getElementName(elementId) {
+            const map = {
+                'wind': '💨 风', 'fire': '🔥 火', 'ice': '❄️ 冰',
+                'lightning': '⚡ 雷', 'quantum': '🌌 量子',
+                'physical': '💪 物理', 'imaginary': '✨ 虚数'
+            };
+            return map[elementId] || '💫 未知';
+        }
 
-
-
-        // 角色数据
         let characters = [];
-        let selectedCharacters = [];
+        let selectedCharacters = [];  // 最多1个
         let previewCharacter = null;
 
-        // 初始化页面
         function initSelectionPage() {
-            // 获取角色数据
             characters = getGameCharacters();
-            
-            // 检查是否有保存的队伍
+            // 检查保存的队伍（只保留鹿馆）
             const savedTeam = localStorage.getItem('hsr-selected-team');
             if (savedTeam) {
                 try {
                     const teamData = JSON.parse(savedTeam);
-                    if (teamData.characters && Array.isArray(teamData.characters)) {
-                        // 将保存的角色ID转换为实际角色
-                        selectedCharacters = teamData.characters.map(savedChar => {
-                            return characters.find(char => 
-                                char.gameId === savedChar.id || 
-                                char.name === savedChar.name
-                            ) || characters[0]; // 如果找不到，使用第一个角色
-                        }).filter(Boolean); // 过滤掉undefined
-                        
-                        // 确保最多4个角色
-                        selectedCharacters = selectedCharacters.slice(0, 4);
-                        
-                        showMessage('已加载保存的队伍', 'success');
+                    if (teamData.characters && teamData.characters.length > 0) {
+                        const savedChar = teamData.characters[0];
+                        const match = characters.find(c => c.gameId === savedChar.id || c.name === savedChar.name);
+                        if (match) selectedCharacters = [match];
+                        else selectedCharacters = [];
                     }
-                } catch (e) {
-                    console.error('加载保存的队伍失败:', e);
-                }
+                } catch(e) {}
             }
-            
             renderSelectedCharacters();
             renderCharacterGrid();
             updateSelectionCount();
-            
-            // 页面加载动画
-            document.body.style.opacity = '0';
-            document.body.style.transition = 'opacity 0.5s ease';
-            
-            setTimeout(() => {
-                document.body.style.opacity = '1';
-            }, 100);
         }
 
-        // 渲染已选角色区域
         function renderSelectedCharacters() {
             const container = document.getElementById('selectedCharacters');
             container.innerHTML = '';
-            
-            // 创建4个空位
-            for (let i = 0; i < 4; i++) {
+            for (let i = 0; i < MAX_TEAM_SIZE; i++) {
                 if (selectedCharacters[i]) {
-                    // 已选角色的槽位
-                    const character = selectedCharacters[i];
+                    const c = selectedCharacters[i];
                     container.innerHTML += `
                         <div class="character-slot" data-index="${i}">
-                            <div class="slot-avatar">${character.avatar}</div>
+                            <div class="slot-avatar">${c.avatar}</div>
                             <div class="slot-info">
-                                <div class="slot-name">${character.name}</div>
-                                <div class="slot-path">${character.path}</div>
+                                <div class="slot-name">${c.name}</div>
+                                <div class="slot-path">${c.path}</div>
                             </div>
                             <div class="remove-btn" onclick="removeCharacter(${i})">×</div>
                         </div>
                     `;
                 } else {
-                    // 空槽位
                     container.innerHTML += `
                         <div class="empty-slot" onclick="showAvailableCharacters()">
                             <div class="slot-icon">➕</div>
-                            <div>点击选择角色</div>
+                            <div>点击选择鹿馆</div>
                         </div>
                     `;
                 }
             }
         }
 
-        // 渲染角色选择网格
         function renderCharacterGrid() {
             const container = document.getElementById('characterGrid');
             container.innerHTML = '';
-            
-            characters.forEach(character => {
-                const isSelected = selectedCharacters.some(c => c.id === character.id);
-                const isDisabled = isSelected && selectedCharacters.length === 4;
-                
+            characters.forEach(ch => {
+                const isSelected = selectedCharacters.some(s => s.id === ch.id);
+                const isDisabled = isSelected || selectedCharacters.length >= MAX_TEAM_SIZE;
                 container.innerHTML += `
                     <div class="character-card ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}" 
-                         onclick="${isDisabled ? '' : `showCharacterPreview(${character.id})`}">
+                         onclick="${isDisabled ? '' : `showCharacterPreview(${ch.id})`}">
                         <div class="card-header">
-                            <div class="card-avatar">${character.avatar}</div>
+                            <div class="card-avatar">${ch.avatar}</div>
                             <div class="card-info">
-                                <div class="card-name">${character.name}</div>
-                                <div class="card-path">${character.path}</div>
+                                <div class="card-name">${ch.name}</div>
+                                <div class="card-path">${ch.path}</div>
                             </div>
                         </div>
-                        
                         <div class="card-stats">
-                            <div class="card-stat">
-                                <span class="stat-icon">❤️</span>
-                                <span class="stat-value">${character.hp}</span>
-                            </div>
-                            <div class="card-stat">
-                                <span class="stat-icon">⚔️</span>
-                                <span class="stat-value">${character.attack}</span>
-                            </div>
-                            <div class="card-stat">
-                                <span class="stat-icon">🛡️</span>
-                                <span class="stat-value">${character.defense}</span>
-                            </div>
-                            <div class="card-stat">
-                                <span class="stat-icon">⚡</span>
-                                <span class="stat-value">${character.speed}</span>
-                            </div>
+                            <div class="card-stat"><span class="stat-icon">❤️</span><span class="stat-value">${ch.hp}</span></div>
+                            <div class="card-stat"><span class="stat-icon">⚔️</span><span class="stat-value">${ch.attack}</span></div>
+                            <div class="card-stat"><span class="stat-icon">🛡️</span><span class="stat-value">${ch.defense}</span></div>
+                            <div class="card-stat"><span class="stat-icon">⚡</span><span class="stat-value">${ch.speed}</span></div>
                         </div>
-                        
                         <div class="card-skills">
-                            ${character.skills.slice(0, 2).map(skill => 
-                                `<span class="skill-tag">${skill.name}</span>`
-                            ).join('')}
+                            ${ch.skills.slice(0,2).map(s => `<span class="skill-tag">${s.name}</span>`).join('')}
                         </div>
-                        
                         ${isSelected ? '<div class="card-status">已选择</div>' : ''}
                     </div>
                 `;
             });
         }
 
-        // 显示角色预览
         function showCharacterPreview(characterId) {
-            const character = characters.find(c => c.id === characterId);
-            if (!character) return;
+            const ch = characters.find(c => c.id === characterId);
+            if (!ch) return;
+            previewCharacter = ch;
+            document.getElementById('previewAvatar').textContent = ch.avatar;
+            document.getElementById('previewName').textContent = ch.name;
+            document.getElementById('previewPath').textContent = ch.path;
+            document.getElementById('previewElement').textContent = ch.element;
+            document.getElementById('previewRarity').textContent = ch.rarity;
+            document.getElementById('previewHP').textContent = ch.hp;
+            document.getElementById('previewAttack').textContent = ch.attack;
+            document.getElementById('previewDefense').textContent = ch.defense;
+            document.getElementById('previewSpeed').textContent = ch.speed;
+            document.getElementById('previewCritRate').textContent = ch.critRate;
+            document.getElementById('previewCritDamage').textContent = ch.critDamage;
             
-            previewCharacter = character;
-            
-            // 更新预览内容
-            document.getElementById('previewAvatar').textContent = character.avatar;
-            document.getElementById('previewName').textContent = character.name;
-            document.getElementById('previewPath').textContent = character.path;
-            document.getElementById('previewElement').textContent = character.element;
-            document.getElementById('previewRarity').textContent = character.rarity;
-            document.getElementById('previewHP').textContent = character.hp;
-            document.getElementById('previewAttack').textContent = character.attack;
-            document.getElementById('previewDefense').textContent = character.defense;
-            document.getElementById('previewSpeed').textContent = character.speed;
-            document.getElementById('previewCritRate').textContent = character.critRate;
-            document.getElementById('previewCritDamage').textContent = character.critDamage;
-            
-            // 更新技能
-            const skills = ['previewSkill1', 'previewSkill2', 'previewSkill3', 'previewSkill4'];
-            skills.forEach((skillId, index) => {
-                const skillElement = document.getElementById(skillId);
-                if (skillElement && character.skills[index]) {
-                    const skill = character.skills[index];
-                    skillElement.innerHTML = `
-                        <div class="skill-name">
-                            <span>${skill.icon || '✨'}</span>
-                            <span>${skill.name}</span>
-                        </div>
-                        <div class="skill-desc">${skill.description}</div>
-                    `;
-                } else if (skillElement) {
-                    skillElement.innerHTML = '';
+            const skillIds = ['previewSkill1', 'previewSkill2', 'previewSkill3', 'previewSkill4'];
+            skillIds.forEach((id, idx) => {
+                const el = document.getElementById(id);
+                if (ch.skills[idx]) {
+                    const s = ch.skills[idx];
+                    el.innerHTML = `<div class="skill-name"><span>${s.icon || '✨'}</span> ${s.name}</div><div class="skill-desc">${s.description}</div>`;
+                } else {
+                    el.innerHTML = '';
                 }
             });
-            
-            // 显示预览面板
             document.getElementById('characterPreview').classList.add('active');
         }
 
-        // 关闭预览
         function closePreview() {
             document.getElementById('characterPreview').classList.remove('active');
             previewCharacter = null;
         }
 
-        // 从预览中选择角色
         function selectFromPreview() {
             if (!previewCharacter) return;
-            
             addCharacter(previewCharacter.id);
             closePreview();
         }
 
-        // 添加角色到队伍
         function addCharacter(characterId) {
-            const character = characters.find(c => c.id === characterId);
-            if (!character) return;
-            
-            // 检查是否已经选择
-            if (selectedCharacters.some(c => c.id === characterId)) {
-                showMessage('该角色已在队伍中！', 'warning');
+            const ch = characters.find(c => c.id === characterId);
+            if (!ch) return;
+            if (selectedCharacters.some(c => c.id === ch.id)) {
+                showMessage('鹿馆已经在队伍中了', 'warning');
                 return;
             }
-            
-            // 检查队伍是否已满
-            if (selectedCharacters.length >= 4) {
-                showMessage('队伍已满（最多4人）！', 'warning');
+            if (selectedCharacters.length >= MAX_TEAM_SIZE) {
+                showMessage('只能选择一名角色出战', 'warning');
                 return;
             }
-            
-            // 添加到队伍
-            selectedCharacters.push(character);
-            showMessage(`${character.name} 已加入队伍！`, 'success');
-            
-            // 更新UI
+            selectedCharacters.push(ch);
+            showMessage(`${ch.name} 已加入队伍！`, 'success');
             renderSelectedCharacters();
             renderCharacterGrid();
             updateSelectionCount();
         }
 
-        // 移除角色
         function removeCharacter(index) {
-            if (index < 0 || index >= selectedCharacters.length) return;
-            
-            const removed = selectedCharacters.splice(index, 1)[0];
-            showMessage(`${removed.name} 已从队伍中移除`, 'info');
-            
-            renderSelectedCharacters();
-            renderCharacterGrid();
-            updateSelectionCount();
-        }
-
-        // 重置选择
-        function resetSelection() {
-            if (selectedCharacters.length === 0) {
-                showMessage('队伍已经是空的', 'info');
-                return;
-            }
-            
-            if (confirm('确定要重置所有选择吗？')) {
-                selectedCharacters = [];
-                showMessage('队伍已重置', 'success');
-                
+            if (index >= 0 && index < selectedCharacters.length) {
+                const removed = selectedCharacters.splice(index, 1)[0];
+                showMessage(`${removed.name} 已移除`, 'info');
                 renderSelectedCharacters();
                 renderCharacterGrid();
                 updateSelectionCount();
             }
         }
 
-        // 更新选择计数
-        function updateSelectionCount() {
-            const countElement = document.getElementById('selectedCount');
-            const startButton = document.getElementById('startBtn');
-            
-            countElement.textContent = selectedCharacters.length;
-            
-            // 启用/禁用开始按钮
-            startButton.disabled = selectedCharacters.length !== 4;
-        }
-
-        // 显示消息提示
-        function showMessage(text, type = 'info') {
-            const messageBox = document.getElementById('messageBox');
-            messageBox.textContent = text;
-            messageBox.style.display = 'flex';
-            
-            // 根据类型设置颜色
-            const colors = {
-                info: 'var(--hsr-primary)',
-                success: 'var(--hsr-success)',
-                warning: 'var(--hsr-warning)',
-                error: 'var(--hsr-danger)'
-            };
-            
-            messageBox.style.color = colors[type] || colors.info;
-            messageBox.style.borderColor = colors[type] || colors.info;
-            
-            // 3秒后自动隐藏
-            setTimeout(() => {
-                messageBox.style.display = 'none';
-            }, 3000);
-        }
-
-        // 显示可用角色提示
-        function showAvailableCharacters() {
-            if (selectedCharacters.length === 4) {
-                showMessage('队伍已满，请先移除角色再添加新成员', 'warning');
-            } else {
-                showMessage('请从下方选择角色加入队伍', 'info');
-                
-                // 滚动到角色选择区域
-                document.querySelector('.character-select').scrollIntoView({ 
-                    behavior: 'smooth' 
-                });
-            }
-        }
-
-        // 开始战斗
-        function startBattle() {
-            if (selectedCharacters.length !== 4) {
-                showMessage('请选择4名角色组成队伍！', 'warning');
+        function resetSelection() {
+            if (selectedCharacters.length === 0) {
+                showMessage('队伍已是空的', 'info');
                 return;
             }
-            
-            // 保存队伍数据到本地存储
-            const teamData = {
-                characters: selectedCharacters.map(char => ({
-                    id: char.gameId || char.id,
-                    name: char.name,
-                    avatar: char.avatar,
-                    path: char.path,
-                    element: char.element.replace(/[^\w\s]/g, '').trim(), // 移除表情符号
-                    hp: char.hp,
-                    attack: char.attack,
-                    defense: char.defense,
-                    speed: char.speed
-                })),
-                timestamp: new Date().getTime(),
-                teamName: `小队${Math.floor(Math.random() * 1000)}`
-            };
-            
-            localStorage.setItem('hsr-selected-team', JSON.stringify(teamData));
-            
-            // 显示加载状态
-            showMessage('正在进入战斗...', 'info');
-            
-            // 跳转到战斗页面
-            setTimeout(() => {
-                window.location.href = 'battle.html';
-            }, 1500);
+            if (confirm('确定重置吗？')) {
+                selectedCharacters = [];
+                showMessage('队伍已重置', 'success');
+                renderSelectedCharacters();
+                renderCharacterGrid();
+                updateSelectionCount();
+            }
         }
 
-        // 键盘快捷键
-        document.addEventListener('keydown', (e) => {
-            switch(e.key) {
-                case 'Escape':
-                    closePreview();
-                    break;
-                case 'Enter':
-                    if (document.getElementById('characterPreview').classList.contains('active')) {
-                        selectFromPreview();
-                    }
-                    break;
-                case 'r':
-                case 'R':
-                    if (e.ctrlKey) {
-                        resetSelection();
-                    }
-                    break;
-            }
-        });
+        function updateSelectionCount() {
+            const countSpan = document.getElementById('selectedCount');
+            const startBtn = document.getElementById('startBtn');
+            countSpan.textContent = selectedCharacters.length;
+            startBtn.disabled = selectedCharacters.length !== MAX_TEAM_SIZE;
+        }
 
-        // 等待游戏数据加载完成
-        function waitForGameData() {
-            if (typeof GameData !== 'undefined') {
-                initSelectionPage();
+        function showMessage(text, type = 'info') {
+            const msg = document.getElementById('messageBox');
+            msg.textContent = text;
+            msg.style.display = 'flex';
+            let color = '#00d4ff';
+            if (type === 'success') color = '#1dd1a1';
+            else if (type === 'warning') color = '#ff9f43';
+            else if (type === 'danger') color = '#ff4757';
+            msg.style.color = color;
+            msg.style.borderColor = color;
+            setTimeout(() => { msg.style.display = 'none'; }, 2500);
+        }
+
+        function showAvailableCharacters() {
+            if (selectedCharacters.length >= MAX_TEAM_SIZE) {
+                showMessage('队伍已满，请先移除当前角色', 'warning');
             } else {
-                setTimeout(waitForGameData, 100);
+                showMessage('点击下方鹿馆卡片加入队伍', 'info');
             }
         }
 
-        // 初始化页面
-        window.addEventListener('DOMContentLoaded', waitForGameData);
+        function startBattle() {
+            if (selectedCharacters.length !== MAX_TEAM_SIZE) {
+                showMessage('请选择鹿馆出战', 'warning');
+                return;
+            }
+            const teamData = {
+                characters: selectedCharacters.map(c => ({
+                    id: c.gameId,
+                    name: c.name,
+                    avatar: c.avatar,
+                    path: c.path,
+                    element: c.element.replace(/[^\w\s]/g, '').trim(),
+                    hp: c.hp,
+                    attack: c.attack,
+                    defense: c.defense,
+                    speed: c.speed
+                })),
+                timestamp: Date.now(),
+                teamName: '鹿馆·独行'
+            };
+            localStorage.setItem('hsr-selected-team', JSON.stringify(teamData));
+            showMessage('正在进入战斗...', 'info');
+            setTimeout(() => { window.location.href = 'battle.html'; }, 1200);
+        }
+
+        window.addEventListener('DOMContentLoaded', initSelectionPage);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closePreview();
+        });
     </script>
 </body>
 </html>
