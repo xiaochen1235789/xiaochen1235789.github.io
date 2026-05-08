@@ -110,7 +110,6 @@
             margin-bottom: 2rem;
             opacity: 0.8;
         }
-        /* 右上角圆形音乐按钮 - 增加呼吸引导动画 */
         .music-circle {
             position: fixed;
             top: 20px;
@@ -132,7 +131,6 @@
         }
         .music-circle:active { transform: scale(0.95); }
         .music-circle span { font-size: 1.5rem; pointer-events: none; }
-        /* 引导呼吸动画 */
         @keyframes guidePulse {
             0% { box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.7); transform: scale(1); }
             70% { box-shadow: 0 0 0 12px rgba(0, 212, 255, 0); transform: scale(1.05); }
@@ -315,8 +313,6 @@
         .loading-bar { width: 260px; height: 4px; background: var(--hsr-glass); border-radius: 2px; overflow: hidden; position: relative; }
         .loading-progress { position: absolute; top: 0; left: 0; height: 100%; background: linear-gradient(90deg, var(--hsr-primary), var(--hsr-primary-light)); border-radius: 2px; width: 0%; transition: width 0.1s linear; }
         .loading-status { margin-top: 20px; font-size: 0.8rem; color: var(--hsr-subtext); }
-
-        /* 设置面板内样式 */
         .settings-header { display: flex; justify-content: space-between; align-items: center; }
         .close-btn { background: none; border: none; color: var(--hsr-subtext); font-size: 1.5rem; cursor: pointer; display: none; }
         .setting-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--hsr-glass-border); }
@@ -342,8 +338,6 @@
         .settings-btn { background: var(--hsr-glass); border: 1px solid var(--hsr-glass-border); padding: 8px 20px; border-radius: 30px; color: var(--hsr-text); cursor: pointer; transition: 0.2s; touch-action: manipulation; }
         .settings-btn.primary { background: var(--hsr-primary); color: #000; border: none; }
         .volume-value { font-size: 0.8rem; min-width: 45px; text-align: right; }
-
-        /* 引导提示浮层 */
         .guide-toast {
             position: fixed;
             bottom: 20%;
@@ -362,21 +356,20 @@
             opacity: 0;
             transition: opacity 0.3s;
             font-weight: 500;
-            letter-spacing: 1px;
         }
         @media (max-width: 480px) {
             .guide-toast { font-size: 0.75rem; white-space: normal; width: 80%; text-align: center; bottom: 25%; }
+            .game-title { font-size: 2.5rem; }
+            .menu-item { padding: 18px 20px; font-size: 1rem; }
+            .character-card { width: 60px; height: 60px; font-size: 2rem; }
+            .title-container { padding-top: 5vh; }
+            .version { top: 10px; left: 10px; font-size: 0.7rem; }
+            .music-circle { width: 48px; height: 48px; top: 12px; right: 12px; }
         }
-
         @media (max-width: 768px) {
             .game-title { font-size: 2.5rem; }
             .menu-item { padding: 18px 20px; font-size: 1rem; }
             .character-card { width: 60px; height: 60px; font-size: 2rem; }
-        }
-        @media (max-width: 480px) {
-            .title-container { padding-top: 5vh; }
-            .version { top: 10px; left: 10px; font-size: 0.7rem; }
-            .music-circle { width: 48px; height: 48px; top: 12px; right: 12px; }
         }
         @media (max-height: 600px) {
             .title-container { padding-top: 3vh; }
@@ -394,7 +387,7 @@
 
     <div class="main-container" id="mainContainer" style="display: none;">
         <div class="stars-bg" id="starsBg"></div>
-        <div class="version">v1.1.0</div>
+        <div class="version">v1.2.0</div>
         <div class="title-container">
             <h1 class="game-title">六哥荣耀</h1>
             <div class="game-subtitle">星海无垠，命运待启</div>
@@ -462,11 +455,10 @@
     </div>
     <div class="about-panel" id="aboutPanel">
         <h2>✨ 关于 ✨</h2>
-        <div class="about-content">开发者：小尘 | 版本 v1.1.0 | 仅供学习交流</div>
+        <div class="about-content">开发者：小尘 | 版本 v1.2.0 | 仅供学习交流</div>
         <div class="settings-actions"><button class="settings-btn primary" onclick="hideAbout()">返回</button></div>
     </div>
     <div class="particle-container" id="particleContainer"></div>
-    <!-- 引导提示浮层 -->
     <div class="guide-toast" id="guideToast">✨ 点击屏幕任意位置，开启星穹音乐</div>
 
     <script>
@@ -490,7 +482,7 @@
         document.addEventListener('click', handleTap);
         document.addEventListener('touchstart', handleTap);
 
-        // ---------- 音乐系统（支持200%，移动端优化）----------
+        // ---------- 音乐系统（支持200%，带localStorage缓存）----------
         const bgmAudio = document.getElementById('bgmAudio');
         const musicCircleBtn = document.getElementById('musicCircleBtn');
         const musicIconSpan = document.getElementById('musicIcon');
@@ -507,36 +499,22 @@
         let gainNode = null;
         let isWebAudioActive = false;
         let musicBlobUrl = null;
-        let userInteracted = false;   // 是否已经有过用户交互
+        let userInteracted = false;
 
-        // 引导提示元素
         const guideToast = document.getElementById('guideToast');
 
-        // 显示引导提示并自动淡出
         function showGuideToast() {
-            if (!guideToast) return;
-            guideToast.style.opacity = '1';
-            setTimeout(() => {
-                if (guideToast) guideToast.style.opacity = '0';
-            }, 3000);
+            if (guideToast) guideToast.style.opacity = '1';
+            setTimeout(() => { if (guideToast) guideToast.style.opacity = '0'; }, 3000);
         }
 
-        // 唤醒 AudioContext 并尝试播放（必须在用户手势中调用）
         async function resumeAudioContextAndPlay() {
             if (!userInteracted) userInteracted = true;
-            // 确保 AudioContext 已初始化
-            if (!audioCtx) {
-                await initWebAudioForBGM();
-            }
-            if (audioCtx && audioCtx.state === 'suspended') {
-                await audioCtx.resume();
-            }
-            if (musicEnabled && bgmAudio.paused) {
-                await attemptPlay(true);
-            }
+            if (!audioCtx) await initWebAudioForBGM();
+            if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
+            if (musicEnabled && bgmAudio.paused) await attemptPlay(true);
         }
 
-        // 初始化 Web Audio
         async function initWebAudioForBGM() {
             if (!bgmAudio) return;
             if (audioCtx && audioCtx.state !== 'closed') return;
@@ -579,7 +557,6 @@
             if (musicVolumePercent > 100) showNotification("⚠️ 音量已超过100%，可能失真", 1500);
         }
 
-        // 沉浸式音量拖动（使用 Pointer API）
         function setupVolumeSlider() {
             const slider = document.getElementById('musicVolumeSlider');
             if (!slider) return;
@@ -690,13 +667,10 @@
             if (!bgmAudio) return false;
             if (!musicEnabled) return false;
             if (!isWebAudioActive && audioCtx === null) await initWebAudioForBGM();
-            if (audioCtx && audioCtx.state === 'suspended') {
-                await audioCtx.resume();
-            }
+            if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
             try {
                 await bgmAudio.play();
                 if (!silent) updateMusicButtonUI();
-                // 播放后移除引导动画
                 musicCircleBtn.classList.remove('guide');
                 return true;
             } catch(err) {
@@ -706,12 +680,10 @@
             }
         }
 
-        // 圆形按钮：同时响应 click 和 touchstart
         function onMusicButtonTap(e) {
             e.preventDefault();
             e.stopPropagation();
             if (!userInteracted) userInteracted = true;
-            // 确保 AudioContext 存在
             if (!audioCtx) {
                 initWebAudioForBGM().then(() => {
                     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -756,22 +728,17 @@
         musicCircleBtn.addEventListener('click', onMusicButtonTap);
         musicCircleBtn.addEventListener('touchstart', onMusicButtonTap, { passive: false });
 
-        // 全局首次用户交互（仅 touchstart 和 click 之一触发，且确保只执行一次）
         let globalInteractionHandled = false;
         async function onFirstUserInteraction(e) {
             if (globalInteractionHandled) return;
             globalInteractionHandled = true;
             userInteracted = true;
-            // 确保 AudioContext 已初始化
             if (!audioCtx) await initWebAudioForBGM();
             if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
             if (musicEnabled && bgmAudio.paused) await attemptPlay(true);
-            // 播放后自动隐藏引导提示
             if (guideToast) guideToast.style.opacity = '0';
-            // 移除按钮引导动画
             musicCircleBtn.classList.remove('guide');
         }
-        // 移动端主要用 touchstart，桌面端用 click，但为了避免重复，标志位控制只执行一次
         document.addEventListener('touchstart', onFirstUserInteraction, { passive: false });
         document.addEventListener('click', onFirstUserInteraction);
 
@@ -847,7 +814,6 @@
             }
         }
 
-        // 角色卡片与菜单项的触摸响应
         document.querySelectorAll('.character-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -930,12 +896,37 @@
             showNotification("设置已重置", 1000);
         }
 
-        // 预加载音乐
+        // ----- 预加载音乐（带 localStorage 缓存）-----
         async function preloadMusicWithProgress() {
             const audioUrl = "https://xiaochen1235789.github.io/ai%20sister/zhujiemian.aac";
             const loadingPercentDiv = document.getElementById('loadingPercent');
             const loadingFill = document.getElementById('loadingProgressFill');
             const loadingStatus = document.getElementById('loadingStatus');
+            const CACHE_KEY = 'hsr_music_cache_v1';
+
+            // 1. 检查 localStorage 缓存
+            const cachedBase64 = localStorage.getItem(CACHE_KEY);
+            if (cachedBase64) {
+                try {
+                    const binary = atob(cachedBase64);
+                    const array = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+                    const blob = new Blob([array], { type: 'audio/aac' });
+                    const blobUrl = URL.createObjectURL(blob);
+                    bgmAudio.src = blobUrl;
+                    bgmAudio.load();
+                    loadingPercentDiv.innerText = `100% (缓存)`;
+                    loadingFill.style.width = `100%`;
+                    loadingStatus.innerText = "音乐已从缓存加载，准备进入...";
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    return true;
+                } catch(e) {
+                    console.warn("缓存读取失败，重新下载", e);
+                    localStorage.removeItem(CACHE_KEY);
+                }
+            }
+
+            // 2. 无缓存或失效，正常下载
             try {
                 const response = await fetch(audioUrl);
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -962,6 +953,23 @@
                 musicBlobUrl = URL.createObjectURL(blob);
                 bgmAudio.src = musicBlobUrl;
                 bgmAudio.load();
+
+                // 3. 尝试存入 localStorage（限制大小 4MB）
+                if (blob.size < 4 * 1024 * 1024) {
+                    const readerForCache = new FileReader();
+                    readerForCache.onloadend = () => {
+                        const base64 = readerForCache.result.split(',')[1];
+                        if (base64 && base64.length < 5 * 1024 * 1024) {
+                            localStorage.setItem(CACHE_KEY, base64);
+                        } else {
+                            console.warn("音频 Base64 过大，不存入 localStorage");
+                        }
+                    };
+                    readerForCache.readAsDataURL(blob);
+                } else {
+                    console.warn("音频文件超过 4MB，不存入 localStorage");
+                }
+
                 loadingPercentDiv.innerText = `100%`;
                 loadingFill.style.width = `100%`;
                 loadingStatus.innerText = "音乐加载完成，准备进入...";
@@ -989,7 +997,6 @@
                 if (loading) loading.style.display = 'none';
                 if (main) main.style.display = 'block';
                 createStars();
-                // 显示引导提示和按钮呼吸动画
                 showGuideToast();
                 musicCircleBtn.classList.add('guide');
                 setTimeout(() => showNotification("欢迎来到星穹列车，开拓者！", 2000), 500);
