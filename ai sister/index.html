@@ -6,369 +6,552 @@
     <title>六哥荣耀 - 星穹启程</title>
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <style>
-        /* ========== 全局样式（精简但完整） ========== */
-        * { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-tap-highlight-color:transparent; font-family:system-ui,'Microsoft YaHei',sans-serif; }
         :root {
-            --bg:#0a0a14; --surface:#151525; --primary:#00d4ff; --primary-light:#66e5ff;
-            --text:#fff; --sub:#a0b4c6; --glass:rgba(255,255,255,0.05); --border:rgba(255,255,255,0.1);
+            --hsr-bg: #0a0a14;
+            --hsr-surface: #151525;
+            --hsr-card: #1e1e2e;
+            --hsr-primary: #00d4ff;
+            --hsr-primary-dark: #0088cc;
+            --hsr-primary-light: #66e5ff;
+            --hsr-text: #ffffff;
+            --hsr-subtext: #a0b4c6;
+            --hsr-glass: rgba(255, 255, 255, 0.05);
+            --hsr-glass-border: rgba(255, 255, 255, 0.1);
         }
-        body, html { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); position:fixed; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'HYWenHei-85W', 'Microsoft YaHei', sans-serif;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: var(--hsr-bg);
+            color: var(--hsr-text);
+            position: fixed;
+        }
         .main-container {
-            width:100%; height:100%; position:relative;
-            background:radial-gradient(circle at 20% 10%, #1a1a3a 0%, transparent 40%),
-                       radial-gradient(circle at 80% 90%, #0f1a2e 0%, transparent 40%),
-                       var(--bg);
-            overflow-y:auto; display:none;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: radial-gradient(circle at 20% 10%, #1a1a3a 0%, transparent 40%),
+                        radial-gradient(circle at 80% 90%, #0f1a2e 0%, transparent 40%),
+                        var(--hsr-bg);
+            overflow-y: auto;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
         }
-        .stars-bg { position:fixed; width:100%; height:100%; pointer-events:none; z-index:1; }
-        .star { position:absolute; background:white; border-radius:50%; animation:twinkle var(--duration) infinite alternate; }
-        @keyframes twinkle { 0%{opacity:0.2;transform:scale(0.8);} 100%{opacity:1;transform:scale(1.2);} }
-        .title-container { text-align:center; width:90%; max-width:800px; margin:0 auto; padding-top:8vh; z-index:10; position:relative; }
-        .game-title { font-size:3.5rem; background:linear-gradient(135deg,#00d4ff,#66e5ff,#fff); background-clip:text; -webkit-background-clip:text; color:transparent; }
-        .game-subtitle { font-size:1.2rem; color:var(--sub); margin:1rem 0 2rem; }
-        .music-circle {
-            position:fixed; top:20px; right:20px; width:48px; height:48px; border-radius:50%;
-            background:rgba(0,0,0,0.65); backdrop-filter:blur(16px); border:1px solid var(--primary);
-            display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:30;
-            transition:0.2s; box-shadow:0 0 12px rgba(0,212,255,0.3);
+        .stars-bg {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
         }
-        .music-circle:active{ transform:scale(0.95); }
-        .music-circle span{ font-size:1.5rem; pointer-events:none; }
-        .menu-container { width:90%; max-width:400px; margin:0 auto 40px; display:flex; flex-direction:column; gap:15px; }
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle var(--duration) infinite alternate;
+        }
+        @keyframes twinkle {
+            0% { opacity: 0.2; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1.2); }
+        }
+        .particle-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10000;
+        }
+        .click-particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: radial-gradient(circle, #00d4ff, #0088cc);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: particleExpand 0.6s ease-out forwards;
+            pointer-events: none;
+        }
+        @keyframes particleExpand {
+            0% { width: 8px; height: 8px; opacity: 0.8; }
+            100% { width: 60px; height: 60px; opacity: 0; filter: blur(4px); }
+        }
+        .title-container {
+            position: relative;
+            text-align: center;
+            z-index: 10;
+            width: 90%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding-top: 8vh;
+        }
+        .game-title {
+            font-size: 3.5rem;
+            background: linear-gradient(135deg, #00d4ff, #66e5ff, #ffffff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+            letter-spacing: 2px;
+        }
+        .game-subtitle {
+            font-size: 1.2rem;
+            color: var(--hsr-subtext);
+            margin-bottom: 2rem;
+            opacity: 0.8;
+        }
+        .menu-container {
+            position: relative;
+            width: 90%;
+            max-width: 400px;
+            margin: 0 auto 40px;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
         .menu-item {
-            background:var(--glass); backdrop-filter:blur(20px); border:1px solid var(--border); border-radius:12px;
-            padding:20px 30px; font-size:1.2rem; color:var(--text); cursor:pointer; transition:0.3s;
-            display:flex; justify-content:space-between; text-decoration:none;
+            background: var(--hsr-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--hsr-glass-border);
+            border-radius: 12px;
+            padding: 20px 30px;
+            font-size: 1.2rem;
+            color: var(--hsr-text);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+            touch-action: manipulation;
         }
-        .menu-item:hover{ border-color:var(--primary); background:rgba(0,212,255,0.05); transform:translateX(10px); }
-        .character-showcase { display:flex; justify-content:center; gap:25px; margin:30px auto; flex-wrap:wrap; }
+        .menu-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+        .menu-item:hover::before { left: 100%; }
+        .menu-item:hover {
+            border-color: var(--hsr-primary);
+            background: rgba(0, 212, 255, 0.05);
+            transform: translateX(10px);
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
+        }
+        .character-showcase {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            margin: 30px auto 40px;
+            z-index: 5;
+            flex-wrap: wrap;
+        }
         .character-card {
-            width:80px; height:80px; border-radius:50%; background:linear-gradient(135deg,var(--primary),#0088cc);
-            display:flex; align-items:center; justify-content:center; font-size:2.5rem; border:2px solid rgba(255,255,255,0.2);
-            cursor:pointer; transition:0.3s; position:relative;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--hsr-primary), var(--hsr-primary-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            touch-action: manipulation;
         }
-        .character-card:hover{ transform:translateY(-10px) scale(1.1); border-color:var(--primary); box-shadow:0 0 30px rgba(0,212,255,0.4); }
-        .character-name{ position:absolute; bottom:-28px; font-size:0.8rem; color:var(--primary-light); white-space:nowrap; opacity:0; transition:0.3s; background:rgba(0,0,0,0.6); padding:2px 6px; border-radius:12px; }
-        .character-card:hover .character-name{ opacity:1; }
-        .footer-info{ text-align:center; color:var(--sub); font-size:0.8rem; margin:20px auto; opacity:0.6; }
-        .version{ position:fixed; top:20px; left:20px; color:var(--sub); font-size:0.8rem; opacity:0.5; z-index:10; }
+        .character-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.4s;
+        }
+        .character-card:hover::after { left: 100%; }
+        .character-card:hover {
+            transform: translateY(-10px) scale(1.1);
+            border-color: var(--hsr-primary);
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.4);
+        }
+        .character-name {
+            position: absolute;
+            bottom: -28px;
+            font-size: 0.8rem;
+            color: var(--hsr-primary-light);
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 12px;
+            pointer-events: none;
+        }
+        .character-card:hover .character-name { opacity: 1; }
+        .footer-info {
+            text-align: center;
+            color: var(--hsr-subtext);
+            font-size: 0.8rem;
+            margin: 20px auto 30px;
+            opacity: 0.6;
+            width: 100%;
+            pointer-events: none;
+        }
+        .version {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: var(--hsr-subtext);
+            font-size: 0.8rem;
+            z-index: 10;
+            opacity: 0.5;
+        }
         .settings-panel, .about-panel {
-            position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:500px;
-            background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:30px;
-            z-index:1000; backdrop-filter:blur(30px); display:none; flex-direction:column; gap:25px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 500px;
+            background: var(--hsr-surface);
+            border: 1px solid var(--hsr-glass-border);
+            border-radius: 20px;
+            padding: 30px;
+            z-index: 1000;
+            backdrop-filter: blur(30px);
+            display: none;
+            flex-direction: column;
+            gap: 25px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
         }
-        .settings-panel.active, .about-panel.active{ display:flex; }
-        .overlay{ position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); backdrop-filter:blur(5px); z-index:999; display:none; }
-        .overlay.active{ display:block; }
-        .setting-item{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); }
-        .toggle-switch{ width:44px; height:24px; background:#444; border-radius:30px; position:relative; cursor:pointer; }
-        .toggle-switch.active{ background:var(--primary); }
-        .toggle-switch::after{ content:''; width:20px; height:20px; background:white; border-radius:50%; position:absolute; top:2px; left:2px; transition:0.2s; }
-        .toggle-switch.active::after{ left:22px; }
-        .volume-slider{ width:140px; height:4px; background:#444; border-radius:4px; position:relative; cursor:pointer; touch-action:none; }
-        .volume-fill{ position:absolute; height:100%; background:var(--primary); border-radius:4px; width:0%; pointer-events:none; }
-        .volume-handle{ position:absolute; width:14px; height:14px; background:white; border-radius:50%; top:-5px; left:0%; transform:translateX(-50%); pointer-events:none; box-shadow:0 0 6px var(--primary); }
-        .quality-select{ background:var(--glass); border:1px solid var(--border); color:var(--text); padding:6px 12px; border-radius:8px; }
-        .settings-actions{ display:flex; gap:20px; justify-content:center; margin-top:10px; }
-        .settings-btn{ background:var(--glass); border:1px solid var(--border); padding:8px 20px; border-radius:30px; cursor:pointer; color:var(--text); }
-        .settings-btn.primary{ background:var(--primary); color:#000; border:none; }
-        .volume-value{ font-size:0.8rem; min-width:45px; text-align:right; }
-        /* 引导页 + 加载进度提示 */
-        .splash-screen {
-            position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(10,10,20,0.96); backdrop-filter:blur(20px);
-            z-index:3000; display:flex; flex-direction:column; align-items:center; justify-content:center;
-            cursor:pointer; transition:opacity 0.8s;
+        .settings-panel.active, .about-panel.active { display: flex; animation: panelFadeIn 0.3s ease; }
+        @keyframes panelFadeIn { from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 999;
+            display: none;
         }
-        .splash-content{ text-align:center; }
-        .splash-icon{ font-size:4rem; margin-bottom:1rem; animation:bounce 1.5s infinite; }
-        .splash-title{ font-size:2rem; color:var(--primary); margin-bottom:1rem; }
-        .splash-desc{ font-size:1.2rem; color:var(--primary-light); margin-bottom:2rem; }
-        .loading-hint{ margin-top:20px; font-size:0.9rem; color:var(--sub); opacity:0; transition:opacity 0.3s; }
-        @keyframes bounce{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-15px);} }
-        .particle-container{ position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10000; }
-        .click-particle{ position:absolute; width:8px; height:8px; background:radial-gradient(circle,#00d4ff,#0088cc); border-radius:50%; transform:translate(-50%,-50%); animation:particleExpand 0.6s ease-out forwards; }
-        @keyframes particleExpand{ 0%{width:8px;height:8px;opacity:0.8;} 100%{width:60px;height:60px;opacity:0;filter:blur(4px);} }
-        @media (max-width:768px){ .game-title{font-size:2.5rem;} .character-card{width:60px;height:60px;font-size:2rem;} .music-circle{width:56px;height:56px;} }
+        .overlay.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--hsr-bg);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .settings-header { display: flex; justify-content: space-between; align-items: center; }
+        .close-btn { background: none; border: none; color: var(--hsr-subtext); font-size: 1.5rem; cursor: pointer; display: none; }
+        .setting-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--hsr-glass-border); }
+        .setting-label { font-size: 1rem; }
+        .setting-control { display: flex; gap: 15px; align-items: center; }
+        .toggle-switch { width: 44px; height: 24px; background: #444; border-radius: 30px; position: relative; cursor: pointer; transition: 0.2s; touch-action: manipulation; }
+        .toggle-switch.active { background: var(--hsr-primary); }
+        .toggle-switch::after { content: ''; width: 20px; height: 20px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: 0.2s; }
+        .toggle-switch.active::after { left: 22px; }
+        .quality-select { background: var(--hsr-glass); border: 1px solid var(--hsr-glass-border); color: var(--hsr-text); padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+        .settings-actions { display: flex; gap: 20px; justify-content: center; margin-top: 10px; }
+        .settings-btn { background: var(--hsr-glass); border: 1px solid var(--hsr-glass-border); padding: 8px 20px; border-radius: 30px; color: var(--hsr-text); cursor: pointer; transition: 0.2s; touch-action: manipulation; }
+        .settings-btn.primary { background: var(--hsr-primary); color: #000; border: none; }
+        @media (max-width: 768px) {
+            .game-title { font-size: 2.5rem; }
+            .menu-item { padding: 18px 20px; font-size: 1rem; }
+            .character-card { width: 60px; height: 60px; font-size: 2rem; }
+        }
+        @media (max-width: 480px) {
+            .title-container { padding-top: 5vh; }
+            .version { top: 10px; left: 10px; font-size: 0.7rem; }
+        }
+        @media (max-height: 600px) {
+            .title-container { padding-top: 3vh; }
+            .character-showcase { margin: 20px auto; }
+        }
     </style>
 </head>
 <body>
-    <!-- 引导页（包含点击后加载提示） -->
-    <div class="splash-screen" id="splashScreen">
-        <div class="splash-content">
-            <div class="splash-icon">✨</div>
-            <div class="splash-title">六哥荣耀</div>
-            <div class="splash-desc">轻触进入星穹世界</div>
-            <div class="loading-hint" id="loadingHint">✨ 触摸任意位置 ✨</div>
-        </div>
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-text">跃迁准备中...</div>
+        <div class="loading-bar"><div class="loading-progress"></div></div>
     </div>
 
-    <!-- 主界面（初始隐藏） -->
-    <div class="main-container" id="mainContainer">
+    <div class="main-container" id="mainContainer" style="display: none;">
         <div class="stars-bg" id="starsBg"></div>
         <div class="version">v1.0.0</div>
         <div class="title-container">
-            <div class="game-title">六哥荣耀</div>
+            <h1 class="game-title">六哥荣耀</h1>
             <div class="game-subtitle">星海无垠，命运待启</div>
         </div>
-        <div class="music-circle" id="musicCircleBtn">
-            <span id="musicIcon">🔇</span>
-        </div>
+
         <div class="menu-container">
-            <a href="https://xiaochen1235789.github.io/ai sister/select-character.html" class="menu-item">🚀 开始游戏 ▶</a>
-            <a href="https://xiaochen1235789.github.io/ai sister/role-details.html" class="menu-item">🐾 角色详情 ▶</a>
-            <div class="menu-item" onclick="showSettings()">⚙️ 设置 ⚙️</div>
-            <div class="menu-item" onclick="showAbout()">📖 关于 📖</div>
-            <div class="menu-item" onclick="exitGame()">🚪 退出 🚪</div>
+            <a href="https://xiaochen1235789.github.io/ai sister/select-character.html" class="menu-item" id="startGameBtn">
+                <span>🚀 开始游戏</span>
+                <span class="menu-icon">▶</span>
+            </a>
+            <a href="https://xiaochen1235789.github.io/ai sister/role-details.html" class="menu-item">
+                <span>🐾 角色详情</span>
+                <span class="menu-icon">▶</span>
+            </a>
+            <div class="menu-item" onclick="showSettings()">
+                <span>⚙️ 设置</span>
+                <span class="menu-icon">⚙️</span>
+            </div>
+            <div class="menu-item" onclick="showAbout()">
+                <span>📖 关于</span>
+                <span class="menu-icon">📖</span>
+            </div>
+            <div class="menu-item" onclick="exitGame()">
+                <span>🚪 退出</span>
+                <span class="menu-icon">🚪</span>
+            </div>
         </div>
+
         <div class="character-showcase">
             <div class="character-card" data-name="三月七">❄️<div class="character-name">三月七</div></div>
             <div class="character-card" data-name="丹恒">🗡️<div class="character-name">丹恒</div></div>
             <div class="character-card" data-name="姬子">☕<div class="character-name">姬子</div></div>
             <div class="character-card" data-name="瓦尔特">🧥<div class="character-name">瓦尔特</div></div>
         </div>
+
         <div class="footer-info">追随星神的轨迹，书写属于你的传奇</div>
     </div>
 
     <div class="overlay" id="overlay"></div>
+
     <div class="settings-panel" id="settingsPanel">
-        <div class="setting-item"><span>🎵 背景音乐</span><div class="setting-control"><div class="toggle-switch active" id="musicToggle" onclick="toggleMusicSetting()"></div><div class="volume-slider" id="musicVolumeSlider"><div class="volume-fill" style="width:30%"></div><div class="volume-handle" style="left:30%"></div></div><span class="volume-value" id="volumePercent">60%</span></div></div>
-        <div class="setting-item"><span>🔊 音效开关</span><div class="setting-control"><div class="toggle-switch active" id="sfxToggle" onclick="toggleSfx()"></div></div></div>
-        <div class="setting-item"><span>📳 震动反馈</span><div class="setting-control"><div class="toggle-switch" id="vibeToggle" onclick="toggleVibration()"></div></div></div>
-        <div class="setting-item"><span>🎨 画面质量</span><div class="setting-control"><select class="quality-select" id="qualitySelect" onchange="changeQuality()"><option value="low">低</option><option value="medium" selected>中</option><option value="high">高</option><option value="ultra">极致</option></select></div></div>
-        <div class="settings-actions"><button class="settings-btn" onclick="resetSettings()">重置</button><button class="settings-btn primary" onclick="saveAndCloseSettings()">保存</button></div>
+        <div class="settings-header">
+            <h2>游戏设置</h2>
+            <button class="close-btn" onclick="hideSettings()">✕</button>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">📳 震动反馈</span>
+            <div class="setting-control"><div class="toggle-switch active" id="vibeToggle" onclick="toggleVibration()"></div></div>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">🎨 画面质量</span>
+            <div class="setting-control"><select class="quality-select" id="qualitySelect" onchange="changeQuality()"><option value="low">低</option><option value="medium" selected>中</option><option value="high">高</option><option value="ultra">极致</option></select></div>
+        </div>
+        <div class="settings-actions">
+            <button class="settings-btn" onclick="resetSettings()">重置</button>
+            <button class="settings-btn primary" onclick="saveSettings()">保存</button>
+        </div>
     </div>
+
     <div class="about-panel" id="aboutPanel">
         <h2>✨ 关于 ✨</h2>
         <div class="about-content">开发者：小尘 | 版本 v1.0.0 | 仅供学习交流</div>
         <div class="settings-actions"><button class="settings-btn primary" onclick="hideAbout()">返回</button></div>
     </div>
+
     <div class="particle-container" id="particleContainer"></div>
 
     <script>
-        // ---------- 粒子效果 ----------
-        function createParticle(x,y){ let c=document.getElementById('particleContainer'); if(!c)return; let p=document.createElement('div'); p.className='click-particle'; p.style.left=x+'px'; p.style.top=y+'px'; c.appendChild(p); setTimeout(()=>p.remove(),600); }
-        function handleTap(e){ let x,y; if(e.touches){x=e.touches[0].clientX; y=e.touches[0].clientY;} else {x=e.clientX; y=e.clientY;} createParticle(x,y); }
-        document.addEventListener('click',handleTap); document.addEventListener('touchstart',handleTap);
-
-        // ---------- 音频核心（延迟加载，带明确加载提示） ----------
-        let bgmAudio = null, audioCtx = null, gainNode = null, sourceNode = null;
-        let isWebAudio = false, musicEnabled = true, musicVol = 60;
-        let sfxEnabled = true, vibrationEnabled = true, quality = 'medium';
-        let audioReady = false;
-
-        const musicCircle = document.getElementById('musicCircleBtn');
-        const musicIcon = document.getElementById('musicIcon');
-        const musicToggleSwitch = document.getElementById('musicToggle');
-        const splash = document.getElementById('splashScreen');
-        const loadingHint = document.getElementById('loadingHint');
-        const mainContainer = document.getElementById('mainContainer');
-
-        // 音频 URL（改成你实际存在的地址）
-        const AUDIO_URL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
-
-        // 显示加载状态
-        function setLoading(text) {
-            if(loadingHint) {
-                loadingHint.innerText = text;
-                loadingHint.style.opacity = '1';
-            }
+        // ---------- 点击粒子效果 ----------
+        function createClickParticle(x, y) {
+            const container = document.getElementById('particleContainer');
+            if (!container) return;
+            const particle = document.createElement('div');
+            particle.className = 'click-particle';
+            particle.style.left = x + 'px';
+            particle.style.top = y + 'px';
+            container.appendChild(particle);
+            setTimeout(() => particle.remove(), 600);
         }
+        function handleTap(e) {
+            let clientX, clientY;
+            if (e.touches) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
+            else { clientX = e.clientX; clientY = e.clientY; }
+            createClickParticle(clientX, clientY);
+        }
+        document.addEventListener('click', handleTap);
+        document.addEventListener('touchstart', handleTap);
 
-        // 下载并初始化音频（必须在用户手势中调用）
-        async function loadAndPlayMusic() {
-            if(audioReady) return;
-            setLoading("⏳ 正在加载音乐... 请稍后");
-            
-            try {
-                // 1. 下载音频文件
-                const response = await fetch(AUDIO_URL);
-                if(!response.ok) throw new Error("音频下载失败");
-                const blob = await response.blob();
-                const blobUrl = URL.createObjectURL(blob);
-                
-                // 2. 创建audio元素
-                bgmAudio = new Audio();
-                bgmAudio.loop = true;
-                bgmAudio.src = blobUrl;
-                bgmAudio.crossOrigin = "anonymous";
-                
-                // 3. 创建 Web Audio
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                gainNode = audioCtx.createGain();
-                gainNode.connect(audioCtx.destination);
-                gainNode.gain.value = musicVol / 100;
-                
-                try {
-                    sourceNode = audioCtx.createMediaElementSource(bgmAudio);
-                    sourceNode.connect(gainNode);
-                    isWebAudio = true;
-                    bgmAudio.volume = 1;
-                } catch(e) {
-                    console.warn("Web Audio降级", e);
-                    isWebAudio = false;
-                    bgmAudio.volume = Math.min(1, musicVol/100);
-                }
-                
-                // 4. 唤醒 AudioContext
-                if(audioCtx.state === 'suspended') await audioCtx.resume();
-                
-                // 5. 播放
-                if(musicEnabled) {
-                    await bgmAudio.play();
-                }
-                
-                audioReady = true;
-                setLoading("✨ 音乐已就绪 ✨");
-                setTimeout(() => {
-                    // 淡出引导页
-                    if(splash) {
-                        splash.style.opacity = '0';
-                        setTimeout(() => {
-                            splash.style.display = 'none';
-                            mainContainer.style.display = 'block';
-                            createStars();
-                            updateMusicUI();
-                        }, 800);
-                    }
-                }, 500);
-            } catch(err) {
-                console.error("音频加载失败", err);
-                setLoading("❌ 加载失败，请检查网络后重试");
-                // 失败后允许用户再次点击重试（不标记audioReady）
-            }
-        }
+        // ---------- 震动反馈与设置 ----------
+        let vibrationEnabled = true;
+        let quality = 'medium';
 
-        // 引导页点击事件
-        function onSplashTap(e) {
-            e.preventDefault();
-            if(audioReady) return;
-            loadAndPlayMusic();
-            // 移除事件避免重复触发（但loadAndPlayMusic内部有判断，没关系）
-        }
-        splash.addEventListener('click', onSplashTap);
-        splash.addEventListener('touchstart', onSplashTap, { passive: false });
-
-        // ---------- 音量控制与设置 ----------
-        function applyVolume(percent) {
-            musicVol = Math.min(200, Math.max(0, percent));
-            if(bgmAudio && musicEnabled) {
-                if(isWebAudio && gainNode) gainNode.gain.value = musicVol/100;
-                else if(bgmAudio) bgmAudio.volume = Math.min(1, musicVol/100);
-            }
-            document.getElementById('volumePercent').innerText = Math.round(musicVol)+'%';
-            let fill = document.querySelector('#musicVolumeSlider .volume-fill');
-            let handle = document.querySelector('#musicVolumeSlider .volume-handle');
-            if(fill) fill.style.width = (musicVol/200*100)+'%';
-            if(handle) handle.style.left = (musicVol/200*100)+'%';
-            if(musicVol > 100) showNotif("⚠️ 音量超过100%可能失真",1500);
-        }
-        function setupSlider() {
-            let slider = document.getElementById('musicVolumeSlider');
-            if(!slider) return;
-            let dragging = false;
-            function update(e) {
-                let rect = slider.getBoundingClientRect();
-                let x = (e.clientX - rect.left) / rect.width;
-                x = Math.min(1, Math.max(0, x));
-                applyVolume(Math.round(x*200));
-                saveSettings();
-            }
-            slider.addEventListener('mousedown', (e) => { dragging=true; update(e); window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp); });
-            slider.addEventListener('touchstart', (e) => { dragging=true; update(e.touches[0]); window.addEventListener('touchmove', onMove); window.addEventListener('touchend', onUp); e.preventDefault(); });
-            function onMove(e) { if(dragging) { e.preventDefault(); update(e.touches ? e.touches[0] : e); } }
-            function onUp() { dragging=false; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onUp); }
-            slider.addEventListener('click', update);
-        }
-        function saveSettings() {
-            localStorage.setItem('music_enabled', musicEnabled);
-            localStorage.setItem('music_vol', musicVol);
-            localStorage.setItem('sfx_enabled', sfxEnabled);
-            localStorage.setItem('vibration_enabled', vibrationEnabled);
-            localStorage.setItem('quality', quality);
-        }
-        function loadSettings() {
-            musicEnabled = localStorage.getItem('music_enabled') !== 'false';
-            musicVol = parseFloat(localStorage.getItem('music_vol')) || 60;
-            sfxEnabled = localStorage.getItem('sfx_enabled') !== 'false';
-            vibrationEnabled = localStorage.getItem('vibration_enabled') === 'true';
-            quality = localStorage.getItem('quality') || 'medium';
-            musicToggleSwitch.classList.toggle('active', musicEnabled);
-            document.getElementById('sfxToggle').classList.toggle('active', sfxEnabled);
-            let vt = document.getElementById('vibeToggle'); if(vt) vt.classList.toggle('active', vibrationEnabled);
-            let qs = document.getElementById('qualitySelect'); if(qs) qs.value = quality;
-            applyVolume(musicVol);
-            changeQuality();
-            updateMusicUI();
-        }
-        function toggleMusicSetting() {
-            musicEnabled = !musicEnabled;
-            musicToggleSwitch.classList.toggle('active', musicEnabled);
-            if(bgmAudio) {
-                if(musicEnabled) {
-                    if(isWebAudio && gainNode) gainNode.gain.value = musicVol/100;
-                    else if(bgmAudio) bgmAudio.volume = Math.min(1, musicVol/100);
-                    if(bgmAudio.paused) bgmAudio.play().catch(e=>console.warn);
-                } else {
-                    if(isWebAudio && gainNode) gainNode.gain.value = 0;
-                    else if(bgmAudio) bgmAudio.volume = 0;
-                    if(!bgmAudio.paused) bgmAudio.pause();
-                }
-            }
+        function toggleVibration() {
+            vibrationEnabled = !vibrationEnabled;
+            const toggle = document.getElementById('vibeToggle');
+            if (toggle) toggle.classList.toggle('active', vibrationEnabled);
             saveSettings();
-            updateMusicUI();
+            showNotification(vibrationEnabled ? "震动反馈已开启" : "震动反馈已关闭", 1000);
+            if (vibrationEnabled && navigator.vibrate) navigator.vibrate(50);
         }
-        function updateMusicUI() {
-            if(!bgmAudio) { musicIcon.innerText='🔇'; return; }
-            if(!musicEnabled) { musicIcon.innerText='🔇'; musicCircle.style.borderColor='#888'; }
-            else { musicIcon.innerText = bgmAudio.paused ? '⏸️' : '🎵'; musicCircle.style.borderColor='var(--primary)'; }
+
+        function vibratePattern(pattern = 50) {
+            if (vibrationEnabled && navigator.vibrate) navigator.vibrate(pattern);
         }
-        async function onMusicCircleTap(e) {
-            e.preventDefault();
-            if(!bgmAudio) return;
-            if(!musicEnabled) {
-                musicEnabled = true;
-                musicToggleSwitch.classList.add('active');
-                if(isWebAudio && gainNode) gainNode.gain.value = musicVol/100;
-                else bgmAudio.volume = Math.min(1, musicVol/100);
-                saveSettings();
+
+        function changeQuality() {
+            const select = document.getElementById('qualitySelect');
+            if (select) quality = select.value;
+            else quality = 'medium';
+            localStorage.setItem('hsr_quality', quality);
+            createStars();
+            const mainContainer = document.getElementById('mainContainer');
+            if (quality === 'low') {
+                mainContainer.style.backdropFilter = 'none';
+                document.querySelectorAll('.menu-item').forEach(el => el.style.backdropFilter = 'none');
+            } else {
+                mainContainer.style.backdropFilter = '';
+                document.querySelectorAll('.menu-item').forEach(el => el.style.backdropFilter = '');
             }
-            if(bgmAudio.paused) { try{ await bgmAudio.play(); }catch(e){} updateMusicUI(); }
-            else { bgmAudio.pause(); updateMusicUI(); }
         }
-        musicCircle.addEventListener('click', onMusicCircleTap);
-        musicCircle.addEventListener('touchstart', onMusicCircleTap, { passive: false });
 
-        // 音效系统（简单）
-        let sfxCtx = null;
-        function playSfx() { if(!sfxEnabled)return; if(!sfxCtx) sfxCtx = new (window.AudioContext||window.webkitAudioContext)(); let o=sfxCtx.createOscillator(); let g=sfxCtx.createGain(); o.type='sine'; o.frequency.value=660; g.gain.value=0.1; o.connect(g); g.connect(sfxCtx.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.0001,sfxCtx.currentTime+0.3); o.stop(sfxCtx.currentTime+0.3); if(sfxCtx.state==='suspended') sfxCtx.resume(); }
-        function toggleSfx() { sfxEnabled=!sfxEnabled; document.getElementById('sfxToggle').classList.toggle('active',sfxEnabled); saveSettings(); }
-        function vibrate(p) { if(vibrationEnabled && navigator.vibrate) navigator.vibrate(p); }
-        function toggleVibration() { vibrationEnabled=!vibrationEnabled; let t=document.getElementById('vibeToggle'); if(t) t.classList.toggle('active',vibrationEnabled); saveSettings(); showNotif(vibrationEnabled?"震动已开启":"震动已关闭",1000); }
+        function createStars() {
+            const starsBg = document.getElementById('starsBg');
+            if (!starsBg) return;
+            starsBg.innerHTML = '';
+            let starCount = quality === 'low' ? 30 : (quality === 'medium' ? 80 : (quality === 'high' ? 120 : 180));
+            starCount = Math.min(starCount, Math.floor(window.innerWidth / 8));
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 3 + 1;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.opacity = Math.random() * 0.6 + 0.2;
+                star.style.setProperty('--duration', `${Math.random() * 3 + 2}s`);
+                starsBg.appendChild(star);
+            }
+        }
 
-        // 画质与星空
-        function changeQuality() { let sel=document.getElementById('qualitySelect'); if(sel) quality=sel.value; localStorage.setItem('quality',quality); createStars(); let mc=document.getElementById('mainContainer'); if(quality==='low'){ mc.style.backdropFilter='none'; document.querySelectorAll('.menu-item,.music-circle').forEach(el=>el.style.backdropFilter='none'); } else { mc.style.backdropFilter=''; document.querySelectorAll('.menu-item,.music-circle').forEach(el=>el.style.backdropFilter=''); } }
-        function createStars() { let stars=document.getElementById('starsBg'); if(!stars)return; stars.innerHTML=''; let c=quality==='low'?30:(quality==='medium'?80:(quality==='high'?120:180)); c=Math.min(c,Math.floor(window.innerWidth/8)); for(let i=0;i<c;i++){ let s=document.createElement('div'); s.className='star'; let sz=Math.random()*3+1; s.style.width=sz+'px'; s.style.height=sz+'px'; s.style.left=Math.random()*100+'%'; s.style.top=Math.random()*100+'%'; s.style.opacity=Math.random()*0.6+0.2; s.style.setProperty('--duration',Math.random()*3+2+'s'); stars.appendChild(s); } }
+        function saveSettings() {
+            localStorage.setItem('hsr_vibration_enabled', vibrationEnabled);
+            localStorage.setItem('hsr_quality', quality);
+            showNotification("设置已保存", 1000);
+            closePanels();
+        }
+
+        function resetSettings() {
+            vibrationEnabled = true;
+            quality = 'medium';
+            document.getElementById('vibeToggle').classList.add('active');
+            document.getElementById('qualitySelect').value = 'medium';
+            changeQuality();
+            saveSettings();
+        }
+
+        function loadSettings() {
+            const savedVibe = localStorage.getItem('hsr_vibration_enabled');
+            if (savedVibe !== null) vibrationEnabled = savedVibe === 'true';
+            const savedQuality = localStorage.getItem('hsr_quality');
+            if (savedQuality !== null) quality = savedQuality;
+            document.getElementById('vibeToggle').classList.toggle('active', vibrationEnabled);
+            document.getElementById('qualitySelect').value = quality;
+            changeQuality();
+        }
 
         // 角色卡片交互
-        document.querySelectorAll('.character-card').forEach(c=>{ c.addEventListener('click',(e)=>{ e.stopPropagation(); playSfx(); vibrate(30); showNotif(`✨ ${c.dataset.name} 向你问好！`,1500); }); });
-        document.querySelectorAll('.menu-item').forEach(i=>{ i.addEventListener('click',()=>vibrate(20)); });
-        let notifTimer; function showNotif(msg,dur){ let n=document.getElementById('floatNotif'); if(!n){ n=document.createElement('div'); n.id='floatNotif'; n.style.cssText='position:fixed;bottom:30%;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);color:#00d4ff;padding:8px 20px;border-radius:40px;font-size:0.9rem;z-index:10001;white-space:nowrap;border:1px solid #00d4ff;pointer-events:none;transition:opacity 0.2s;'; document.body.appendChild(n); } n.textContent=msg; n.style.opacity='1'; clearTimeout(notifTimer); notifTimer=setTimeout(()=>n.style.opacity='0',dur); }
+        document.querySelectorAll('.character-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                e.stopPropagation();
+                vibratePattern(30);
+                showNotification(`✨ ${card.getAttribute('data-name')} 向你问好，开拓者！`, 1500);
+            });
+            card.addEventListener('touchstart', (e) => { e.stopPropagation(); }, { passive: false });
+        });
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', () => vibratePattern(20));
+            item.addEventListener('touchstart', () => vibratePattern(20), { passive: false });
+        });
 
-        // 界面控制
-        function showSettings() { document.getElementById('overlay').classList.add('active'); document.getElementById('settingsPanel').classList.add('active'); }
-        function saveAndCloseSettings() { saveSettings(); showNotif("设置已保存",1000); closePanels(); }
-        function showAbout() { document.getElementById('overlay').classList.add('active'); document.getElementById('aboutPanel').classList.add('active'); }
-        function hideAbout() { closePanels(); }
-        function closePanels() { document.getElementById('overlay').classList.remove('active'); document.getElementById('settingsPanel').classList.remove('active'); document.getElementById('aboutPanel').classList.remove('active'); }
-        function exitGame() { if(confirm("确定离开？")){ document.getElementById('mainContainer').style.transition='opacity 1s'; document.getElementById('mainContainer').style.opacity='0'; setTimeout(()=>{ document.body.innerHTML='<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#0a0a14;color:#00d4ff;font-size:1.5rem;">🚀<br>感谢游玩，愿星光照耀你的旅途</div>'; setTimeout(()=>window.close(),2000); },800); } }
-        function resetSettings() { musicEnabled=true; musicVol=60; sfxEnabled=true; vibrationEnabled=true; quality='medium'; musicToggleSwitch.classList.add('active'); document.getElementById('sfxToggle').classList.add('active'); let vt=document.getElementById('vibeToggle'); if(vt) vt.classList.add('active'); document.getElementById('qualitySelect').value='medium'; applyVolume(60); if(bgmAudio){ if(isWebAudio&&gainNode) gainNode.gain.value=musicVol/100; else bgmAudio.volume=Math.min(1,musicVol/100); } changeQuality(); saveSettings(); showNotif("设置已重置",1000); }
-
-        // 启动
-        function init() {
-            setupSlider();
-            loadSettings();
-            createStars();  // 预生成星星（主界面尚未显示）
+        let notifTimeout = null;
+        function showNotification(msg, duration = 2000) {
+            let notif = document.getElementById('floatNotif');
+            if (!notif) {
+                notif = document.createElement('div');
+                notif.id = 'floatNotif';
+                notif.style.cssText = 'position:fixed; bottom:30%; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); color:#00d4ff; padding:8px 20px; border-radius:40px; font-size:0.9rem; z-index:10000; white-space:nowrap; border:1px solid #00d4ff; pointer-events:none; transition:opacity 0.2s;';
+                document.body.appendChild(notif);
+            }
+            notif.textContent = msg;
+            notif.style.opacity = '1';
+            clearTimeout(notifTimeout);
+            notifTimeout = setTimeout(() => { notif.style.opacity = '0'; }, duration);
         }
+
+        // 面板控制
+        function showSettings() {
+            document.getElementById('overlay').classList.add('active');
+            document.getElementById('settingsPanel').classList.add('active');
+        }
+        function hideSettings() { closePanels(); }
+        function showAbout() {
+            document.getElementById('overlay').classList.add('active');
+            document.getElementById('aboutPanel').classList.add('active');
+        }
+        function hideAbout() { closePanels(); }
+        function closePanels() {
+            document.getElementById('overlay').classList.remove('active');
+            document.getElementById('settingsPanel').classList.remove('active');
+            document.getElementById('aboutPanel').classList.remove('active');
+        }
+
+        function exitGame() {
+            if (confirm("确定要登上星穹列车离开吗？")) {
+                const main = document.getElementById('mainContainer');
+                main.style.transition = 'opacity 1s';
+                main.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.innerHTML = `<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0a14;color:#00d4ff;font-size:1.5rem;">🚀<br>感谢游玩，愿星光照耀你的旅途<br><span style="font-size:0.9rem;margin-top:20px;">页面即将关闭...</span></div>`;
+                    setTimeout(() => window.close(), 2000);
+                }, 800);
+            }
+        }
+
+        // 初始化
+        function init() {
+            const loading = document.getElementById('loadingScreen');
+            const main = document.getElementById('mainContainer');
+            setTimeout(() => {
+                if (loading) loading.style.display = 'none';
+                if (main) main.style.display = 'block';
+                createStars();
+                loadSettings();
+                showNotification("欢迎来到星穹列车，开拓者！", 2000);
+            }, 1000);
+        }
+
         window.addEventListener('DOMContentLoaded', init);
         document.addEventListener('contextmenu', e => e.preventDefault());
     </script>
