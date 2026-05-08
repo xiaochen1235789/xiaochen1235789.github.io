@@ -3,34 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>六哥荣耀 · 鹿馆实战</title>
+    <title>六哥荣耀 - 战斗（调用BattleLogic）</title>
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
-    <!-- 游戏数据（必须存在） -->
-    <script src="https://xiaochen1235789.github.io/ai sister/game-data.js"></script>
+    <script src="game-data.js"></script>
+    <script src="battle-logic.js"></script>
     <style>
-        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
-        body { background:#0a0a14; color:#fff; font-family: system-ui, 'Microsoft YaHei', sans-serif; height:100vh; overflow:hidden; }
-        /* 主容器 */
+        /* 样式同你之前优化的版本，省略重复代码，你保留原有样式即可 */
+        * { margin:0; padding:0; box-sizing:border-box; user-select:none; }
+        body { background:#0a0a14; color:#fff; font-family: system-ui, sans-serif; height:100vh; overflow:hidden; }
         .battle-container { display:flex; flex-direction:column; height:100%; background:radial-gradient(circle at 20% 10%, #1a1a3a 0%, transparent 40%), radial-gradient(circle at 80% 90%, #0f1a2e 0%, transparent 40%), #0a0a14; }
-        /* 返回按钮 */
         .back-btn { position:fixed; top:16px; left:16px; background:rgba(0,0,0,0.5); backdrop-filter:blur(8px); padding:8px 16px; border-radius:40px; font-size:0.9rem; color:#00d4ff; text-decoration:none; z-index:100; border:1px solid rgba(0,212,255,0.3); }
-        /* 敌人区域 */
         .enemy-area { flex:2; display:flex; justify-content:center; align-items:center; gap:20px; flex-wrap:wrap; padding:20px; overflow-y:auto; }
-        .enemy-card { background:rgba(0,0,0,0.4); backdrop-filter:blur(12px); border-radius:24px; padding:16px; min-width:140px; text-align:center; border:1px solid rgba(255,255,255,0.1); transition:0.2s; }
+        .enemy-card { background:rgba(0,0,0,0.4); backdrop-filter:blur(12px); border-radius:24px; padding:16px; min-width:140px; text-align:center; border:1px solid rgba(255,255,255,0.1); transition:0.2s; cursor:pointer; }
         .enemy-card.selected { border-color:#00d4ff; box-shadow:0 0 20px rgba(0,212,255,0.4); }
         .enemy-avatar { width:90px; height:90px; background:linear-gradient(135deg,#8b0000,#330000); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:3rem; margin:0 auto 12px; border:2px solid #ff4757; }
         .enemy-name { font-size:1.1rem; font-weight:600; color:#ffa5a5; margin-bottom:8px; }
         .enemy-hp-bar { width:100%; height:6px; background:#333; border-radius:3px; overflow:hidden; margin:8px 0; }
         .enemy-hp-fill { height:100%; background:linear-gradient(90deg,#ff4757,#ff8c9e); width:100%; }
         .enemy-hp-text { font-size:0.8rem; color:#ccc; }
-        /* 状态栏 */
         .status-bar { background:rgba(0,0,0,0.6); backdrop-filter:blur(12px); padding:8px 16px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.1); border-bottom:1px solid rgba(255,255,255,0.1); }
         .turn-badge { background:#00d4ff20; border:1px solid #00d4ff; border-radius:24px; padding:4px 16px; font-weight:bold; }
         .enemy-turn { background:#ff475720; border-color:#ff4757; }
         .skill-points { display:flex; gap:6px; }
         .skill-point { width:22px; height:28px; background:rgba(29,209,161,0.3); border-radius:4px; border:1px solid #1dd1a1; }
         .skill-point.active { background:#1dd1a1; box-shadow:0 0 8px #1dd1a1; }
-        /* 角色区域 */
         .party-area { background:rgba(10,15,30,0.8); backdrop-filter:blur(16px); padding:12px 16px; border-top:1px solid rgba(255,255,255,0.1); }
         .character-card { display:flex; gap:16px; background:rgba(30,30,46,0.6); border-radius:16px; padding:12px; border:1px solid transparent; transition:0.2s; }
         .character-card.active { border-color:#00d4ff; background:rgba(0,212,255,0.1); }
@@ -44,7 +40,6 @@
         .hp-fill { height:100%; background:linear-gradient(90deg,#ff4757,#ff8c9e); width:100%; }
         .energy-fill { height:100%; background:linear-gradient(90deg,#4488ff,#88aaff); width:100%; }
         .stat-text { font-size:0.7rem; min-width:45px; text-align:right; color:#aaa; }
-        /* 技能区 */
         .action-area { background:#0a0f1a; border-top:1px solid rgba(255,255,255,0.1); padding:12px; display:flex; flex-direction:column; gap:12px; }
         .skills-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
         .skill-btn { background:#1e1e2e; border:1px solid #2a2a3e; border-radius:16px; padding:10px 6px; text-align:center; cursor:pointer; transition:0.1s; position:relative; }
@@ -54,7 +49,6 @@
         .skill-name { font-size:0.75rem; font-weight:500; white-space:nowrap; overflow-x:hidden; text-overflow:ellipsis; }
         .skill-cost { position:absolute; top:6px; right:8px; font-size:0.7rem; color:#4488ff; }
         .end-turn-btn { background:linear-gradient(135deg,#00d4ff,#0088cc); border:none; border-radius:32px; padding:12px; font-size:1rem; font-weight:bold; color:white; cursor:pointer; }
-        /* 伤害特效 */
         .damage-popup { position:fixed; font-weight:bold; font-size:1.3rem; pointer-events:none; z-index:1000; text-shadow:0 0 4px black; animation:floatUp 0.8s ease-out forwards; }
         .critical { color:#ffdd00; font-size:1.6rem; text-shadow:0 0 8px #ffaa00; }
         @keyframes floatUp { 0% { opacity:1; transform:translateY(0) scale(0.8); } 100% { opacity:0; transform:translateY(-60px) scale(1.2); } }
@@ -73,7 +67,7 @@
     <a href="index.html" class="back-btn">← 返回</a>
     <div class="battle-container" id="battleContainer">
         <div class="damage-stats" id="damageStats"></div>
-        <div class="battle-log" id="battleLog">✨ 战斗开始</div>
+        <div class="battle-log" id="battleLog">战斗开始</div>
         <div class="enemy-area" id="enemyArea"></div>
         <div class="status-bar">
             <div class="turn-badge" id="turnBadge"><span>⚡ 玩家回合</span></div>
@@ -87,59 +81,42 @@
     </div>
 
     <script>
-        // ---------- 等待 GameData ----------
-        let GameData = window.GameData;
-        let battleState = null;
-        let uiElements = {};
-
-        // 辅助函数：显示战斗日志
-        function addLog(msg) {
-            const logDiv = document.getElementById('battleLog');
-            if (logDiv) {
-                logDiv.innerHTML = `${msg} &nbsp; ➜ ${logDiv.innerHTML.slice(0, 100)}`;
-                logDiv.scrollLeft = 0;
+        // 等待 GameData 和 BattleLogic 加载
+        let initTimer = 0;
+        function waitForDeps() {
+            if (typeof GameData !== 'undefined' && typeof BattleLogic !== 'undefined') {
+                initBattleUI();
+            } else {
+                clearTimeout(initTimer);
+                initTimer = setTimeout(waitForDeps, 200);
             }
-            console.log(msg);
         }
 
-        // 伤害显示特效
-        function showDamage(targetElement, damage, isCritical, isEnemy) {
-            if (!targetElement) return;
-            const rect = targetElement.getBoundingClientRect();
-            const div = document.createElement('div');
-            div.className = `damage-popup ${isCritical ? 'critical' : ''}`;
-            div.textContent = isCritical ? `💥${damage}` : `${damage}`;
-            div.style.left = rect.left + rect.width/2 + 'px';
-            div.style.top = rect.top + rect.height/3 + 'px';
-            document.body.appendChild(div);
-            setTimeout(() => div.remove(), 800);
-            // 顶部统计
-            const statsDiv = document.getElementById('damageStats');
-            statsDiv.style.opacity = '1';
-            statsDiv.textContent = `${isEnemy ? '⚔️ 造成' : '🛡️ 受到'} ${damage} ${isCritical ? '暴击‼' : ''}`;
-            statsDiv.style.background = isEnemy ? '#00d4ffcc' : '#ff4757cc';
-            setTimeout(() => statsDiv.style.opacity = '0', 1200);
-        }
+        // 全局 gameState（供 BattleLogic 使用）
+        window.gameState = null;
 
-        // 更新UI（血条、能量、技能点、回合标识）
-        function updateUI() {
-            if (!battleState) return;
-            // 敌人
+        // UI 更新函数（必须挂载到 window，供 BattleLogic 调用）
+        window.updateBattleUI = function() {
+            if (!window.gameState) return;
+            const state = window.gameState;
+
+            // 渲染敌人
             const enemyArea = document.getElementById('enemyArea');
-            enemyArea.innerHTML = battleState.enemies.map((e, idx) => `
-                <div class="enemy-card ${idx === battleState.selectedEnemy ? 'selected' : ''}" onclick="battleState.selectedEnemy=${idx};updateUI()">
+            enemyArea.innerHTML = state.enemies.map((e, idx) => `
+                <div class="enemy-card ${idx === state.selectedEnemy ? 'selected' : ''}" onclick="selectEnemy(${idx})">
                     <div class="enemy-avatar">${e.emoji || '👹'}</div>
                     <div class="enemy-name">${e.name}</div>
                     <div class="enemy-hp-bar"><div class="enemy-hp-fill" style="width:${(e.hp/e.maxHp)*100}%"></div></div>
                     <div class="enemy-hp-text">${Math.max(0,e.hp)}/${e.maxHp}</div>
                 </div>
             `).join('');
-            // 角色
+
+            // 渲染角色（单人鹿馆）
+            const ch = state.party[0];
             const partyArea = document.getElementById('partyArea');
-            const ch = battleState.party[0];
             partyArea.innerHTML = `
                 <div class="character-card active">
-                    <div class="character-avatar">${ch.avatar}</div>
+                    <div class="character-avatar">${ch.avatar || '🦌'}</div>
                     <div class="character-info">
                         <div class="character-name">${ch.name}</div>
                         <div class="character-path">${ch.path}</div>
@@ -150,25 +127,27 @@
                     </div>
                 </div>
             `;
+
             // 战技点
             const skillPointsDiv = document.getElementById('skillPoints');
-            skillPointsDiv.innerHTML = Array(battleState.maxSkillPoints).fill().map((_,i) => `<div class="skill-point ${i < battleState.skillPoints ? 'active' : ''}"></div>`).join('');
+            skillPointsDiv.innerHTML = Array(state.maxSkillPoints).fill().map((_,i) => `<div class="skill-point ${i < state.skillPoints ? 'active' : ''}"></div>`).join('');
+
             // 回合标识
             const turnBadge = document.getElementById('turnBadge');
-            turnBadge.innerHTML = battleState.isPlayerTurn ? '<span>⚡ 玩家回合</span>' : '<span>🔥 敌人回合</span>';
-            turnBadge.className = `turn-badge ${battleState.isPlayerTurn ? '' : 'enemy-turn'}`;
-            // 技能按钮
+            turnBadge.innerHTML = state.isPlayerTurn ? '<span>⚡ 玩家回合</span>' : '<span>🔥 敌人回合</span>';
+            turnBadge.className = `turn-badge ${state.isPlayerTurn ? '' : 'enemy-turn'}`;
+
+            // 技能按钮（玩家回合且未结束时启用）
             const skillsGrid = document.getElementById('skillsGrid');
-            if (battleState.isPlayerTurn && !battleState.gameOver) {
-                skillsGrid.innerHTML = battleState.party[0].skills.map((sk, idx) => {
+            if (state.isPlayerTurn && !state.gameOver) {
+                const character = state.party[0];
+                const skills = character.skills || [];
+                skillsGrid.innerHTML = skills.map((sk, idx) => {
                     let disabled = false, costText = '';
-                    if (sk.type === 'skill') {
-                        disabled = battleState.skillPoints < (sk.skillPointCost || 1);
-                        costText = `✦${sk.skillPointCost || 1}`;
-                    } else if (sk.type === 'ultimate') {
-                        disabled = battleState.party[0].energy < (sk.energyCost || 120);
-                        costText = `⚡${sk.energyCost || 120}`;
-                    }
+                    if (sk.type === 'skill') disabled = state.skillPoints < (sk.skillPointCost || 1);
+                    if (sk.type === 'ultimate') disabled = character.energy < (sk.energyCost || 120);
+                    if (sk.type === 'skill') costText = `✦${sk.skillPointCost || 1}`;
+                    if (sk.type === 'ultimate') costText = `⚡${sk.energyCost || 120}`;
                     return `<div class="skill-btn ${disabled ? 'disabled' : ''}" data-skill-index="${idx}">
                                 <div class="skill-icon">${sk.icon}</div>
                                 <div class="skill-name">${sk.name}</div>
@@ -179,150 +158,36 @@
                 document.querySelectorAll('.skill-btn').forEach(btn => {
                     btn.onclick = () => {
                         const idx = parseInt(btn.dataset.skillIndex);
-                        if (!isNaN(idx)) useSkill(idx);
+                        if (!isNaN(idx)) window.useSkillLogic(idx);
                     };
                 });
             } else {
                 skillsGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#aaa;">等待敌人行动...</div>';
             }
-            // 结束按钮状态
+            // 结束按钮禁用状态
             const endBtn = document.getElementById('endTurnBtn');
-            endBtn.disabled = !battleState.isPlayerTurn || battleState.gameOver;
-        }
-
-        // 战斗胜利/失败
-        function checkGameOver() {
-            if (battleState.gameOver) return true;
-            const allEnemiesDead = battleState.enemies.every(e => e.hp <= 0);
-            if (allEnemiesDead) {
-                battleState.gameOver = true;
-                battleState.isPlayerTurn = false;
-                addLog('🎉 胜利！星穹列车继续前行');
-                updateUI();
-                alert('战斗胜利！');
-                return true;
-            }
-            const charDead = battleState.party.every(c => c.hp <= 0);
-            if (charDead) {
-                battleState.gameOver = true;
-                addLog('💀 鹿馆倒下了... 重新开始吧');
-                updateUI();
-                alert('战斗失败');
-                return true;
-            }
-            return false;
-        }
-
-        // 伤害计算（整合角色属性、技能倍率、暴击、防御等）
-        function calcDamage(attacker, target, skill) {
-            let baseDmg = attacker.attack * (skill.baseDamage || 1);
-            const isCritical = Math.random() < (attacker.critRate || 0.05);
-            if (isCritical) baseDmg *= (1 + (attacker.critDamage || 0.5));
-            // 属性增伤（风伤）
-            if (skill.element && attacker.windDamageBoost) baseDmg *= (1 + attacker.windDamageBoost);
-            // 目标抗性（预留）
-            let defense = target.defense || 800;
-            let reduction = defense / (defense + 1500);
-            let final = Math.max(1, Math.floor(baseDmg * (1 - reduction)));
-            if (skill.hasDefDown && target.isDefDown) final = Math.floor(final * 0.65);
-            return { damage: final, isCritical };
-        }
-
-        // 执行技能（玩家主动）
-        window.useSkill = function(skillIndex) {
-            if (!battleState.isPlayerTurn || battleState.gameOver) return;
-            const char = battleState.party[0];
-            const skill = char.skills[skillIndex];
-            if (!skill) return;
-            // 检查消耗
-            if (skill.type === 'skill') {
-                if (battleState.skillPoints < (skill.skillPointCost || 1)) { addLog('战技点不足！'); return; }
-                battleState.skillPoints -= (skill.skillPointCost || 1);
-            } else if (skill.type === 'ultimate') {
-                if (char.energy < (skill.energyCost || 120)) { addLog('能量不足！'); return; }
-                char.energy -= (skill.energyCost || 120);
-            }
-            // 选中敌人
-            const targetEnemy = battleState.enemies[battleState.selectedEnemy];
-            if (!targetEnemy || targetEnemy.hp <= 0) { addLog('目标无效，重新选择'); return; }
-            // 伤害计算
-            const { damage, isCritical } = calcDamage(char, targetEnemy, skill);
-            targetEnemy.hp -= damage;
-            addLog(`${char.name} 使用 ${skill.name} → ${targetEnemy.name} 受到 ${damage}${isCritical ? '（暴击！）' : ''}`);
-            // 触发额外减防（战技暴击效果）
-            if (skill.type === 'skill' && isCritical && skill.hasDefDown) {
-                targetEnemy.isDefDown = true;
-                targetEnemy.defDownTurns = 2;
-                addLog(`降低 ${targetEnemy.name} 防御35%`);
-            }
-            // 能量回复（普攻/战技）
-            if (skill.type === 'normal') char.energy += (skill.energyGain || 20);
-            if (skill.type === 'skill') char.energy += (skill.energyGain || 30);
-            char.energy = Math.min(char.maxEnergy, char.energy);
-            // 显示伤害特效
-            const enemyElement = document.querySelector(`.enemy-card:nth-child(${battleState.selectedEnemy+1}) .enemy-avatar`);
-            if (enemyElement) showDamage(enemyElement, damage, isCritical, true);
-            // 更新UI
-            updateUI();
-            if (checkGameOver()) return;
-            // 玩家技能使用后，如果敌人未全灭，则切换回合（简化：立即结束玩家回合）
-            if (!battleState.gameOver) {
-                endTurn();
-            }
+            endBtn.disabled = !state.isPlayerTurn || state.gameOver;
         };
 
-        // 敌人AI
-        function enemyTurn() {
-            if (battleState.gameOver) return;
-            addLog('敌人开始行动');
-            const enemies = battleState.enemies.filter(e => e.hp > 0);
-            if (enemies.length === 0) { checkGameOver(); return; }
-            const char = battleState.party[0];
-            for (let enemy of enemies) {
-                if (char.hp <= 0) break;
-                const skill = enemy.skills ? enemy.skills[0] : { name: '暗影冲击', baseDamage: 0.7 };
-                const dmgCalc = { damage: Math.floor(char.attack * skill.baseDamage * (Math.random() * 0.5 + 0.8)) };
-                dmgCalc.isCritical = false;
-                const finalDmg = Math.max(1, dmgCalc.damage);
-                char.hp -= finalDmg;
-                addLog(`${enemy.name} 攻击 → ${char.name} 受到 ${finalDmg} 伤害`);
-                const charElement = document.querySelector('.character-avatar');
-                if (charElement) showDamage(charElement, finalDmg, false, false);
-                if (char.hp <= 0) break;
-            }
-            updateUI();
-            if (checkGameOver()) return;
-            // 切换回玩家回合
-            battleState.isPlayerTurn = true;
-            battleState.turn++;
-            updateUI();
-            addLog(`=== 第 ${battleState.turn} 回合，轮到你了 ===`);
-        }
-
-        // 结束回合
-        window.endTurn = function() {
-            if (!battleState.isPlayerTurn || battleState.gameOver) return;
-            battleState.isPlayerTurn = false;
-            updateUI();
-            setTimeout(() => enemyTurn(), 600);
+        // 选择敌人（暴露给全局）
+        window.selectEnemy = function(idx) {
+            if (!window.gameState || !window.gameState.isPlayerTurn) return;
+            window.gameState.selectedEnemy = idx;
+            window.updateBattleUI();
         };
 
-        // 初始化战斗（从 GameData 读取鹿馆，并根据本地存储的队伍调整等级）
-        async function initBattle() {
-            if (!GameData) {
-                setTimeout(initBattle, 500);
-                return;
-            }
-            // 读取保存的队伍（鹿馆）
+        // 初始化战斗状态
+        function initBattleUI() {
+            // 从 localStorage 读取保存的队伍（鹿馆）
             let savedTeam = null;
             try {
                 const saved = localStorage.getItem('hsr-selected-team');
                 if (saved) savedTeam = JSON.parse(saved);
             } catch(e) {}
-            // 获取初始数据（默认鹿馆1级）
+
+            // 获取初始状态（从 GameData）
             let initState = GameData.getInitialState();
             let character = initState.party[0];
-            // 如果有队伍数据，应用属性（等级暂时固定为1，后续可扩展）
             if (savedTeam && savedTeam.characters && savedTeam.characters.length > 0) {
                 const teamChar = savedTeam.characters[0];
                 character.name = teamChar.name || character.name;
@@ -333,22 +198,22 @@
                 character.defense = teamChar.defense || character.defense;
                 character.speed = teamChar.speed || character.speed;
             }
-            // 确保技能完整（从 GameData 技能库补全）
+            // 确保技能完整（从 GameData 技能库补充）
             character.skills = [
                 GameData.getSkillById('luguan_normal'),
                 GameData.getSkillById('luguan_skill'),
                 GameData.getSkillById('luguan_ultimate'),
                 GameData.getSkillById('defend')
             ].filter(Boolean);
-            // 重置能量
             character.energy = 0;
-            // 敌人设定（3个深渊魔物）
+            character.maxEnergy = 120;
+            character.path = character.path || '巡猎';
+
+            // 构建敌人（固定三个深渊魔物，参考 battle-logic.js 的数据结构）
             const baseEnemy = {
                 id: 'abyss_monster',
                 name: '深渊魔物',
                 emoji: '👹',
-                maxHp: 3500,
-                hp: 3500,
                 attack: 600,
                 defense: 400,
                 skills: [{ name: '暗影爪', baseDamage: 0.6 }],
@@ -360,23 +225,80 @@
                 { ...baseEnemy, name: '深渊魔物·中', maxHp: 3800, hp: 3800 },
                 { ...baseEnemy, name: '深渊魔物·右', maxHp: 3000, hp: 3000 }
             ];
-            battleState = {
+
+            window.gameState = {
                 party: [character],
                 enemies: enemies,
                 skillPoints: 3,
                 maxSkillPoints: 5,
-                turn: 1,
+                turn: 0,
                 isPlayerTurn: true,
                 gameOver: false,
                 selectedEnemy: 0,
+                activeCharacter: 0,
                 lastDamage: 0,
                 lastDamageTaken: 0
             };
-            updateUI();
+            // 通知战斗逻辑状态已更新
+            if (typeof BattleLogic !== 'undefined') {
+                // 可选：调用 BattleLogic 的任何初始化方法，但 BattleLogic 直接使用 gameState 全局变量，所以不需要额外调用
+            }
+            window.updateBattleUI();
+            // 添加初始日志
             addLog('战斗开始！鹿馆迎战深渊魔物');
         }
 
-        window.addEventListener('DOMContentLoaded', initBattle);
+        function addLog(msg) {
+            const logDiv = document.getElementById('battleLog');
+            if (logDiv) {
+                logDiv.innerHTML = `${msg} &nbsp; ➜ ${logDiv.innerHTML.slice(0, 100)}`;
+            }
+            console.log(msg);
+        }
+
+        // 伤害特效（供 battle-logic 调用）
+        window.showDamageEffect = function(targetIndex, damage, isCritical, isEnemy) {
+            let targetElem = null;
+            if (isEnemy) {
+                targetElem = document.querySelector(`.enemy-card:nth-child(${targetIndex+1}) .enemy-avatar`);
+            } else {
+                targetElem = document.querySelector(`.character-card .character-avatar`);
+            }
+            if (targetElem) {
+                const rect = targetElem.getBoundingClientRect();
+                const div = document.createElement('div');
+                div.className = `damage-popup ${isCritical ? 'critical' : ''}`;
+                div.textContent = isCritical ? `💥${damage}` : `${damage}`;
+                div.style.left = rect.left + rect.width/2 + 'px';
+                div.style.top = rect.top + rect.height/3 + 'px';
+                document.body.appendChild(div);
+                setTimeout(() => div.remove(), 800);
+            }
+            const statsDiv = document.getElementById('damageStats');
+            statsDiv.style.opacity = '1';
+            statsDiv.textContent = `${isEnemy ? '⚔️ 造成' : '🛡️ 受到'} ${damage} ${isCritical ? '暴击‼' : ''}`;
+            statsDiv.style.background = isEnemy ? '#00d4ffcc' : '#ff4757cc';
+            setTimeout(() => statsDiv.style.opacity = '0', 1200);
+        };
+
+        // 消息提示
+        window.showMessage = function(title, msg) {
+            addLog(`${title}: ${msg}`);
+            // 简单 alert 或 toast
+            const toast = document.createElement('div');
+            toast.textContent = msg;
+            toast.style.cssText = 'position:fixed;top:30%;left:50%;transform:translateX(-50%);background:#000c;color:#00d4ff;padding:8px 16px;border-radius:40px;z-index:200;backdrop-filter:blur(8px);';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        };
+
+        // 结束回合按钮
+        document.getElementById('endTurnBtn').onclick = () => {
+            window.endTurnLogic();
+        };
+
+        // 启动
+        waitForDeps();
     </script>
 </body>
 </html>
