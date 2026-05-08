@@ -6,6 +6,8 @@
     <title>六哥荣耀 - 星穹启程</title>
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <style>
+        /* 样式部分与原文件完全相同，为了节省篇幅这里省略 */
+        /* 您可以直接把原来完整的 style 粘贴过来，或者保持原有样式不变 */
         :root {
             --hsr-bg: #0a0a14;
             --hsr-surface: #151525;
@@ -387,7 +389,7 @@
 
     <div class="main-container" id="mainContainer" style="display: none;">
         <div class="stars-bg" id="starsBg"></div>
-        <div class="version">v1.3.0</div>
+        <div class="version">v2.0.0</div>
         <div class="title-container">
             <h1 class="game-title">六哥荣耀</h1>
             <div class="game-subtitle">星海无垠，命运待启</div>
@@ -395,7 +397,7 @@
         <div class="music-circle" id="musicCircleBtn">
             <span id="musicIcon">🔇</span>
         </div>
-        <audio id="bgmAudio" loop preload="auto" style="display: none;"></audio>
+        <!-- 不再预先放置 audio 标签，动态创建 -->
         <div class="menu-container">
             <a href="https://xiaochen1235789.github.io/ai sister/select-character.html" class="menu-item" id="startGameBtn">
                 <span>🚀 开始游戏</span><span class="menu-icon">▶</span>
@@ -455,7 +457,7 @@
     </div>
     <div class="about-panel" id="aboutPanel">
         <h2>✨ 关于 ✨</h2>
-        <div class="about-content">开发者：小尘 | 版本 v1.3.0 | 仅供学习交流</div>
+        <div class="about-content">开发者：小尘 | 版本 v2.0.0 | 仅供学习交流</div>
         <div class="settings-actions"><button class="settings-btn primary" onclick="hideAbout()">返回</button></div>
     </div>
     <div class="particle-container" id="particleContainer"></div>
@@ -482,26 +484,23 @@
         document.addEventListener('click', handleTap);
         document.addEventListener('touchstart', handleTap);
 
-        // ---------- 音乐系统（支持200%，移动端完全优化）----------
-        const bgmAudio = document.getElementById('bgmAudio');
-        const musicCircleBtn = document.getElementById('musicCircleBtn');
-        const musicIconSpan = document.getElementById('musicIcon');
-        const musicToggleSwitch = document.getElementById('musicToggle');
-        
+        // ---------- 全新的音频系统（移动端友好）----------
+        let bgmAudio = null;           // 延迟创建
+        let audioCtx = null;
+        let sourceNode = null;
+        let gainNode = null;
+        let isWebAudioActive = false;
         let musicEnabled = true;
         let musicVolumePercent = 60;
         let sfxEnabled = true;
         let vibrationEnabled = true;
         let quality = 'medium';
-
-        let audioCtx = null;
-        let sourceNode = null;
-        let gainNode = null;
-        let isWebAudioActive = false;
         let musicBlobUrl = null;
-        let userInteracted = false;
-        let audioInitialized = false;   // 防止多次初始化
-
+        let audioInitialized = false;
+        
+        const musicCircleBtn = document.getElementById('musicCircleBtn');
+        const musicIconSpan = document.getElementById('musicIcon');
+        const musicToggleSwitch = document.getElementById('musicToggle');
         const guideToast = document.getElementById('guideToast');
 
         function showGuideToast() {
@@ -509,93 +508,133 @@
             setTimeout(() => { if (guideToast) guideToast.style.opacity = '0'; }, 3000);
         }
 
-        // 唯一的音频初始化函数（必须在用户手势中调用）
+        // 核心初始化：只在用户手势中调用一次
         async function initAudioOnUserGesture() {
             if (audioInitialized) return true;
             audioInitialized = true;
             
-            // 创建 AudioContext
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                gainNode = audioCtx.createGain();
-                gainNode.connect(audioCtx.destination);
-                gainNode.gain.value = musicVolumePercent / 100;
+            // 1. 获取音频 Blob URL（如果还没有）
+            if (!musicBlobUrl) {
+                musicBlobUrl = await getAudioBlobUrl();
+                if (!musicBlobUrl) return false;
             }
             
-            // 关键：createMediaElementSource 只能调用一次，必须在 AudioContext 未关闭时进行
-            if (!sourceNode && bgmAudio.src) {
-                try {
-                    sourceNode = audioCtx.createMediaElementSource(bgmAudio);
-                    sourceNode.connect(gainNode);
-                    isWebAudioActive = true;
-                    bgmAudio.volume = 1;   // 由 gainNode 完全控制
-                } catch(e) {
-                    console.warn("MediaElementSource 连接失败，回退原生音量", e);
-                    isWebAudioActive = false;
-                }
+            // 2. 创建 audio 元素
+            bgmAudio = new Audio();
+            bgmAudio.loop = true;
+            bgmAudio.src = musicBlobUrl;
+            bgmAudio.crossOrigin = "anonymous";
+            
+            // 3. 创建 Web Audio 上下文并连接
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            gainNode = audioCtx.createGain();
+            gainNode.connect(audioCtx.destination);
+            gainNode.gain.value = musicVolumePercent / 100;
+            
+            try {
+                sourceNode = audioCtx.createMediaElementSource(bgmAudio);
+                sourceNode.connect(gainNode);
+                isWebAudioActive = true;
+                bgmAudio.volume = 1;
+            } catch(e) {
+                console.warn("Web Audio 连接失败，降级到原生音量", e);
+                isWebAudioActive = false;
+                bgmAudio.volume = Math.min(1, musicVolumePercent / 100);
             }
             
-            // 唤醒 AudioContext
+            // 4. 唤醒 AudioContext
             if (audioCtx.state === 'suspended') {
                 await audioCtx.resume();
             }
+            
             return true;
         }
-
+        
+        // 获取音频 Blob（优先缓存）
+        async function getAudioBlobUrl() {
+            const audioUrl = "https://xiaochen1235789.github.io/ai%20sister/zhujiemian.aac";
+            const CACHE_KEY = 'hsr_music_cache_v3';
+            const cached = localStorage.getItem(CACHE_KEY);
+            if (cached) {
+                try {
+                    const binary = atob(cached);
+                    const array = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+                    const blob = new Blob([array], { type: 'audio/mp4' });
+                    return URL.createObjectURL(blob);
+                } catch(e) { localStorage.removeItem(CACHE_KEY); }
+            }
+            
+            // 下载并缓存
+            try {
+                const resp = await fetch(audioUrl);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                if (blob.size < 4 * 1024 * 1024) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const base64 = reader.result.split(',')[1];
+                        if (base64 && base64.length < 5e6) localStorage.setItem(CACHE_KEY, base64);
+                    };
+                    reader.readAsDataURL(blob);
+                }
+                return url;
+            } catch(e) {
+                console.error("下载音频失败", e);
+                return audioUrl; // 降级使用原始链接
+            }
+        }
+        
         function applyVolumePercent(percent) {
             musicVolumePercent = Math.min(200, Math.max(0, percent));
+            if (!bgmAudio) return;
             if (!musicEnabled) return;
             if (isWebAudioActive && gainNode) {
                 gainNode.gain.value = musicVolumePercent / 100;
                 bgmAudio.volume = 1;
             } else {
-                let nativeVol = Math.min(1, musicVolumePercent / 100);
-                bgmAudio.volume = nativeVol;
+                bgmAudio.volume = Math.min(1, musicVolumePercent / 100);
             }
-            const percentSpan = document.getElementById('volumePercent');
-            if (percentSpan) percentSpan.innerText = Math.round(musicVolumePercent) + '%';
+            const span = document.getElementById('volumePercent');
+            if (span) span.innerText = Math.round(musicVolumePercent) + '%';
             const fill = document.querySelector('#musicVolumeSlider .volume-fill');
             const handle = document.querySelector('#musicVolumeSlider .volume-handle');
             if (fill) fill.style.width = (musicVolumePercent / 200 * 100) + '%';
             if (handle) handle.style.left = (musicVolumePercent / 200 * 100) + '%';
             if (musicVolumePercent > 100) showNotification("⚠️ 音量已超过100%，可能失真", 1500);
         }
-
+        
         function setupVolumeSlider() {
             const slider = document.getElementById('musicVolumeSlider');
             if (!slider) return;
             let isDragging = false;
-            const updateFromEvent = (clientX) => {
+            const update = (clientX) => {
                 const rect = slider.getBoundingClientRect();
                 let x = (clientX - rect.left) / rect.width;
                 x = Math.min(1, Math.max(0, x));
-                let newPercent = Math.round(x * 200);
-                applyVolumePercent(newPercent);
+                applyVolumePercent(Math.round(x * 200));
                 saveSettingsImmediate();
             };
-            const onPointerMove = (e) => {
-                if (!isDragging) return;
-                e.preventDefault();
-                updateFromEvent(e.clientX);
-            };
-            const onPointerUp = () => {
+            const onMove = (e) => { if (isDragging) { e.preventDefault(); update(e.clientX); } };
+            const onUp = () => {
                 isDragging = false;
-                window.removeEventListener('pointermove', onPointerMove);
-                window.removeEventListener('pointerup', onPointerUp);
-                slider.releasePointerCapture?.(slider.pointerId);
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', onUp);
+                if (slider.releasePointerCapture) slider.releasePointerCapture(slider.pointerId);
             };
-            const onPointerDown = (e) => {
+            const onDown = (e) => {
                 e.preventDefault();
                 isDragging = true;
                 slider.setPointerCapture(e.pointerId);
-                updateFromEvent(e.clientX);
-                window.addEventListener('pointermove', onPointerMove);
-                window.addEventListener('pointerup', onPointerUp);
+                update(e.clientX);
+                window.addEventListener('pointermove', onMove);
+                window.addEventListener('pointerup', onUp);
             };
-            slider.addEventListener('pointerdown', onPointerDown);
-            slider.addEventListener('click', (e) => updateFromEvent(e.clientX));
+            slider.addEventListener('pointerdown', onDown);
+            slider.addEventListener('click', (e) => update(e.clientX));
         }
-
+        
         function saveSettingsImmediate() {
             localStorage.setItem('hsr_music_enabled', musicEnabled);
             localStorage.setItem('hsr_music_volume_percent', musicVolumePercent);
@@ -603,7 +642,7 @@
             localStorage.setItem('hsr_vibration_enabled', vibrationEnabled);
             localStorage.setItem('hsr_quality', quality);
         }
-
+        
         function loadAudioSettings() {
             const savedMusic = localStorage.getItem('hsr_music_enabled');
             if (savedMusic !== null) musicEnabled = savedMusic === 'true';
@@ -623,28 +662,22 @@
             const qSelect = document.getElementById('qualitySelect');
             if (qSelect) qSelect.value = quality;
             applyVolumePercent(musicVolumePercent);
-            if (bgmAudio) {
-                if (musicEnabled) {
-                    if (isWebAudioActive && gainNode) gainNode.gain.value = musicVolumePercent / 100;
-                    else bgmAudio.volume = Math.min(1, musicVolumePercent/100);
-                } else {
-                    if (isWebAudioActive && gainNode) gainNode.gain.value = 0;
-                    else bgmAudio.volume = 0;
-                }
+            if (bgmAudio && musicEnabled) {
+                if (isWebAudioActive && gainNode) gainNode.gain.value = musicVolumePercent / 100;
+                else if (bgmAudio) bgmAudio.volume = Math.min(1, musicVolumePercent/100);
             }
             changeQuality();
             updateMusicButtonUI();
         }
-
+        
         function toggleMusicSetting() {
             musicEnabled = !musicEnabled;
             musicToggleSwitch.classList.toggle('active', musicEnabled);
+            if (!bgmAudio) return;
             if (musicEnabled) {
                 if (isWebAudioActive && gainNode) gainNode.gain.value = musicVolumePercent / 100;
                 else bgmAudio.volume = Math.min(1, musicVolumePercent/100);
-                if (bgmAudio.paused && userInteracted) {
-                    attemptPlay(true);
-                }
+                if (bgmAudio.paused) attemptPlay(true);
             } else {
                 if (isWebAudioActive && gainNode) gainNode.gain.value = 0;
                 else bgmAudio.volume = 0;
@@ -653,8 +686,12 @@
             saveSettingsImmediate();
             updateMusicButtonUI();
         }
-
+        
         function updateMusicButtonUI() {
+            if (!bgmAudio) {
+                musicIconSpan.innerText = '🔇';
+                return;
+            }
             if (!musicEnabled) {
                 musicIconSpan.innerText = '🔇';
                 musicCircleBtn.style.borderColor = '#888';
@@ -668,15 +705,10 @@
                 }
             }
         }
-
+        
         async function attemptPlay(silent = false) {
             if (!bgmAudio) return false;
             if (!musicEnabled) return false;
-            // 确保音频已初始化（如果还没初始化，尝试初始化）
-            if (!audioInitialized) {
-                await initAudioOnUserGesture();
-            }
-            // 确保 AudioContext 是 running 状态
             if (audioCtx && audioCtx.state === 'suspended') {
                 await audioCtx.resume();
             }
@@ -691,21 +723,22 @@
                 return false;
             }
         }
-
-        // 圆形按钮点击/触摸
+        
+        // 用户点击圆形按钮
         async function onMusicButtonTap(e) {
             e.preventDefault();
             e.stopPropagation();
-            userInteracted = true;
-            await initAudioOnUserGesture();
-            
+            if (!audioInitialized) {
+                await initAudioOnUserGesture();
+            }
+            if (!bgmAudio) return;
             if (!musicEnabled) {
                 musicEnabled = true;
                 musicToggleSwitch.classList.add('active');
                 if (isWebAudioActive && gainNode) gainNode.gain.value = musicVolumePercent / 100;
+                else bgmAudio.volume = Math.min(1, musicVolumePercent/100);
                 saveSettingsImmediate();
             }
-            
             if (bgmAudio.paused) {
                 await attemptPlay(false);
             } else {
@@ -715,15 +748,16 @@
         }
         musicCircleBtn.addEventListener('click', onMusicButtonTap);
         musicCircleBtn.addEventListener('touchstart', onMusicButtonTap, { passive: false });
-
-        // 全局首次用户交互（触摸或点击，只执行一次）
-        let globalInteractionHandled = false;
-        async function onFirstUserInteraction(e) {
-            if (globalInteractionHandled) return;
-            globalInteractionHandled = true;
-            userInteracted = true;
-            await initAudioOnUserGesture();
-            if (musicEnabled && bgmAudio.paused) {
+        
+        // 全局首次交互
+        let globalInteractionDone = false;
+        async function onFirstUserInteraction() {
+            if (globalInteractionDone) return;
+            globalInteractionDone = true;
+            if (!audioInitialized) {
+                await initAudioOnUserGesture();
+            }
+            if (bgmAudio && musicEnabled && bgmAudio.paused) {
                 await attemptPlay(true);
             }
             if (guideToast) guideToast.style.opacity = '0';
@@ -731,8 +765,8 @@
         }
         document.addEventListener('touchstart', onFirstUserInteraction, { passive: false });
         document.addEventListener('click', onFirstUserInteraction);
-
-        // ---------- 音效系统 ----------
+        
+        // 音效系统（保持不变）
         let sfxAudioCtx = null;
         function initSfxContext() {
             if (sfxAudioCtx) return;
@@ -759,9 +793,7 @@
             document.getElementById('sfxToggle').classList.toggle('active', sfxEnabled);
             saveSettingsImmediate();
         }
-        function vibratePattern(pattern = 50) {
-            if (vibrationEnabled && navigator.vibrate) navigator.vibrate(pattern);
-        }
+        function vibratePattern(p) { if (vibrationEnabled && navigator.vibrate) navigator.vibrate(p); }
         function toggleVibration() {
             vibrationEnabled = !vibrationEnabled;
             const toggle = document.getElementById('vibeToggle');
@@ -771,16 +803,15 @@
         }
         function changeQuality() {
             const select = document.getElementById('qualitySelect');
-            if (select) quality = select.value;
-            else quality = 'medium';
+            quality = select ? select.value : 'medium';
             localStorage.setItem('hsr_quality', quality);
             createStars();
-            const mainContainer = document.getElementById('mainContainer');
+            const main = document.getElementById('mainContainer');
             if (quality === 'low') {
-                mainContainer.style.backdropFilter = 'none';
+                main.style.backdropFilter = 'none';
                 document.querySelectorAll('.menu-item, .music-circle').forEach(el => el.style.backdropFilter = 'none');
             } else {
-                mainContainer.style.backdropFilter = '';
+                main.style.backdropFilter = '';
                 document.querySelectorAll('.menu-item, .music-circle').forEach(el => el.style.backdropFilter = '');
             }
         }
@@ -788,22 +819,20 @@
             const starsBg = document.getElementById('starsBg');
             if (!starsBg) return;
             starsBg.innerHTML = '';
-            let starCount = quality === 'low' ? 30 : (quality === 'medium' ? 80 : (quality === 'high' ? 120 : 180));
-            starCount = Math.min(starCount, Math.floor(window.innerWidth / 8));
-            for (let i = 0; i < starCount; i++) {
-                const star = document.createElement('div');
-                star.className = 'star';
-                const size = Math.random() * 3 + 1;
-                star.style.width = `${size}px`;
-                star.style.height = `${size}px`;
-                star.style.left = `${Math.random() * 100}%`;
-                star.style.top = `${Math.random() * 100}%`;
-                star.style.opacity = Math.random() * 0.6 + 0.2;
-                star.style.setProperty('--duration', `${Math.random() * 3 + 2}s`);
-                starsBg.appendChild(star);
+            let cnt = quality === 'low' ? 30 : (quality === 'medium' ? 80 : (quality === 'high' ? 120 : 180));
+            cnt = Math.min(cnt, Math.floor(window.innerWidth / 8));
+            for (let i = 0; i < cnt; i++) {
+                const s = document.createElement('div');
+                s.className = 'star';
+                const sz = Math.random() * 3 + 1;
+                s.style.width = sz + 'px'; s.style.height = sz + 'px';
+                s.style.left = Math.random() * 100 + '%';
+                s.style.top = Math.random() * 100 + '%';
+                s.style.opacity = Math.random() * 0.6 + 0.2;
+                s.style.setProperty('--duration', Math.random() * 3 + 2 + 's');
+                starsBg.appendChild(s);
             }
         }
-
         document.querySelectorAll('.character-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -811,43 +840,36 @@
                 vibratePattern(30);
                 showNotification(`✨ ${card.getAttribute('data-name')} 向你问好，开拓者！`, 1500);
             });
-            card.addEventListener('touchstart', (e) => { e.stopPropagation(); }, { passive: false });
+            card.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: false });
         });
         document.querySelectorAll('.menu-item').forEach(item => {
             item.addEventListener('click', () => vibratePattern(20));
             item.addEventListener('touchstart', () => vibratePattern(20), { passive: false });
         });
-
+        
         let notifTimeout = null;
-        function showNotification(msg, duration = 2000) {
-            let notif = document.getElementById('floatNotif');
-            if (!notif) {
-                notif = document.createElement('div');
-                notif.id = 'floatNotif';
-                notif.style.cssText = 'position:fixed; bottom:30%; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); color:#00d4ff; padding:8px 20px; border-radius:40px; font-size:0.9rem; z-index:10000; white-space:nowrap; border:1px solid #00d4ff; pointer-events:none; transition:opacity 0.2s;';
-                document.body.appendChild(notif);
+        function showNotification(msg, dur = 2000) {
+            let n = document.getElementById('floatNotif');
+            if (!n) {
+                n = document.createElement('div');
+                n.id = 'floatNotif';
+                n.style.cssText = 'position:fixed; bottom:30%; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); color:#00d4ff; padding:8px 20px; border-radius:40px; font-size:0.9rem; z-index:10000; white-space:nowrap; border:1px solid #00d4ff; pointer-events:none; transition:opacity 0.2s;';
+                document.body.appendChild(n);
             }
-            notif.textContent = msg;
-            notif.style.opacity = '1';
+            n.textContent = msg;
+            n.style.opacity = '1';
             clearTimeout(notifTimeout);
-            notifTimeout = setTimeout(() => { notif.style.opacity = '0'; }, duration);
+            notifTimeout = setTimeout(() => n.style.opacity = '0', dur);
         }
-
+        
         function showSettings() {
             document.getElementById('overlay').classList.add('active');
             document.getElementById('settingsPanel').classList.add('active');
             if (sfxAudioCtx && sfxAudioCtx.state !== 'running') sfxAudioCtx.resume();
         }
         function hideSettings() {}
-        function saveAndCloseSettings() {
-            saveSettingsImmediate();
-            showNotification("设置已保存", 1000);
-            closePanels();
-        }
-        function showAbout() {
-            document.getElementById('overlay').classList.add('active');
-            document.getElementById('aboutPanel').classList.add('active');
-        }
+        function saveAndCloseSettings() { saveSettingsImmediate(); showNotification("设置已保存", 1000); closePanels(); }
+        function showAbout() { document.getElementById('overlay').classList.add('active'); document.getElementById('aboutPanel').classList.add('active'); }
         function hideAbout() { closePanels(); }
         function closePanels() {
             document.getElementById('overlay').classList.remove('active');
@@ -873,8 +895,8 @@
             quality = 'medium';
             document.getElementById('musicToggle').classList.add('active');
             document.getElementById('sfxToggle').classList.add('active');
-            const vibeToggle = document.getElementById('vibeToggle');
-            if (vibeToggle) vibeToggle.classList.add('active');
+            const vt = document.getElementById('vibeToggle');
+            if (vt) vt.classList.add('active');
             document.getElementById('qualitySelect').value = 'medium';
             applyVolumePercent(60);
             if (bgmAudio) {
@@ -885,92 +907,10 @@
             saveSettingsImmediate();
             showNotification("设置已重置", 1000);
         }
-
-        // 预加载音乐（带 localStorage 缓存）
-        async function preloadMusicWithProgress() {
-            const audioUrl = "https://xiaochen1235789.github.io/ai%20sister/zhujiemian.aac";
-            const loadingPercentDiv = document.getElementById('loadingPercent');
-            const loadingFill = document.getElementById('loadingProgressFill');
-            const loadingStatus = document.getElementById('loadingStatus');
-            const CACHE_KEY = 'hsr_music_cache_v2';
-            
-            const cachedBase64 = localStorage.getItem(CACHE_KEY);
-            if (cachedBase64) {
-                try {
-                    const binary = atob(cachedBase64);
-                    const array = new Uint8Array(binary.length);
-                    for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
-                    const blob = new Blob([array], { type: 'audio/aac' });
-                    const blobUrl = URL.createObjectURL(blob);
-                    bgmAudio.src = blobUrl;
-                    bgmAudio.load();
-                    loadingPercentDiv.innerText = `100% (缓存)`;
-                    loadingFill.style.width = `100%`;
-                    loadingStatus.innerText = "音乐已从缓存加载，准备进入...";
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                    return true;
-                } catch(e) {
-                    console.warn("缓存读取失败，重新下载", e);
-                    localStorage.removeItem(CACHE_KEY);
-                }
-            }
-            
-            try {
-                const response = await fetch(audioUrl);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const contentLength = response.headers.get('content-length');
-                const total = contentLength ? parseInt(contentLength, 10) : null;
-                let loaded = 0;
-                const reader = response.body.getReader();
-                const chunks = [];
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    chunks.push(value);
-                    loaded += value.length;
-                    if (total) {
-                        const percent = (loaded / total * 100).toFixed(1);
-                        loadingPercentDiv.innerText = `${percent}%`;
-                        loadingFill.style.width = `${percent}%`;
-                    } else {
-                        loadingPercentDiv.innerText = `加载中 ${Math.min(99, Math.floor(loaded/1024))}KB`;
-                        loadingFill.style.width = `70%`;
-                    }
-                }
-                const blob = new Blob(chunks, { type: 'audio/aac' });
-                musicBlobUrl = URL.createObjectURL(blob);
-                bgmAudio.src = musicBlobUrl;
-                bgmAudio.load();
-                
-                if (blob.size < 4 * 1024 * 1024) {
-                    const readerForCache = new FileReader();
-                    readerForCache.onloadend = () => {
-                        const base64 = readerForCache.result.split(',')[1];
-                        if (base64 && base64.length < 5 * 1024 * 1024) {
-                            localStorage.setItem(CACHE_KEY, base64);
-                        }
-                    };
-                    readerForCache.readAsDataURL(blob);
-                }
-                
-                loadingPercentDiv.innerText = `100%`;
-                loadingFill.style.width = `100%`;
-                loadingStatus.innerText = "音乐加载完成，准备进入...";
-                await new Promise(resolve => setTimeout(resolve, 300));
-                return true;
-            } catch (err) {
-                console.error("预加载失败", err);
-                loadingStatus.innerText = "音乐加载失败，将使用在线源";
-                bgmAudio.innerHTML = '<source src="' + audioUrl + '" type="audio/aac">';
-                bgmAudio.load();
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                return false;
-            }
-        }
-
+        
         async function init() {
-            await preloadMusicWithProgress();
-            // 重要：不要在这里初始化 Web Audio，等待用户手势
+            // 预加载音频（仅下载并缓存，不创建 audio 元素）
+            await getAudioBlobUrl();  // 填充 musicBlobUrl 或缓存
             setupVolumeSlider();
             loadAudioSettings();
             const loading = document.getElementById('loadingScreen');
