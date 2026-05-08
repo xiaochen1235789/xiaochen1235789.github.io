@@ -387,7 +387,7 @@
 
     <div class="main-container" id="mainContainer" style="display: none;">
         <div class="stars-bg" id="starsBg"></div>
-        <div class="version">v1.2.0</div>
+        <div class="version">v1.3.0</div>
         <div class="title-container">
             <h1 class="game-title">六哥荣耀</h1>
             <div class="game-subtitle">星海无垠，命运待启</div>
@@ -455,7 +455,7 @@
     </div>
     <div class="about-panel" id="aboutPanel">
         <h2>✨ 关于 ✨</h2>
-        <div class="about-content">开发者：小尘 | 版本 v1.2.0 | 仅供学习交流</div>
+        <div class="about-content">开发者：小尘 | 版本 v1.3.0 | 仅供学习交流</div>
         <div class="settings-actions"><button class="settings-btn primary" onclick="hideAbout()">返回</button></div>
     </div>
     <div class="particle-container" id="particleContainer"></div>
@@ -482,14 +482,14 @@
         document.addEventListener('click', handleTap);
         document.addEventListener('touchstart', handleTap);
 
-        // ---------- 音乐系统（支持200%，带localStorage缓存）----------
+        // ---------- 音乐系统（支持200%，移动端完全优化）----------
         const bgmAudio = document.getElementById('bgmAudio');
         const musicCircleBtn = document.getElementById('musicCircleBtn');
         const musicIconSpan = document.getElementById('musicIcon');
         const musicToggleSwitch = document.getElementById('musicToggle');
         
         let musicEnabled = true;
-        let musicVolumePercent = 60;   // 0-200
+        let musicVolumePercent = 60;
         let sfxEnabled = true;
         let vibrationEnabled = true;
         let quality = 'medium';
@@ -500,6 +500,7 @@
         let isWebAudioActive = false;
         let musicBlobUrl = null;
         let userInteracted = false;
+        let audioInitialized = false;   // 防止多次初始化
 
         const guideToast = document.getElementById('guideToast');
 
@@ -508,34 +509,37 @@
             setTimeout(() => { if (guideToast) guideToast.style.opacity = '0'; }, 3000);
         }
 
-        async function resumeAudioContextAndPlay() {
-            if (!userInteracted) userInteracted = true;
-            if (!audioCtx) await initWebAudioForBGM();
-            if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
-            if (musicEnabled && bgmAudio.paused) await attemptPlay(true);
-        }
-
-        async function initWebAudioForBGM() {
-            if (!bgmAudio) return;
-            if (audioCtx && audioCtx.state !== 'closed') return;
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            gainNode = audioCtx.createGain();
-            gainNode.connect(audioCtx.destination);
-            try {
-                if (sourceNode) try { sourceNode.disconnect(); } catch(e) {}
-                sourceNode = audioCtx.createMediaElementSource(bgmAudio);
-                sourceNode.connect(gainNode);
-                isWebAudioActive = true;
-                applyVolumePercent(musicVolumePercent);
-                if (!bgmAudio.paused && audioCtx.state === 'suspended' && userInteracted) {
-                    await audioCtx.resume();
-                }
-            } catch(e) {
-                console.warn("Web Audio 连接失败，回退到原生音量", e);
-                isWebAudioActive = false;
-                let nativeVol = Math.min(1, musicVolumePercent / 100);
-                bgmAudio.volume = musicEnabled ? nativeVol : 0;
+        // 唯一的音频初始化函数（必须在用户手势中调用）
+        async function initAudioOnUserGesture() {
+            if (audioInitialized) return true;
+            audioInitialized = true;
+            
+            // 创建 AudioContext
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                gainNode = audioCtx.createGain();
+                gainNode.connect(audioCtx.destination);
+                gainNode.gain.value = musicVolumePercent / 100;
             }
+            
+            // 关键：createMediaElementSource 只能调用一次，必须在 AudioContext 未关闭时进行
+            if (!sourceNode && bgmAudio.src) {
+                try {
+                    sourceNode = audioCtx.createMediaElementSource(bgmAudio);
+                    sourceNode.connect(gainNode);
+                    isWebAudioActive = true;
+                    bgmAudio.volume = 1;   // 由 gainNode 完全控制
+                } catch(e) {
+                    console.warn("MediaElementSource 连接失败，回退原生音量", e);
+                    isWebAudioActive = false;
+                }
+            }
+            
+            // 唤醒 AudioContext
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+            return true;
         }
 
         function applyVolumePercent(percent) {
@@ -638,7 +642,9 @@
             if (musicEnabled) {
                 if (isWebAudioActive && gainNode) gainNode.gain.value = musicVolumePercent / 100;
                 else bgmAudio.volume = Math.min(1, musicVolumePercent/100);
-                if (bgmAudio.paused && userInteracted) attemptPlay(true);
+                if (bgmAudio.paused && userInteracted) {
+                    attemptPlay(true);
+                }
             } else {
                 if (isWebAudioActive && gainNode) gainNode.gain.value = 0;
                 else bgmAudio.volume = 0;
@@ -666,8 +672,14 @@
         async function attemptPlay(silent = false) {
             if (!bgmAudio) return false;
             if (!musicEnabled) return false;
-            if (!isWebAudioActive && audioCtx === null) await initWebAudioForBGM();
-            if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
+            // 确保音频已初始化（如果还没初始化，尝试初始化）
+            if (!audioInitialized) {
+                await initAudioOnUserGesture();
+            }
+            // 确保 AudioContext 是 running 状态
+            if (audioCtx && audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
             try {
                 await bgmAudio.play();
                 if (!silent) updateMusicButtonUI();
@@ -680,69 +692,47 @@
             }
         }
 
-        function onMusicButtonTap(e) {
+        // 圆形按钮点击/触摸
+        async function onMusicButtonTap(e) {
             e.preventDefault();
             e.stopPropagation();
-            if (!userInteracted) userInteracted = true;
-            if (!audioCtx) {
-                initWebAudioForBGM().then(() => {
-                    if (audioCtx.state === 'suspended') audioCtx.resume();
-                    if (!musicEnabled) {
-                        musicEnabled = true;
-                        musicToggleSwitch.classList.add('active');
-                        applyVolumePercent(musicVolumePercent);
-                        saveSettingsImmediate();
-                    }
-                    if (bgmAudio.paused) attemptPlay(false);
-                    else bgmAudio.pause();
-                    updateMusicButtonUI();
-                });
-                return;
+            userInteracted = true;
+            await initAudioOnUserGesture();
+            
+            if (!musicEnabled) {
+                musicEnabled = true;
+                musicToggleSwitch.classList.add('active');
+                if (isWebAudioActive && gainNode) gainNode.gain.value = musicVolumePercent / 100;
+                saveSettingsImmediate();
             }
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume().then(() => {
-                    if (!musicEnabled) {
-                        musicEnabled = true;
-                        musicToggleSwitch.classList.add('active');
-                        applyVolumePercent(musicVolumePercent);
-                        saveSettingsImmediate();
-                    }
-                    if (bgmAudio.paused) attemptPlay(false);
-                    else bgmAudio.pause();
-                    updateMusicButtonUI();
-                });
+            
+            if (bgmAudio.paused) {
+                await attemptPlay(false);
             } else {
-                if (!musicEnabled) {
-                    musicEnabled = true;
-                    musicToggleSwitch.classList.add('active');
-                    applyVolumePercent(musicVolumePercent);
-                    saveSettingsImmediate();
-                }
-                if (bgmAudio.paused) attemptPlay(false);
-                else {
-                    bgmAudio.pause();
-                    updateMusicButtonUI();
-                }
+                bgmAudio.pause();
+                updateMusicButtonUI();
             }
         }
         musicCircleBtn.addEventListener('click', onMusicButtonTap);
         musicCircleBtn.addEventListener('touchstart', onMusicButtonTap, { passive: false });
 
+        // 全局首次用户交互（触摸或点击，只执行一次）
         let globalInteractionHandled = false;
         async function onFirstUserInteraction(e) {
             if (globalInteractionHandled) return;
             globalInteractionHandled = true;
             userInteracted = true;
-            if (!audioCtx) await initWebAudioForBGM();
-            if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
-            if (musicEnabled && bgmAudio.paused) await attemptPlay(true);
+            await initAudioOnUserGesture();
+            if (musicEnabled && bgmAudio.paused) {
+                await attemptPlay(true);
+            }
             if (guideToast) guideToast.style.opacity = '0';
             musicCircleBtn.classList.remove('guide');
         }
         document.addEventListener('touchstart', onFirstUserInteraction, { passive: false });
         document.addEventListener('click', onFirstUserInteraction);
 
-        // 音效系统
+        // ---------- 音效系统 ----------
         let sfxAudioCtx = null;
         function initSfxContext() {
             if (sfxAudioCtx) return;
@@ -896,15 +886,14 @@
             showNotification("设置已重置", 1000);
         }
 
-        // ----- 预加载音乐（带 localStorage 缓存）-----
+        // 预加载音乐（带 localStorage 缓存）
         async function preloadMusicWithProgress() {
             const audioUrl = "https://xiaochen1235789.github.io/ai%20sister/zhujiemian.aac";
             const loadingPercentDiv = document.getElementById('loadingPercent');
             const loadingFill = document.getElementById('loadingProgressFill');
             const loadingStatus = document.getElementById('loadingStatus');
-            const CACHE_KEY = 'hsr_music_cache_v1';
-
-            // 1. 检查 localStorage 缓存
+            const CACHE_KEY = 'hsr_music_cache_v2';
+            
             const cachedBase64 = localStorage.getItem(CACHE_KEY);
             if (cachedBase64) {
                 try {
@@ -925,8 +914,7 @@
                     localStorage.removeItem(CACHE_KEY);
                 }
             }
-
-            // 2. 无缓存或失效，正常下载
+            
             try {
                 const response = await fetch(audioUrl);
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -953,23 +941,18 @@
                 musicBlobUrl = URL.createObjectURL(blob);
                 bgmAudio.src = musicBlobUrl;
                 bgmAudio.load();
-
-                // 3. 尝试存入 localStorage（限制大小 4MB）
+                
                 if (blob.size < 4 * 1024 * 1024) {
                     const readerForCache = new FileReader();
                     readerForCache.onloadend = () => {
                         const base64 = readerForCache.result.split(',')[1];
                         if (base64 && base64.length < 5 * 1024 * 1024) {
                             localStorage.setItem(CACHE_KEY, base64);
-                        } else {
-                            console.warn("音频 Base64 过大，不存入 localStorage");
                         }
                     };
                     readerForCache.readAsDataURL(blob);
-                } else {
-                    console.warn("音频文件超过 4MB，不存入 localStorage");
                 }
-
+                
                 loadingPercentDiv.innerText = `100%`;
                 loadingFill.style.width = `100%`;
                 loadingStatus.innerText = "音乐加载完成，准备进入...";
@@ -987,7 +970,7 @@
 
         async function init() {
             await preloadMusicWithProgress();
-            await initWebAudioForBGM();
+            // 重要：不要在这里初始化 Web Audio，等待用户手势
             setupVolumeSlider();
             loadAudioSettings();
             const loading = document.getElementById('loadingScreen');
