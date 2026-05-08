@@ -342,11 +342,15 @@
         .loading-text {
             font-size: 1.5rem;
             color: var(--hsr-primary);
-            margin-bottom: 30px;
-            animation: pulse 1.5s infinite;
+            margin-bottom: 20px;
+        }
+        .loading-percent {
+            font-size: 1.2rem;
+            color: var(--hsr-primary-light);
+            margin-bottom: 20px;
         }
         .loading-bar {
-            width: 200px;
+            width: 260px;
             height: 4px;
             background: var(--hsr-glass);
             border-radius: 2px;
@@ -360,12 +364,13 @@
             height: 100%;
             background: linear-gradient(90deg, var(--hsr-primary), var(--hsr-primary-light));
             border-radius: 2px;
-            animation: loading 2s ease-in-out infinite;
+            width: 0%;
+            transition: width 0.1s linear;
         }
-        @keyframes loading {
-            0% { width: 0%; left: 0; }
-            50% { width: 100%; left: 0; }
-            100% { width: 0%; left: 100%; }
+        .loading-status {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: var(--hsr-subtext);
         }
 
         /* 设置面板内样式 */
@@ -380,6 +385,10 @@
             color: var(--hsr-subtext);
             font-size: 1.5rem;
             cursor: pointer;
+        }
+        /* 防误触：移除关闭按钮（隐藏） */
+        .close-btn {
+            display: none;
         }
         .setting-item {
             display: flex;
@@ -423,7 +432,7 @@
             left: 22px;
         }
         .volume-slider {
-            width: 120px;
+            width: 140px;
             height: 4px;
             background: #444;
             border-radius: 4px;
@@ -501,12 +510,14 @@
 <body>
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-text">跃迁准备中...</div>
-        <div class="loading-bar"><div class="loading-progress"></div></div>
+        <div class="loading-percent" id="loadingPercent">0%</div>
+        <div class="loading-bar"><div class="loading-progress" id="loadingProgressFill"></div></div>
+        <div class="loading-status" id="loadingStatus">正在预加载音乐资源...</div>
     </div>
 
     <div class="main-container" id="mainContainer" style="display: none;">
         <div class="stars-bg" id="starsBg"></div>
-        <div class="version">v1.3.0</div>
+        <div class="version">v1.4.0</div>
         <div class="title-container">
             <h1 class="game-title">六哥荣耀</h1>
             <div class="game-subtitle">星海无垠，命运待启</div>
@@ -519,9 +530,7 @@
             </div>
         </div>
        
-        <audio id="bgmAudio" loop preload="auto" style="display: none;">
-            <source src="https://xiaochen1235789.github.io/ai%20sister/zhujiemian.aac" type="audio/aac">
-        </audio>
+        <audio id="bgmAudio" loop preload="auto" style="display: none;"></audio>
 
         <div class="menu-container">
             <a href="https://xiaochen1235789.github.io/ai sister/select-character.html" class="menu-item" id="startGameBtn">
@@ -556,7 +565,7 @@
         <div class="footer-info">追随星神的轨迹，书写属于你的传奇</div>
     </div>
 
-    <div class="overlay" id="overlay"></div>
+    <div class="overlay" id="overlay" onclick=""></div> <!-- 点击不关闭面板 -->
 
     <div class="settings-panel" id="settingsPanel">
         <div class="settings-header">
@@ -568,8 +577,8 @@
             <div class="setting-control">
                 <div class="toggle-switch active" id="musicToggle" onclick="toggleMusicSetting()"></div>
                 <div class="volume-slider" id="musicVolumeSlider">
-                    <div class="volume-fill" style="width: 60%"></div>
-                    <div class="volume-handle" style="left: 60%"></div>
+                    <div class="volume-fill" style="width: 30%"></div>
+                    <div class="volume-handle" style="left: 30%"></div>
                 </div>
                 <span class="volume-value" id="volumePercent">60%</span>
             </div>
@@ -588,7 +597,7 @@
         </div>
         <div class="settings-actions">
             <button class="settings-btn" onclick="resetSettings()">重置</button>
-            <button class="settings-btn primary" onclick="saveSettings()">保存</button>
+            <button class="settings-btn primary" onclick="saveAndCloseSettings()">保存</button>
         </div>
     </div>
 
@@ -601,7 +610,7 @@
             <div class="feature-item"><span>🎵 沉浸音乐</span></div>
             <div class="feature-item"><span>📱 全平台适配</span></div>
         </div>
-        <div class="about-content">开发者：小尘 | 版本 v1.3.0 | 仅供学习交流</div>
+        <div class="about-content">开发者：小尘 | 版本 v1.4.0 | 仅供学习交流</div>
         <div class="settings-actions"><button class="settings-btn primary" onclick="hideAbout()">返回</button></div>
     </div>
 
@@ -634,14 +643,14 @@
         document.addEventListener('click', handleTap);
         document.addEventListener('touchstart', handleTap);
 
-        // ---------- 增强版音乐系统（支持150%音量）----------
+        // ---------- 增强版音乐系统（支持200%音量）----------
         const bgmAudio = document.getElementById('bgmAudio');
         const musicControlBtn = document.getElementById('musicControlBtn');
         const musicStatusText = document.getElementById('musicStatusText');
         const musicToggleSwitch = document.getElementById('musicToggle');
         
         let musicEnabled = true;
-        let musicVolumePercent = 60;   // 存储 0-150
+        let musicVolumePercent = 60;   // 存储 0-200
         let sfxEnabled = true;
         let vibrationEnabled = true;
         let quality = 'medium';
@@ -651,6 +660,9 @@
         let sourceNode = null;
         let gainNode = null;
         let isWebAudioActive = false;
+
+        // 预加载的音乐 blob URL (如果 fetch 成功)
+        let musicBlobUrl = null;
 
         // 初始化 Web Audio 上下文并连接 <audio> 元素
         async function initWebAudioForBGM() {
@@ -678,15 +690,14 @@
             } catch(e) {
                 console.warn("Web Audio 连接失败，回退到原生音量", e);
                 isWebAudioActive = false;
-                // 回退：原生音量最大1，超过100%无效
                 let nativeVol = Math.min(1, musicVolumePercent / 100);
                 bgmAudio.volume = musicEnabled ? nativeVol : 0;
             }
         }
 
-        // 应用音量百分比 (0-150)
+        // 应用音量百分比 (0-200)
         function applyVolumePercent(percent) {
-            musicVolumePercent = Math.min(150, Math.max(0, percent));
+            musicVolumePercent = Math.min(200, Math.max(0, percent));
             if (!musicEnabled) return;
             if (isWebAudioActive && gainNode) {
                 let gain = musicVolumePercent / 100;
@@ -702,23 +713,13 @@
             if (percentSpan) percentSpan.innerText = Math.round(musicVolumePercent) + '%';
             const fill = document.querySelector('#musicVolumeSlider .volume-fill');
             const handle = document.querySelector('#musicVolumeSlider .volume-handle');
-            if (fill) fill.style.width = (musicVolumePercent / 150 * 100) + '%';
-            if (handle) handle.style.left = (musicVolumePercent / 150 * 100) + '%';
+            if (fill) fill.style.width = (musicVolumePercent / 200 * 100) + '%';
+            if (handle) handle.style.left = (musicVolumePercent / 200 * 100) + '%';
             
             // 超过100%提示
             if (musicVolumePercent > 100) {
                 showNotification("⚠️ 音量已超过100%，可能失真", 1500);
             }
-        }
-
-        function updateMusicVolumeUIFromPercent() {
-            const percent = musicVolumePercent;
-            const fill = document.querySelector('#musicVolumeSlider .volume-fill');
-            const handle = document.querySelector('#musicVolumeSlider .volume-handle');
-            if (fill) fill.style.width = (percent / 150 * 100) + '%';
-            if (handle) handle.style.left = (percent / 150 * 100) + '%';
-            const span = document.getElementById('volumePercent');
-            if (span) span.innerText = Math.round(percent) + '%';
         }
 
         // 音量滑动条交互
@@ -729,9 +730,9 @@
                 const rect = slider.getBoundingClientRect();
                 let x = (e.clientX - rect.left) / rect.width;
                 x = Math.min(1, Math.max(0, x));
-                let newPercent = Math.round(x * 150);
+                let newPercent = Math.round(x * 200);
                 applyVolumePercent(newPercent);
-                saveSettings(); // 实时保存
+                saveSettingsImmediate(); // 实时保存
             };
             slider.addEventListener('click', updateFromEvent);
             slider.addEventListener('touchstart', (e) => {
@@ -742,6 +743,15 @@
                 e.preventDefault();
                 updateFromEvent(e.touches[0]);
             });
+        }
+
+        // 保存设置（不关闭面板）
+        function saveSettingsImmediate() {
+            localStorage.setItem('hsr_music_enabled', musicEnabled);
+            localStorage.setItem('hsr_music_volume_percent', musicVolumePercent);
+            localStorage.setItem('hsr_sfx_enabled', sfxEnabled);
+            localStorage.setItem('hsr_vibration_enabled', vibrationEnabled);
+            localStorage.setItem('hsr_quality', quality);
         }
 
         // 加载设置
@@ -766,8 +776,13 @@
             
             applyVolumePercent(musicVolumePercent);
             if (bgmAudio) {
-                bgmAudio.volume = musicEnabled ? (isWebAudioActive ? 1 : Math.min(1, musicVolumePercent/100)) : 0;
-                if (!musicEnabled) bgmAudio.volume = 0;
+                if (musicEnabled) {
+                    if (isWebAudioActive && gainNode) gainNode.gain.value = musicVolumePercent / 100;
+                    else bgmAudio.volume = Math.min(1, musicVolumePercent/100);
+                } else {
+                    if (isWebAudioActive && gainNode) gainNode.gain.value = 0;
+                    else bgmAudio.volume = 0;
+                }
             }
             changeQuality(); // 应用画质
         }
@@ -788,7 +803,7 @@
                     else bgmAudio.volume = 0;
                 }
             }
-            saveSettings();
+            saveSettingsImmediate();
             updateMusicStatusText();
         }
 
@@ -833,7 +848,7 @@
             if (!musicEnabled) {
                 musicEnabled = true;
                 musicToggleSwitch.classList.add('active');
-                saveSettings();
+                saveSettingsImmediate();
                 if (isWebAudioActive && gainNode) gainNode.gain.value = musicVolumePercent/100;
                 else bgmAudio.volume = Math.min(1, musicVolumePercent/100);
             }
@@ -889,7 +904,7 @@
             sfxEnabled = !sfxEnabled;
             const toggle = document.getElementById('sfxToggle');
             if (toggle) toggle.classList.toggle('active', sfxEnabled);
-            saveSettings();
+            saveSettingsImmediate();
         }
 
         // 震动反馈
@@ -903,7 +918,7 @@
             vibrationEnabled = !vibrationEnabled;
             const toggle = document.getElementById('vibeToggle');
             if (toggle) toggle.classList.toggle('active', vibrationEnabled);
-            saveSettings();
+            saveSettingsImmediate();
             showNotification(vibrationEnabled ? "震动反馈已开启" : "震动反馈已关闭", 1000);
         }
 
@@ -913,9 +928,7 @@
             if (select) quality = select.value;
             else quality = 'medium';
             localStorage.setItem('hsr_quality', quality);
-            // 重新生成星星
             createStars();
-            // 调整背景模糊/特效
             const mainContainer = document.getElementById('mainContainer');
             if (quality === 'low') {
                 mainContainer.style.backdropFilter = 'none';
@@ -928,12 +941,9 @@
                     el.style.backdropFilter = '';
                 });
             }
-            if (quality === 'ultra') {
-                // 增加额外粒子效果（略）
-            }
         }
 
-        // 星空背景生成（根据画质调整数量）
+        // 星空背景生成
         function createStars() {
             const starsBg = document.getElementById('starsBg');
             if (!starsBg) return;
@@ -958,7 +968,7 @@
             }
         }
 
-        // 角色卡片点击增加震动
+        // 角色卡片点击
         document.querySelectorAll('.character-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -968,7 +978,6 @@
                 showNotification(`✨ ${name} 向你问好，开拓者！`, 1500);
             });
         });
-        // 菜单项点击震动 (通过事件委托)
         document.querySelectorAll('.menu-item').forEach(item => {
             item.addEventListener('click', () => vibratePattern(20));
         });
@@ -988,13 +997,18 @@
             notifTimeout = setTimeout(() => { notif.style.opacity = '0'; }, duration);
         }
 
-        // 设置面板控制
+        // 设置面板控制 - 防误触：只有保存按钮关闭，overlay和关闭按钮不关闭
         function showSettings() {
             document.getElementById('overlay').classList.add('active');
             document.getElementById('settingsPanel').classList.add('active');
             if (sfxAudioCtx && sfxAudioCtx.state !== 'running') sfxAudioCtx.resume();
         }
-        function hideSettings() { closePanels(); }
+        function hideSettings() { /* 不关闭，只有保存才关闭 */ }
+        function saveAndCloseSettings() {
+            saveSettingsImmediate();
+            showNotification("设置已保存", 1000);
+            closePanels();
+        }
         function showAbout() {
             document.getElementById('overlay').classList.add('active');
             document.getElementById('aboutPanel').classList.add('active');
@@ -1035,37 +1049,84 @@
                 else bgmAudio.volume = Math.min(1, musicVolumePercent/100);
             }
             changeQuality();
+            saveSettingsImmediate();
             showNotification("设置已重置", 1000);
-            saveSettings();
         }
 
-        function saveSettings() {
-            localStorage.setItem('hsr_music_enabled', musicEnabled);
-            localStorage.setItem('hsr_music_volume_percent', musicVolumePercent);
-            localStorage.setItem('hsr_sfx_enabled', sfxEnabled);
-            localStorage.setItem('hsr_vibration_enabled', vibrationEnabled);
-            localStorage.setItem('hsr_quality', quality);
-            showNotification("设置已保存", 1000);
-            hideSettings();
+        // ---------- 加载前强制预加载音乐 ----------
+        async function preloadMusicWithProgress() {
+            const audioUrl = "https://xiaochen1235789.github.io/ai%20sister/zhujiemian.aac";
+            const loadingPercentDiv = document.getElementById('loadingPercent');
+            const loadingFill = document.getElementById('loadingProgressFill');
+            const loadingStatus = document.getElementById('loadingStatus');
+            
+            try {
+                const response = await fetch(audioUrl);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const contentLength = response.headers.get('content-length');
+                const total = contentLength ? parseInt(contentLength, 10) : null;
+                let loaded = 0;
+                const reader = response.body.getReader();
+                const chunks = [];
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    chunks.push(value);
+                    loaded += value.length;
+                    if (total) {
+                        const percent = (loaded / total * 100).toFixed(1);
+                        loadingPercentDiv.innerText = `${percent}%`;
+                        loadingFill.style.width = `${percent}%`;
+                    } else {
+                        // 模拟进度（没有content-length）
+                        loadingPercentDiv.innerText = `加载中 ${Math.min(99, Math.floor(loaded/1024))}KB`;
+                        loadingFill.style.width = `70%`;
+                    }
+                }
+                // 合并数据
+                const blob = new Blob(chunks, { type: 'audio/aac' });
+                musicBlobUrl = URL.createObjectURL(blob);
+                // 设置音频源
+                bgmAudio.src = musicBlobUrl;
+                bgmAudio.load();
+                loadingPercentDiv.innerText = `100%`;
+                loadingFill.style.width = `100%`;
+                loadingStatus.innerText = "音乐加载完成，准备进入...";
+                await new Promise(resolve => setTimeout(resolve, 300));
+                return true;
+            } catch (err) {
+                console.error("预加载音乐失败", err);
+                loadingStatus.innerText = "音乐加载失败，将使用在线源（可能无法播放）";
+                // 降级：直接使用原始URL
+                bgmAudio.innerHTML = '<source src="' + audioUrl + '" type="audio/aac">';
+                bgmAudio.load();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                return false;
+            }
         }
 
-        // 初始化函数
+        // 初始化主界面
         async function init() {
+            // 强制预加载音乐并显示进度
+            await preloadMusicWithProgress();
+            
+            // 初始化 Web Audio
             await initWebAudioForBGM();
             setupVolumeSlider();
             loadAudioSettings();
+            
+            // 隐藏loading，显示主界面
+            const loading = document.getElementById('loadingScreen');
+            const main = document.getElementById('mainContainer');
+            if (loading) loading.style.opacity = '0';
             setTimeout(() => {
-                const loading = document.getElementById('loadingScreen');
-                const main = document.getElementById('mainContainer');
-                if (loading) loading.style.opacity = '0';
-                setTimeout(() => {
-                    if (loading) loading.style.display = 'none';
-                    if (main) main.style.display = 'block';
-                    createStars();
-                    autoPlayMusic();
-                    setTimeout(() => showNotification("欢迎来到星穹列车，开拓者！", 2000), 500);
-                }, 500);
-            }, 1300);
+                if (loading) loading.style.display = 'none';
+                if (main) main.style.display = 'block';
+                createStars();
+                autoPlayMusic();
+                setTimeout(() => showNotification("欢迎来到星穹列车，开拓者！", 2000), 500);
+            }, 500);
         }
 
         window.addEventListener('DOMContentLoaded', init);
