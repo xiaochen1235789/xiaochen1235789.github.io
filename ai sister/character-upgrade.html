@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>六哥荣耀 · 鹿馆升级</title>
+    <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
+    <script src="game-data.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: system-ui, 'Microsoft YaHei', sans-serif;
+        }
+
+        :root {
+            --hsr-bg: #0a0a14;
+            --hsr-surface: #151525;
+            --hsr-card: #1e1e2e;
+            --hsr-primary: #00d4ff;
+            --hsr-primary-dark: #0088cc;
+            --hsr-primary-light: #66e5ff;
+            --hsr-text: #ffffff;
+            --hsr-subtext: #a0b4c6;
+            --hsr-success: #1dd1a1;
+            --hsr-warning: #ff9f43;
+            --hsr-danger: #ff4757;
+            --hsr-glass: rgba(255, 255, 255, 0.05);
+            --hsr-glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at 20% 10%, #1a1a3a 0%, transparent 40%),
+                        radial-gradient(circle at 80% 90%, #0f1a2e 0%, transparent 40%),
+                        var(--hsr-bg);
+            color: var(--hsr-text);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* 头部 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .back-link {
+            background: var(--hsr-glass);
+            backdrop-filter: blur(10px);
+            padding: 8px 20px;
+            border-radius: 40px;
+            text-decoration: none;
+            color: var(--hsr-primary);
+            border: 1px solid var(--hsr-glass-border);
+            transition: 0.2s;
+        }
+        .back-link:hover {
+            border-color: var(--hsr-primary);
+            transform: translateX(-5px);
+        }
+        .title {
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, var(--hsr-primary), var(--hsr-primary-light));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .credits {
+            background: var(--hsr-glass);
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-size: 1rem;
+            border: 1px solid var(--hsr-glass-border);
+        }
+
+        /* 角色卡片 */
+        .character-card {
+            background: var(--hsr-surface);
+            border: 1px solid var(--hsr-glass-border);
+            border-radius: 28px;
+            padding: 24px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .char-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .char-avatar {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--hsr-primary), var(--hsr-primary-dark));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        .char-info {
+            flex: 1;
+        }
+        .char-name {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .char-meta {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .char-tag {
+            background: rgba(0,212,255,0.15);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--hsr-primary);
+            border: 1px solid rgba(0,212,255,0.3);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+            background: var(--hsr-glass);
+            padding: 20px;
+            border-radius: 20px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--hsr-subtext);
+            margin-bottom: 6px;
+        }
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--hsr-primary);
+        }
+
+        /* 升级区域 */
+        .upgrade-section {
+            margin-top: 30px;
+            background: var(--hsr-glass);
+            border-radius: 20px;
+            padding: 20px;
+        }
+        .section-title {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: var(--hsr-primary-light);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 4px solid var(--hsr-primary);
+            padding-left: 16px;
+        }
+        .skill-item {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--hsr-glass-border);
+        }
+        .skill-info {
+            flex: 2;
+        }
+        .skill-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .skill-desc {
+            font-size: 0.8rem;
+            color: var(--hsr-subtext);
+        }
+        .skill-level {
+            font-size: 1rem;
+            margin: 0 16px;
+            min-width: 80px;
+            text-align: center;
+        }
+        .skill-level span {
+            color: var(--hsr-primary);
+            font-weight: bold;
+        }
+        .upgrade-btn {
+            background: var(--hsr-primary-dark);
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            min-width: 100px;
+        }
+        .upgrade-btn:not(:disabled):hover {
+            background: var(--hsr-primary);
+            transform: scale(1.02);
+        }
+        .upgrade-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .cost-info {
+            font-size: 0.7rem;
+            color: var(--hsr-warning);
+            margin-left: 10px;
+        }
+        .save-area {
+            text-align: center;
+            margin-top: 30px;
+        }
+        .save-btn {
+            background: linear-gradient(135deg, var(--hsr-success), #0f8b6e);
+            border: none;
+            padding: 14px 40px;
+            border-radius: 60px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .save-btn:active {
+            transform: scale(0.96);
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            color: var(--hsr-primary);
+            padding: 8px 24px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            z-index: 100;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            opacity: 0;
+        }
+        @media (max-width: 600px) {
+            .skill-item { flex-direction: column; gap: 12px; align-items: stretch; text-align: center; }
+            .upgrade-btn { align-self: center; }
+            .stat-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <a href="index.html" class="back-link">← 返回主菜单</a>
+        <div class="title">鹿馆 · 修炼室</div>
+        <div class="credits" id="creditDisplay">💰 0 信用点</div>
+    </div>
+
+    <!-- 角色卡片 -->
+    <div class="character-card" id="characterCard">
+        <!-- 动态填充 -->
+    </div>
+
+    <!-- 等级升级 -->
+    <div class="upgrade-section" id="levelUpSection">
+        <div class="section-title">📈 角色等级</div>
+        <div id="levelUpPanel"></div>
+    </div>
+
+    <!-- 技能升级 -->
+    <div class="upgrade-section" id="skillUpSection">
+        <div class="section-title">✨ 技能升级</div>
+        <div id="skillList"></div>
+    </div>
+
+    <div class="save-area">
+        <button class="save-btn" id="saveBtn">💾 保存并返回</button>
+    </div>
+</div>
+<div class="toast" id="toastMsg">提示</div>
+
+<script>
+    let currentCharacter = null;     // 当前角色对象（引用）
+    let totalCredits = 50000;        // 初始信用点（可调整）
+    const COST_LEVEL = 1000;         // 每升一级消耗1000信用点
+    const COST_SKILL = 500;          // 技能每升一级消耗500信用点
+
+    // 辅助函数：显示提示
+    function showToast(msg, isError = false) {
+        const toast = document.getElementById('toastMsg');
+        toast.textContent = msg;
+        toast.style.color = isError ? 'var(--hsr-danger)' : 'var(--hsr-primary)';
+        toast.style.opacity = '1';
+        setTimeout(() => {
+            toast.style.opacity = '0';
+        }, 2000);
+    }
+
+    // 更新界面上的信用点显示
+    function updateCreditUI() {
+        document.getElementById('creditDisplay').innerHTML = `💰 ${totalCredits} 信用点`;
+    }
+
+    // 渲染角色基础信息
+    function renderCharacterInfo() {
+        if (!currentCharacter) return;
+        const char = currentCharacter;
+        const container = document.getElementById('characterCard');
+        container.innerHTML = `
+            <div class="char-header">
+                <div class="char-avatar">${char.avatar || '🦌'}</div>
+                <div class="char-info">
+                    <div class="char-name">${char.name}</div>
+                    <div class="char-meta">
+                        <span class="char-tag">${char.path}</span>
+                        <span class="char-tag">${char.element === 'wind' ? '风' : char.element}</span>
+                        <span class="char-tag">Lv.${char.level}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-grid">
+                <div class="stat-item"><div class="stat-label">❤️ 生命</div><div class="stat-value">${char.maxHp}</div></div>
+                <div class="stat-item"><div class="stat-label">⚔️ 攻击</div><div class="stat-value">${char.attack}</div></div>
+                <div class="stat-item"><div class="stat-label">🛡️ 防御</div><div class="stat-value">${char.defense}</div></div>
+                <div class="stat-item"><div class="stat-label">⚡ 速度</div><div class="stat-value">${char.speed}</div></div>
+                <div class="stat-item"><div class="stat-label">💥 暴击率</div><div class="stat-value">${Math.round(char.critRate * 100)}%</div></div>
+                <div class="stat-item"><div class="stat-label">💢 暴伤</div><div class="stat-value">${Math.round(char.critDamage * 100)}%</div></div>
+            </div>
+        `;
+    }
+
+    // 渲染等级升级面板
+    function renderLevelUpPanel() {
+        const container = document.getElementById('levelUpPanel');
+        const char = currentCharacter;
+        const nextLevel = char.level + 1;
+        const canLevelUp = nextLevel <= GameData.MAX_CHARACTER_LEVEL && totalCredits >= COST_LEVEL;
+        // 获取下一级属性预览
+        let nextHp = char.maxHp, nextAtk = char.attack, nextDef = char.defense;
+        if (nextLevel <= GameData.MAX_CHARACTER_LEVEL) {
+            nextHp = GameData.getStatByLevel ? GameData.getStatByLevel(nextLevel, 'hp') : char.maxHp;
+            nextAtk = GameData.getStatByLevel ? GameData.getStatByLevel(nextLevel, 'atk') : char.attack;
+            nextDef = GameData.getStatByLevel ? GameData.getStatByLevel(nextLevel, 'def') : char.defense;
+        }
+        container.innerHTML = `
+            <div class="skill-item">
+                <div class="skill-info">
+                    <div class="skill-name">当前等级 ${char.level}</div>
+                    <div class="skill-desc">下一级 → Lv.${nextLevel}<br>
+                        生命 ${char.maxHp} → ${nextHp} &nbsp;|&nbsp;
+                        攻击 ${char.attack} → ${nextAtk} &nbsp;|&nbsp;
+                        防御 ${char.defense} → ${nextDef}
+                    </div>
+                </div>
+                <div class="skill-level"><span>消耗 ${COST_LEVEL} 信用点</span></div>
+                <button class="upgrade-btn" id="levelUpBtn" ${!canLevelUp ? 'disabled' : ''}>⬆️ 升级</button>
+            </div>
+        `;
+        const btn = document.getElementById('levelUpBtn');
+        if (btn) btn.onclick = () => levelUpCharacter();
+    }
+
+    // 执行等级升级
+    function levelUpCharacter() {
+        const char = currentCharacter;
+        const nextLevel = char.level + 1;
+        if (nextLevel > GameData.MAX_CHARACTER_LEVEL) {
+            showToast('已达最高等级！', true);
+            return;
+        }
+        if (totalCredits < COST_LEVEL) {
+            showToast('信用点不足！', true);
+            return;
+        }
+        // 调用 GameData 的升级方法
+        const success = GameData.levelUpCharacter(char, nextLevel);
+        if (success) {
+            totalCredits -= COST_LEVEL;
+            updateCreditUI();
+            renderCharacterInfo();
+            renderLevelUpPanel();
+            renderSkillList();  // 技能无变化但UI刷新
+            showToast(`升级成功！鹿馆升至 Lv.${char.level}`);
+        } else {
+            showToast('升级失败', true);
+        }
+    }
+
+    // 渲染技能列表
+    function renderSkillList() {
+        const container = document.getElementById('skillList');
+        const char = currentCharacter;
+        const skills = char.skills || [];
+        // 只显示可升级的技能类型（normal, skill, ultimate, talent）
+        const skillTypes = ['normal', 'skill', 'ultimate', 'talent'];
+        const displaySkills = skills.filter(s => skillTypes.includes(s.type));
+        if (displaySkills.length === 0) {
+            container.innerHTML = '<div style="padding:20px;text-align:center;">技能加载中...</div>';
+            return;
+        }
+        container.innerHTML = displaySkills.map(skill => {
+            const canUp = skill.currentLevel < skill.maxLevel && totalCredits >= COST_SKILL;
+            return `
+                <div class="skill-item" data-skill-id="${skill.id}">
+                    <div class="skill-info">
+                        <div class="skill-name">${skill.icon || '✨'} ${skill.name}</div>
+                        <div class="skill-desc">${skill.description || '无描述'}</div>
+                    </div>
+                    <div class="skill-level">Lv.<span>${skill.currentLevel}</span> / ${skill.maxLevel}</div>
+                    <button class="upgrade-btn skill-upgrade" ${!canUp ? 'disabled' : ''}>⬆️ 升级 (${COST_SKILL})</button>
+                </div>
+            `;
+        }).join('');
+        // 绑定升级事件
+        document.querySelectorAll('.skill-upgrade').forEach((btn, idx) => {
+            const skillItem = btn.closest('.skill-item');
+            const skillId = skillItem.dataset.skillId;
+            const skill = currentCharacter.skills.find(s => s.id === skillId);
+            if (skill) {
+                btn.onclick = () => upgradeSkill(skill);
+            }
+        });
+    }
+
+    // 升级技能
+    function upgradeSkill(skill) {
+        if (skill.currentLevel >= skill.maxLevel) {
+            showToast(`${skill.name} 已达最高等级！`, true);
+            return;
+        }
+        if (totalCredits < COST_SKILL) {
+            showToast('信用点不足！', true);
+            return;
+        }
+        const success = GameData.levelUpSkill(skill);
+        if (success) {
+            totalCredits -= COST_SKILL;
+            updateCreditUI();
+            // 更新技能面板
+            renderSkillList();
+            // 角色基础属性可能因天赋升级而改变（天赋效果需在战斗中体现，这里只刷新显示）
+            renderCharacterInfo();
+            showToast(`${skill.name} 升至 Lv.${skill.currentLevel}`);
+        } else {
+            showToast(`${skill.name} 升级失败`, true);
+        }
+    }
+
+    // 保存角色数据到 localStorage (替换队伍数据)
+    function saveCharacter() {
+        const char = currentCharacter;
+        // 构建与 select-character.html 兼容的队伍数据
+        const teamData = {
+            characters: [{
+                id: char.id,
+                name: char.name,
+                avatar: char.avatar,
+                path: char.path,
+                element: char.element === 'wind' ? '风' : char.element,
+                hp: char.maxHp,
+                attack: char.attack,
+                defense: char.defense,
+                speed: char.speed,
+                level: char.level,
+                skills: char.skills.map(s => ({ id: s.id, currentLevel: s.currentLevel }))
+            }],
+            timestamp: Date.now(),
+            teamName: '鹿馆·独行'
+        };
+        // 同时保存等级和技能等级，以便下次加载时恢复
+        const upgradeData = {
+            level: char.level,
+            skillLevels: {}
+        };
+        char.skills.forEach(s => {
+            upgradeData.skillLevels[s.id] = s.currentLevel;
+        });
+        localStorage.setItem('hsr-selected-team', JSON.stringify(teamData));
+        localStorage.setItem('hsr-upgrade-data', JSON.stringify(upgradeData));
+        showToast('角色数据已保存！');
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 800);
+    }
+
+    // 加载保存的升级数据（等级、技能等级）
+    function loadSavedUpgradeData() {
+        const saved = localStorage.getItem('hsr-upgrade-data');
+        if (!saved) return null;
+        try {
+            return JSON.parse(saved);
+        } catch(e) { return null; }
+    }
+
+    // 初始化页面：从 GameData 获取基础角色，再应用已保存的等级和技能等级
+    function initUpgradePage() {
+        if (!window.GameData) {
+            setTimeout(initUpgradePage, 200);
+            return;
+        }
+        // 获取初始状态（1级角色）
+        let initState = GameData.getInitialState();
+        let character = initState.party[0];
+        // 尝试读取保存的升级数据
+        const upgradeData = loadSavedUpgradeData();
+        if (upgradeData) {
+            // 升级等级
+            if (upgradeData.level && upgradeData.level > 1) {
+                GameData.levelUpCharacter(character, upgradeData.level);
+            }
+            // 升级技能
+            if (upgradeData.skillLevels) {
+                character.skills.forEach(skill => {
+                    const savedLv = upgradeData.skillLevels[skill.id];
+                    if (savedLv && savedLv > skill.currentLevel) {
+                        while (skill.currentLevel < savedLv && skill.currentLevel < skill.maxLevel) {
+                            GameData.levelUpSkill(skill);
+                        }
+                    }
+                });
+            }
+        }
+        currentCharacter = character;
+
+        // 尝试读取保存的信用点（可选）
+        const savedCredits = localStorage.getItem('hsr_credits');
+        if (savedCredits) totalCredits = parseInt(savedCredits) || 50000;
+
+        updateCreditUI();
+        renderCharacterInfo();
+        renderLevelUpPanel();
+        renderSkillList();
+    }
+
+    // 保存信用点到 localStorage
+    function saveCredits() {
+        localStorage.setItem('hsr_credits', totalCredits);
+    }
+
+    window.addEventListener('DOMContentLoaded', initUpgradePage);
+    document.getElementById('saveBtn').addEventListener('click', () => {
+        saveCredits();
+        saveCharacter();
+    });
+    // 每次修改信用点时保存（可选）
+    window.setInterval(() => {
+        if (totalCredits !== undefined) saveCredits();
+    }, 5000);
+</script>
+</body>
+</html>
