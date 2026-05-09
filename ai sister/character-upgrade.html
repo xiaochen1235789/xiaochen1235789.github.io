@@ -205,39 +205,54 @@
 
     // 渲染命座卡片（含描述）
     function renderEidolonButtons() {
-        const container = document.getElementById('eidolonGrid');
-        if (!window.GameData || !window.GameData.eidolons) {
-            container.innerHTML = '<div>命座数据加载中...</div>';
-            return;
-        }
-        const allEidolons = ['e1', 'e2', 'e3', 'e4', 'e5', 'e6'];
-        container.innerHTML = allEidolons.map(id => {
-            const eData = GameData.eidolons[id];
-            const name = eData ? eData.name : (id === 'e1' ? '疾风追影' : (id === 'e2' ? '旋刃狩魂' : '未知命座'));
-            const desc = eData ? eData.description : '暂无描述';
-            const isActive = activatedEidolons.includes(id);
-            return `
-                <div class="eidolon-card ${isActive ? 'active' : ''}" data-eidolon="${id}">
-                    <div class="eidolon-header">
-                        <span class="eidolon-name">${name}</span>
-                    </div>
-                    <div class="eidolon-desc">${desc}</div>
-                    <button class="eidolon-activate-btn ${isActive ? 'active' : ''}" data-id="${id}">
-                        ${isActive ? '✓ 已激活' : '🔘 未激活'}
-                    </button>
-                </div>
-            `;
-        }).join('');
+    const container = document.getElementById('eidolonGrid');
+    if (!container) return;
 
-        // 绑定按钮事件
-        document.querySelectorAll('.eidolon-activate-btn').forEach(btn => {
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                const id = btn.dataset.id;
-                toggleEidolon(id);
-            };
-        });
+    // 定义后备命座数据（确保始终可显示）
+    const fallbackEidolons = {
+        e1: { name: '疾风追影', description: '攻击敌方目标时，若其生命≥20%，受到的伤害提高50%。' },
+        e2: { name: '旋刃狩魂', description: '对拥有负面效果的目标暴击率提高18%，每有一个负面效果暴击伤害提高24%，最多144%。' },
+        e3: { name: '裂空破障', description: '普攻等级+1，天赋等级+2。' },
+        e4: { name: '破晓狩风', description: '消灭目标时恢复20能量并获得额外回合。' },
+        e5: { name: '风狩铭纹', description: '战技等级+2，终结技等级+2。' },
+        e6: { name: '逐影风刃', description: '天赋所有效果进入战斗后立即生效，且伤害无视目标24%防御。' }
+    };
+
+    // 优先从 GameData 获取，若不存在则使用后备
+    let eidolonMap = {};
+    if (window.GameData && window.GameData.eidolons) {
+        eidolonMap = window.GameData.eidolons;
+    } else {
+        eidolonMap = fallbackEidolons;
     }
+
+    const allEidolons = ['e1', 'e2', 'e3', 'e4', 'e5', 'e6'];
+    container.innerHTML = allEidolons.map(id => {
+        const eData = eidolonMap[id] || fallbackEidolons[id];
+        const name = eData ? eData.name : (id === 'e1' ? '疾风追影' : '未知命座');
+        const desc = eData ? eData.description : '暂无描述';
+        const isActive = activatedEidolons.includes(id);
+        return `
+            <div class="eidolon-card ${isActive ? 'active' : ''}" data-eidolon="${id}">
+                <div class="eidolon-header">
+                    <span class="eidolon-name">${name}</span>
+                </div>
+                <div class="eidolon-desc">${desc}</div>
+                <button class="eidolon-activate-btn ${isActive ? 'active' : ''}" data-id="${id}">
+                    ${isActive ? '✓ 已激活' : '🔘 未激活'}
+                </button>
+            </div>
+        `;
+    }).join('');
+
+    document.querySelectorAll('.eidolon-activate-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            toggleEidolon(id);
+        };
+    });
+}
 
     function loadSavedEidolons() {
         const saved = localStorage.getItem('hsr-activated-eidolons');
