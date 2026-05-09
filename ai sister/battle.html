@@ -3,24 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>六哥荣耀 - 战斗（调用BattleLogic）</title>
+    <title>六哥荣耀 · 鹿馆实战</title>
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
-    <script src="game-data.js"></script>
-    <script src="battle-logic.js"></script>
+    <!-- 依赖文件 -->
+    <script src="ai sister/game-data.js"></script>
+    <script src="ai sister/battle-logic.js"></script>
+    <link rel="stylesheet" href="/css/info-popup.css">
     <style>
-        /* 样式同你之前优化的版本，省略重复代码，你保留原有样式即可 */
-        * { margin:0; padding:0; box-sizing:border-box; user-select:none; }
-        body { background:#0a0a14; color:#fff; font-family: system-ui, sans-serif; height:100vh; overflow:hidden; }
-        .battle-container { display:flex; flex-direction:column; height:100%; background:radial-gradient(circle at 20% 10%, #1a1a3a 0%, transparent 40%), radial-gradient(circle at 80% 90%, #0f1a2e 0%, transparent 40%), #0a0a14; }
-        .back-btn { position:fixed; top:16px; left:16px; background:rgba(0,0,0,0.5); backdrop-filter:blur(8px); padding:8px 16px; border-radius:40px; font-size:0.9rem; color:#00d4ff; text-decoration:none; z-index:100; border:1px solid rgba(0,212,255,0.3); }
-        .enemy-area { flex:2; display:flex; justify-content:center; align-items:center; gap:20px; flex-wrap:wrap; padding:20px; overflow-y:auto; }
-        .enemy-card { background:rgba(0,0,0,0.4); backdrop-filter:blur(12px); border-radius:24px; padding:16px; min-width:140px; text-align:center; border:1px solid rgba(255,255,255,0.1); transition:0.2s; cursor:pointer; }
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
+        body { background:#0a0a14; color:#fff; font-family: system-ui, 'Microsoft YaHei', sans-serif; height:100vh; overflow:hidden; }
+        .battle-container { 
+            display: flex; 
+            flex-direction: column; 
+            height: 100%; 
+            background: radial-gradient(circle at 20% 10%, #1a1a3a 0%, transparent 40%),
+                        radial-gradient(circle at 80% 90%, #0f1a2e 0%, transparent 40%),
+                        #0a0a14;
+            padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+        .back-btn { 
+            position: fixed; 
+            top: max(16px, env(safe-area-inset-top)); 
+            left: 16px; 
+            background: rgba(0,0,0,0.6); 
+            backdrop-filter: blur(8px); 
+            padding: 8px 16px; 
+            border-radius: 40px; 
+            font-size: 0.9rem; 
+            color: #00d4ff; 
+            text-decoration: none; 
+            z-index: 100; 
+            border: 1px solid rgba(0,212,255,0.3); 
+        }
+        .enemy-area { 
+            flex: 2; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 20px; 
+            flex-wrap: wrap; 
+            padding: 70px 20px 20px; 
+            overflow-y: auto; 
+        }
+        .enemy-card { 
+            background: rgba(0,0,0,0.4); 
+            backdrop-filter: blur(12px); 
+            border-radius: 24px; 
+            padding: 16px; 
+            min-width: 140px; 
+            text-align: center; 
+            border: 1px solid rgba(255,255,255,0.1); 
+            transition: 0.2s; 
+            position: relative;
+        }
         .enemy-card.selected { border-color:#00d4ff; box-shadow:0 0 20px rgba(0,212,255,0.4); }
         .enemy-avatar { width:90px; height:90px; background:linear-gradient(135deg,#8b0000,#330000); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:3rem; margin:0 auto 12px; border:2px solid #ff4757; }
         .enemy-name { font-size:1.1rem; font-weight:600; color:#ffa5a5; margin-bottom:8px; }
         .enemy-hp-bar { width:100%; height:6px; background:#333; border-radius:3px; overflow:hidden; margin:8px 0; }
         .enemy-hp-fill { height:100%; background:linear-gradient(90deg,#ff4757,#ff8c9e); width:100%; }
         .enemy-hp-text { font-size:0.8rem; color:#ccc; }
+        /* 信息按钮 */
+        .info-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: #aaa;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: 0.2s;
+        }
+        .info-btn:hover { background: #00d4ff; color: #000; border-color: #fff; }
         .status-bar { background:rgba(0,0,0,0.6); backdrop-filter:blur(12px); padding:8px 16px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.1); border-bottom:1px solid rgba(255,255,255,0.1); }
         .turn-badge { background:#00d4ff20; border:1px solid #00d4ff; border-radius:24px; padding:4px 16px; font-weight:bold; }
         .enemy-turn { background:#ff475720; border-color:#ff4757; }
@@ -28,7 +88,7 @@
         .skill-point { width:22px; height:28px; background:rgba(29,209,161,0.3); border-radius:4px; border:1px solid #1dd1a1; }
         .skill-point.active { background:#1dd1a1; box-shadow:0 0 8px #1dd1a1; }
         .party-area { background:rgba(10,15,30,0.8); backdrop-filter:blur(16px); padding:12px 16px; border-top:1px solid rgba(255,255,255,0.1); }
-        .character-card { display:flex; gap:16px; background:rgba(30,30,46,0.6); border-radius:16px; padding:12px; border:1px solid transparent; transition:0.2s; }
+        .character-card { display:flex; gap:16px; background:rgba(30,30,46,0.6); border-radius:16px; padding:12px; border:1px solid transparent; position:relative; }
         .character-card.active { border-color:#00d4ff; background:rgba(0,212,255,0.1); }
         .character-avatar { width:56px; height:56px; background:linear-gradient(135deg,#00d4ff,#0066aa); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2rem; }
         .character-info { flex:1; }
@@ -80,9 +140,11 @@
         </div>
     </div>
 
+    <!-- 引入弹窗脚本 -->
+    <script src="css/info-popup.js"></script>
     <script>
         // 等待 GameData 和 BattleLogic 加载
-        let initTimer = 0;
+        let initTimer;
         function waitForDeps() {
             if (typeof GameData !== 'undefined' && typeof BattleLogic !== 'undefined') {
                 initBattleUI();
@@ -100,10 +162,11 @@
             if (!window.gameState) return;
             const state = window.gameState;
 
-            // 渲染敌人
+            // 渲染敌人（带信息按钮）
             const enemyArea = document.getElementById('enemyArea');
             enemyArea.innerHTML = state.enemies.map((e, idx) => `
                 <div class="enemy-card ${idx === state.selectedEnemy ? 'selected' : ''}" onclick="selectEnemy(${idx})">
+                    <div class="info-btn" onclick="event.stopPropagation(); showEnemyInfo(${idx})">ℹ️</div>
                     <div class="enemy-avatar">${e.emoji || '👹'}</div>
                     <div class="enemy-name">${e.name}</div>
                     <div class="enemy-hp-bar"><div class="enemy-hp-fill" style="width:${(e.hp/e.maxHp)*100}%"></div></div>
@@ -111,11 +174,12 @@
                 </div>
             `).join('');
 
-            // 渲染角色（单人鹿馆）
+            // 渲染角色（带信息按钮）
             const ch = state.party[0];
             const partyArea = document.getElementById('partyArea');
             partyArea.innerHTML = `
                 <div class="character-card active">
+                    <div class="info-btn" onclick="showCharacterInfo(0)">ℹ️</div>
                     <div class="character-avatar">${ch.avatar || '🦌'}</div>
                     <div class="character-info">
                         <div class="character-name">${ch.name}</div>
@@ -198,7 +262,7 @@
                 character.defense = teamChar.defense || character.defense;
                 character.speed = teamChar.speed || character.speed;
             }
-            // 确保技能完整（从 GameData 技能库补充）
+            // 确保技能完整
             character.skills = [
                 GameData.getSkillById('luguan_normal'),
                 GameData.getSkillById('luguan_skill'),
@@ -207,9 +271,9 @@
             ].filter(Boolean);
             character.energy = 0;
             character.maxEnergy = 120;
-            character.path = character.path || '巡猎';
+            character.path = character.path || '巡獵';
 
-            // 构建敌人（固定三个深渊魔物，参考 battle-logic.js 的数据结构）
+            // 构建敌人（固定三个深渊魔物）
             const baseEnemy = {
                 id: 'abyss_monster',
                 name: '深渊魔物',
@@ -239,10 +303,6 @@
                 lastDamage: 0,
                 lastDamageTaken: 0
             };
-            // 通知战斗逻辑状态已更新
-            if (typeof BattleLogic !== 'undefined') {
-                // 可选：调用 BattleLogic 的任何初始化方法，但 BattleLogic 直接使用 gameState 全局变量，所以不需要额外调用
-            }
             window.updateBattleUI();
             // 添加初始日志
             addLog('战斗开始！鹿馆迎战深渊魔物');
@@ -281,10 +341,8 @@
             setTimeout(() => statsDiv.style.opacity = '0', 1200);
         };
 
-        // 消息提示
         window.showMessage = function(title, msg) {
             addLog(`${title}: ${msg}`);
-            // 简单 alert 或 toast
             const toast = document.createElement('div');
             toast.textContent = msg;
             toast.style.cssText = 'position:fixed;top:30%;left:50%;transform:translateX(-50%);background:#000c;color:#00d4ff;padding:8px 16px;border-radius:40px;z-index:200;backdrop-filter:blur(8px);';
@@ -297,7 +355,10 @@
             window.endTurnLogic();
         };
 
-        // 启动
+        // 暴露给全局弹窗需要的数据
+        window.getCharacterDataForPopup = () => window.gameState?.party[0];
+        window.getEnemyDataForPopup = (idx) => window.gameState?.enemies[idx];
+
         waitForDeps();
     </script>
 </body>
