@@ -7,7 +7,7 @@
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <script src="https://xiaochen1235789.github.io/ai%20sister/game-data.js"></script>
     <style>
-        /* 样式与之前相同，忽略重复 */
+        /* 样式沿用已有，新增命座区域样式 */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: system-ui, 'Microsoft YaHei', sans-serif; }
         :root {
             --hsr-bg: #0a0a14;
@@ -59,6 +59,11 @@
         .upgrade-btn { background: var(--hsr-primary-dark); border: none; color: white; padding: 8px 20px; border-radius: 40px; font-weight: bold; cursor: pointer; transition: 0.2s; min-width: 100px; }
         .upgrade-btn:disabled { opacity: 0.5; cursor: not-allowed; background: #555; }
         .upgrade-btn:not(:disabled):hover { background: var(--hsr-primary); transform: scale(1.02); }
+        /* 命座按钮区域 */
+        .eidolon-section { margin-top: 30px; background: var(--hsr-glass); border-radius: 20px; padding: 20px; }
+        .eidolon-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 15px; }
+        .eidolon-btn { background: var(--hsr-surface); border: 2px solid var(--hsr-glass-border); border-radius: 60px; padding: 10px 20px; font-size: 1rem; font-weight: bold; color: var(--hsr-text); cursor: pointer; transition: 0.2s; min-width: 70px; text-align: center; }
+        .eidolon-btn.active { background: linear-gradient(135deg, var(--hsr-primary), var(--hsr-primary-dark)); border-color: var(--hsr-primary); color: #000; box-shadow: 0 0 12px var(--hsr-primary); }
         .save-area { text-align: center; margin-top: 30px; }
         .save-btn { background: linear-gradient(135deg, var(--hsr-success), #0f8b6e); border: none; padding: 14px 40px; border-radius: 60px; font-size: 1.2rem; font-weight: bold; color: white; cursor: pointer; }
         .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); color: var(--hsr-primary); padding: 8px 24px; border-radius: 40px; font-size: 0.9rem; z-index: 100; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
@@ -76,6 +81,14 @@
         <div class="credits" id="creditDisplay">💰 0 信用点</div>
     </div>
     <div class="character-card" id="characterCard"></div>
+
+    <!-- 命座激活区域 -->
+    <div class="eidolon-section">
+        <div class="section-title">🌟 星魂 · 命座激活</div>
+        <div class="eidolon-grid" id="eidolonGrid"></div>
+        <div style="font-size:0.75rem; color:var(--hsr-subtext); margin-top:12px;">※ 命座效果将在战斗中自动生效（E1/E2/E6已实现，E3/E5影响技能上限）</div>
+    </div>
+
     <div class="upgrade-section" id="levelUpSection">
         <div class="section-title">📈 角色等级</div>
         <div id="levelUpPanel"></div>
@@ -93,6 +106,7 @@
 <script>
     let currentCharacter = null;
     let totalCredits = 5000000;
+    let activatedEidolons = [];        // 当前激活的命座数组，如 ['e1','e2']
     const COST_LEVEL = 1000;
     const COST_SKILL = 500;
 
@@ -108,6 +122,79 @@
         document.getElementById('creditDisplay').innerHTML = `💰 ${totalCredits} 信用点`;
     }
 
+    // 重新构建角色（当命座变化时，需要重新获取基础角色并重新应用升级数据）
+    async function rebuildCharacter() {
+        if (!GameData) return;
+        // 获取基础角色（根据当前命座生成正确的技能上限）
+        let initState = GameData.getInitialState(null, activatedEidolons);
+        let newChar = initState.party[0];
+        // 读取之前保存的升级数据（等级和技能等级）
+        const upgradeData = loadSavedUpgradeData();
+        if (upgradeData) {
+            if (upgradeData.level && upgradeData.level > 1) {
+                GameData.levelUpCharacter(newChar, upgradeData.level);
+            }
+            if (upgradeData.skillLevels) {
+                newChar.skills.forEach(skill => {
+                    const targetLv = upgradeData.skillLevels[skill.id];
+                    if (targetLv && targetLv > skill.currentLevel) {
+                        while (skill.currentLevel < targetLv && skill.currentLevel < skill.maxLevel) {
+                            GameData.levelUpSkill(skill);
+                        }
+                    }
+                });
+            }
+        }
+        currentCharacter = newChar;
+        renderCharacterInfo();
+        renderLevelUpPanel();
+        renderSkillList();
+    }
+
+    // 切换命座激活状态
+    function toggleEidolon(eidolonId) {
+        const index = activatedEidolons.indexOf(eidolonId);
+        if (index === -1) {
+            activatedEidolons.push(eidolonId);
+        } else {
+            activatedEidolons.splice(index, 1);
+        }
+        // 更新按钮高亮
+        renderEidolonButtons();
+        // 重新构建角色（因为e3/e5影响技能上限，必须重建）
+        rebuildCharacter();
+    }
+
+    // 渲染命座按钮
+    function renderEidolonButtons() {
+        const container = document.getElementById('eidolonGrid');
+        const allEidolons = ['e1', 'e2', 'e3', 'e4', 'e5', 'e6'];
+        const names = { e1: '1命', e2: '2命', e3: '3命', e4: '4命', e5: '5命', e6: '6命' };
+        container.innerHTML = allEidolons.map(id => `
+            <div class="eidolon-btn ${activatedEidolons.includes(id) ? 'active' : ''}" data-eidolon="${id}">
+                ${names[id]}
+            </div>
+        `).join('');
+        // 绑定事件
+        document.querySelectorAll('.eidolon-btn').forEach(btn => {
+            btn.onclick = () => toggleEidolon(btn.dataset.eidolon);
+        });
+    }
+
+    // 加载保存的命座
+    function loadSavedEidolons() {
+        const saved = localStorage.getItem('hsr-activated-eidolons');
+        if (saved) {
+            try {
+                activatedEidolons = JSON.parse(saved);
+                if (!Array.isArray(activatedEidolons)) activatedEidolons = [];
+            } catch(e) { activatedEidolons = []; }
+        } else {
+            activatedEidolons = [];
+        }
+        renderEidolonButtons();
+    }
+
     function renderCharacterInfo() {
         if (!currentCharacter) return;
         const char = currentCharacter;
@@ -120,6 +207,7 @@
                         <span class="char-tag">${char.path}</span>
                         <span class="char-tag">${char.element === 'wind' ? '风' : char.element}</span>
                         <span class="char-tag">Lv.${char.level}</span>
+                        ${activatedEidolons.length > 0 ? `<span class="char-tag">🌟${activatedEidolons.length}命</span>` : ''}
                     </div>
                 </div>
             </div>
@@ -134,7 +222,6 @@
         `;
     }
 
-    // 获取技能下一级倍率（不修改原技能）
     function getNextDamage(skill) {
         if (skill.currentLevel >= skill.maxLevel) return null;
         let nextLv = skill.currentLevel + 1;
@@ -149,7 +236,6 @@
         return nextDamage;
     }
 
-    // 获取技能描述（替换所有占位符）
     function getProcessedDescription(skill) {
         let desc = skill.description || '无描述';
         if (skill.baseDamage && desc.includes('{damage}')) {
@@ -173,7 +259,6 @@
         return desc;
     }
 
-    // 获取天赋下一级数值
     function getNextTalentValues(skill) {
         if (skill.type !== 'talent') return null;
         if (skill.currentLevel >= skill.maxLevel) return null;
@@ -317,6 +402,7 @@
         char.skills.forEach(s => { upgradeData.skillLevels[s.id] = s.currentLevel; });
         localStorage.setItem('hsr-selected-team', JSON.stringify(teamData));
         localStorage.setItem('hsr-upgrade-data', JSON.stringify(upgradeData));
+        localStorage.setItem('hsr-activated-eidolons', JSON.stringify(activatedEidolons));
         showToast('角色数据已保存！');
         setTimeout(() => window.location.href = 'index.html', 800);
     }
@@ -326,9 +412,12 @@
         try { return saved ? JSON.parse(saved) : null; } catch(e) { return null; }
     }
 
-    function initUpgradePage() {
+    async function initUpgradePage() {
         if (!window.GameData) { setTimeout(initUpgradePage, 200); return; }
-        let initState = GameData.getInitialState();
+        // 先加载命座
+        loadSavedEidolons();
+        // 获取基础角色（带命座）
+        let initState = GameData.getInitialState(null, activatedEidolons);
         let character = initState.party[0];
         const upgradeData = loadSavedUpgradeData();
         if (upgradeData) {
@@ -349,6 +438,7 @@
         renderCharacterInfo();
         renderLevelUpPanel();
         renderSkillList();
+        // 命座按钮已渲染，无需额外操作
     }
 
     function saveCredits() { localStorage.setItem('hsr_credits', totalCredits); }
