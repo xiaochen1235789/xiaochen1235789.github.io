@@ -7,7 +7,6 @@
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <script src="https://xiaochen1235789.github.io/ai%20sister/game-data.js"></script>
     <style>
-        /* 样式沿用已有，新增命座区域样式 */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: system-ui, 'Microsoft YaHei', sans-serif; }
         :root {
             --hsr-bg: #0a0a14;
@@ -59,17 +58,62 @@
         .upgrade-btn { background: var(--hsr-primary-dark); border: none; color: white; padding: 8px 20px; border-radius: 40px; font-weight: bold; cursor: pointer; transition: 0.2s; min-width: 100px; }
         .upgrade-btn:disabled { opacity: 0.5; cursor: not-allowed; background: #555; }
         .upgrade-btn:not(:disabled):hover { background: var(--hsr-primary); transform: scale(1.02); }
-        /* 命座按钮区域 */
+        /* 命座卡片区域 */
         .eidolon-section { margin-top: 30px; background: var(--hsr-glass); border-radius: 20px; padding: 20px; }
-        .eidolon-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 15px; }
-        .eidolon-btn { background: var(--hsr-surface); border: 2px solid var(--hsr-glass-border); border-radius: 60px; padding: 10px 20px; font-size: 1rem; font-weight: bold; color: var(--hsr-text); cursor: pointer; transition: 0.2s; min-width: 70px; text-align: center; }
-        .eidolon-btn.active { background: linear-gradient(135deg, var(--hsr-primary), var(--hsr-primary-dark)); border-color: var(--hsr-primary); color: #000; box-shadow: 0 0 12px var(--hsr-primary); }
+        .eidolon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 15px; }
+        .eidolon-card {
+            background: var(--hsr-surface);
+            border: 1px solid var(--hsr-glass-border);
+            border-radius: 20px;
+            padding: 16px;
+            transition: 0.2s;
+        }
+        .eidolon-card.active {
+            border-color: var(--hsr-primary);
+            box-shadow: 0 0 12px var(--hsr-primary);
+            background: rgba(0,212,255,0.05);
+        }
+        .eidolon-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .eidolon-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--hsr-primary);
+        }
+        .eidolon-desc {
+            font-size: 0.8rem;
+            color: var(--hsr-subtext);
+            margin-bottom: 14px;
+            line-height: 1.4;
+        }
+        .eidolon-activate-btn {
+            background: var(--hsr-glass);
+            border: 1px solid var(--hsr-glass-border);
+            padding: 6px 16px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--hsr-text);
+            transition: 0.2s;
+            width: 100%;
+            text-align: center;
+        }
+        .eidolon-activate-btn.active {
+            background: var(--hsr-primary);
+            color: #000;
+            border-color: var(--hsr-primary);
+        }
         .save-area { text-align: center; margin-top: 30px; }
         .save-btn { background: linear-gradient(135deg, var(--hsr-success), #0f8b6e); border: none; padding: 14px 40px; border-radius: 60px; font-size: 1.2rem; font-weight: bold; color: white; cursor: pointer; }
         .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); color: var(--hsr-primary); padding: 8px 24px; border-radius: 40px; font-size: 0.9rem; z-index: 100; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
         @media (max-width: 600px) {
             .skill-item { flex-direction: column; gap: 12px; align-items: stretch; text-align: center; }
             .upgrade-btn { align-self: center; }
+            .eidolon-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -82,7 +126,7 @@
     </div>
     <div class="character-card" id="characterCard"></div>
 
-    <!-- 命座激活区域 -->
+    <!-- 命座激活区域（卡片式） -->
     <div class="eidolon-section">
         <div class="section-title">🌟 星魂 · 命座激活</div>
         <div class="eidolon-grid" id="eidolonGrid"></div>
@@ -106,7 +150,7 @@
 <script>
     let currentCharacter = null;
     let totalCredits = 5000000;
-    let activatedEidolons = [];        // 当前激活的命座数组，如 ['e1','e2']
+    let activatedEidolons = [];
     const COST_LEVEL = 1000;
     const COST_SKILL = 500;
 
@@ -122,13 +166,10 @@
         document.getElementById('creditDisplay').innerHTML = `💰 ${totalCredits} 信用点`;
     }
 
-    // 重新构建角色（当命座变化时，需要重新获取基础角色并重新应用升级数据）
     async function rebuildCharacter() {
         if (!GameData) return;
-        // 获取基础角色（根据当前命座生成正确的技能上限）
         let initState = GameData.getInitialState(null, activatedEidolons);
         let newChar = initState.party[0];
-        // 读取之前保存的升级数据（等级和技能等级）
         const upgradeData = loadSavedUpgradeData();
         if (upgradeData) {
             if (upgradeData.level && upgradeData.level > 1) {
@@ -151,7 +192,6 @@
         renderSkillList();
     }
 
-    // 切换命座激活状态
     function toggleEidolon(eidolonId) {
         const index = activatedEidolons.indexOf(eidolonId);
         if (index === -1) {
@@ -159,29 +199,46 @@
         } else {
             activatedEidolons.splice(index, 1);
         }
-        // 更新按钮高亮
         renderEidolonButtons();
-        // 重新构建角色（因为e3/e5影响技能上限，必须重建）
         rebuildCharacter();
     }
 
-    // 渲染命座按钮
+    // 渲染命座卡片（含描述）
     function renderEidolonButtons() {
         const container = document.getElementById('eidolonGrid');
+        if (!window.GameData || !window.GameData.eidolons) {
+            container.innerHTML = '<div>命座数据加载中...</div>';
+            return;
+        }
         const allEidolons = ['e1', 'e2', 'e3', 'e4', 'e5', 'e6'];
-        const names = { e1: '1命', e2: '2命', e3: '3命', e4: '4命', e5: '5命', e6: '6命' };
-        container.innerHTML = allEidolons.map(id => `
-            <div class="eidolon-btn ${activatedEidolons.includes(id) ? 'active' : ''}" data-eidolon="${id}">
-                ${names[id]}
-            </div>
-        `).join('');
-        // 绑定事件
-        document.querySelectorAll('.eidolon-btn').forEach(btn => {
-            btn.onclick = () => toggleEidolon(btn.dataset.eidolon);
+        container.innerHTML = allEidolons.map(id => {
+            const eData = GameData.eidolons[id];
+            const name = eData ? eData.name : (id === 'e1' ? '疾风追影' : (id === 'e2' ? '旋刃狩魂' : '未知命座'));
+            const desc = eData ? eData.description : '暂无描述';
+            const isActive = activatedEidolons.includes(id);
+            return `
+                <div class="eidolon-card ${isActive ? 'active' : ''}" data-eidolon="${id}">
+                    <div class="eidolon-header">
+                        <span class="eidolon-name">${name}</span>
+                    </div>
+                    <div class="eidolon-desc">${desc}</div>
+                    <button class="eidolon-activate-btn ${isActive ? 'active' : ''}" data-id="${id}">
+                        ${isActive ? '✓ 已激活' : '🔘 未激活'}
+                    </button>
+                </div>
+            `;
+        }).join('');
+
+        // 绑定按钮事件
+        document.querySelectorAll('.eidolon-activate-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                toggleEidolon(id);
+            };
         });
     }
 
-    // 加载保存的命座
     function loadSavedEidolons() {
         const saved = localStorage.getItem('hsr-activated-eidolons');
         if (saved) {
@@ -414,9 +471,7 @@
 
     async function initUpgradePage() {
         if (!window.GameData) { setTimeout(initUpgradePage, 200); return; }
-        // 先加载命座
         loadSavedEidolons();
-        // 获取基础角色（带命座）
         let initState = GameData.getInitialState(null, activatedEidolons);
         let character = initState.party[0];
         const upgradeData = loadSavedUpgradeData();
@@ -438,7 +493,6 @@
         renderCharacterInfo();
         renderLevelUpPanel();
         renderSkillList();
-        // 命座按钮已渲染，无需额外操作
     }
 
     function saveCredits() { localStorage.setItem('hsr_credits', totalCredits); }
