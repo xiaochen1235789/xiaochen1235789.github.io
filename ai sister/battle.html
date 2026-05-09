@@ -8,7 +8,7 @@
     <script src="/ai sister/game-data.js"></script>
     <script src="/ai sister/battle-logic.js"></script>
     <link rel="stylesheet" href="/css/info-popup.css">
-    <style>
+<style>
         * {
             margin: 0;
             padding: 0;
@@ -452,9 +452,7 @@
 
     <script src="/css/info-popup.js"></script>
     <script>
-        // 等待 GameData 和 BattleLogic 加载
         let initTimer;
-
         function waitForDeps() {
             if (typeof GameData !== 'undefined' && typeof BattleLogic !== 'undefined') {
                 initBattleUI();
@@ -482,10 +480,9 @@
                 </div>
             `).join('');
 
-            // 重新绑定敌人点击选择和信息按钮事件
             document.querySelectorAll('.enemy-card').forEach((card, idx) => {
                 card.onclick = (e) => {
-                    if (e.target.classList.contains('info-btn')) return; // 避免点击信息按钮时触发选中
+                    if (e.target.classList.contains('info-btn')) return;
                     selectEnemy(idx);
                 };
             });
@@ -539,8 +536,7 @@
                 const allSkills = character.skills || [];
                 const activeSkills = allSkills.filter(sk => sk.type !== 'talent');
                 skillsGrid.innerHTML = activeSkills.map((sk, idx) => {
-                    let disabled = false,
-                        costText = '';
+                    let disabled = false, costText = '';
                     if (sk.type === 'skill') {
                         disabled = state.skillPoints < (sk.skillPointCost || 1);
                         costText = `✦${sk.skillPointCost || 1}`;
@@ -576,13 +572,19 @@
 
         function initBattleUI() {
             let savedTeam = null;
+            let savedUpgrade = null;
             try {
                 const saved = localStorage.getItem('hsr-selected-team');
                 if (saved) savedTeam = JSON.parse(saved);
+                const upgrade = localStorage.getItem('hsr-upgrade-data');
+                if (upgrade) savedUpgrade = JSON.parse(upgrade);
             } catch (e) {}
 
-            let initState = GameData.getInitialState(); // 可传命座数组
+            // 获取初始角色（等级1，所有技能等级1）
+            let initState = GameData.getInitialState();
             let character = initState.party[0];
+            
+            // 应用队伍保存的基础属性（从选人界面来）
             if (savedTeam && savedTeam.characters && savedTeam.characters.length > 0) {
                 const teamChar = savedTeam.characters[0];
                 character.name = teamChar.name || character.name;
@@ -592,17 +594,42 @@
                 character.attack = teamChar.attack || character.attack;
                 character.defense = teamChar.defense || character.defense;
                 character.speed = teamChar.speed || character.speed;
+                if (teamChar.level) character.level = teamChar.level;
             }
+            
+            // 确保技能模板存在（必须从 GameData 获取完整对象）
             character.skills = [
                 GameData.getSkillById('luguan_normal'),
                 GameData.getSkillById('luguan_skill'),
                 GameData.getSkillById('luguan_ultimate'),
                 GameData.getSkillById('luguan_talent')
             ].filter(Boolean);
+            
+            // 应用升级数据（等级和技能等级）
+            if (savedUpgrade) {
+                // 先升级角色等级（如果需要）
+                if (savedUpgrade.level && savedUpgrade.level > character.level) {
+                    GameData.levelUpCharacter(character, savedUpgrade.level);
+                }
+                // 再升级技能等级
+                if (savedUpgrade.skillLevels) {
+                    character.skills.forEach(skill => {
+                        const targetLv = savedUpgrade.skillLevels[skill.id];
+                        if (targetLv && targetLv > skill.currentLevel) {
+                            while (skill.currentLevel < targetLv && skill.currentLevel < skill.maxLevel) {
+                                GameData.levelUpSkill(skill);
+                            }
+                        }
+                    });
+                }
+            }
+            
+            // 确保能量归零，最大能量120
             character.energy = 0;
             character.maxEnergy = 120;
             character.path = character.path || '巡猎';
 
+            // 敌人定义
             const baseEnemy = {
                 id: 'abyss_monster',
                 name: '深渊魔物',
@@ -681,7 +708,6 @@
             window.endTurnLogic();
         };
 
-        // 暴露获取当前角色/敌函数供 info-popup 使用
         window.getCharacterDataForPopup = () => window.gameState?.party[0];
         window.getEnemyDataForPopup = (idx) => window.gameState?.enemies[idx];
 
