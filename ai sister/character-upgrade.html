@@ -7,7 +7,13 @@
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <script src="https://xiaochen1235789.github.io/ai%20sister/game-data.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: system-ui, 'Microsoft YaHei', sans-serif; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: system-ui, 'Microsoft YaHei', sans-serif;
+        }
         :root {
             --hsr-bg: #0a0a14;
             --hsr-surface: #151525;
@@ -49,8 +55,10 @@
         .skill-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--hsr-glass-border); }
         .skill-info { flex: 2; }
         .skill-name { font-size: 1.1rem; font-weight: 600; margin-bottom: 4px; }
-        .skill-desc { font-size: 0.8rem; color: var(--hsr-subtext); margin-bottom: 6px; }
-        .skill-multiplier { font-size: 0.75rem; color: var(--hsr-primary); background: rgba(0,212,255,0.15); display: inline-block; padding: 2px 10px; border-radius: 20px; }
+        .skill-desc { font-size: 0.8rem; color: var(--hsr-subtext); margin-bottom: 6px; line-height: 1.4; }
+        .skill-next, .skill-max { font-size: 0.7rem; margin-top: 4px; }
+        .skill-next { color: var(--hsr-warning); }
+        .skill-max { color: var(--hsr-success); }
         .skill-level { font-size: 1rem; margin: 0 16px; min-width: 100px; text-align: center; }
         .skill-level span { color: var(--hsr-primary); font-weight: bold; }
         .upgrade-btn { background: var(--hsr-primary-dark); border: none; color: white; padding: 8px 20px; border-radius: 40px; font-weight: bold; cursor: pointer; transition: 0.2s; min-width: 100px; }
@@ -131,15 +139,29 @@
         `;
     }
 
-    // 获取技能当前倍率显示文本（直接使用角色技能对象的 baseDamage）
-    function getMultiplierText(skill) {
-        if (skill.type === 'normal' || skill.type === 'skill' || skill.type === 'ultimate') {
-            let ratio = (skill.baseDamage * 100).toFixed(0);
-            return `当前倍率: ${ratio}%`;
-        } else if (skill.type === 'talent') {
-            return '被动技能，升级增强效果';
+    // 获取技能下一级倍率（不修改原技能）
+    function getNextDamage(skill) {
+        if (skill.currentLevel >= skill.maxLevel) return null;
+        let nextLv = skill.currentLevel + 1;
+        let nextDamage = null;
+        if (skill.type === 'normal') {
+            nextDamage = GameData.getSkillValue('normal', nextLv, 0) / 100;
+        } else if (skill.type === 'skill') {
+            nextDamage = GameData.getSkillValue('skill', nextLv, 0) / 100;
+        } else if (skill.type === 'ultimate') {
+            nextDamage = GameData.getSkillValue('ultimate', nextLv, 0) / 100;
         }
-        return '';
+        return nextDamage;
+    }
+
+    // 获取技能描述（替换 {damage} 占位符）
+    function getProcessedDescription(skill) {
+        let desc = skill.description || '无描述';
+        if (skill.baseDamage && desc.includes('{damage}')) {
+            let currentPercent = Math.round(skill.baseDamage * 100);
+            desc = desc.replace('{damage}', `${currentPercent}%`);
+        }
+        return desc;
     }
 
     function renderLevelUpPanel() {
@@ -189,7 +211,6 @@
     function renderSkillList() {
         const char = currentCharacter;
         const skills = char.skills || [];
-        // 过滤出可升级的主动/被动技能（不包含 defend）
         const displaySkills = skills.filter(s => ['normal', 'skill', 'ultimate', 'talent'].includes(s.type));
         const container = document.getElementById('skillList');
         if (displaySkills.length === 0) {
@@ -198,20 +219,39 @@
         }
         container.innerHTML = displaySkills.map(skill => {
             const canUp = skill.currentLevel < skill.maxLevel && totalCredits >= COST_SKILL;
-            const multiplierText = getMultiplierText(skill);
+            const processedDesc = getProcessedDescription(skill);
+            let nextPreview = '';
+            if (skill.type !== 'talent') {
+                if (skill.currentLevel < skill.maxLevel) {
+                    const nextDamage = getNextDamage(skill);
+                    if (nextDamage) {
+                        let currentPercent = Math.round(skill.baseDamage * 100);
+                        let nextPercent = Math.round(nextDamage * 100);
+                        nextPreview = `<div class="skill-next">下一级: ${currentPercent}% → ${nextPercent}%</div>`;
+                    }
+                } else {
+                    nextPreview = `<div class="skill-max">✓ 已达最高等级</div>`;
+                }
+            } else {
+                // 天赋没有倍率，但可以显示满级提示
+                if (skill.currentLevel >= skill.maxLevel) {
+                    nextPreview = `<div class="skill-max">✓ 天赋已达最高等级</div>`;
+                } else {
+                    nextPreview = `<div class="skill-next">升级提升天赋效果</div>`;
+                }
+            }
             return `
                 <div class="skill-item" data-skill-id="${skill.id}">
                     <div class="skill-info">
                         <div class="skill-name">${skill.icon || '✨'} ${skill.name}</div>
-                        <div class="skill-desc">${skill.description || '无描述'}</div>
-                        ${multiplierText ? `<div class="skill-multiplier">${multiplierText}</div>` : ''}
+                        <div class="skill-desc">${processedDesc}</div>
+                        ${nextPreview}
                     </div>
                     <div class="skill-level">Lv.<span>${skill.currentLevel}</span> / ${skill.maxLevel}</div>
                     <button class="upgrade-btn skill-upgrade" ${!canUp ? 'disabled' : ''}>⬆️ 升级 (${COST_SKILL})</button>
                 </div>
             `;
         }).join('');
-        // 绑定升级事件
         document.querySelectorAll('.skill-upgrade').forEach(btn => {
             const skillItem = btn.closest('.skill-item');
             const skillId = skillItem?.dataset.skillId;
@@ -227,7 +267,7 @@
             totalCredits -= COST_SKILL;
             updateCreditUI();
             renderSkillList();
-            renderCharacterInfo(); // 天赋升级可能影响角色属性，刷新显示
+            renderCharacterInfo();
             showToast(`${skill.name} 升至 Lv.${skill.currentLevel}`);
         } else showToast(`${skill.name} 升级失败`, true);
     }
