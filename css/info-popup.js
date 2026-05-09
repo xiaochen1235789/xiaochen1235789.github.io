@@ -77,10 +77,25 @@ function showCharacterInfo(characterIndex) {
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 }
 
-// 显示敌人详情弹窗
+// 显示敌人详情弹窗（增强版，自动合并 isDefDown 等独立状态）
 function showEnemyInfo(enemyIndex) {
     const enemy = window.getEnemyDataForPopup ? window.getEnemyDataForPopup(enemyIndex) : null;
     if (!enemy) return;
+
+    // 收集所有负面状态（包括 debuffs 数组和独立的 isDefDown）
+    let allDebuffs = [];
+    if (enemy.debuffs && enemy.debuffs.length) {
+        allDebuffs.push(...enemy.debuffs);
+    }
+    if (enemy.isDefDown) {
+        // 避免重复添加（若 debuffs 中已有防御降低条目则不重复）
+        const alreadyHas = allDebuffs.some(d => d.name && d.name.includes('防御降低'));
+        if (!alreadyHas) {
+            const turns = enemy.defDownTurns || 0;
+            const displayName = turns > 0 ? `防御降低 (剩${turns}回合)` : '防御降低';
+            allDebuffs.push({ name: displayName });
+        }
+    }
 
     const modal = document.createElement('div');
     modal.className = 'info-modal';
@@ -96,7 +111,7 @@ function showEnemyInfo(enemyIndex) {
             <div class="stat-row"><span class="stat-label">⚡ 速度</span><span class="stat-value">${enemy.speed || '??'}</span></div>
             <div class="status-section">
                 <div class="status-title">⚠️ 负面状态</div>
-                <div class="status-list" id="debuff-list">${renderStatusList(enemy.debuffs || [])}</div>
+                <div class="status-list">${renderStatusList(allDebuffs)}</div>
             </div>
         </div>
     `;
