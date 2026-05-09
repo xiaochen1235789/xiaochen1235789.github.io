@@ -1,4 +1,4 @@
-// ===================== 游戏数据配置（线性属性成长 + 崩铁伤害公式 + 命座）=====================
+// ===================== 游戏数据配置（崩铁公式 + 动态技能上限 + 命座，无防御技能）=====================
 const GameData = (function() {
     // ---------- 1. 基础技能上限（无命座）----------
     const BASE_SKILL_MAX_LEVEL = {
@@ -8,30 +8,48 @@ const GameData = (function() {
         talent: 10
     };
 
-    // ---------- 2. 线性属性成长（基于1级和90级数值）----------
-    const BASE_STAT_1 = { hp: 126, atk: 87, def: 49 };
-    const BASE_STAT_90 = { hp: 1117, atk: 768, def: 582 };
-    const MAX_CHARACTER_LEVEL = 90;
+    // ---------- 2. 属性预设点（等级 → {hp, atk, def}）----------
+    const STAT_PRESETS = {
+        1:  { hp: 126, atk: 87,  def: 49 },
+        20: { hp: 297, atk: 204, def: 116 },
+        30: { hp: 411, atk: 283, def: 160 },
+        40: { hp: 525, atk: 361, def: 205 },
+        50: { hp: 639, atk: 439, def: 249 },
+        60: { hp: 753, atk: 518, def: 294 },
+        70: { hp: 868, atk: 596, def: 339 },
+        80: { hp: 931, atk: 640, def: 363 },
+        90: { hp: 1117, atk: 768, def: 582 }
+    };
+    const PRESET_LEVELS = Object.keys(STAT_PRESETS).map(Number).sort((a,b)=>a-b);
 
     function getStatByLevel(level, statName) {
-        level = Math.min(MAX_CHARACTER_LEVEL, Math.max(1, level));
-        const low = BASE_STAT_1[statName];
-        const high = BASE_STAT_90[statName];
-        const value = low + (high - low) * (level - 1) / (MAX_CHARACTER_LEVEL - 1);
-        return Math.floor(value);
+        if (level <= PRESET_LEVELS[0]) return STAT_PRESETS[PRESET_LEVELS[0]][statName];
+        if (level >= PRESET_LEVELS[PRESET_LEVELS.length-1]) return STAT_PRESETS[PRESET_LEVELS[PRESET_LEVELS.length-1]][statName];
+        let lower = PRESET_LEVELS[0], upper = PRESET_LEVELS[PRESET_LEVELS.length-1];
+        for (let i = 0; i < PRESET_LEVELS.length-1; i++) {
+            if (level >= PRESET_LEVELS[i] && level <= PRESET_LEVELS[i+1]) {
+                lower = PRESET_LEVELS[i];
+                upper = PRESET_LEVELS[i+1];
+                break;
+            }
+        }
+        const lowVal = STAT_PRESETS[lower][statName];
+        const highVal = STAT_PRESETS[upper][statName];
+        const ratio = (level - lower) / (upper - lower);
+        return Math.round(lowVal + (highVal - lowVal) * ratio);
     }
 
     // ---------- 3. 技能倍率成长公式 ----------
     const SKILL_GROWTH = {
-        normal: { base: 50, step: 10 },      // 1级 50%, 每级+10%
-        skill: { base: 150, step: 20 },      // 1级 150%, 每级+20%
+        normal: { base: 50, step: 10 },
+        skill: { base: 150, step: 20 },
         ultimate: [
-            { base: 300, step: 36 },         // 第一段倍率
-            { base: 100, step: 10 }          // 第二段额外倍率（负面目标增伤）
+            { base: 300, step: 36 },
+            { base: 100, step: 10 }
         ],
         talent: [
-            { base: 10, step: 2 },           // 抗性穿透上限
-            { base: 20, step: 5 }            // 攻击力加成上限
+            { base: 10, step: 2 },
+            { base: 20, step: 5 }
         ]
     };
 
@@ -131,7 +149,7 @@ const GameData = (function() {
         }
     };
 
-    // ---------- 5. 构建查找表 ----------
+    // ---------- 5. 构建查找表（命座使用短ID作为键）----------
     const skillsMap = {};
     const extraAbilitiesMap = {};
     const eidolonsMap = {};
@@ -145,12 +163,16 @@ const GameData = (function() {
         skillsMap[clone.id] = clone;
     }
     function registerExtraAbility(ability) { extraAbilitiesMap[ability.id] = { ...ability }; }
-    function registerEidolon(eidolon) { eidolonsMap[eidolon.id] = { ...eidolon }; }
+    function registerEidolon(shortId, eidolon) {
+        eidolonsMap[shortId] = { ...eidolon };
+    }
 
     for (const char of Object.values(charactersBaseData)) {
         for (const skill of Object.values(char.skillsTemplates)) registerSkill(skill);
         for (const ability of Object.values(char.extraAbilities)) registerExtraAbility(ability);
-        for (const eidolon of Object.values(char.eidolons)) registerEidolon(eidolon);
+        for (const [shortId, eidolon] of Object.entries(char.eidolons)) {
+            registerEidolon(shortId, eidolon);
+        }
     }
 
     // ---------- 6. 获取技能上限（根据命座动态调整）----------
@@ -174,7 +196,7 @@ const GameData = (function() {
             charLevel = levelConfig.luguan.level || 1;
             skillLevels = levelConfig.luguan.skillLevels || {};
         }
-        charLevel = Math.min(MAX_CHARACTER_LEVEL, Math.max(1, charLevel));
+        charLevel = Math.min(90, Math.max(1, charLevel));
 
         const hp = getStatByLevel(charLevel, 'hp');
         const atk = getStatByLevel(charLevel, 'atk');
@@ -269,7 +291,7 @@ const GameData = (function() {
     function levelUpCharacter(character, targetLevel) {
         if (!character) return false;
         let newLevel = targetLevel || (character.level + 1);
-        if (newLevel > MAX_CHARACTER_LEVEL) newLevel = MAX_CHARACTER_LEVEL;
+        if (newLevel > 90) newLevel = 90;
         if (newLevel <= character.level) return false;
         const oldHp = character.hp;
         const oldMaxHp = character.maxHp;
@@ -289,7 +311,7 @@ const GameData = (function() {
         if (!skill) return false;
         if (skill.currentLevel >= skill.maxLevel) return false;
         skill.currentLevel++;
-        const skillType = skill.type; // 'normal', 'skill', 'ultimate', 'talent'
+        const skillType = skill.type;
         if (skillType === 'normal' || skillType === 'skill') {
             skill.baseDamage = getSkillValue(skillType, skill.currentLevel, 0) / 100;
         } else if (skillType === 'ultimate') {
@@ -360,13 +382,9 @@ const GameData = (function() {
         eidolons: eidolonsMap,
         enemies: [],
         constants: { maxSkillPoints: 5, minDamageMultiplier: 0.1 },
-        MAX_CHARACTER_LEVEL,
-        SKILL_MAX_LEVEL: BASE_SKILL_MAX_LEVEL,
         getInitialState,
         levelUpCharacter,
         levelUpSkill,
-        getStatByLevel,   // 导出线性属性函数供升级界面调用
-        getSkillValue,
         getSkillById: (id) => skillsMap[id] || null,
         getExtraAbilityById: (id) => extraAbilitiesMap[id] || null,
         getEidolonById: (id) => eidolonsMap[id] || null,
@@ -378,4 +396,4 @@ const GameData = (function() {
 })();
 
 window.GameData = GameData;
-console.log('游戏数据加载完成（线性属性成长 + 崩铁公式 + 命座支持）');
+console.log('游戏数据加载完成（命座使用短ID，已修复描述显示）');
