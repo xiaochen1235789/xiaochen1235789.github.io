@@ -1,5 +1,6 @@
-// info-popup.js - 角色/敌人信息弹窗，支持命座显示
+// info-popup.js - 角色/敌人信息弹窗，含命座显示
 
+// 工具函数：渲染状态列表
 function renderStatusList(list) {
     if (!list || list.length === 0) return '<div style="color:#aaa;">无</div>';
     return list.map(s => `<div class="status-item">${s.name || s}</div>`).join('');
@@ -17,7 +18,6 @@ function showCharacterInfo(characterIndex) {
             eidolonNames[id] = data.name;
         }
     } else {
-        // 后备映射
         const fallback = {
             e1: '疾风追影', e2: '旋刃狩魂', e3: '裂空破障',
             e4: '破晓狩风', e5: '风狩铭纹', e6: '逐影风刃'
