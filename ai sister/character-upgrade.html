@@ -7,13 +7,8 @@
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <script src="https://xiaochen1235789.github.io/ai%20sister/game-data.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            font-family: system-ui, 'Microsoft YaHei', sans-serif;
-        }
+        /* 样式与之前相同，忽略重复 */
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: system-ui, 'Microsoft YaHei', sans-serif; }
         :root {
             --hsr-bg: #0a0a14;
             --hsr-surface: #151525;
@@ -97,7 +92,7 @@
 
 <script>
     let currentCharacter = null;
-    let totalCredits = 50000;
+    let totalCredits = 5000000;
     const COST_LEVEL = 1000;
     const COST_SKILL = 500;
 
@@ -154,14 +149,40 @@
         return nextDamage;
     }
 
-    // 获取技能描述（替换 {damage} 占位符）
+    // 获取技能描述（替换所有占位符）
     function getProcessedDescription(skill) {
         let desc = skill.description || '无描述';
         if (skill.baseDamage && desc.includes('{damage}')) {
             let currentPercent = Math.round(skill.baseDamage * 100);
             desc = desc.replace('{damage}', `${currentPercent}%`);
         }
+        if (skill.extraDamage && desc.includes('{extra}')) {
+            let extraPercent = Math.round(skill.extraDamage * 100);
+            desc = desc.replace('{extra}', `${extraPercent}%`);
+        }
+        if (skill.type === 'talent') {
+            if (skill.penetration !== undefined && desc.includes('{penetration}')) {
+                let penPercent = Math.round(skill.penetration * 100);
+                desc = desc.replace('{penetration}', `${penPercent}%`);
+            }
+            if (skill.atkBonus !== undefined && desc.includes('{atkBonus}')) {
+                let atkPercent = Math.round(skill.atkBonus * 100);
+                desc = desc.replace('{atkBonus}', `${atkPercent}%`);
+            }
+        }
         return desc;
+    }
+
+    // 获取天赋下一级数值
+    function getNextTalentValues(skill) {
+        if (skill.type !== 'talent') return null;
+        if (skill.currentLevel >= skill.maxLevel) return null;
+        let nextLv = skill.currentLevel + 1;
+        let nextPen = GameData.getSkillValue('talent', nextLv, 0) / 100;
+        let nextAtk = GameData.getSkillValue('talent', nextLv, 1) / 100;
+        let curPen = skill.penetration;
+        let curAtk = skill.atkBonus;
+        return { curPen, curAtk, nextPen, nextAtk };
     }
 
     function renderLevelUpPanel() {
@@ -233,11 +254,19 @@
                     nextPreview = `<div class="skill-max">✓ 已达最高等级</div>`;
                 }
             } else {
-                // 天赋没有倍率，但可以显示满级提示
-                if (skill.currentLevel >= skill.maxLevel) {
-                    nextPreview = `<div class="skill-max">✓ 天赋已达最高等级</div>`;
+                if (skill.currentLevel < skill.maxLevel) {
+                    const nextVals = getNextTalentValues(skill);
+                    if (nextVals) {
+                        let curPen = Math.round(nextVals.curPen * 100);
+                        let nextPen = Math.round(nextVals.nextPen * 100);
+                        let curAtk = Math.round(nextVals.curAtk * 100);
+                        let nextAtk = Math.round(nextVals.nextAtk * 100);
+                        nextPreview = `<div class="skill-next">下一级: 穿透上限 ${curPen}% → ${nextPen}% &nbsp;|&nbsp; 攻击加成上限 ${curAtk}% → ${nextAtk}%</div>`;
+                    } else {
+                        nextPreview = `<div class="skill-next">升级提升天赋效果</div>`;
+                    }
                 } else {
-                    nextPreview = `<div class="skill-next">升级提升天赋效果</div>`;
+                    nextPreview = `<div class="skill-max">✓ 天赋已达最高等级</div>`;
                 }
             }
             return `
