@@ -102,6 +102,56 @@
         .upgrade-btn:disabled { opacity: 0.5; cursor: not-allowed; background: #555; }
         .upgrade-btn:not(:disabled):hover { background: var(--hsr-primary); transform: scale(1.02); }
 
+        /* 光锥区域样式 */
+        .lightcone-section {
+            background: var(--hsr-glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--hsr-glass-border);
+            border-radius: 28px;
+            padding: 24px;
+        }
+        .lightcone-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .lightcone-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--hsr-primary);
+        }
+        .lightcone-stats {
+            display: flex;
+            gap: 24px;
+            margin: 16px 0;
+            flex-wrap: wrap;
+        }
+        .lightcone-stat {
+            background: rgba(0,0,0,0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .lightcone-stat span:first-child { font-weight: bold; color: var(--hsr-subtext); }
+        .lightcone-stat span:last-child { color: var(--hsr-primary); font-weight: bold; }
+        .level-control {
+            margin-top: 16px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .btn-group .upgrade-btn {
+            min-width: auto;
+            padding: 8px 20px;
+        }
+
         .eidolon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 15px; }
         .eidolon-card {
             background: var(--hsr-surface);
@@ -156,6 +206,7 @@
             .upgrade-btn { align-self: center; }
             .relic-grid { grid-template-columns: 1fr; }
             .tabs { justify-content: center; }
+            .lightcone-stats { flex-direction: column; gap: 8px; }
         }
     </style>
 </head>
@@ -170,13 +221,15 @@
     <!-- 角色信息卡片 -->
     <div class="character-card" id="characterCard"></div>
 
-    <!-- 选项卡 -->
+    <!-- 选项卡（新顺序：角色提升 → 光锥提升 → 遗器调整 → 星魂同调） -->
     <div class="tabs">
         <button class="tab-btn active" data-tab="tab1">📈 角色提升</button>
-        <button class="tab-btn" data-tab="tab2">🌟 星魂同调</button>
-        <button class="tab-btn" data-tab="tab3">📿 遗器系统</button>
+        <button class="tab-btn" data-tab="tab2">✨ 光锥提升</button>
+        <button class="tab-btn" data-tab="tab3">📿 遗器调整</button>
+        <button class="tab-btn" data-tab="tab4">🌟 星魂同调</button>
     </div>
 
+    <!-- 角色提升 -->
     <div id="tab1" class="tab-pane active">
         <div class="section-card">
             <div class="section-title" style="margin-bottom: 20px;">📈 角色等级</div>
@@ -186,19 +239,48 @@
         </div>
     </div>
 
+    <!-- 光锥提升 -->
     <div id="tab2" class="tab-pane">
-        <div class="section-card">
-            <div class="section-title">🌟 星魂 · 命座激活</div>
-            <div class="eidolon-grid" id="eidolonGrid"></div>
-            <div style="font-size:0.75rem; color:var(--hsr-subtext); margin-top:12px;">※ 命座效果将在战斗中自动生效（E1/E2/E6已实现，E3/E5影响技能上限）</div>
+        <div class="lightcone-section">
+            <div class="lightcone-header">
+                <div class="lightcone-name">快乐的路一天</div>
+                <div class="lightcone-rating" style="color: gold;">✭✭✭✭✭</div>
+            </div>
+            <div class="lightcone-stats" id="lightconeStats">
+                <div class="lightcone-stat"><span>❤️ 生命值</span> <span id="lcHp">0</span></div>
+                <div class="lightcone-stat"><span>⚔️ 攻击力</span> <span id="lcAtk">0</span></div>
+                <div class="lightcone-stat"><span>🛡️ 防御力</span> <span id="lcDef">0</span></div>
+            </div>
+            <div class="level-control">
+                <div class="level-header">
+                    <span class="level-label">光锥等级</span>
+                    <span class="level-value" id="lcLevelDisplay">Lv.1</span>
+                </div>
+                <input type="range" class="level-slider" id="lcLevelSlider" min="1" max="90" value="1" step="1">
+                <div class="btn-group">
+                    <button class="upgrade-btn" id="lcLevelDown">⬇️ 降级</button>
+                    <button class="upgrade-btn" id="lcLevelUp">⬆️ 升级</button>
+                </div>
+                <div style="margin-top: 12px; color: var(--hsr-warning); font-size: 0.8rem;">升级消耗：每级 500 信用点</div>
+            </div>
         </div>
     </div>
 
+    <!-- 遗器调整 -->
     <div id="tab3" class="tab-pane">
         <div class="section-card">
             <div class="section-title">📿 遗器装备</div>
             <div class="relic-grid" id="relicGrid"></div>
             <div style="font-size:0.75rem; color:var(--hsr-subtext); margin-top:12px;">※ 每件遗器可升级至+15，每3级随机强化一条副词条或新增词条</div>
+        </div>
+    </div>
+
+    <!-- 星魂同调 -->
+    <div id="tab4" class="tab-pane">
+        <div class="section-card">
+            <div class="section-title">🌟 星魂 · 命座激活</div>
+            <div class="eidolon-grid" id="eidolonGrid"></div>
+            <div style="font-size:0.75rem; color:var(--hsr-subtext); margin-top:12px;">※ 命座效果将在战斗中自动生效（E1/E2/E6已实现，E3/E5影响技能上限）</div>
         </div>
     </div>
 
@@ -209,15 +291,97 @@
 <div class="toast" id="toastMsg">提示</div>
 
 <script>
-    // 角色升级相关变量
+    // ========== 角色升级相关变量 ==========
     let currentCharacter = null;
     let totalCredits = 5000000;
     let activatedEidolons = [];
     const COST_LEVEL = 1000;
     const COST_SKILL = 500;
     const RELIC_UPGRADE_COST = 500;
+    const LIGHTCONE_UPGRADE_COST = 500;   // 光锥每级消耗
 
     let relicEquips = { head: null, hands: null, body: null, feet: null, sphere: null, rope: null };
+
+    // ========== 光锥数据 ==========
+    // 基于 changjinglu.html 中的已知等级点，线性插值生成 1~90 级属性
+    const lcBasePoints = {
+        1:  { hp: 48, atk: 26, def: 21 },
+        20: { hp: 242, atk: 133, def: 106 },
+        30: { hp: 391, atk: 215, def: 171 },
+        40: { hp: 540, atk: 297, def: 236 },
+        50: { hp: 688, atk: 378, def: 301 },
+        60: { hp: 837, atk: 460, def: 366 },
+        70: { hp: 986, atk: 542, def: 431 },
+        80: { hp: 1058, atk: 582, def: 463 },
+        90: { hp: 1270, atk: 698, def: 556 }
+    };
+    const lcLevels = [1,20,30,40,50,60,70,80,90];
+    // 生成 1~90 级的连续属性数组
+    let lightconeStatsByLevel = [];
+    for (let i = 1; i <= 90; i++) {
+        // 找到 i 所在的区间
+        let lower = lcLevels[0], upper = lcLevels[lcLevels.length-1];
+        for (let j = 0; j < lcLevels.length-1; j++) {
+            if (i >= lcLevels[j] && i <= lcLevels[j+1]) {
+                lower = lcLevels[j];
+                upper = lcLevels[j+1];
+                break;
+            }
+        }
+        const low = lcBasePoints[lower];
+        const high = lcBasePoints[upper];
+        const ratio = (i - lower) / (upper - lower);
+        const hp = Math.round(low.hp + (high.hp - low.hp) * ratio);
+        const atk = Math.round(low.atk + (high.atk - low.atk) * ratio);
+        const def = Math.round(low.def + (high.def - low.def) * ratio);
+        lightconeStatsByLevel[i] = { hp, atk, def };
+    }
+
+    let lightconeLevel = 1;   // 当前光锥等级，从 localStorage 读取
+
+    // 加载/保存光锥等级
+    function loadLightconeLevel() {
+        const saved = localStorage.getItem('hsr-lightcone-level');
+        if (saved) {
+            let lv = parseInt(saved, 10);
+            if (!isNaN(lv) && lv >= 1 && lv <= 90) lightconeLevel = lv;
+        }
+    }
+    function saveLightconeLevel() {
+        localStorage.setItem('hsr-lightcone-level', lightconeLevel);
+    }
+
+    function updateLightconeUI() {
+        const stats = lightconeStatsByLevel[lightconeLevel];
+        document.getElementById('lcHp').innerText = stats.hp;
+        document.getElementById('lcAtk').innerText = stats.atk;
+        document.getElementById('lcDef').innerText = stats.def;
+        document.getElementById('lcLevelDisplay').innerText = `Lv.${lightconeLevel}`;
+        document.getElementById('lcLevelSlider').value = lightconeLevel;
+        // 更新按钮状态
+        const downBtn = document.getElementById('lcLevelDown');
+        const upBtn = document.getElementById('lcLevelUp');
+        if (downBtn) downBtn.disabled = (lightconeLevel <= 1);
+        if (upBtn) upBtn.disabled = (lightconeLevel >= 90);
+    }
+
+    function changeLightconeLevel(delta) {
+        let newLevel = lightconeLevel + delta;
+        if (newLevel < 1) newLevel = 1;
+        if (newLevel > 90) newLevel = 90;
+        if (newLevel === lightconeLevel) return;
+        const cost = Math.abs(newLevel - lightconeLevel) * LIGHTCONE_UPGRADE_COST;
+        if (totalCredits < cost) {
+            showToast(`信用点不足，需要 ${cost} 点`, true);
+            return;
+        }
+        totalCredits -= cost;
+        lightconeLevel = newLevel;
+        updateLightconeUI();
+        updateCreditUI();
+        saveLightconeLevel();
+        showToast(`光锥升至 Lv.${lightconeLevel}`, false);
+    }
 
     // ========== 辅助函数 ==========
     function showToast(msg, isError = false) {
@@ -231,7 +395,7 @@
         document.getElementById('creditDisplay').innerHTML = `💰 ${totalCredits} 信用点`;
     }
 
-    // ========== 遗器相关（含强化显示与补词条） ==========
+    // ========== 遗器相关（保持不变） ==========
     const statIconMap = {
         hpPercent: '/attribute_image/HP.webp', hp: '/attribute_image/HP.webp',
         atkPercent: '/attribute_image/ATK.webp', atk: '/attribute_image/ATK.webp',
@@ -260,15 +424,11 @@
         };
         return map[type] || type;
     }
-
     function getPartName(part) {
         const map = { head:'智慧头套', hands:'指挥手套', body:'安心的护甲', feet:'健步如飞的靴子', sphere:'过去的球', rope:'过去的绳' };
         return map[part] || part;
     }
-
-    // 核心：遗器强化逻辑（升级时调用）
     function enhanceRelicSubStat(relic) {
-        // 优先补满第4条副词条
         if (relic.subStats.length < 4) {
             const existingTypes = relic.subStats.map(s => s.type);
             let candidates = SubStatPool.filter(t => t !== relic.mainStat.type && !existingTypes.includes(t));
@@ -283,7 +443,6 @@
             relic.subStats.push({ type: newType, value: value, enhanceCount: 0 });
             return;
         }
-        // 已有4条，随机强化一条
         const idx = Math.floor(Math.random() * relic.subStats.length);
         const sub = relic.subStats[idx];
         if (sub.enhanceCount === undefined) sub.enhanceCount = 0;
@@ -296,7 +455,6 @@
         sub.value += increment;
         sub.value = parseFloat(sub.value.toFixed(1));
     }
-
     function upgradeRelic(part) {
         let relic = relicEquips[part];
         if (!relic) return;
@@ -326,14 +484,12 @@
         updateCreditUI();
         showToast(`${getPartName(part)} 升至 +${relic.level}`);
     }
-
     function loadRelicEquips() {
         const saved = localStorage.getItem('hsr-relic-equips');
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
                 relicEquips = { ...relicEquips, ...parsed };
-                // 确保每个遗器的副词条都有 enhanceCount
                 for (let part of Object.keys(relicEquips)) {
                     let r = relicEquips[part];
                     if (r && r.subStats) {
@@ -354,7 +510,6 @@
         saveRelicEquips();
     }
     function saveRelicEquips() { localStorage.setItem('hsr-relic-equips', JSON.stringify(relicEquips)); }
-
     function renderRelicSystem() {
         const container = document.getElementById('relicGrid');
         if (!container) return;
@@ -385,7 +540,7 @@
         }).join('');
     }
 
-    // ========== 其余角色升级逻辑（保持原有） ==========
+    // ========== 角色升级逻辑（保持不变） ==========
     function rebuildCharacter() {
         if (!GameData) return;
         let initState = GameData.getInitialState(null, activatedEidolons);
@@ -554,6 +709,7 @@
         localStorage.setItem('hsr-upgrade-data', JSON.stringify(upgradeData));
         localStorage.setItem('hsr-activated-eidolons', JSON.stringify(activatedEidolons));
         saveRelicEquips();
+        saveLightconeLevel();   // 保存光锥等级
         showToast('角色数据已保存！');
         setTimeout(() => window.location.href = 'index.html', 800);
     }
@@ -562,6 +718,7 @@
         try { return saved ? JSON.parse(saved) : null; } catch(e) { return null; }
     }
     function saveCredits() { localStorage.setItem('hsr_credits', totalCredits); }
+
     function initTabs() {
         const btns = document.querySelectorAll('.tab-btn');
         const panes = document.querySelectorAll('.tab-pane');
@@ -575,6 +732,7 @@
             });
         });
     }
+
     async function initUpgradePage() {
         if (!window.GameData) { setTimeout(initUpgradePage, 200); return; }
         loadSavedEidolons();
@@ -603,8 +761,33 @@
             loadRelicEquips();
             renderRelicSystem();
         } else { console.warn('relic-data.js 未加载，遗器系统不可用'); }
+        // 加载光锥数据
+        loadLightconeLevel();
+        updateLightconeUI();
+        // 绑定光锥控件事件
+        document.getElementById('lcLevelSlider').addEventListener('input', (e) => {
+            const newLevel = parseInt(e.target.value, 10);
+            if (newLevel !== lightconeLevel) {
+                const cost = Math.abs(newLevel - lightconeLevel) * LIGHTCONE_UPGRADE_COST;
+                if (totalCredits >= cost) {
+                    totalCredits -= cost;
+                    lightconeLevel = newLevel;
+                    updateLightconeUI();
+                    updateCreditUI();
+                    saveLightconeLevel();
+                    showToast(`光锥升至 Lv.${lightconeLevel}`, false);
+                } else {
+                    showToast(`信用点不足，需要 ${cost} 点`, true);
+                    document.getElementById('lcLevelSlider').value = lightconeLevel;
+                }
+            }
+        });
+        document.getElementById('lcLevelDown').addEventListener('click', () => changeLightconeLevel(-1));
+        document.getElementById('lcLevelUp').addEventListener('click', () => changeLightconeLevel(1));
+
         initTabs();
     }
+
     window.upgradeRelic = upgradeRelic;
     window.addEventListener('DOMContentLoaded', initUpgradePage);
     document.getElementById('saveBtn').addEventListener('click', () => { saveCredits(); saveCharacter(); });
