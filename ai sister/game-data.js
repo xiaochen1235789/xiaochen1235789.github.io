@@ -332,41 +332,61 @@ const GameData = (function() {
 
     // ---------- 9. 崩铁标准伤害计算（含命座效果 + 天赋抗性穿透）----------
     function calculateDamage(attacker, target, skill) {
-        let damage = attacker.attack * (skill.baseDamage || 1);
-        if (skill.element && attacker[`${skill.element}DamageBoost`]) {
-            damage *= (1 + attacker[`${skill.element}DamageBoost`]);
-        }
-        
-        let resistance = target.resistances?.[skill.element] || 0;
-        const hasTalent = attacker.extraAbilities && attacker.extraAbilities.some(a => a.id === 'luguan_talent');
-        if (hasTalent && attacker.speed >= 100) {
-            const speedOver = attacker.speed - 100;
-            const stacks = Math.floor(speedOver / 5);
-            const talentSkill = attacker.skills.find(s => s.type === 'talent');
-            const maxPenetration = talentSkill ? talentSkill.penetration : 0.1;
-            const penetration = Math.min(maxPenetration, stacks * 0.02);
-            resistance = Math.max(0, resistance - penetration);
-        }
-        damage *= (1 - Math.min(resistance, 0.7));
-        
-        let defense = target.defense;
-        if (target.isDefDown) defense *= (1 - (skill.defDownAmount || 0.35));
-        if (attacker.activatedEidolons && attacker.activatedEidolons.includes('e6')) defense *= 0.76;
-        const defenseReducer = 1000 / (1000 + defense);
-        damage *= defenseReducer;
+    let damage = attacker.attack * (skill.baseDamage || 1);
+    if (skill.element && attacker[`${skill.element}DamageBoost`]) {
+        damage *= (1 + attacker[`${skill.element}DamageBoost`]);
+    }
+    
+    let resistance = target.resistances?.[skill.element] || 0;
+    const hasTalent = attacker.extraAbilities && attacker.extraAbilities.some(a => a.id === 'luguan_talent');
+    if (hasTalent && attacker.speed >= 100) {
+        const speedOver = attacker.speed - 100;
+        const stacks = Math.floor(speedOver / 5);
+        const talentSkill = attacker.skills.find(s => s.type === 'talent');
+        const maxPenetration = talentSkill ? talentSkill.penetration : 0.1;
+        const penetration = Math.min(maxPenetration, stacks * 0.02);
+        resistance = Math.max(0, resistance - penetration);
+    }
+    damage *= (1 - Math.min(resistance, 0.7));
+    
+    let defense = target.defense;
+    if (target.isDefDown) defense *= (1 - (skill.defDownAmount || 0.35));
+    if (attacker.activatedEidolons && attacker.activatedEidolons.includes('e6')) defense *= 0.76;
+    const defenseReducer = 1000 / (1000 + defense);
+    damage *= defenseReducer;
 
-        let finalCritRate = attacker.critRate;
-        let finalCritDamage = attacker.critDamage;
-        if (attacker.activatedEidolons && attacker.activatedEidolons.includes('e2') && target.debuffs && target.debuffs.length > 0) {
-            finalCritRate += 0.18;
-            const stacks = Math.min(target.debuffs.length, 6);
-            finalCritDamage += 0.24 * stacks;
+    let finalCritRate = attacker.critRate;
+    let finalCritDamage = attacker.critDamage;
+    if (attacker.activatedEidolons && attacker.activatedEidolons.includes('e2') && target.debuffs && target.debuffs.length > 0) {
+        finalCritRate += 0.18;
+        const stacks = Math.min(target.debuffs.length, 6);
+        finalCritDamage += 0.24 * stacks;
+    }
+    const isCritical = Math.random() < finalCritRate;
+    if (isCritical) damage *= (1 + finalCritDamage);
+    
+    if (skill.extraDamage && target.debuffs && target.debuffs.length > 0) damage *= (1 + skill.extraDamage);
+    if (attacker.activatedEidolons && attacker.activatedEidolons.includes('e1') && target.hp >= target.maxHp * 0.2) damage *= 1.5;
+
+    // ========== 套装效果（新增） ==========
+    // 1. 过往的旧事物 2件套：速度阈值增伤
+    if (attacker._hasSpeedDmgSet && attacker.speed !== undefined) {
+        const thresholds = [115, 140, 160];
+        const bonuses = [0.10, 0.15, 0.25];
+        let bonus = 0;
+        for (let i = 0; i < thresholds.length; i++) {
+            if (attacker.speed >= thresholds[i]) bonus = bonuses[i];
         }
-        const isCritical = Math.random() < finalCritRate;
-        if (isCritical) damage *= (1 + finalCritDamage);
-        
-        if (skill.extraDamage && target.debuffs && target.debuffs.length > 0) damage *= (1 + skill.extraDamage);
-        if (attacker.activatedEidolons && attacker.activatedEidolons.includes('e1') && target.hp >= target.maxHp * 0.2) damage *= 1.5;
+        if (bonus > 0) damage *= (1 + bonus);
+    }
+    // 2. 新生的未来 4件套：攻击力阈值增暴伤
+    if (attacker._hasAtkThresholdSet) {
+        const cond = { minAtk: 1800, step: 200, bonusPerStep: 0.15, maxBonus: 0.6 };
+        let overAtk = Math.max(0, attacker.attack - cond.minAtk);
+        let steps = Math.floor(overAtk / cond.step);
+        let bonus = Math.min(cond.maxBonus, steps * cond.bonusPerStep);
+        if (bonus > 0) damage *= (1 + bonus);
+    }
         
         damage = Math.max(damage, attacker.attack * 0.1);
         return { damage: Math.round(damage), isCritical };
