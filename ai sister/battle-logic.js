@@ -71,7 +71,6 @@ const BattleLogic = {
         this.checkBattleEnd();
         if (typeof window.updateBattleUI === 'function') window.updateBattleUI();
 
-        // 处理额外行动（风速迅捷）
         let extraTurnFlag = false;
         if (skill.type === 'normal' && window._extraTurnPending) {
             extraTurnFlag = true;
@@ -82,7 +81,6 @@ const BattleLogic = {
             setTimeout(() => {
                 if (gameState.isPlayerTurn && !gameState.gameOver) {
                     if (extraTurnFlag) {
-                        // 不切换角色，直接刷新UI让当前角色再次行动
                         window.updateBattleUI();
                     } else {
                         this.switchToNextCharacter();
@@ -122,7 +120,6 @@ const BattleLogic = {
         character.energy = Math.min(character.energy + (skill.energyGain || 20), character.maxEnergy);
         gameState.skillPoints = Math.min(gameState.skillPoints + 1, gameState.maxSkillPoints);
         
-        // 额外能力3：风速迅捷（普攻后行动提前）
         const hasTalent3 = character.extraAbilities && character.extraAbilities.some(a => a.id === 'luguan_talent3');
         if (hasTalent3) {
             window._extraTurnPending = true;
@@ -141,7 +138,6 @@ const BattleLogic = {
         const damageResult = GameData.calculateDamage(character, enemy, skill);
         let damage = damageResult.damage || 0;
         
-        // 额外能力2：精准狩猎（战技对负面目标伤害提高60%）
         const hasTalent2 = character.extraAbilities && character.extraAbilities.some(a => a.id === 'luguan_talent2');
         if (hasTalent2 && enemy.debuffs && enemy.debuffs.length > 0) {
             damage = Math.floor(damage * 1.6);
@@ -157,16 +153,15 @@ const BattleLogic = {
         gameState.skillPoints = Math.max(0, gameState.skillPoints);
         character.energy = Math.min(character.energy + (skill.energyGain || 30), character.maxEnergy);
         
-        // 减防效果
         if (skill.hasDefDown && damageResult.isCritical) {
             enemy.isDefDown = true;
             enemy.defDownTurns = skill.defDownTurns || 2;
-            // 动态生成debuff显示
             const percent = (skill.defDownAmount || 0.35) * 100;
             const turns = enemy.defDownTurns;
             const name = skill.debuffConfig?.nameTemplate?.replace("{percent}", percent) || `${percent}%防御降低`;
             const desc = skill.debuffConfig?.descTemplate?.replace("{percent}", percent).replace("{turns}", turns) || `防御力降低${percent}%，持续${turns}回合`;
             const debuff = { name, description: desc, turnsLeft: turns };
+            if (!enemy.debuffs) enemy.debuffs = [];
             if (!enemy.debuffs.some(d => d.name === name)) enemy.debuffs.push(debuff);
         }
         
@@ -205,9 +200,8 @@ const BattleLogic = {
         if (enemy.hp <= 0) this.onEnemyDefeated(enemy);
         this.logBattleAction(character.name, skill.name, result);
         
-        // 天赋：猎杀强化 - 每行动1次增加攻击力
         const talentSkill = character.skills.find(s => s.type === 'talent');
-        if (talentSkill && !character._actionCountLock) { // 防止重复触发
+        if (talentSkill && !character._actionCountLock) {
             if (character._actionCount === undefined) character._actionCount = 0;
             character._actionCount++;
             const maxBonus = talentSkill.atkBonus || 0.2;
@@ -228,9 +222,10 @@ const BattleLogic = {
         console.log(`${enemy.name} 被击败了！`);
         enemy.isDefDown = false;
         enemy.defDownTurns = 0;
-        // 清除 debuff 数组中的防御降低条目
-        const idx = enemy.debuffs.findIndex(d => d.name && d.name.includes('防御降低'));
-        if (idx !== -1) enemy.debuffs.splice(idx, 1);
+        if (enemy.debuffs && Array.isArray(enemy.debuffs)) {
+            const idx = enemy.debuffs.findIndex(d => d.name && d.name.includes('防御降低'));
+            if (idx !== -1) enemy.debuffs.splice(idx, 1);
+        }
     },
 
     switchToNextCharacter: function() {
@@ -270,12 +265,15 @@ const BattleLogic = {
                 enemy.defDownTurns--;
                 if (enemy.defDownTurns <= 0) {
                     enemy.isDefDown = false;
-                    const idx = enemy.debuffs.findIndex(d => d.name && d.name.includes('防御降低'));
-                    if (idx !== -1) enemy.debuffs.splice(idx, 1);
+                    if (enemy.debuffs && Array.isArray(enemy.debuffs)) {
+                        const idx = enemy.debuffs.findIndex(d => d.name && d.name.includes('防御降低'));
+                        if (idx !== -1) enemy.debuffs.splice(idx, 1);
+                    }
                 } else {
-                    // 更新剩余回合显示
-                    const debuff = enemy.debuffs.find(d => d.name && d.name.includes('防御降低'));
-                    if (debuff) debuff.turnsLeft = enemy.defDownTurns;
+                    if (enemy.debuffs && Array.isArray(enemy.debuffs)) {
+                        const debuff = enemy.debuffs.find(d => d.name && d.name.includes('防御降低'));
+                        if (debuff) debuff.turnsLeft = enemy.defDownTurns;
+                    }
                 }
             }
         });
@@ -321,7 +319,6 @@ const BattleLogic = {
         let damage = Math.floor(enemy.attack * enemySkill.baseDamage);
         if (target.isDefending) damage = Math.floor(damage * (1 - (target.defenseBonus || 0)));
         
-        // 额外能力1：疾风守护（生命≤50%时减伤50%）
         const hasTalent1 = target.extraAbilities && target.extraAbilities.some(a => a.id === 'luguan_talent1');
         if (hasTalent1 && target.hp <= target.maxHp * 0.5) {
             damage = Math.floor(damage * 0.5);
@@ -342,7 +339,6 @@ const BattleLogic = {
         if (!gameState || gameState.gameOver) return;
         gameState.isPlayerTurn = true;
         console.log(`===== 玩家回合开始 (回合 ${gameState.turn}) =====`);
-        // 重置行动计数和攻击力基准（每场战斗重置）
         gameState.party.forEach(character => {
             character.isDefending = false;
             character.defenseBonus = 0;
