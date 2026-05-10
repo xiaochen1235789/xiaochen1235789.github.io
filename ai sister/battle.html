@@ -1,435 +1,725 @@
-// ===================== 战斗逻辑核心 =====================
-const BattleLogic = {
-    // 使用技能
-    useSkill: function(skillIndex) {
-        const gameState = window.gameState;
-        if (!gameState || !gameState.isPlayerTurn || gameState.gameOver) {
-            window.showMessage('提示', '当前无法使用技能');
-            return false;
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>六哥荣耀 · 鹿馆实战</title>
+    <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
+    <script src="/ai sister/game-data.js"></script>
+    <script src="/ai sister/battle-logic.js"></script>
+    <link rel="stylesheet" href="/css/info-popup.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
 
-        const character = gameState.party[gameState.activeCharacter];
-        const enemy = gameState.enemies[gameState.selectedEnemy];
-        
-        const skill = character.skills ? character.skills[skillIndex] : null;
-        if (!skill) {
-            window.showMessage('错误', '技能不存在');
-            return false;
+        body {
+            background: #0a0a14;
+            color: #fff;
+            font-family: system-ui, 'Microsoft YaHei', sans-serif;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        if (this.isSkillDisabled(skill, skillIndex)) {
-            window.showMessage('提示', '技能条件不满足');
-            return false;
+        .battle-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: radial-gradient(circle at 20% 10%, #1a1a3a 0%, transparent 40%),
+                        radial-gradient(circle at 80% 90%, #0f1a2e 0%, transparent 40%),
+                        #0a0a14;
+            padding-bottom: env(safe-area-inset-bottom, 0);
         }
 
-        if (!enemy || enemy.hp <= 0) {
-            window.showMessage('提示', '请选择有效的目标');
-            return false;
+        .back-btn {
+            position: fixed;
+            top: max(16px, env(safe-area-inset-top));
+            left: 16px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            color: #00d4ff;
+            text-decoration: none;
+            z-index: 100;
+            border: 1px solid rgba(0, 212, 255, 0.3);
         }
 
-        let result = null;
-        let success = true;
-        try {
-            switch(skill.type) {
-                case 'normal':
-                    result = this.executeNormalAttack(character, enemy, skill);
-                    break;
-                case 'skill':
-                    result = this.executeSkillAttack(character, enemy, skill);
-                    break;
-                case 'ultimate':
-                    result = this.executeUltimateAttack(character, enemy, skill);
-                    break;
-                case 'defend':
-                    result = this.executeDefend(character);
-                    break;
-                default:
-                    console.warn('未知技能类型:', skill.type);
-                    success = false;
+        .enemy-area {
+            flex: 2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            padding: 80px 20px 20px;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .enemy-card {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            padding: 16px;
+            min-width: 140px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: 0.2s;
+            position: relative;
+        }
+
+        .enemy-card.selected {
+            border-color: #00d4ff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+        }
+
+        .enemy-avatar {
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, #8b0000, #330000);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            margin: 0 auto 12px;
+            border: 2px solid #ff4757;
+        }
+
+        .enemy-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #ffa5a5;
+            margin-bottom: 8px;
+        }
+
+        .enemy-hp-bar {
+            width: 100%;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+
+        .enemy-hp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4757, #ff8c9e);
+        }
+
+        .enemy-hp-text {
+            font-size: 0.8rem;
+            color: #ccc;
+        }
+
+        .info-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 32px;
+            height: 32px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            color: #ddd;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: 0.2s;
+            z-index: 10;
+        }
+        .info-btn:active { background: #00d4ff; color: #000; transform: scale(0.95); }
+
+        .status-bar {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(12px);
+            padding: 8px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .turn-badge {
+            background: #00d4ff20;
+            border: 1px solid #00d4ff;
+            border-radius: 24px;
+            padding: 4px 16px;
+            font-weight: bold;
+        }
+
+        .enemy-turn {
+            background: #ff475720;
+            border-color: #ff4757;
+        }
+
+        .skill-points {
+            display: flex;
+            gap: 6px;
+        }
+
+        .skill-point {
+            width: 22px;
+            height: 28px;
+            background: rgba(29, 209, 161, 0.3);
+            border-radius: 4px;
+            border: 1px solid #1dd1a1;
+        }
+
+        .skill-point.active {
+            background: #1dd1a1;
+            box-shadow: 0 0 8px #1dd1a1;
+        }
+
+        .party-area {
+            background: rgba(10, 15, 30, 0.8);
+            backdrop-filter: blur(16px);
+            padding: 12px 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .character-card {
+            display: flex;
+            gap: 16px;
+            background: rgba(30, 30, 46, 0.6);
+            border-radius: 16px;
+            padding: 12px;
+            border: 1px solid transparent;
+            position: relative;
+        }
+
+        .character-card.active {
+            border-color: #00d4ff;
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .character-avatar {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #00d4ff, #0066aa);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+
+        .character-info {
+            flex: 1;
+        }
+
+        .character-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .character-path {
+            font-size: 0.75rem;
+            color: #00d4ff;
+            background: #00d4ff20;
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+
+        .stat-bars {
+            margin-top: 8px;
+        }
+
+        .stat-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .bar-bg {
+            flex: 1;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .hp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4757, #ff8c9e);
+        }
+
+        .energy-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4488ff, #88aaff);
+        }
+
+        .stat-text {
+            font-size: 0.7rem;
+            min-width: 45px;
+            text-align: right;
+            color: #aaa;
+        }
+
+        .action-area {
+            background: #0a0f1a;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .skill-btn {
+            background: #1e1e2e;
+            border: 1px solid #2a2a3e;
+            border-radius: 16px;
+            padding: 12px 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.1s;
+            position: relative;
+        }
+
+        .skill-btn:active {
+            transform: scale(0.96);
+        }
+
+        .skill-btn.disabled {
+            opacity: 0.4;
+            filter: grayscale(0.3);
+            pointer-events: none;
+        }
+
+        .skill-icon {
+            font-size: 1.8rem;
+            margin-bottom: 4px;
+        }
+
+        .skill-name {
+            font-size: 0.8rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow-x: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .skill-cost {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            font-size: 0.7rem;
+            color: #4488ff;
+        }
+
+        .end-turn-btn {
+            background: linear-gradient(135deg, #00d4ff, #0088cc);
+            border: none;
+            border-radius: 32px;
+            padding: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+        }
+
+        .damage-popup {
+            position: fixed;
+            font-weight: bold;
+            font-size: 1.3rem;
+            pointer-events: none;
+            z-index: 1000;
+            text-shadow: 0 0 4px black;
+            animation: floatUp 0.8s ease-out forwards;
+        }
+
+        .critical {
+            color: #ffdd00;
+            font-size: 1.6rem;
+            text-shadow: 0 0 8px #ffaa00;
+        }
+
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(0.8);
             }
-        } catch (error) {
-            console.error('执行技能时出错:', error);
-            success = false;
-        }
-
-        if (!success) {
-            window.showMessage('错误', '技能执行失败');
-            return false;
-        }
-
-        this.updateAfterSkill(character, enemy, skill, result);
-        
-        if (result && result.damage !== undefined) {
-            window.showDamageEffect(
-                gameState.selectedEnemy,
-                result.damage,
-                result.isCritical || false,
-                false
-            );
-        }
-
-        this.checkBattleEnd();
-        if (typeof window.updateBattleUI === 'function') window.updateBattleUI();
-
-        let extraTurnFlag = false;
-        if (skill.type === 'normal' && window._extraTurnPending) {
-            extraTurnFlag = true;
-            window._extraTurnPending = false;
-        }
-
-        if (skill.type !== 'defend' && skill.type !== 'ultimate') {
-            setTimeout(() => {
-                if (gameState.isPlayerTurn && !gameState.gameOver) {
-                    if (extraTurnFlag) {
-                        window.updateBattleUI();
-                    } else {
-                        this.switchToNextCharacter();
-                    }
-                }
-            }, 800);
-        }
-
-        return true;
-    },
-
-    isSkillDisabled: function(skill, skillIndex) {
-        const gameState = window.gameState;
-        if (!gameState) return true;
-        const character = gameState.party[gameState.activeCharacter];
-        if (!character || character.hp <= 0) return true;
-        switch(skill.type) {
-            case 'normal': return false;
-            case 'skill':
-                return gameState.skillPoints < (skill.skillPointCost || 1);
-            case 'ultimate':
-                return character.energy < (skill.energyCost || 120);
-            default:
-                return false;
-        }
-    },
-
-    executeNormalAttack: function(character, enemy, skill) {
-        const gameState = window.gameState;
-        const damageResult = GameData.calculateDamage(character, enemy, skill);
-        let damage = damageResult.damage || 0;
-        if (enemy.isDefDown) damage = Math.floor(damage * 1.3);
-        
-        enemy.hp -= damage;
-        enemy.hp = Math.max(0, enemy.hp);
-        
-        character.energy = Math.min(character.energy + (skill.energyGain || 20), character.maxEnergy);
-        gameState.skillPoints = Math.min(gameState.skillPoints + 1, gameState.maxSkillPoints);
-        
-        const hasTalent3 = character.extraAbilities && character.extraAbilities.some(a => a.id === 'luguan_talent3');
-        if (hasTalent3) {
-            window._extraTurnPending = true;
-            console.log(`${character.name} 触发风速迅捷，获得额外行动`);
-        }
-        
-        return {
-            damage: damage,
-            isCritical: damageResult.isCritical || false,
-            type: 'normal'
-        };
-    },
-
-    executeSkillAttack: function(character, enemy, skill) {
-        const gameState = window.gameState;
-        const damageResult = GameData.calculateDamage(character, enemy, skill);
-        let damage = damageResult.damage || 0;
-        
-        const hasTalent2 = character.extraAbilities && character.extraAbilities.some(a => a.id === 'luguan_talent2');
-        if (hasTalent2 && enemy.debuffs && enemy.debuffs.length > 0) {
-            damage = Math.floor(damage * 1.6);
-            console.log(`${character.name} 触发精准狩猎，伤害增加60%`);
-        }
-        
-        if (enemy.isDefDown) damage = Math.floor(damage * 1.3);
-        
-        enemy.hp -= damage;
-        enemy.hp = Math.max(0, enemy.hp);
-        
-        gameState.skillPoints -= (skill.skillPointCost || 1);
-        gameState.skillPoints = Math.max(0, gameState.skillPoints);
-        character.energy = Math.min(character.energy + (skill.energyGain || 30), character.maxEnergy);
-        
-        if (skill.hasDefDown && damageResult.isCritical) {
-            enemy.isDefDown = true;
-            enemy.defDownTurns = skill.defDownTurns || 2;
-            const percent = (skill.defDownAmount || 0.35) * 100;
-            const turns = enemy.defDownTurns;
-            const name = skill.debuffConfig?.nameTemplate?.replace("{percent}", percent) || `${percent}%防御降低`;
-            const desc = skill.debuffConfig?.descTemplate?.replace("{percent}", percent).replace("{turns}", turns) || `防御力降低${percent}%，持续${turns}回合`;
-            const debuff = { name, description: desc, turnsLeft: turns };
-            if (!enemy.debuffs) enemy.debuffs = [];
-            if (!enemy.debuffs.some(d => d.name === name)) enemy.debuffs.push(debuff);
-        }
-        
-        return {
-            damage: damage,
-            isCritical: damageResult.isCritical || false,
-            type: 'skill'
-        };
-    },
-
-    executeUltimateAttack: function(character, enemy, skill) {
-        const damageResult = GameData.calculateDamage(character, enemy, skill);
-        let damage = damageResult.damage || 0;
-        if (enemy.isDefDown) damage = Math.floor(damage * 1.3);
-        enemy.hp -= damage;
-        enemy.hp = Math.max(0, enemy.hp);
-        character.energy -= (skill.energyCost || 120);
-        character.energy = Math.max(0, character.energy);
-        return {
-            damage: damage,
-            isCritical: damageResult.isCritical || false,
-            type: 'ultimate'
-        };
-    },
-
-    executeDefend: function(character) {
-        character.isDefending = true;
-        character.defenseBonus = 0.5;
-        character.defenseTurns = 1;
-        character.energy = Math.min(character.energy + 10, character.maxEnergy);
-        return { type: 'defend', defenseBonus: 0.5 };
-    },
-
-    updateAfterSkill: function(character, enemy, skill, result) {
-        if (character.hp <= 0) this.onCharacterDefeated(character);
-        if (enemy.hp <= 0) this.onEnemyDefeated(enemy);
-        this.logBattleAction(character.name, skill.name, result);
-        
-        const talentSkill = character.skills.find(s => s.type === 'talent');
-        if (talentSkill && !character._actionCountLock) {
-            if (character._actionCount === undefined) character._actionCount = 0;
-            character._actionCount++;
-            const maxBonus = talentSkill.atkBonus || 0.2;
-            const currentBonus = Math.min(maxBonus, character._actionCount * 0.05);
-            if (!character._baseAttack) character._baseAttack = character.attack;
-            character.attack = Math.floor(character._baseAttack * (1 + currentBonus));
-            console.log(`${character.name} 行动 ${character._actionCount} 次，攻击力提升至 ${character.attack}`);
-        }
-    },
-
-    onCharacterDefeated: function(character) {
-        console.log(`${character.name} 被击败了！`);
-        character.isDefending = false;
-        character.defenseBonus = 0;
-    },
-
-    onEnemyDefeated: function(enemy) {
-        console.log(`${enemy.name} 被击败了！`);
-        enemy.isDefDown = false;
-        enemy.defDownTurns = 0;
-        if (enemy.debuffs && Array.isArray(enemy.debuffs)) {
-            const idx = enemy.debuffs.findIndex(d => d.name && d.name.includes('防御降低'));
-            if (idx !== -1) enemy.debuffs.splice(idx, 1);
-        }
-    },
-
-    switchToNextCharacter: function() {
-        const gameState = window.gameState;
-        if (!gameState || !gameState.isPlayerTurn) return false;
-        let nextIndex = gameState.activeCharacter;
-        let attempts = 0;
-        do {
-            nextIndex = (nextIndex + 1) % gameState.party.length;
-            attempts++;
-            if (attempts >= gameState.party.length) {
-                this.endTurn();
-                return false;
+            100% {
+                opacity: 0;
+                transform: translateY(-60px) scale(1.2);
             }
-        } while (gameState.party[nextIndex].hp <= 0);
-        gameState.activeCharacter = nextIndex;
-        if (typeof window.updateBattleUI === 'function') window.updateBattleUI();
-        return true;
-    },
+        }
 
-    endTurn: function() {
-        const gameState = window.gameState;
-        if (!gameState || !gameState.isPlayerTurn || gameState.gameOver) return;
+        .damage-stats {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            background: #00d4ffcc;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-weight: bold;
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            opacity: 0;
+            transition: 0.2s;
+            pointer-events: none;
+        }
 
-        gameState.party.forEach(character => {
-            if (character.isDefending && character.defenseTurns) {
-                character.defenseTurns--;
-                if (character.defenseTurns <= 0) {
-                    character.isDefending = false;
-                    character.defenseBonus = 0;
-                }
+        .battle-log {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: #000000aa;
+            backdrop-filter: blur(4px);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            max-width: 60%;
+            white-space: nowrap;
+            overflow-x: auto;
+            z-index: 100;
+            color: #ccc;
+        }
+
+        @media (max-width: 768px) {
+            .enemy-avatar {
+                width: 70px;
+                height: 70px;
+                font-size: 2.2rem;
             }
-        });
-
-        gameState.enemies.forEach(enemy => {
-            if (enemy.isDefDown && enemy.defDownTurns) {
-                enemy.defDownTurns--;
-                if (enemy.defDownTurns <= 0) {
-                    enemy.isDefDown = false;
-                    if (enemy.debuffs && Array.isArray(enemy.debuffs)) {
-                        const idx = enemy.debuffs.findIndex(d => d.name && d.name.includes('防御降低'));
-                        if (idx !== -1) enemy.debuffs.splice(idx, 1);
-                    }
-                } else {
-                    if (enemy.debuffs && Array.isArray(enemy.debuffs)) {
-                        const debuff = enemy.debuffs.find(d => d.name && d.name.includes('防御降低'));
-                        if (debuff) debuff.turnsLeft = enemy.defDownTurns;
-                    }
-                }
+            .enemy-card {
+                min-width: 120px;
             }
-        });
-
-        gameState.isPlayerTurn = false;
-        gameState.turn++;
-        console.log(`===== 回合 ${gameState.turn} 结束 =====`);
-        if (typeof window.updateBattleUI === 'function') window.updateBattleUI();
-        setTimeout(() => this.executeEnemyTurns(), 800);
-    },
-
-    executeEnemyTurns: function() {
-        const gameState = window.gameState;
-        if (!gameState || gameState.gameOver) return;
-        const aliveEnemies = gameState.enemies.filter(enemy => enemy.hp > 0);
-        if (aliveEnemies.length === 0) {
-            this.checkBattleEnd();
-            return;
+            .skills-grid {
+                gap: 8px;
+            }
+            .skill-icon {
+                font-size: 1.5rem;
+            }
+            .skill-name {
+                font-size: 0.7rem;
+            }
+            .character-avatar {
+                width: 48px;
+                height: 48px;
+                font-size: 1.5rem;
+            }
         }
-        console.log(`敌人回合开始，${aliveEnemies.length}个敌人行动`);
-        aliveEnemies.forEach((enemy, index) => {
-            setTimeout(() => {
-                this.executeEnemyAction(enemy, index);
-                if (index === aliveEnemies.length - 1) {
-                    setTimeout(() => this.startPlayerTurn(), 1000);
-                }
-            }, index * 800);
-        });
-    },
 
-    executeEnemyAction: function(enemy, enemyIndex) {
-        const gameState = window.gameState;
-        if (!gameState) return;
-        const aliveCharacters = gameState.party.filter(char => char.hp > 0);
-        if (aliveCharacters.length === 0) {
-            this.checkBattleEnd();
-            return;
+        @media (max-width: 480px) {
+            .enemy-area {
+                padding: 70px 12px 12px;
+            }
         }
-        const targetIndex = Math.floor(Math.random() * aliveCharacters.length);
-        const target = aliveCharacters[targetIndex];
-        const partyIndex = gameState.party.indexOf(target);
-        const enemySkill = enemy.skills && enemy.skills[0] ? enemy.skills[0] : { baseDamage: 0.8 };
-        let damage = Math.floor(enemy.attack * enemySkill.baseDamage);
-        if (target.isDefending) damage = Math.floor(damage * (1 - (target.defenseBonus || 0)));
-        
-        const hasTalent1 = target.extraAbilities && target.extraAbilities.some(a => a.id === 'luguan_talent1');
-        if (hasTalent1 && target.hp <= target.maxHp * 0.5) {
-            damage = Math.floor(damage * 0.5);
-            console.log(`${target.name} 触发疾风守护，伤害减半`);
-        }
-        
-        target.hp -= damage;
-        target.hp = Math.max(0, target.hp);
-        window.showDamageEffect(partyIndex, damage, false, true);
-        console.log(`${enemy.name} 攻击了 ${target.name}，造成 ${damage} 点伤害`);
-        if (target.hp <= 0) this.onCharacterDefeated(target);
-        if (typeof window.updateBattleUI === 'function') window.updateBattleUI();
-        this.checkBattleEnd();
-    },
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-btn">← 返回</a>
+    <div class="battle-container" id="battleContainer">
+        <div class="damage-stats" id="damageStats"></div>
+        <div class="battle-log" id="battleLog">战斗开始</div>
+        <div class="enemy-area" id="enemyArea"></div>
+        <div class="status-bar">
+            <div class="turn-badge" id="turnBadge"><span>⚡ 玩家回合</span></div>
+            <div class="skill-points" id="skillPoints"></div>
+        </div>
+        <div class="party-area" id="partyArea"></div>
+        <div class="action-area">
+            <div class="skills-grid" id="skillsGrid"></div>
+            <button class="end-turn-btn" id="endTurnBtn">⏩ 结束回合</button>
+        </div>
+    </div>
 
-    startPlayerTurn: function() {
-        const gameState = window.gameState;
-        if (!gameState || gameState.gameOver) return;
-        gameState.isPlayerTurn = true;
-        console.log(`===== 玩家回合开始 (回合 ${gameState.turn}) =====`);
-        gameState.party.forEach(character => {
-            character.isDefending = false;
-            character.defenseBonus = 0;
-            if (character._baseAttack) character.attack = character._baseAttack;
-            character._actionCount = 0;
-            character._actionCountLock = false;
-        });
-        let firstAliveIndex = gameState.party.findIndex(char => char.hp > 0);
-        if (firstAliveIndex !== -1) gameState.activeCharacter = firstAliveIndex;
-        else this.checkBattleEnd();
-        if (typeof window.updateBattleUI === 'function') window.updateBattleUI();
-    },
+    <script src="/css/info-popup.js"></script>
+    <script>
+        // 等待 GameData 和 BattleLogic 加载
+        let initTimer;
 
-    checkBattleEnd: function() {
-        const gameState = window.gameState;
-        if (!gameState || gameState.gameOver) return;
-        const allEnemiesDead = gameState.enemies.every(enemy => enemy.hp <= 0);
-        const allCharactersDead = gameState.party.every(char => char.hp <= 0);
-        if (allEnemiesDead) {
-            gameState.gameOver = true;
-            window.showMessage('胜利！', '成功击败所有敌人');
-            console.log('战斗胜利！');
-        } else if (allCharactersDead) {
-            gameState.gameOver = true;
-            window.showMessage('战败', '队伍被击败了');
-            console.log('战斗失败！');
-        }
-        return gameState.gameOver;
-    },
-
-    logBattleAction: function(characterName, skillName, result) {
-        let message = `${characterName} 使用了 ${skillName}`;
-        if (result && result.damage !== undefined) {
-            message += `，造成 ${result.damage} 点伤害`;
-            if (result.isCritical) message += ' (暴击!)';
-        } else if (result && result.type === 'defend') message += '，进入防御姿态';
-        console.log(`[战斗日志] ${message}`);
-    },
-
-    restartBattle: function() {
-        if (typeof GameData !== 'undefined') {
-            console.log('重新开始战斗...');
-            const initialState = GameData.getInitialState();
-            if (window.gameState) {
-                Object.keys(initialState).forEach(key => { window.gameState[key] = initialState[key]; });
-                window.gameState.turn = 0;
-                window.gameState.isPlayerTurn = true;
-                window.gameState.gameOver = false;
-                window.gameState.selectedEnemy = 0;
-                window.gameState.activeCharacter = 0;
-                if (window.gameState.skillPoints === undefined) window.gameState.skillPoints = Math.floor(window.gameState.maxSkillPoints / 2);
+        function waitForDeps() {
+            if (typeof GameData !== 'undefined' && typeof BattleLogic !== 'undefined') {
+                initBattleUI();
             } else {
-                window.gameState = {
-                    ...initialState,
-                    turn: 0,
-                    isPlayerTurn: true,
-                    gameOver: false,
-                    selectedEnemy: 0,
-                    activeCharacter: 0
+                clearTimeout(initTimer);
+                initTimer = setTimeout(waitForDeps, 200);
+            }
+        }
+
+        window.gameState = null;
+
+        window.updateBattleUI = function () {
+            if (!window.gameState) return;
+            const state = window.gameState;
+
+            // 敌人区域
+            const enemyArea = document.getElementById('enemyArea');
+            enemyArea.innerHTML = state.enemies.map((e, idx) => `
+                <div class="enemy-card ${idx === state.selectedEnemy ? 'selected' : ''}">
+                    <div class="info-btn" data-type="enemy" data-index="${idx}">ℹ️</div>
+                    <div class="enemy-avatar">${e.emoji || '👹'}</div>
+                    <div class="enemy-name">${e.name}</div>
+                    <div class="enemy-hp-bar"><div class="enemy-hp-fill" style="width:${(e.hp / e.maxHp) * 100}%"></div></div>
+                    <div class="enemy-hp-text">${Math.max(0, e.hp)}/${e.maxHp}</div>
+                </div>
+            `).join('');
+
+            // 重新绑定敌人点击选择和信息按钮事件
+            document.querySelectorAll('.enemy-card').forEach((card, idx) => {
+                card.onclick = (e) => {
+                    if (e.target.classList.contains('info-btn')) return;
+                    selectEnemy(idx);
                 };
-                if (window.gameState.skillPoints === undefined) window.gameState.skillPoints = Math.floor(window.gameState.maxSkillPoints / 2);
-            }
-            if (typeof window.renderBattleUI === 'function') window.renderBattleUI();
-            if (typeof window.updateBattleUI === 'function') window.updateBattleUI();
-            window.showMessage('战斗开始', '新的战斗开始了！');
-            return true;
-        }
-        return false;
-    },
+            });
+            document.querySelectorAll('.info-btn[data-type="enemy"]').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const idx = parseInt(btn.dataset.index);
+                    if (!isNaN(idx) && typeof showEnemyInfo === 'function') showEnemyInfo(idx);
+                    else console.warn('showEnemyInfo not defined');
+                };
+            });
 
-    switchCharacter: function(index) {
-        const gameState = window.gameState;
-        if (!gameState || gameState.gameOver || !gameState.isPlayerTurn) return false;
-        if (index >= 0 && index < gameState.party.length) {
-            if (gameState.party[index].hp <= 0) {
-                window.showMessage('提示', '该角色已无法行动');
-                return false;
+            // 角色区域
+            const ch = state.party[0];
+            const partyArea = document.getElementById('partyArea');
+            partyArea.innerHTML = `
+                <div class="character-card active">
+                    <div class="info-btn" data-type="character" data-index="0">ℹ️</div>
+                    <div class="character-avatar">${ch.avatar || '🦌'}</div>
+                    <div class="character-info">
+                        <div class="character-name">${ch.name}</div>
+                        <div class="character-path">${ch.path}</div>
+                        <div class="stat-bars">
+                            <div class="stat-bar"><div class="bar-bg"><div class="hp-fill" style="width:${(ch.hp / ch.maxHp) * 100}%"></div></div><span class="stat-text">❤️ ${ch.hp}/${ch.maxHp}</span></div>
+                            <div class="stat-bar"><div class="bar-bg"><div class="energy-fill" style="width:${(ch.energy / ch.maxEnergy) * 100}%"></div></div><span class="stat-text">⚡ ${ch.energy}/${ch.maxEnergy}</span></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            const charInfoBtn = document.querySelector('.info-btn[data-type="character"]');
+            if (charInfoBtn && typeof showCharacterInfo === 'function') {
+                charInfoBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    showCharacterInfo(0);
+                };
             }
-            gameState.activeCharacter = index;
-            if (typeof window.updateBattleUI === 'function') window.updateBattleUI();
-            console.log(`切换到角色: ${gameState.party[index].name}`);
-            return true;
+
+            // 战技点
+            const skillPointsDiv = document.getElementById('skillPoints');
+            skillPointsDiv.innerHTML = Array(state.maxSkillPoints).fill().map((_, i) => `<div class="skill-point ${i < state.skillPoints ? 'active' : ''}"></div>`).join('');
+
+            // 回合标识
+            const turnBadge = document.getElementById('turnBadge');
+            turnBadge.innerHTML = state.isPlayerTurn ? '<span>⚡ 玩家回合</span>' : '<span>🔥 敌人回合</span>';
+            turnBadge.className = `turn-badge ${state.isPlayerTurn ? '' : 'enemy-turn'}`;
+
+            // 技能网格
+            const skillsGrid = document.getElementById('skillsGrid');
+            if (state.isPlayerTurn && !state.gameOver) {
+                const character = state.party[0];
+                const allSkills = character.skills || [];
+                const activeSkills = allSkills.filter(sk => sk.type !== 'talent');
+                skillsGrid.innerHTML = activeSkills.map((sk, idx) => {
+                    let disabled = false,
+                        costText = '';
+                    if (sk.type === 'skill') {
+                        disabled = state.skillPoints < (sk.skillPointCost || 1);
+                        costText = `✦${sk.skillPointCost || 1}`;
+                    } else if (sk.type === 'ultimate') {
+                        disabled = character.energy < (sk.energyCost || 120);
+                        costText = `⚡${sk.energyCost || 120}`;
+                    }
+                    const originalIndex = allSkills.findIndex(s => s.id === sk.id);
+                    return `<div class="skill-btn ${disabled ? 'disabled' : ''}" data-skill-original-index="${originalIndex}">
+                                <div class="skill-icon">${sk.icon}</div>
+                                <div class="skill-name">${sk.name}</div>
+                                ${costText ? `<div class="skill-cost">${costText}</div>` : ''}
+                            </div>`;
+                }).join('');
+                document.querySelectorAll('.skill-btn').forEach(btn => {
+                    btn.onclick = () => {
+                        const originalIdx = parseInt(btn.dataset.skillOriginalIndex);
+                        if (!isNaN(originalIdx)) window.useSkillLogic(originalIdx);
+                    };
+                });
+            } else {
+                skillsGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#aaa;">等待敌人行动...</div>';
+            }
+            const endBtn = document.getElementById('endTurnBtn');
+            endBtn.disabled = !state.isPlayerTurn || state.gameOver;
+        };
+
+        window.selectEnemy = function (idx) {
+            if (!window.gameState || !window.gameState.isPlayerTurn) return;
+            window.gameState.selectedEnemy = idx;
+            window.updateBattleUI();
+        };
+
+function initBattleUI() {
+    let savedTeam = null;
+    let savedUpgrade = null;
+    let activatedEidolons = [];
+    try {
+        const saved = localStorage.getItem('hsr-selected-team');
+        if (saved) savedTeam = JSON.parse(saved);
+        const upgrade = localStorage.getItem('hsr-upgrade-data');
+        if (upgrade) savedUpgrade = JSON.parse(upgrade);
+        const eid = localStorage.getItem('hsr-activated-eidolons');
+        if (eid) activatedEidolons = JSON.parse(eid);
+    } catch (e) {}
+
+    // 使用命座获取初始角色（包含正确的技能上限）
+    let initState = GameData.getInitialState(null, activatedEidolons);
+    let character = initState.party[0];
+
+    // 应用队伍保存的基础属性（仅外观和初始属性，不覆盖等级/技能）
+    if (savedTeam && savedTeam.characters && savedTeam.characters.length > 0) {
+        const teamChar = savedTeam.characters[0];
+        character.name = teamChar.name || character.name;
+        character.avatar = teamChar.avatar || '🦌';
+        if (!savedUpgrade || !savedUpgrade.level) {
+            // 没有升级数据时，使用队伍保存的属性作为初始值
+            character.maxHp = teamChar.hp || character.maxHp;
+            character.attack = teamChar.attack || character.attack;
+            character.defense = teamChar.defense || character.defense;
+            character.speed = teamChar.speed || character.speed;
         }
-        return false;
+        if (teamChar.level && (!savedUpgrade || !savedUpgrade.level)) {
+            character.level = teamChar.level;
+        }
     }
-};
 
-window.useSkillLogic = function(skillIndex) { return BattleLogic.useSkill(skillIndex); };
-window.endTurnLogic = function() { return BattleLogic.endTurn(); };
-window.restartBattleLogic = function() { return BattleLogic.restartBattle(); };
-window.switchCharacterLogic = function(index) { return BattleLogic.switchCharacter(index); };
-window.getBattleLogic = function() { return BattleLogic; };
-window.BattleLogic = BattleLogic;
-window.addEventListener('DOMContentLoaded', () => console.log('战斗逻辑加载完成！'));
+    // 确保技能数组存在（initState 已经提供）
+    if (!character.skills || character.skills.length === 0) {
+        character.skills = initState.party[0].skills;
+    }
+
+    // 应用升级数据（等级和技能等级）
+    if (savedUpgrade) {
+        if (savedUpgrade.level && savedUpgrade.level > character.level) {
+            GameData.levelUpCharacter(character, savedUpgrade.level);
+        }
+        if (savedUpgrade.skillLevels) {
+            character.skills.forEach(skill => {
+                const targetLv = savedUpgrade.skillLevels[skill.id];
+                if (targetLv && targetLv > skill.currentLevel) {
+                    while (skill.currentLevel < targetLv && skill.currentLevel < skill.maxLevel) {
+                        GameData.levelUpSkill(skill);
+                    }
+                }
+            });
+        }
+    } else {
+        // 没有升级数据但队伍有等级，简单升级
+        if (character.level > 1) {
+            GameData.levelUpCharacter(character, character.level);
+        }
+    }
+
+    // 确保命座数组被保存到角色对象（防止丢失）
+    character.activatedEidolons = activatedEidolons;
+
+    // 能量初始化
+    character.energy = 0;
+    character.maxEnergy = 120;
+    character.path = character.path || '巡猎';
+
+    // 敌人定义
+    const baseEnemy = {
+        id: 'abyss_monster',
+        name: '深渊魔物',
+        emoji: '👹',
+        attack: 600,
+        defense: 400,
+        skills: [{ name: '暗影爪', baseDamage: 0.6 }],
+        isDefDown: false,
+        defDownTurns: 0
+    };
+    const enemies = [
+    { ...baseEnemy, name: '深渊魔物·左', maxHp: 3200, hp: 3200, debuffs: [] },
+    { ...baseEnemy, name: '深渊魔物·中', maxHp: 3800, hp: 3800, debuffs: [] },
+    { ...baseEnemy, name: '深渊魔物·右', maxHp: 3000, hp: 3000, debuffs: [] }
+];
+
+    window.gameState = {
+        party: [character],
+        enemies: enemies,
+        skillPoints: 3,
+        maxSkillPoints: 5,
+        turn: 0,
+        isPlayerTurn: true,
+        gameOver: false,
+        selectedEnemy: 0,
+        activeCharacter: 0,
+        lastDamage: 0,
+        lastDamageTaken: 0
+    };
+    window.updateBattleUI();
+    addLog('战斗开始！鹿馆迎战深渊魔物');
+}
+
+        function addLog(msg) {
+            const logDiv = document.getElementById('battleLog');
+            if (logDiv) {
+                logDiv.innerHTML = `${msg} &nbsp; ➜ ${logDiv.innerHTML.slice(0, 100)}`;
+            }
+            console.log(msg);
+        }
+
+        window.showDamageEffect = function (targetIndex, damage, isCritical, isEnemy) {
+            let targetElem = null;
+            if (isEnemy) {
+                targetElem = document.querySelector(`.enemy-card:nth-child(${targetIndex + 1}) .enemy-avatar`);
+            } else {
+                targetElem = document.querySelector(`.character-card .character-avatar`);
+            }
+            if (targetElem) {
+                const rect = targetElem.getBoundingClientRect();
+                const div = document.createElement('div');
+                div.className = `damage-popup ${isCritical ? 'critical' : ''}`;
+                div.textContent = isCritical ? `💥${damage}` : `${damage}`;
+                div.style.left = rect.left + rect.width / 2 + 'px';
+                div.style.top = rect.top + rect.height / 3 + 'px';
+                document.body.appendChild(div);
+                setTimeout(() => div.remove(), 800);
+            }
+            const statsDiv = document.getElementById('damageStats');
+            statsDiv.style.opacity = '1';
+            statsDiv.textContent = `${isEnemy ? '⚔️ 造成' : '🛡️ 受到'} ${damage} ${isCritical ? '暴击‼' : ''}`;
+            statsDiv.style.background = isEnemy ? '#00d4ffcc' : '#ff4757cc';
+            setTimeout(() => statsDiv.style.opacity = '0', 1200);
+        };
+
+        window.showMessage = function (title, msg) {
+            addLog(`${title}: ${msg}`);
+            const toast = document.createElement('div');
+            toast.textContent = msg;
+            toast.style.cssText = 'position:fixed;top:30%;left:50%;transform:translateX(-50%);background:#000c;color:#00d4ff;padding:8px 16px;border-radius:40px;z-index:200;backdrop-filter:blur(8px);';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        };
+
+        document.getElementById('endTurnBtn').onclick = () => {
+            window.endTurnLogic();
+        };
+
+        // 暴露获取当前角色/敌函数供 info-popup 使用
+        window.getCharacterDataForPopup = () => window.gameState?.party[0];
+        window.getEnemyDataForPopup = (idx) => window.gameState?.enemies[idx];
+
+        waitForDeps();
+    </script>
+</body>
+</html>
