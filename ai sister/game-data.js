@@ -274,7 +274,7 @@ const GameData = (function() {
             activatedEidolons: activatedEidolons,
             _baseStats: { hp, atk, def },
             _charLevel: charLevel,
-            _baseAttack: atk,    // 用于天赋攻击力加成
+            _baseAttack: atk,
             _actionCount: 0
         };
         return {
@@ -337,7 +337,6 @@ const GameData = (function() {
             damage *= (1 + attacker[`${skill.element}DamageBoost`]);
         }
         
-        // 天赋：猎杀强化 - 速度转抗性穿透
         let resistance = target.resistances?.[skill.element] || 0;
         const hasTalent = attacker.extraAbilities && attacker.extraAbilities.some(a => a.id === 'luguan_talent');
         if (hasTalent && attacker.speed >= 100) {
