@@ -31,10 +31,47 @@
             padding: 20px;
         }
         .container { max-width: 1000px; margin: 0 auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 12px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
         .back-link { background: var(--hsr-glass); backdrop-filter: blur(10px); padding: 8px 20px; border-radius: 40px; text-decoration: none; color: var(--hsr-primary); border: 1px solid var(--hsr-glass-border); transition: 0.2s; }
         .title { font-size: 1.8rem; background: linear-gradient(135deg, var(--hsr-primary), var(--hsr-primary-light)); -webkit-background-clip: text; background-clip: text; color: transparent; }
         .credits { background: var(--hsr-glass); padding: 8px 20px; border-radius: 40px; font-size: 1rem; border: 1px solid var(--hsr-glass-border); }
+
+        /* 选项卡样式 */
+        .tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--hsr-glass-border);
+            padding-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            padding: 10px 24px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--hsr-subtext);
+            cursor: pointer;
+            border-radius: 30px;
+            transition: 0.2s;
+        }
+        .tab-btn.active {
+            background: var(--hsr-primary);
+            color: #000;
+            box-shadow: 0 0 12px var(--hsr-primary);
+        }
+        .tab-pane {
+            display: none;
+            animation: fadeIn 0.2s;
+        }
+        .tab-pane.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
         /* 通用卡片样式 */
         .section-card {
@@ -43,17 +80,9 @@
             border: 1px solid var(--hsr-glass-border);
             border-radius: 28px;
             padding: 24px;
-            margin-bottom: 30px;
-        }
-        .section-title {
-            font-size: 1.3rem;
-            margin-bottom: 20px;
-            color: var(--hsr-primary-light);
-            border-left: 4px solid var(--hsr-primary);
-            padding-left: 16px;
         }
 
-        /* 角色卡片 */
+        /* 角色卡片（独立于选项卡） */
         .character-card {
             background: var(--hsr-surface);
             border: 1px solid var(--hsr-glass-border);
@@ -102,7 +131,7 @@
         .eidolon-activate-btn { background: var(--hsr-glass); border: 1px solid var(--hsr-glass-border); padding: 6px 16px; border-radius: 40px; cursor: pointer; font-size: 0.85rem; color: var(--hsr-text); transition: 0.2s; width: 100%; text-align: center; }
         .eidolon-activate-btn.active { background: var(--hsr-primary); color: #000; border-color: var(--hsr-primary); }
 
-        /* 遗器系统 - 槽位网格 */
+        /* 遗器系统 */
         .relic-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -132,11 +161,15 @@
         .relic-btn:hover { background: var(--hsr-primary-dark); border-color: var(--hsr-primary); }
         .relic-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+        .save-area { text-align: center; margin-top: 20px; }
+        .save-btn { background: linear-gradient(135deg, var(--hsr-success), #0f8b6e); border: none; padding: 14px 40px; border-radius: 60px; font-size: 1.2rem; font-weight: bold; color: white; cursor: pointer; }
+
         .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); color: var(--hsr-primary); padding: 8px 24px; border-radius: 40px; font-size: 0.9rem; z-index: 100; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
         @media (max-width: 600px) {
             .skill-item { flex-direction: column; gap: 12px; align-items: stretch; text-align: center; }
             .upgrade-btn { align-self: center; }
             .relic-grid { grid-template-columns: 1fr; }
+            .tabs { justify-content: center; }
         }
     </style>
 </head>
@@ -148,33 +181,46 @@
         <div class="credits" id="creditDisplay">💰 0 信用点</div>
     </div>
 
-    <!-- 角色信息卡片 -->
+    <!-- 角色信息卡片（始终显示） -->
     <div class="character-card" id="characterCard"></div>
 
-    <!-- 板块一：角色提升（等级升级 + 技能升级） -->
-    <div class="section-card">
-        <div class="section-title">📈 角色等级</div>
-        <div id="levelUpPanel"></div>
-        <div class="section-title" style="margin-top: 20px;">✨ 技能升级</div>
-        <div id="skillList"></div>
+    <!-- 选项卡 -->
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="tab1">📈 角色提升</button>
+        <button class="tab-btn" data-tab="tab2">🌟 星魂同调</button>
+        <button class="tab-btn" data-tab="tab3">📿 遗器系统</button>
     </div>
 
-    <!-- 板块二：星魂同调（命座激活） -->
-    <div class="section-card">
-        <div class="section-title">🌟 星魂 · 命座激活</div>
-        <div class="eidolon-grid" id="eidolonGrid"></div>
-        <div style="font-size:0.75rem; color:var(--hsr-subtext); margin-top:12px;">※ 命座效果将在战斗中自动生效（E1/E2/E6已实现，E3/E5影响技能上限）</div>
+    <!-- 板块一：角色提升 -->
+    <div id="tab1" class="tab-pane active">
+        <div class="section-card">
+            <div class="section-title" style="margin-bottom: 20px;">📈 角色等级</div>
+            <div id="levelUpPanel"></div>
+            <div class="section-title" style="margin-top: 20px; margin-bottom: 20px;">✨ 技能升级</div>
+            <div id="skillList"></div>
+        </div>
+    </div>
+
+    <!-- 板块二：星魂同调 -->
+    <div id="tab2" class="tab-pane">
+        <div class="section-card">
+            <div class="section-title">🌟 星魂 · 命座激活</div>
+            <div class="eidolon-grid" id="eidolonGrid"></div>
+            <div style="font-size:0.75rem; color:var(--hsr-subtext); margin-top:12px;">※ 命座效果将在战斗中自动生效（E1/E2/E6已实现，E3/E5影响技能上限）</div>
+        </div>
     </div>
 
     <!-- 板块三：遗器系统 -->
-    <div class="section-card">
-        <div class="section-title">📿 遗器装备</div>
-        <div class="relic-grid" id="relicGrid"></div>
-        <div style="font-size:0.75rem; color:var(--hsr-subtext); margin-top:12px;">※ 每件遗器可升级至+15，消耗信用点</div>
+    <div id="tab3" class="tab-pane">
+        <div class="section-card">
+            <div class="section-title">📿 遗器装备</div>
+            <div class="relic-grid" id="relicGrid"></div>
+            <div style="font-size:0.75rem; color:var(--hsr-subtext); margin-top:12px;">※ 每件遗器可升级至+15，消耗信用点</div>
+        </div>
     </div>
 
-    <div class="save-area" style="text-align: center; margin-top: 20px;">
-        <button class="save-btn" id="saveBtn" style="background: linear-gradient(135deg, var(--hsr-success), #0f8b6e); border: none; padding: 14px 40px; border-radius: 60px; font-size: 1.2rem; font-weight: bold; color: white; cursor: pointer;">💾 保存并返回</button>
+    <div class="save-area">
+        <button class="save-btn" id="saveBtn">💾 保存并返回</button>
     </div>
 </div>
 <div class="toast" id="toastMsg">提示</div>
@@ -188,12 +234,12 @@
     const COST_SKILL = 500;
     const RELIC_UPGRADE_COST = 500;   // 遗器每级升级消耗
 
-    // 遗器装备数据（存储在 localStorage，键名 hsr-relic-equips）
+    // 遗器装备数据
     let relicEquips = {
         head: null, hands: null, body: null, feet: null, sphere: null, rope: null
     };
 
-    // 辅助函数
+    // ========== 辅助函数 ==========
     function showToast(msg, isError = false) {
         const toast = document.getElementById('toastMsg');
         toast.textContent = msg;
@@ -206,7 +252,7 @@
         document.getElementById('creditDisplay').innerHTML = `💰 ${totalCredits} 信用点`;
     }
 
-    // 加载/保存遗器装备
+    // ========== 遗器相关 ==========
     function loadRelicEquips() {
         const saved = localStorage.getItem('hsr-relic-equips');
         if (saved) {
@@ -215,13 +261,11 @@
                 relicEquips = { ...relicEquips, ...parsed };
             } catch(e) {}
         }
-        // 初始化未装备的部位：随机生成一件该部位的遗器（0级），便于演示
         const parts = ['head', 'hands', 'body', 'feet', 'sphere', 'rope'];
         for (let part of parts) {
             if (!relicEquips[part] && window.generateRandomRelic) {
                 relicEquips[part] = generateRandomRelic(part, 0);
             } else if (!relicEquips[part]) {
-                // 降级：创建一个最简单的遗器对象
                 relicEquips[part] = {
                     id: `relic_${part}_init`,
                     setType: "新生的未来",
@@ -239,7 +283,6 @@
         localStorage.setItem('hsr-relic-equips', JSON.stringify(relicEquips));
     }
 
-    // 升级遗器
     function upgradeRelic(part) {
         let relic = relicEquips[part];
         if (!relic) return;
@@ -253,11 +296,9 @@
         }
         totalCredits -= RELIC_UPGRADE_COST;
         relic.level++;
-        // 重新计算主属性值
         if (window.getRelicMainStatValue) {
             relic.mainStat.value = getRelicMainStatValue(relic.mainStat.type, relic.level);
         } else {
-            // 简单线性估算
             relic.mainStat.value = (relic.mainStat.value || 0) + (relic.mainStat.type === 'speed' ? 1.5 : 2.5);
             relic.mainStat.value = parseFloat(relic.mainStat.value.toFixed(1));
         }
@@ -272,32 +313,16 @@
         return map[part] || part;
     }
 
-    // 渲染遗器系统
-    function renderRelicSystem() {
-        const container = document.getElementById('relicGrid');
-        if (!container) return;
-        const parts = ['head', 'hands', 'body', 'feet', 'sphere', 'rope'];
-        container.innerHTML = parts.map(part => {
-            const relic = relicEquips[part];
-            if (!relic) return `<div class="relic-slot">${getPartName(part)}<div>无遗器</div></div>`;
-            const mainTypeName = getStatName(relic.mainStat.type);
-            const mainVal = relic.mainStat.value;
-            const subStatsHtml = relic.subStats.map(sub => `<div>${getStatName(sub.type)}: ${sub.value}${sub.type.includes('Percent') ? '%' : ''}</div>`).join('');
-            const partName = getPartName(part);
-            return `
-                <div class="relic-slot">
-                    <div class="relic-header">
-                        <span class="relic-partName">${partName}</span>
-                        <span class="relic-level">+${relic.level}</span>
-                    </div>
-                    <div class="relic-mainStat">⚡主: ${mainTypeName} ${mainVal}${relic.mainStat.type.includes('Percent') ? '%' : ''}</div>
-                    <div class="relic-subStats">${subStatsHtml || '<span style="color:#aaa;">无副词条</span>'}</div>
-                    <div class="relic-actions">
-                        <button class="relic-btn" onclick="upgradeRelic('${part}')">⬆️ 升级 (${RELIC_UPGRADE_COST})</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
+    // 优化属性显示：百分比加%后缀，固定值不加
+    function formatStatValue(type, value) {
+        if (type === 'hpPercent' || type === 'atkPercent' || type === 'defPercent' || type === 'critRate' || type === 'critDamage' ||
+            type === 'effectHitRate' || type === 'effectRes' || type === 'energyRegen' ||
+            type === 'windDamage' || type === 'fireDamage' || type === 'iceDamage' || type === 'imaginaryDamage' ||
+            type === 'physicalDamage' || type === 'quantumDamage') {
+            return `${value}%`;
+        } else {
+            return `${value}`;
+        }
     }
 
     function getStatName(type) {
@@ -310,9 +335,38 @@
         return map[type] || type;
     }
 
-    // 以下为原有角色升级逻辑（保持不变，仅重构UI）
-    let currentCharacterRef = null;
+    function renderRelicSystem() {
+        const container = document.getElementById('relicGrid');
+        if (!container) return;
+        const parts = ['head', 'hands', 'body', 'feet', 'sphere', 'rope'];
+        container.innerHTML = parts.map(part => {
+            const relic = relicEquips[part];
+            if (!relic) return `<div class="relic-slot">${getPartName(part)}<div>无遗器</div></div>`;
+            const mainTypeName = getStatName(relic.mainStat.type);
+            const mainValFormatted = formatStatValue(relic.mainStat.type, relic.mainStat.value);
+            const subStatsHtml = relic.subStats.map(sub => {
+                const subName = getStatName(sub.type);
+                const subVal = formatStatValue(sub.type, sub.value);
+                return `<div>${subName}: ${subVal}</div>`;
+            }).join('');
+            const partName = getPartName(part);
+            return `
+                <div class="relic-slot">
+                    <div class="relic-header">
+                        <span class="relic-partName">${partName}</span>
+                        <span class="relic-level">+${relic.level}</span>
+                    </div>
+                    <div class="relic-mainStat">⚡主: ${mainTypeName} ${mainValFormatted}</div>
+                    <div class="relic-subStats">${subStatsHtml || '<span style="color:#aaa;">无副词条</span>'}</div>
+                    <div class="relic-actions">
+                        <button class="relic-btn" onclick="upgradeRelic('${part}')">⬆️ 升级 (${RELIC_UPGRADE_COST})</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
 
+    // ========== 角色升级等原有逻辑（保持基本不变） ==========
     function rebuildCharacter() {
         if (!GameData) return;
         let initState = GameData.getInitialState(null, activatedEidolons);
@@ -574,6 +628,22 @@
 
     function saveCredits() { localStorage.setItem('hsr_credits', totalCredits); }
 
+    // ========== 选项卡切换逻辑 ==========
+    function initTabs() {
+        const btns = document.querySelectorAll('.tab-btn');
+        const panes = document.querySelectorAll('.tab-pane');
+        btns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.dataset.tab;
+                btns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                panes.forEach(pane => pane.classList.remove('active'));
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+    }
+
+    // ========== 初始化 ==========
     async function initUpgradePage() {
         if (!window.GameData) { setTimeout(initUpgradePage, 200); return; }
         loadSavedEidolons();
@@ -598,17 +668,16 @@
         renderCharacterInfo();
         renderLevelUpPanel();
         renderSkillList();
-        // 加载遗器装备
         if (window.RelicSets) {
             loadRelicEquips();
             renderRelicSystem();
         } else {
             console.warn('relic-data.js 未加载，遗器系统不可用');
         }
+        initTabs();
     }
 
-    window.upgradeRelic = upgradeRelic;  // 暴露全局给 onclick
-
+    window.upgradeRelic = upgradeRelic;  // 暴露全局
     window.addEventListener('DOMContentLoaded', initUpgradePage);
     document.getElementById('saveBtn').addEventListener('click', () => { saveCredits(); saveCharacter(); });
     setInterval(() => { if (totalCredits !== undefined) saveCredits(); }, 5000);
