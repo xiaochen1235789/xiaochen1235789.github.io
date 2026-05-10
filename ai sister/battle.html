@@ -598,104 +598,186 @@
             window.updateBattleUI();
         };
 
-        function initBattleUI() {
-            let savedTeam = null;
-            let savedUpgrade = null;
-            let activatedEidolons = [];
-            try {
-                const saved = localStorage.getItem('hsr-selected-team');
-                if (saved) savedTeam = JSON.parse(saved);
-                const upgrade = localStorage.getItem('hsr-upgrade-data');
-                if (upgrade) savedUpgrade = JSON.parse(upgrade);
-                const eid = localStorage.getItem('hsr-activated-eidolons');
-                if (eid) activatedEidolons = JSON.parse(eid);
-            } catch (e) {}
+function initBattleUI() {
+    let savedTeam = null;
+    let savedUpgrade = null;
+    let activatedEidolons = [];
+    try {
+        const saved = localStorage.getItem('hsr-selected-team');
+        if (saved) savedTeam = JSON.parse(saved);
+        const upgrade = localStorage.getItem('hsr-upgrade-data');
+        if (upgrade) savedUpgrade = JSON.parse(upgrade);
+        const eid = localStorage.getItem('hsr-activated-eidolons');
+        if (eid) activatedEidolons = JSON.parse(eid);
+    } catch (e) {}
 
-            let initState = GameData.getInitialState(null, activatedEidolons);
-            let character = initState.party[0];
+    let initState = GameData.getInitialState(null, activatedEidolons);
+    let character = initState.party[0];
 
-            if (savedTeam && savedTeam.characters && savedTeam.characters.length > 0) {
-                const teamChar = savedTeam.characters[0];
-                character.name = teamChar.name || character.name;
-                character.avatar = teamChar.avatar || '🦌';
-                if (!savedUpgrade || !savedUpgrade.level) {
-                    character.maxHp = teamChar.hp || character.maxHp;
-                    character.attack = teamChar.attack || character.attack;
-                    character.defense = teamChar.defense || character.defense;
-                    character.speed = teamChar.speed || character.speed;
-                }
-                if (teamChar.level && (!savedUpgrade || !savedUpgrade.level)) {
-                    character.level = teamChar.level;
-                }
-            }
-
-            if (!character.skills || character.skills.length === 0) {
-                character.skills = initState.party[0].skills;
-            }
-
-            if (savedUpgrade) {
-                if (savedUpgrade.level && savedUpgrade.level > character.level) {
-                    GameData.levelUpCharacter(character, savedUpgrade.level);
-                }
-                if (savedUpgrade.skillLevels) {
-                    character.skills.forEach(skill => {
-                        const targetLv = savedUpgrade.skillLevels[skill.id];
-                        if (targetLv && targetLv > skill.currentLevel) {
-                            while (skill.currentLevel < targetLv && skill.currentLevel < skill.maxLevel) {
-                                GameData.levelUpSkill(skill);
-                            }
-                        }
-                    });
-                }
-            } else {
-                if (character.level > 1) {
-                    GameData.levelUpCharacter(character, character.level);
-                }
-            }
-
-            character.activatedEidolons = activatedEidolons;
-            character.energy = 0;
-            character.maxEnergy = 120;
-            character.path = character.path || '巡猎';
-
-            // 初始化天赋相关属性
-            character._baseAttack = character.attack;
-            character._actionCount = 0;
-            character._extraTurnUsedInThisTurn = false;
-
-            const baseEnemy = {
-                id: 'abyss_monster',
-                name: '深渊魔物',
-                emoji: '👹',
-                attack: 600,
-                defense: 400,
-                skills: [{ name: '暗影爪', baseDamage: 0.6 }],
-                isDefDown: false,
-                defDownTurns: 0,
-                debuffs: []
-            };
-            const enemies = [
-                { ...baseEnemy, name: '深渊魔物·左', maxHp: 3200, hp: 3200 },
-                { ...baseEnemy, name: '深渊魔物·中', maxHp: 3800, hp: 3800 },
-                { ...baseEnemy, name: '深渊魔物·右', maxHp: 3000, hp: 3000 }
-            ];
-
-            window.gameState = {
-                party: [character],
-                enemies: enemies,
-                skillPoints: 3,
-                maxSkillPoints: 5,
-                turn: 0,
-                isPlayerTurn: true,
-                gameOver: false,
-                selectedEnemy: 0,
-                activeCharacter: 0,
-                lastDamage: 0,
-                lastDamageTaken: 0
-            };
-            window.updateBattleUI();
-            addLog('战斗开始！鹿馆迎战深渊魔物');
+    if (savedTeam && savedTeam.characters && savedTeam.characters.length > 0) {
+        const teamChar = savedTeam.characters[0];
+        character.name = teamChar.name || character.name;
+        character.avatar = teamChar.avatar || '🦌';
+        if (!savedUpgrade || !savedUpgrade.level) {
+            character.maxHp = teamChar.hp || character.maxHp;
+            character.attack = teamChar.attack || character.attack;
+            character.defense = teamChar.defense || character.defense;
+            character.speed = teamChar.speed || character.speed;
         }
+        if (teamChar.level && (!savedUpgrade || !savedUpgrade.level)) {
+            character.level = teamChar.level;
+        }
+    }
+
+    if (!character.skills || character.skills.length === 0) {
+        character.skills = initState.party[0].skills;
+    }
+
+    if (savedUpgrade) {
+        if (savedUpgrade.level && savedUpgrade.level > character.level) {
+            GameData.levelUpCharacter(character, savedUpgrade.level);
+        }
+        if (savedUpgrade.skillLevels) {
+            character.skills.forEach(skill => {
+                const targetLv = savedUpgrade.skillLevels[skill.id];
+                if (targetLv && targetLv > skill.currentLevel) {
+                    while (skill.currentLevel < targetLv && skill.currentLevel < skill.maxLevel) {
+                        GameData.levelUpSkill(skill);
+                    }
+                }
+            });
+        }
+    } else {
+        if (character.level > 1) {
+            GameData.levelUpCharacter(character, character.level);
+        }
+    }
+
+    character.activatedEidolons = activatedEidolons;
+    character.energy = 0;
+    character.maxEnergy = 120;
+    character.path = character.path || '巡猎';
+
+    character._baseAttack = character.attack;
+    character._actionCount = 0;
+    character._extraTurnUsedInThisTurn = false;
+
+    // ========== 新增：加载遗器装备并加成属性 ==========
+    // 确保 relic-data.js 已加载，且存在 localStorage 中的遗器数据
+    if (window.RelicSets && localStorage.getItem('hsr-relic-equips')) {
+        const savedRelics = localStorage.getItem('hsr-relic-equips');
+        let relicEquips = {};
+        try {
+            relicEquips = JSON.parse(savedRelics);
+        } catch(e) {}
+
+        // 保存基础属性（用于百分比计算）
+        const baseHp = character.maxHp;
+        const baseAtk = character.attack;
+        const baseDef = character.defense;
+
+        // 辅助函数：累加属性（处理百分比和固定值）
+        function addStat(statType, value, isPercent) {
+            if (isPercent) {
+                if (statType === 'hp') character.maxHp += Math.floor(baseHp * (value / 100));
+                else if (statType === 'atk') character.attack += Math.floor(baseAtk * (value / 100));
+                else if (statType === 'def') character.defense += Math.floor(baseDef * (value / 100));
+                else if (statType === 'critRate') character.critRate += value / 100;
+                else if (statType === 'critDamage') character.critDamage += value / 100;
+                else if (statType === 'speed') character.speed += value;
+                // windDamage 和其他元素伤害单独记录
+                else if (statType === 'windDamage') character.windDamageBoost += value / 100;
+            } else {
+                if (statType === 'hp') character.maxHp += value;
+                else if (statType === 'atk') character.attack += value;
+                else if (statType === 'def') character.defense += value;
+                else if (statType === 'speed') character.speed += value;
+            }
+        }
+
+        // 遍历6个部位
+        const parts = ['head', 'hands', 'body', 'feet', 'sphere', 'rope'];
+        for (let part of parts) {
+            const relic = relicEquips[part];
+            if (!relic) continue;
+
+            // 处理主属性
+            const main = relic.mainStat;
+            const isPercentMain = main.type.includes('Percent') || main.type === 'critRate' || main.type === 'critDamage';
+            if (main.type === 'windDamage') {
+                character.windDamageBoost += main.value / 100;
+            } else {
+                addStat(main.type, main.value, isPercentMain);
+            }
+
+            // 处理副词条
+            for (let sub of relic.subStats) {
+                const isPercentSub = sub.type.includes('Percent') || sub.type === 'critRate' || sub.type === 'critDamage';
+                if (sub.type === 'windDamage') {
+                    character.windDamageBoost += sub.value / 100;
+                } else {
+                    addStat(sub.type, sub.value, isPercentSub);
+                }
+            }
+        }
+
+        // 统计套装数量
+        const setCount = { "新生的未来": 0, "过往的旧事物": 0 };
+        for (let part of parts) {
+            const relic = relicEquips[part];
+            if (relic && relic.setType && setCount[relic.setType] !== undefined) {
+                setCount[relic.setType]++;
+            }
+        }
+        // 应用2件套常驻效果
+        if (setCount["新生的未来"] >= 2) character.critRate += 0.08;
+        // 标记套装效果（供伤害计算使用）
+        if (setCount["过往的旧事物"] >= 2) character._hasSpeedDmgSet = true;
+        if (setCount["新生的未来"] >= 4) character._hasAtkThresholdSet = true;
+
+        // 调整血量比例（防止血量溢出）
+        const hpRatio = character.hp / character.maxHp;
+        character.hp = Math.floor(character.maxHp * hpRatio);
+        if (character.hp <= 0) character.hp = 1;
+
+        // 更新天赋的基础攻击力（用于后续动作累加）
+        character._baseAttack = character.attack;
+    }
+    // ========== 遗器加成结束 ==========
+
+    const baseEnemy = {
+        id: 'abyss_monster',
+        name: '深渊魔物',
+        emoji: '👹',
+        attack: 600,
+        defense: 400,
+        skills: [{ name: '暗影爪', baseDamage: 0.6 }],
+        isDefDown: false,
+        defDownTurns: 0,
+        debuffs: []
+    };
+    const enemies = [
+        { ...baseEnemy, name: '深渊魔物·左', maxHp: 3200, hp: 3200 },
+        { ...baseEnemy, name: '深渊魔物·中', maxHp: 3800, hp: 3800 },
+        { ...baseEnemy, name: '深渊魔物·右', maxHp: 3000, hp: 3000 }
+    ];
+
+    window.gameState = {
+        party: [character],
+        enemies: enemies,
+        skillPoints: 3,
+        maxSkillPoints: 5,
+        turn: 0,
+        isPlayerTurn: true,
+        gameOver: false,
+        selectedEnemy: 0,
+        activeCharacter: 0,
+        lastDamage: 0,
+        lastDamageTaken: 0
+    };
+    window.updateBattleUI();
+    addLog('战斗开始！鹿馆迎战深渊魔物');
+}
 
         function addLog(msg) {
             const logDiv = document.getElementById('battleLog');
