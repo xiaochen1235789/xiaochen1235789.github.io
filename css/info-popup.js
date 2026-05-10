@@ -1,17 +1,15 @@
-// info-popup.js - 角色/敌人信息弹窗，含命座显示
+// info-popup.js - 角色/敌人信息弹窗，含命座、遗器套装效果
 
-// 工具函数：渲染状态列表
 function renderStatusList(list) {
     if (!list || list.length === 0) return '<div style="color:#aaa;">无</div>';
     return list.map(s => `<div class="status-item">${s.name || s}</div>`).join('');
 }
 
-// 显示角色详情弹窗（含命座，属性图标用真实图片）
 function showCharacterInfo(characterIndex) {
     const char = window.getCharacterDataForPopup ? window.getCharacterDataForPopup() : null;
     if (!char) return;
 
-    // 获取命座名称映射
+    // 命座名称映射
     const eidolonNames = {};
     if (window.GameData && window.GameData.eidolons) {
         for (let [id, data] of Object.entries(window.GameData.eidolons)) {
@@ -47,7 +45,58 @@ function showCharacterInfo(characterIndex) {
         `;
     }
 
-    // 图片样式辅助
+    // ========== 遗器套装效果显示 ==========
+    let relicHtml = '';
+    const relicSetCounts = char.relicSetCounts || {};
+    if (Object.keys(relicSetCounts).length > 0) {
+        const parts = [];
+        // 新生的未来 2件套
+        if (relicSetCounts["新生的未来"] >= 2) {
+            parts.push(`新生的未来 2件: 暴击率+8%`);
+        }
+        // 新生的未来 4件套（基于攻击力阈值增暴伤）
+        if (relicSetCounts["新生的未来"] >= 4) {
+            const cond = { minAtk: 1800, step: 200, bonusPerStep: 0.15, maxBonus: 0.6 };
+            let overAtk = Math.max(0, char.attack - cond.minAtk);
+            let steps = Math.floor(overAtk / cond.step);
+            let bonus = Math.min(cond.maxBonus, steps * cond.bonusPerStep);
+            parts.push(`新生的未来 4件: 暴击伤害+${(bonus * 100).toFixed(0)}% (攻击力 ${char.attack})`);
+        }
+        // 过往的旧事物 2件套（速度阈值增伤）
+        if (relicSetCounts["过往的旧事物"] >= 2) {
+            const thresholds = [115, 140, 160];
+            const bonuses = [0.10, 0.15, 0.25];
+            let speedBonus = 0;
+            for (let i = 0; i < thresholds.length; i++) {
+                if (char.speed >= thresholds[i]) speedBonus = bonuses[i];
+            }
+            parts.push(`过往的旧事物 2件: 造成的伤害提高${(speedBonus * 100).toFixed(0)}% (速度 ${char.speed})`);
+        }
+        if (parts.length > 0) {
+            relicHtml = `
+                <div class="status-section">
+                    <div class="status-title">📿 遗器套装效果</div>
+                    <div class="status-list">${parts.map(p => `<div class="status-item">${p}</div>`).join('')}</div>
+                </div>
+            `;
+        } else {
+            relicHtml = `
+                <div class="status-section">
+                    <div class="status-title">📿 遗器套装效果</div>
+                    <div class="status-list"><div style="color:#aaa;">无激活套装</div></div>
+                </div>
+            `;
+        }
+    } else {
+        relicHtml = `
+            <div class="status-section">
+                <div class="status-title">📿 遗器套装效果</div>
+                <div class="status-list"><div style="color:#aaa;">无激活套装</div></div>
+            </div>
+        `;
+    }
+    // ========== 遗器套装效果结束 ==========
+
     const imgStyle = 'width:20px; height:20px; vertical-align:middle; margin-right:6px;';
 
     const modal = document.createElement('div');
@@ -83,6 +132,7 @@ function showCharacterInfo(characterIndex) {
                 <span class="stat-value">${Math.round((char.critDamage || 0.5)*100)}%</span>
             </div>
             ${eidolonHtml}
+            ${relicHtml}
             <div class="status-section">
                 <div class="status-title">✨ 正面状态</div>
                 <div class="status-list" id="buff-list">${renderStatusList(char.buffs || [])}</div>
@@ -98,7 +148,7 @@ function showCharacterInfo(characterIndex) {
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 }
 
-// 显示敌人详情弹窗（属性也使用图片）
+// 敌人弹窗保持不变
 function showEnemyInfo(enemyIndex) {
     const enemy = window.getEnemyDataForPopup ? window.getEnemyDataForPopup(enemyIndex) : null;
     if (!enemy) return;
