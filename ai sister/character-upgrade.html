@@ -173,9 +173,7 @@
     const EFFECTIVE_STATS = ['critRate','critDamage','speed','atkPercent','atk'];
     function calcRelicScore(relic) {
         let score = 0;
-        // 基础分（每条有效副属性计1分）
         relic.subStats.forEach(sub => { if(EFFECTIVE_STATS.includes(sub.type)) score+=1; });
-        // 强化分（每次强化到有效词条计1分）
         relic.subStats.forEach(sub => { if(EFFECTIVE_STATS.includes(sub.type)) score+=(sub.enhanceCount||0); });
         return score;
     }
@@ -214,10 +212,90 @@
         const map={head:'智慧头套',hands:'指挥手套',body:'安心的护甲',feet:'健步如飞的靴子',sphere:'过去的球',rope:'过去的绳'};
         return map[part]||part;
     }
-    function enhanceRelicSubStat(relic) { /* 同原版，略 */ if(relic.subStats.length<4){ /* 补第4条 */ }else{ /* 随机强化 */ } }
-    function upgradeRelic(part){ /* 同原版，略 */ }
-    function loadRelicEquips(){ /* 同原版 */ }
-    function saveRelicEquips(){ localStorage.setItem('hsr-relic-equips',JSON.stringify(relicEquips)); }
+
+    // ========== 遗器强化逻辑（完整实现） ==========
+    function enhanceRelicSubStat(relic) {
+        if (relic.subStats.length < 4) {
+            const existingTypes = relic.subStats.map(s => s.type);
+            let candidates = window.SubStatPool.filter(t => t !== relic.mainStat.type && !existingTypes.includes(t));
+            if (candidates.length === 0) candidates = window.SubStatPool.filter(t => t !== relic.mainStat.type);
+            const newType = candidates[Math.floor(Math.random() * candidates.length)];
+            let base = window.SubStatBase[newType];
+            let roll = window.SubStatRollRange.min + Math.random() * (window.SubStatRollRange.max - window.SubStatRollRange.min);
+            let value = base * roll;
+            if (newType === 'speed') value = Math.round(value);
+            else if (newType === 'hp' || newType === 'atk' || newType === 'def') value = Math.floor(value);
+            else value = parseFloat(value.toFixed(1));
+            relic.subStats.push({ type: newType, value: value, enhanceCount: 0 });
+            return;
+        }
+        const idx = Math.floor(Math.random() * relic.subStats.length);
+        const sub = relic.subStats[idx];
+        if (sub.enhanceCount === undefined) sub.enhanceCount = 0;
+        sub.enhanceCount++;
+        let base = window.SubStatBase[sub.type];
+        let increment = base * (0.8 + Math.random() * 0.4);
+        if (sub.type === 'speed') increment = Math.round(increment);
+        else if (sub.type === 'hp' || sub.type === 'atk' || sub.type === 'def') increment = Math.floor(increment);
+        else increment = parseFloat(increment.toFixed(1));
+        sub.value += increment;
+        sub.value = parseFloat(sub.value.toFixed(1));
+    }
+
+    function upgradeRelic(part) {
+        let relic = relicEquips[part];
+        if (!relic) return;
+        if (relic.level >= 15) {
+            showToast(`${getPartName(part)} 已达最高等级！`, true);
+            return;
+        }
+        if (totalCredits < RELIC_UPGRADE_COST) {
+            showToast('信用点不足！', true);
+            return;
+        }
+        totalCredits -= RELIC_UPGRADE_COST;
+        relic.level++;
+        if (window.getRelicMainStatValue) {
+            relic.mainStat.value = window.getRelicMainStatValue(relic.mainStat.type, relic.level);
+        } else {
+            let step = relic.mainStat.type === 'speed' ? 1.56 : (relic.mainStat.type.includes('Damage') ? 2.592 : (relic.mainStat.type === 'critRate' ? 1.944 : (relic.mainStat.type === 'critDamage' ? 3.888 : 2.592)));
+            relic.mainStat.value = (relic.mainStat.value || 0) + step;
+            relic.mainStat.value = parseFloat(relic.mainStat.value.toFixed(1));
+        }
+        if (relic.level % 3 === 0 && relic.level <= 15) {
+            enhanceRelicSubStat(relic);
+            showToast(`${getPartName(part)} 副词条强化！`, false);
+        }
+        saveRelicEquips();
+        renderRelicSystem();
+        updateCreditUI();
+        showToast(`${getPartName(part)} 升至 +${relic.level}`);
+    }
+
+    function loadRelicEquips() {
+        const saved = localStorage.getItem('hsr-relic-equips');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                relicEquips = { head: null, hands: null, body: null, feet: null, sphere: null, rope: null, ...parsed };
+                for (let part of Object.keys(relicEquips)) {
+                    let r = relicEquips[part];
+                    if (r && r.subStats) {
+                        r.subStats.forEach(s => { if (s.enhanceCount === undefined) s.enhanceCount = 0; });
+                    }
+                }
+            } catch(e) { console.warn(e); }
+        }
+        // 只为 null 的部位创建空占位，不自动生成随机遗器（避免覆盖已有完美遗器）
+        const parts = ['head','hands','body','feet','sphere','rope'];
+        for (let part of parts) {
+            if (!relicEquips[part]) {
+                relicEquips[part] = { id:`empty_${part}`, setType:"新生的未来", part:part, level:0, mainStat:{ type: part==='head'?'hpPercent':'atkPercent', value:0 }, subStats:[] };
+            }
+        }
+        saveRelicEquips();
+    }
+    function saveRelicEquips() { localStorage.setItem('hsr-relic-equips', JSON.stringify(relicEquips)); }
 
     function renderRelicSystem() {
         const container=document.getElementById('relicGrid');
@@ -250,8 +328,8 @@
             `;
         }).join('');
     }
-    
-        // ========== 角色升级逻辑（续） ==========
+
+    // ========== 角色升级逻辑（续） ==========
     function rebuildCharacter() {
         if (!GameData) return;
         let initState = GameData.getInitialState(null, activatedEidolons);
@@ -579,7 +657,6 @@
     window.addEventListener('DOMContentLoaded', initUpgradePage);
     document.getElementById('saveBtn').addEventListener('click', () => { saveCredits(); saveCharacter(); });
     setInterval(() => { if (totalCredits !== undefined) saveCredits(); }, 5000);
-    
 </script>
 </body>
 </html>
