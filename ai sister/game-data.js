@@ -109,7 +109,6 @@ const GameData = (function() {
                     defDownTurns: 2,
                     target: 'single',
                     baseDamageExpr: () => getSkillValue('skill', this.currentLevel, 0) / 100,
-                    // 新增：debuff 显示配置（用于战斗逻辑动态生成）
                     debuffConfig: {
                         nameTemplate: "{percent}%防御降低",
                         descTemplate: "防御力降低{percent}%，持续{turns}回合"
@@ -175,9 +174,7 @@ const GameData = (function() {
     for (const char of Object.values(charactersBaseData)) {
         for (const skill of Object.values(char.skillsTemplates)) registerSkill(skill);
         for (const ability of Object.values(char.extraAbilities)) registerExtraAbility(ability);
-        for (const [shortId, eidolon] of Object.entries(char.eidolons)) {
-            registerEidolon(shortId, eidolon);
-        }
+        for (const [shortId, eidolon] of Object.entries(char.eidolons)) registerEidolon(shortId, eidolon);
     }
 
     // ---------- 6. 获取技能上限（根据命座动态调整）----------
@@ -240,7 +237,7 @@ const GameData = (function() {
                 defDownTurns: template.defDownTurns,
                 baseDamage: baseDamage,
                 extraDamage: extraDamage,
-                debuffConfig: template.debuffConfig // 传递配置
+                debuffConfig: template.debuffConfig
             };
             skills.push(skillObj);
         }
@@ -276,7 +273,9 @@ const GameData = (function() {
             eidolons: eidolonList,
             activatedEidolons: activatedEidolons,
             _baseStats: { hp, atk, def },
-            _charLevel: charLevel
+            _charLevel: charLevel,
+            _baseAttack: atk,    // 用于天赋攻击力加成
+            _actionCount: 0
         };
         return {
             party: [character],
@@ -309,6 +308,7 @@ const GameData = (function() {
         character.hp = Math.floor(character.maxHp * ratio);
         if (character.hp <= 0) character.hp = 1;
         character._baseStats = { hp: character.maxHp, atk: character.attack, def: character.defense };
+        character._baseAttack = character.attack;
         character._charLevel = newLevel;
         return true;
     }
@@ -330,21 +330,29 @@ const GameData = (function() {
         return true;
     }
 
-    // ---------- 9. 崩铁标准伤害计算（含命座效果）----------
+    // ---------- 9. 崩铁标准伤害计算（含命座效果 + 天赋抗性穿透）----------
     function calculateDamage(attacker, target, skill) {
         let damage = attacker.attack * (skill.baseDamage || 1);
         if (skill.element && attacker[`${skill.element}DamageBoost`]) {
             damage *= (1 + attacker[`${skill.element}DamageBoost`]);
         }
-        const resistance = target.resistances?.[skill.element] || 0;
+        
+        // 天赋：猎杀强化 - 速度转抗性穿透
+        let resistance = target.resistances?.[skill.element] || 0;
+        const hasTalent = attacker.extraAbilities && attacker.extraAbilities.some(a => a.id === 'luguan_talent');
+        if (hasTalent && attacker.speed >= 100) {
+            const speedOver = attacker.speed - 100;
+            const stacks = Math.floor(speedOver / 5);
+            const talentSkill = attacker.skills.find(s => s.type === 'talent');
+            const maxPenetration = talentSkill ? talentSkill.penetration : 0.1;
+            const penetration = Math.min(maxPenetration, stacks * 0.02);
+            resistance = Math.max(0, resistance - penetration);
+        }
         damage *= (1 - Math.min(resistance, 0.7));
+        
         let defense = target.defense;
-        if (target.isDefDown) {
-            defense *= (1 - (skill.defDownAmount || 0.35));
-        }
-        if (attacker.activatedEidolons && attacker.activatedEidolons.includes('e6')) {
-            defense *= 0.76;
-        }
+        if (target.isDefDown) defense *= (1 - (skill.defDownAmount || 0.35));
+        if (attacker.activatedEidolons && attacker.activatedEidolons.includes('e6')) defense *= 0.76;
         const defenseReducer = 1000 / (1000 + defense);
         damage *= defenseReducer;
 
@@ -356,15 +364,11 @@ const GameData = (function() {
             finalCritDamage += 0.24 * stacks;
         }
         const isCritical = Math.random() < finalCritRate;
-        if (isCritical) {
-            damage *= (1 + finalCritDamage);
-        }
-        if (skill.extraDamage && target.debuffs && target.debuffs.length > 0) {
-            damage *= (1 + skill.extraDamage);
-        }
-        if (attacker.activatedEidolons && attacker.activatedEidolons.includes('e1') && target.hp >= target.maxHp * 0.2) {
-            damage *= 1.5;
-        }
+        if (isCritical) damage *= (1 + finalCritDamage);
+        
+        if (skill.extraDamage && target.debuffs && target.debuffs.length > 0) damage *= (1 + skill.extraDamage);
+        if (attacker.activatedEidolons && attacker.activatedEidolons.includes('e1') && target.hp >= target.maxHp * 0.2) damage *= 1.5;
+        
         damage = Math.max(damage, attacker.attack * 0.1);
         return { damage: Math.round(damage), isCritical };
     }
@@ -373,9 +377,7 @@ const GameData = (function() {
         const baseDamage = attacker.attack * (skill.baseDamage || 1);
         const isCritical = Math.random() < attacker.critRate;
         let damage = isCritical ? baseDamage * (1 + attacker.critDamage) : baseDamage;
-        if (skill.element && target.resistances?.[skill.element]) {
-            damage *= (1 - target.resistances[skill.element]);
-        }
+        if (skill.element && target.resistances?.[skill.element]) damage *= (1 - target.resistances[skill.element]);
         damage *= (1 - target.defense / (target.defense + 1000));
         return { damage: Math.round(damage), isCritical };
     }
@@ -402,4 +404,4 @@ const GameData = (function() {
 })();
 
 window.GameData = GameData;
-console.log('游戏数据加载完成（命座使用短ID，已修复描述显示）');
+console.log('游戏数据加载完成（含额外能力与天赋完整实现）');
