@@ -6,7 +6,7 @@ function renderStatusList(list) {
     return list.map(s => `<div class="status-item">${s.name || s}</div>`).join('');
 }
 
-// 显示角色详情弹窗（含命座）
+// 显示角色详情弹窗（含命座，属性图标用真实图片）
 function showCharacterInfo(characterIndex) {
     const char = window.getCharacterDataForPopup ? window.getCharacterDataForPopup() : null;
     if (!char) return;
@@ -47,6 +47,9 @@ function showCharacterInfo(characterIndex) {
         `;
     }
 
+    // 图片样式辅助
+    const imgStyle = 'width:20px; height:20px; vertical-align:middle; margin-right:6px;';
+
     const modal = document.createElement('div');
     modal.className = 'info-modal';
     modal.innerHTML = `
@@ -55,12 +58,30 @@ function showCharacterInfo(characterIndex) {
                 <h3>${char.name}</h3>
                 <button class="close-info">&times;</button>
             </div>
-            <div class="stat-row"><span class="stat-label">❤️ 生命值</span><span class="stat-value">${char.hp} / ${char.maxHp}</span></div>
-            <div class="stat-row"><span class="stat-label">⚔️ 攻击力</span><span class="stat-value">${char.attack}</span></div>
-            <div class="stat-row"><span class="stat-label">🛡️ 防御力</span><span class="stat-value">${char.defense}</span></div>
-            <div class="stat-row"><span class="stat-label">⚡ 速度</span><span class="stat-value">${char.speed}</span></div>
-            <div class="stat-row"><span class="stat-label">💥 暴击率</span><span class="stat-value">${Math.round((char.critRate || 0.05)*100)}%</span></div>
-            <div class="stat-row"><span class="stat-label">💢 暴击伤害</span><span class="stat-value">${Math.round((char.critDamage || 0.5)*100)}%</span></div>
+            <div class="stat-row">
+                <span class="stat-label"><img src="/attribute_image/HP.webp" style="${imgStyle}" alt="生命">生命值</span>
+                <span class="stat-value">${char.hp} / ${char.maxHp}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label"><img src="/attribute_image/ATK.webp" style="${imgStyle}" alt="攻击">攻击力</span>
+                <span class="stat-value">${char.attack}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label"><img src="/attribute_image/def.webp" style="${imgStyle}" alt="防御">防御力</span>
+                <span class="stat-value">${char.defense}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label"><img src="/attribute_image/SPD.webp" style="${imgStyle}" alt="速度">速度</span>
+                <span class="stat-value">${char.speed}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label"><img src="/attribute_image/IconCriticalChance.webp" style="${imgStyle}" alt="暴击率">暴击率</span>
+                <span class="stat-value">${Math.round((char.critRate || 0.05)*100)}%</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label"><img src="/attribute_image/IconCriticalDamage.webp" style="${imgStyle}" alt="暴击伤害">暴击伤害</span>
+                <span class="stat-value">${Math.round((char.critDamage || 0.5)*100)}%</span>
+            </div>
             ${eidolonHtml}
             <div class="status-section">
                 <div class="status-title">✨ 正面状态</div>
@@ -77,25 +98,12 @@ function showCharacterInfo(characterIndex) {
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 }
 
-// 显示敌人详情弹窗（增强版，自动合并 isDefDown 等独立状态）
+// 显示敌人详情弹窗（属性也使用图片）
 function showEnemyInfo(enemyIndex) {
     const enemy = window.getEnemyDataForPopup ? window.getEnemyDataForPopup(enemyIndex) : null;
     if (!enemy) return;
 
-    // 收集所有负面状态（包括 debuffs 数组和独立的 isDefDown）
-    let allDebuffs = [];
-    if (enemy.debuffs && enemy.debuffs.length) {
-        allDebuffs.push(...enemy.debuffs);
-    }
-    if (enemy.isDefDown) {
-        // 避免重复添加（若 debuffs 中已有防御降低条目则不重复）
-        const alreadyHas = allDebuffs.some(d => d.name && d.name.includes('防御降低'));
-        if (!alreadyHas) {
-            const turns = enemy.defDownTurns || 0;
-            const displayName = turns > 0 ? `防御降低 (剩${turns}回合)` : '防御降低';
-            allDebuffs.push({ name: displayName });
-        }
-    }
+    const imgStyle = 'width:20px; height:20px; vertical-align:middle; margin-right:6px;';
 
     const modal = document.createElement('div');
     modal.className = 'info-modal';
@@ -105,13 +113,25 @@ function showEnemyInfo(enemyIndex) {
                 <h3>${enemy.name}</h3>
                 <button class="close-info">&times;</button>
             </div>
-            <div class="stat-row"><span class="stat-label">❤️ 生命值</span><span class="stat-value">${enemy.hp} / ${enemy.maxHp}</span></div>
-            <div class="stat-row"><span class="stat-label">⚔️ 攻击力</span><span class="stat-value">${enemy.attack}</span></div>
-            <div class="stat-row"><span class="stat-label">🛡️ 防御力</span><span class="stat-value">${enemy.defense}</span></div>
-            <div class="stat-row"><span class="stat-label">⚡ 速度</span><span class="stat-value">${enemy.speed || '??'}</span></div>
+            <div class="stat-row">
+                <span class="stat-label"><img src="/attribute_image/HP.webp" style="${imgStyle}" alt="生命">生命值</span>
+                <span class="stat-value">${enemy.hp} / ${enemy.maxHp}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label"><img src="/attribute_image/ATK.webp" style="${imgStyle}" alt="攻击">攻击力</span>
+                <span class="stat-value">${enemy.attack}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label"><img src="/attribute_image/def.webp" style="${imgStyle}" alt="防御">防御力</span>
+                <span class="stat-value">${enemy.defense}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label"><img src="/attribute_image/SPD.webp" style="${imgStyle}" alt="速度">速度</span>
+                <span class="stat-value">${enemy.speed || '??'}</span>
+            </div>
             <div class="status-section">
                 <div class="status-title">⚠️ 负面状态</div>
-                <div class="status-list">${renderStatusList(allDebuffs)}</div>
+                <div class="status-list" id="debuff-list">${renderStatusList(enemy.debuffs || [])}</div>
             </div>
         </div>
     `;
