@@ -122,7 +122,7 @@ function showEnemyInfo(enemyIndex) {
                 <span class="stat-value">${enemy.attack}</span>
             </div>
             <div class="stat-row">
-                <span class="stat-label"><img src="/attribute_image/def.webp.webp" style="${imgStyle}" alt="防御">防御力</span>
+                <span class="stat-label"><img src="/attribute_image/DEF.webp" style="${imgStyle}" alt="防御">防御力</span>
                 <span class="stat-value">${enemy.defense}</span>
             </div>
             <div class="stat-row">
