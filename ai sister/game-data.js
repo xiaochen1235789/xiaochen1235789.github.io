@@ -108,7 +108,12 @@ const GameData = (function() {
                     defDownAmount: 0.35,
                     defDownTurns: 2,
                     target: 'single',
-                    baseDamageExpr: () => getSkillValue('skill', this.currentLevel, 0) / 100
+                    baseDamageExpr: () => getSkillValue('skill', this.currentLevel, 0) / 100,
+                    // 新增：debuff 显示配置（用于战斗逻辑动态生成）
+                    debuffConfig: {
+                        nameTemplate: "{percent}%防御降低",
+                        descTemplate: "防御力降低{percent}%，持续{turns}回合"
+                    }
                 },
                 ultimate: {
                     id: 'luguan_ultimate',
@@ -234,7 +239,8 @@ const GameData = (function() {
                 defDownAmount: template.defDownAmount,
                 defDownTurns: template.defDownTurns,
                 baseDamage: baseDamage,
-                extraDamage: extraDamage
+                extraDamage: extraDamage,
+                debuffConfig: template.debuffConfig // 传递配置
             };
             skills.push(skillObj);
         }
