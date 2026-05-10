@@ -120,9 +120,11 @@ const BattleLogic = {
         character.energy = Math.min(character.energy + (skill.energyGain || 20), character.maxEnergy);
         gameState.skillPoints = Math.min(gameState.skillPoints + 1, gameState.maxSkillPoints);
         
+        // 额外能力3：风速迅捷（每回合最多触发一次）
         const hasTalent3 = character.extraAbilities && character.extraAbilities.some(a => a.id === 'luguan_talent3');
-        if (hasTalent3) {
+        if (hasTalent3 && !character._extraTurnUsedInThisTurn) {
             window._extraTurnPending = true;
+            character._extraTurnUsedInThisTurn = true;
             console.log(`${character.name} 触发风速迅捷，获得额外行动`);
         }
         
@@ -200,6 +202,7 @@ const BattleLogic = {
         if (enemy.hp <= 0) this.onEnemyDefeated(enemy);
         this.logBattleAction(character.name, skill.name, result);
         
+        // 天赋：猎杀强化 - 每行动1次增加攻击力（整场战斗累加，不重置）
         const talentSkill = character.skills.find(s => s.type === 'talent');
         if (talentSkill && !character._actionCountLock) {
             if (character._actionCount === undefined) character._actionCount = 0;
@@ -342,9 +345,9 @@ const BattleLogic = {
         gameState.party.forEach(character => {
             character.isDefending = false;
             character.defenseBonus = 0;
-            if (character._baseAttack) character.attack = character._baseAttack;
-            character._actionCount = 0;
-            character._actionCountLock = false;
+            // 重置额外行动标记（每回合一次）
+            character._extraTurnUsedInThisTurn = false;
+            // 注意：不要重置攻击力！天赋加成的攻击力应该整场战斗累计
         });
         let firstAliveIndex = gameState.party.findIndex(char => char.hp > 0);
         if (firstAliveIndex !== -1) gameState.activeCharacter = firstAliveIndex;
