@@ -659,19 +659,16 @@ function initBattleUI() {
     character.maxEnergy = 120;
     character.path = character.path || '巡猎';
 
-    // ========== 第一步：保存基础属性（不含任何百分比加成） ==========
-    // 注意：此时 character 的属性已经是升级后的基础值（如 90 级攻击 768）
     const baseHp = character.maxHp;
     const baseAtk = character.attack;
     const baseDef = character.defense;
 
-    // ========== 第二步：应用行迹百分比加成 ==========
-    // 鹿馆的行迹：攻击力+19.8%，暴击伤害+41.05%，速度+11
+    // 行迹加成（示例数值，请根据你的实际行迹修改）
     character.attack += Math.floor(baseAtk * 0.198);
     character.critDamage += 0.4105;
     character.speed += 11;
 
-    // ========== 第三步：应用遗器装备加成 ==========
+    // 遗器加成
     if (window.RelicSets && localStorage.getItem('hsr-relic-equips')) {
         const savedRelics = localStorage.getItem('hsr-relic-equips');
         let relicEquips = {};
@@ -699,7 +696,6 @@ function initBattleUI() {
         for (let part of parts) {
             const relic = relicEquips[part];
             if (!relic) continue;
-
             const main = relic.mainStat;
             const isPercentMain = main.type.includes('Percent') || main.type === 'critRate' || main.type === 'critDamage';
             if (main.type === 'windDamage') {
@@ -707,7 +703,6 @@ function initBattleUI() {
             } else {
                 addStat(main.type, main.value, isPercentMain);
             }
-
             for (let sub of relic.subStats) {
                 const isPercentSub = sub.type.includes('Percent') || sub.type === 'critRate' || sub.type === 'critDamage';
                 if (sub.type === 'windDamage') {
@@ -718,7 +713,6 @@ function initBattleUI() {
             }
         }
 
-        // 统计套装数量
         const setCount = { "新生的未来": 0, "过往的旧事物": 0 };
         for (let part of parts) {
             const relic = relicEquips[part];
@@ -730,20 +724,12 @@ function initBattleUI() {
         if (setCount["新生的未来"] >= 2) character.critRate += 0.08;
         if (setCount["过往的旧事物"] >= 2) character._hasSpeedDmgSet = true;
         if (setCount["新生的未来"] >= 4) character._hasAtkThresholdSet = true;
-
-        // 应用完遗器后，将血量设为满血
-        character.hp = character.maxHp;
-    } else {
-        // 没有遗器也把血量设为满血
-        character.hp = character.maxHp;
     }
 
-    // 更新天赋的基础攻击力（用于后续动作累加）
+    character.hp = character.maxHp;
     character._baseAttack = character.attack;
     character._actionCount = 0;
     character._extraTurnUsedInThisTurn = false;
-}
-    // ========== 遗器加成结束 ==========
 
     const baseEnemy = {
         id: 'abyss_monster',
@@ -779,55 +765,55 @@ function initBattleUI() {
     addLog('战斗开始！鹿馆迎战深渊魔物');
 }
 
-        function addLog(msg) {
-            const logDiv = document.getElementById('battleLog');
-            if (logDiv) {
-                logDiv.innerHTML = `${msg} &nbsp; ➜ ${logDiv.innerHTML.slice(0, 100)}`;
-            }
-            console.log(msg);
-        }
+function addLog(msg) {
+    const logDiv = document.getElementById('battleLog');
+    if (logDiv) {
+        logDiv.innerHTML = `${msg} &nbsp; ➜ ${logDiv.innerHTML.slice(0, 100)}`;
+    }
+    console.log(msg);
+}
 
-        window.showDamageEffect = function (targetIndex, damage, isCritical, isEnemy) {
-            let targetElem = null;
-            if (isEnemy) {
-                targetElem = document.querySelector(`.enemy-card:nth-child(${targetIndex + 1}) .enemy-avatar`);
-            } else {
-                targetElem = document.querySelector(`.character-card .character-avatar`);
-            }
-            if (targetElem) {
-                const rect = targetElem.getBoundingClientRect();
-                const div = document.createElement('div');
-                div.className = `damage-popup ${isCritical ? 'critical' : ''}`;
-                div.textContent = isCritical ? `💥${damage}` : `${damage}`;
-                div.style.left = rect.left + rect.width / 2 + 'px';
-                div.style.top = rect.top + rect.height / 3 + 'px';
-                document.body.appendChild(div);
-                setTimeout(() => div.remove(), 800);
-            }
-            const statsDiv = document.getElementById('damageStats');
-            statsDiv.style.opacity = '1';
-            statsDiv.textContent = `${isEnemy ? '⚔️ 造成' : '🛡️ 受到'} ${damage} ${isCritical ? '暴击‼' : ''}`;
-            statsDiv.style.background = isEnemy ? '#00d4ffcc' : '#ff4757cc';
-            setTimeout(() => statsDiv.style.opacity = '0', 1200);
-        };
+window.showDamageEffect = function (targetIndex, damage, isCritical, isEnemy) {
+    let targetElem = null;
+    if (isEnemy) {
+        targetElem = document.querySelector(`.enemy-card:nth-child(${targetIndex + 1}) .enemy-avatar`);
+    } else {
+        targetElem = document.querySelector(`.character-card .character-avatar`);
+    }
+    if (targetElem) {
+        const rect = targetElem.getBoundingClientRect();
+        const div = document.createElement('div');
+        div.className = `damage-popup ${isCritical ? 'critical' : ''}`;
+        div.textContent = isCritical ? `💥${damage}` : `${damage}`;
+        div.style.left = rect.left + rect.width / 2 + 'px';
+        div.style.top = rect.top + rect.height / 3 + 'px';
+        document.body.appendChild(div);
+        setTimeout(() => div.remove(), 800);
+    }
+    const statsDiv = document.getElementById('damageStats');
+    statsDiv.style.opacity = '1';
+    statsDiv.textContent = `${isEnemy ? '⚔️ 造成' : '🛡️ 受到'} ${damage} ${isCritical ? '暴击‼' : ''}`;
+    statsDiv.style.background = isEnemy ? '#00d4ffcc' : '#ff4757cc';
+    setTimeout(() => statsDiv.style.opacity = '0', 1200);
+};
 
-        window.showMessage = function (title, msg) {
-            addLog(`${title}: ${msg}`);
-            const toast = document.createElement('div');
-            toast.textContent = msg;
-            toast.style.cssText = 'position:fixed;top:30%;left:50%;transform:translateX(-50%);background:#000c;color:#00d4ff;padding:8px 16px;border-radius:40px;z-index:200;backdrop-filter:blur(8px);';
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 2000);
-        };
+window.showMessage = function (title, msg) {
+    addLog(`${title}: ${msg}`);
+    const toast = document.createElement('div');
+    toast.textContent = msg;
+    toast.style.cssText = 'position:fixed;top:30%;left:50%;transform:translateX(-50%);background:#000c;color:#00d4ff;padding:8px 16px;border-radius:40px;z-index:200;backdrop-filter:blur(8px);';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+};
 
-        document.getElementById('endTurnBtn').onclick = () => {
-            window.endTurnLogic();
-        };
+document.getElementById('endTurnBtn').onclick = () => {
+    window.endTurnLogic();
+};
 
-        window.getCharacterDataForPopup = () => window.gameState?.party[0];
-        window.getEnemyDataForPopup = (idx) => window.gameState?.enemies[idx];
+window.getCharacterDataForPopup = () => window.gameState?.party[0];
+window.getEnemyDataForPopup = (idx) => window.gameState?.enemies[idx];
 
-        waitForDeps();
+waitForDeps();
     </script>
 </body>
 </html>
