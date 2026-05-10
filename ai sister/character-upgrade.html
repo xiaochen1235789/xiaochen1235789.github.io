@@ -21,6 +21,7 @@
             --hsr-danger: #ff4757;
             --hsr-glass: rgba(255, 255, 255, 0.05);
             --hsr-glass-border: rgba(255, 255, 255, 0.1);
+            --golden: #e6c87e;      /* 淡金色 */
         }
         body {
             min-height: 100vh;
@@ -93,6 +94,7 @@
         .skill-info { flex: 2; }
         .skill-name { font-size: 1.1rem; font-weight: 600; margin-bottom: 4px; }
         .skill-desc { font-size: 0.8rem; color: var(--hsr-subtext); margin-bottom: 6px; line-height: 1.4; }
+        .skill-desc .golden { color: var(--golden); font-weight: 600; }
         .skill-next, .skill-max { font-size: 0.7rem; margin-top: 4px; }
         .skill-next { color: var(--hsr-warning); }
         .skill-max { color: var(--hsr-success); }
@@ -147,9 +149,28 @@
             gap: 12px;
             margin-top: 12px;
         }
-        .btn-group .upgrade-btn {
-            min-width: auto;
-            padding: 8px 20px;
+        .superimpose-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        .superimpose-select {
+            background: var(--hsr-glass);
+            border: 1px solid var(--hsr-glass-border);
+            color: var(--hsr-text);
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .lc-desc {
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            font-size: 0.85rem;
+            color: var(--golden);
         }
 
         .eidolon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 15px; }
@@ -218,10 +239,8 @@
         <div class="credits" id="creditDisplay">💰 0 信用点</div>
     </div>
 
-    <!-- 角色信息卡片 -->
     <div class="character-card" id="characterCard"></div>
 
-    <!-- 选项卡（新顺序：角色提升 → 光锥提升 → 遗器调整 → 星魂同调） -->
     <div class="tabs">
         <button class="tab-btn active" data-tab="tab1">📈 角色提升</button>
         <button class="tab-btn" data-tab="tab2">✨ 光锥提升</button>
@@ -239,7 +258,7 @@
         </div>
     </div>
 
-    <!-- 光锥提升 -->
+    <!-- 光锥提升（含叠影） -->
     <div id="tab2" class="tab-pane">
         <div class="lightcone-section">
             <div class="lightcone-header">
@@ -261,6 +280,17 @@
                     <button class="upgrade-btn" id="lcLevelDown">⬇️ 降级</button>
                     <button class="upgrade-btn" id="lcLevelUp">⬆️ 升级</button>
                 </div>
+                <div class="superimpose-row">
+                    <span class="level-label">叠影等级</span>
+                    <select id="lcSuperimpose" class="superimpose-select">
+                        <option value="1">叠影①</option>
+                        <option value="2">叠影②</option>
+                        <option value="3">叠影③</option>
+                        <option value="4">叠影④</option>
+                        <option value="5">叠影⑤</option>
+                    </select>
+                </div>
+                <div class="lc-desc" id="lcDesc"></div>
                 <div style="margin-top: 12px; color: var(--hsr-warning); font-size: 0.8rem;">升级消耗：每级 500 信用点</div>
             </div>
         </div>
@@ -298,12 +328,11 @@
     const COST_LEVEL = 1000;
     const COST_SKILL = 500;
     const RELIC_UPGRADE_COST = 500;
-    const LIGHTCONE_UPGRADE_COST = 500;   // 光锥每级消耗
+    const LIGHTCONE_UPGRADE_COST = 500;
 
     let relicEquips = { head: null, hands: null, body: null, feet: null, sphere: null, rope: null };
 
     // ========== 光锥数据 ==========
-    // 基于 changjinglu.html 中的已知等级点，线性插值生成 1~90 级属性
     const lcBasePoints = {
         1:  { hp: 48, atk: 26, def: 21 },
         20: { hp: 242, atk: 133, def: 106 },
@@ -316,17 +345,11 @@
         90: { hp: 1270, atk: 698, def: 556 }
     };
     const lcLevels = [1,20,30,40,50,60,70,80,90];
-    // 生成 1~90 级的连续属性数组
     let lightconeStatsByLevel = [];
     for (let i = 1; i <= 90; i++) {
-        // 找到 i 所在的区间
         let lower = lcLevels[0], upper = lcLevels[lcLevels.length-1];
         for (let j = 0; j < lcLevels.length-1; j++) {
-            if (i >= lcLevels[j] && i <= lcLevels[j+1]) {
-                lower = lcLevels[j];
-                upper = lcLevels[j+1];
-                break;
-            }
+            if (i >= lcLevels[j] && i <= lcLevels[j+1]) { lower = lcLevels[j]; upper = lcLevels[j+1]; break; }
         }
         const low = lcBasePoints[lower];
         const high = lcBasePoints[upper];
@@ -336,20 +359,18 @@
         const def = Math.round(low.def + (high.def - low.def) * ratio);
         lightconeStatsByLevel[i] = { hp, atk, def };
     }
+    let lightconeLevel = 1;
+    let superimpose = 1;
 
-    let lightconeLevel = 1;   // 当前光锥等级，从 localStorage 读取
-
-    // 加载/保存光锥等级
-    function loadLightconeLevel() {
-        const saved = localStorage.getItem('hsr-lightcone-level');
-        if (saved) {
-            let lv = parseInt(saved, 10);
-            if (!isNaN(lv) && lv >= 1 && lv <= 90) lightconeLevel = lv;
-        }
+    function loadLightconeData() {
+        const savedLv = localStorage.getItem('hsr-lightcone-level');
+        if (savedLv) lightconeLevel = parseInt(savedLv, 10) || 1;
+        const savedSuper = localStorage.getItem('hsr-lightcone-superimpose');
+        if (savedSuper) superimpose = parseInt(savedSuper, 10) || 1;
+        document.getElementById('lcSuperimpose').value = superimpose;
     }
-    function saveLightconeLevel() {
-        localStorage.setItem('hsr-lightcone-level', lightconeLevel);
-    }
+    function saveLightconeLevel() { localStorage.setItem('hsr-lightcone-level', lightconeLevel); }
+    function saveLightconeSuperimpose() { localStorage.setItem('hsr-lightcone-superimpose', superimpose); }
 
     function updateLightconeUI() {
         const stats = lightconeStatsByLevel[lightconeLevel];
@@ -358,7 +379,18 @@
         document.getElementById('lcDef').innerText = stats.def;
         document.getElementById('lcLevelDisplay').innerText = `Lv.${lightconeLevel}`;
         document.getElementById('lcLevelSlider').value = lightconeLevel;
-        // 更新按钮状态
+        // 更新描述
+        const critRate = [0.20, 0.225, 0.25, 0.275, 0.30][superimpose-1];
+        const skillDmg = [0.06, 0.08, 0.10, 0.12, 0.14][superimpose-1];
+        const ultDmg = [0.16, 0.18, 0.20, 0.22, 0.24][superimpose-1];
+        const stacks = Math.min(10, Math.max(0, Math.floor((currentCharacter?.speed || 102) - 100) / 6));
+        document.getElementById('lcDesc').innerHTML = `
+            <div>✨ 基础效果（叠影${['①','②','③','④','⑤'][superimpose-1]}）</div>
+            <div>• 暴击率提高 ${(critRate*100).toFixed(1)}%</div>
+            <div>• 速度＞100时，每超过6点获得1层【暗涌】（最多10层）</div>
+            <div>• 每层【暗涌】使普攻/战技伤害提高 ${(skillDmg*100).toFixed(0)}%，终结技暴伤提高 ${(ultDmg*100).toFixed(0)}%</div>
+            <div class="skill-next" style="margin-top:4px;">当前速度 ${currentCharacter?.speed || 102} → 可叠加 ${Math.min(10, Math.max(0, Math.floor(((currentCharacter?.speed || 102) - 100)/6)))} 层</div>
+        `;
         const downBtn = document.getElementById('lcLevelDown');
         const upBtn = document.getElementById('lcLevelUp');
         if (downBtn) downBtn.disabled = (lightconeLevel <= 1);
@@ -371,16 +403,20 @@
         if (newLevel > 90) newLevel = 90;
         if (newLevel === lightconeLevel) return;
         const cost = Math.abs(newLevel - lightconeLevel) * LIGHTCONE_UPGRADE_COST;
-        if (totalCredits < cost) {
-            showToast(`信用点不足，需要 ${cost} 点`, true);
-            return;
-        }
+        if (totalCredits < cost) { showToast(`信用点不足，需要 ${cost} 点`, true); return; }
         totalCredits -= cost;
         lightconeLevel = newLevel;
         updateLightconeUI();
         updateCreditUI();
         saveLightconeLevel();
         showToast(`光锥升至 Lv.${lightconeLevel}`, false);
+    }
+
+    function changeSuperimpose() {
+        superimpose = parseInt(document.getElementById('lcSuperimpose').value, 10);
+        saveLightconeSuperimpose();
+        updateLightconeUI();
+        showToast(`叠影等级已切换`, false);
     }
 
     // ========== 辅助函数 ==========
@@ -391,9 +427,7 @@
         toast.style.opacity = '1';
         setTimeout(() => toast.style.opacity = '0', 2000);
     }
-    function updateCreditUI() {
-        document.getElementById('creditDisplay').innerHTML = `💰 ${totalCredits} 信用点`;
-    }
+    function updateCreditUI() { document.getElementById('creditDisplay').innerHTML = `💰 ${totalCredits} 信用点`; }
 
     // ========== 遗器相关（保持不变） ==========
     const statIconMap = {
@@ -406,9 +440,9 @@
         effectHitRate: '/attribute_image/IconStatusProbability.webp',
         effectRes: '/attribute_image/IconStatusResistance.webp',
         energyRegen: '/attribute_image/IconEnergyRecovery.webp',
-        windDamage: '/attribute_image/WindDamage.webp', fireDamage: '/attribute_image/FireDamage.webp',
-        iceDamage: '/attribute_image/IceDamage.webp', imaginaryDamage: '/attribute_image/ImaginaryDamage.webp',
-        physicalDamage: '/attribute_image/PhysicalDamage.webp', quantumDamage: '/attribute_image/QuantumDamage.webp'
+        windDamage: '/attribute_image/Wind.webp', fireDamage: '/attribute_image/Fire.webp',
+        iceDamage: '/attribute_image/Ice.webp', imaginaryDamage: '/attribute_image/Imaginary.webp',
+        physicalDamage: '/attribute_image/Phys.webp', quantumDamage: '/attribute_image/Quantum.webp'
     };
     function getStatIcon(type) { return statIconMap[type] || '/attribute_image/HP.webp'; }
     function formatStatValue(type, value) {
@@ -458,14 +492,8 @@
     function upgradeRelic(part) {
         let relic = relicEquips[part];
         if (!relic) return;
-        if (relic.level >= 15) {
-            showToast(`${getPartName(part)} 已达最高等级！`, true);
-            return;
-        }
-        if (totalCredits < RELIC_UPGRADE_COST) {
-            showToast('信用点不足！', true);
-            return;
-        }
+        if (relic.level >= 15) { showToast(`${getPartName(part)} 已达最高等级！`, true); return; }
+        if (totalCredits < RELIC_UPGRADE_COST) { showToast('信用点不足！', true); return; }
         totalCredits -= RELIC_UPGRADE_COST;
         relic.level++;
         if (window.getRelicMainStatValue) {
@@ -492,9 +520,7 @@
                 relicEquips = { ...relicEquips, ...parsed };
                 for (let part of Object.keys(relicEquips)) {
                     let r = relicEquips[part];
-                    if (r && r.subStats) {
-                        r.subStats.forEach(s => { if (s.enhanceCount === undefined) s.enhanceCount = 0; });
-                    }
+                    if (r && r.subStats) r.subStats.forEach(s => { if (s.enhanceCount === undefined) s.enhanceCount = 0; });
                 }
             } catch(e) {}
         }
@@ -540,7 +566,7 @@
         }).join('');
     }
 
-    // ========== 角色升级逻辑（保持不变） ==========
+    // ========== 角色升级逻辑 ==========
     function rebuildCharacter() {
         if (!GameData) return;
         let initState = GameData.getInitialState(null, activatedEidolons);
@@ -561,6 +587,7 @@
         renderCharacterInfo();
         renderLevelUpPanel();
         renderSkillList();
+        if (document.getElementById('tab2').classList.contains('active')) updateLightconeUI(); // 刷新光锥描述中的速度
     }
     function toggleEidolon(eidolonId) {
         const idx = activatedEidolons.indexOf(eidolonId);
@@ -608,11 +635,11 @@
     }
     function getProcessedDescription(skill) {
         let desc = skill.description || '无描述';
-        if (skill.baseDamage && desc.includes('{damage}')) desc = desc.replace('{damage}', `${Math.round(skill.baseDamage*100)}%`);
-        if (skill.extraDamage && desc.includes('{extra}')) desc = desc.replace('{extra}', `${Math.round(skill.extraDamage*100)}%`);
+        if (skill.baseDamage && desc.includes('{damage}')) desc = desc.replace('{damage}', `<span class="golden">${Math.round(skill.baseDamage*100)}%</span>`);
+        if (skill.extraDamage && desc.includes('{extra}')) desc = desc.replace('{extra}', `<span class="golden">${Math.round(skill.extraDamage*100)}%</span>`);
         if (skill.type === 'talent') {
-            if (skill.penetration !== undefined && desc.includes('{penetration}')) desc = desc.replace('{penetration}', `${Math.round(skill.penetration*100)}%`);
-            if (skill.atkBonus !== undefined && desc.includes('{atkBonus}')) desc = desc.replace('{atkBonus}', `${Math.round(skill.atkBonus*100)}%`);
+            if (skill.penetration !== undefined && desc.includes('{penetration}')) desc = desc.replace('{penetration}', `<span class="golden">${Math.round(skill.penetration*100)}%</span>`);
+            if (skill.atkBonus !== undefined && desc.includes('{atkBonus}')) desc = desc.replace('{atkBonus}', `<span class="golden">${Math.round(skill.atkBonus*100)}%</span>`);
         }
         return desc;
     }
@@ -709,7 +736,8 @@
         localStorage.setItem('hsr-upgrade-data', JSON.stringify(upgradeData));
         localStorage.setItem('hsr-activated-eidolons', JSON.stringify(activatedEidolons));
         saveRelicEquips();
-        saveLightconeLevel();   // 保存光锥等级
+        saveLightconeLevel();
+        saveLightconeSuperimpose();
         showToast('角色数据已保存！');
         setTimeout(() => window.location.href = 'index.html', 800);
     }
@@ -718,7 +746,6 @@
         try { return saved ? JSON.parse(saved) : null; } catch(e) { return null; }
     }
     function saveCredits() { localStorage.setItem('hsr_credits', totalCredits); }
-
     function initTabs() {
         const btns = document.querySelectorAll('.tab-btn');
         const panes = document.querySelectorAll('.tab-pane');
@@ -729,6 +756,7 @@
                 btn.classList.add('active');
                 panes.forEach(p => p.classList.remove('active'));
                 document.getElementById(tabId).classList.add('active');
+                if (tabId === 'tab2') updateLightconeUI(); // 切到光锥页时刷新描述（速度可能已变）
             });
         });
     }
@@ -761,10 +789,9 @@
             loadRelicEquips();
             renderRelicSystem();
         } else { console.warn('relic-data.js 未加载，遗器系统不可用'); }
-        // 加载光锥数据
-        loadLightconeLevel();
+        // 光锥初始化
+        loadLightconeData();
         updateLightconeUI();
-        // 绑定光锥控件事件
         document.getElementById('lcLevelSlider').addEventListener('input', (e) => {
             const newLevel = parseInt(e.target.value, 10);
             if (newLevel !== lightconeLevel) {
@@ -784,7 +811,7 @@
         });
         document.getElementById('lcLevelDown').addEventListener('click', () => changeLightconeLevel(-1));
         document.getElementById('lcLevelUp').addEventListener('click', () => changeLightconeLevel(1));
-
+        document.getElementById('lcSuperimpose').addEventListener('change', () => changeSuperimpose());
         initTabs();
     }
 
