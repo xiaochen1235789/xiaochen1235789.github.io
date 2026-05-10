@@ -36,7 +36,6 @@
         .title { font-size: 1.8rem; background: linear-gradient(135deg, var(--hsr-primary), var(--hsr-primary-light)); -webkit-background-clip: text; background-clip: text; color: transparent; }
         .credits { background: var(--hsr-glass); padding: 8px 20px; border-radius: 40px; font-size: 1rem; border: 1px solid var(--hsr-glass-border); }
 
-        /* 选项卡样式 */
         .tabs {
             display: flex;
             gap: 12px;
@@ -73,7 +72,6 @@
             padding: 24px;
         }
 
-        /* 角色卡片 */
         .character-card {
             background: var(--hsr-surface);
             border: 1px solid var(--hsr-glass-border);
@@ -91,7 +89,6 @@
         .stat-label { font-size: 0.8rem; color: var(--hsr-subtext); margin-bottom: 6px; }
         .stat-value { font-size: 1.2rem; font-weight: bold; color: var(--hsr-primary); }
 
-        /* 技能列表 */
         .skill-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--hsr-glass-border); }
         .skill-info { flex: 2; }
         .skill-name { font-size: 1.1rem; font-weight: 600; margin-bottom: 4px; }
@@ -105,9 +102,14 @@
         .upgrade-btn:disabled { opacity: 0.5; cursor: not-allowed; background: #555; }
         .upgrade-btn:not(:disabled):hover { background: var(--hsr-primary); transform: scale(1.02); }
 
-        /* 命座卡片 */
         .eidolon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 15px; }
-        .eidolon-card { background: var(--hsr-surface); border: 1px solid var(--hsr-glass-border); border-radius: 20px; padding: 16px; transition: 0.2s; }
+        .eidolon-card {
+            background: var(--hsr-surface);
+            border: 1px solid var(--hsr-glass-border);
+            border-radius: 20px;
+            padding: 16px;
+            transition: 0.2s;
+        }
         .eidolon-card.active { border-color: var(--hsr-primary); box-shadow: 0 0 12px var(--hsr-primary); background: rgba(0,212,255,0.05); }
         .eidolon-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .eidolon-name { font-size: 1.1rem; font-weight: bold; color: var(--hsr-primary); }
@@ -115,7 +117,6 @@
         .eidolon-activate-btn { background: var(--hsr-glass); border: 1px solid var(--hsr-glass-border); padding: 6px 16px; border-radius: 40px; cursor: pointer; font-size: 0.85rem; color: var(--hsr-text); transition: 0.2s; width: 100%; text-align: center; }
         .eidolon-activate-btn.active { background: var(--hsr-primary); color: #000; border-color: var(--hsr-primary); }
 
-        /* 遗器系统 - 优化样式 */
         .relic-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -138,9 +139,9 @@
         }
         .relic-partName { font-weight: bold; color: var(--hsr-primary); font-size: 1rem; }
         .relic-level { font-size: 0.8rem; color: var(--hsr-warning); }
-        .relic-mainStat { font-size: 0.85rem; margin: 8px 0; color: #ffaa44; display: flex; align-items: center; gap: 6px; }  /* 橙色 */
+        .relic-mainStat { font-size: 0.85rem; margin: 8px 0; color: #ffaa44; display: flex; align-items: center; gap: 6px; }
         .relic-subStats { font-size: 0.75rem; margin-top: 8px; }
-        .relic-subStats .substat { color: #e6c87e; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; } /* 淡金色 */
+        .relic-subStats .substat { color: #e6c87e; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
         .relic-actions { display: flex; gap: 8px; margin-top: 12px; }
         .relic-btn { background: var(--hsr-glass); border: 1px solid var(--hsr-glass-border); padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
         .relic-btn:hover { background: var(--hsr-primary-dark); border-color: var(--hsr-primary); }
@@ -197,7 +198,7 @@
         <div class="section-card">
             <div class="section-title">📿 遗器装备</div>
             <div class="relic-grid" id="relicGrid"></div>
-            <div style="font-size:0.75rem; color:var(--hsr-subtext); margin-top:12px;">※ 每件遗器可升级至+15，每3级随机强化一条副词条</div>
+            <div style="font-size:0.75rem; color:var(--hsr-subtext); margin-top:12px;">※ 每件遗器可升级至+15，每3级随机强化一条副词条或新增词条</div>
         </div>
     </div>
 
@@ -230,65 +231,64 @@
         document.getElementById('creditDisplay').innerHTML = `💰 ${totalCredits} 信用点`;
     }
 
-    // ========== 遗器相关（含副词条强化） ==========
-    // 属性图片映射（根据提供的路径）
+    // ========== 遗器相关（含强化显示与补词条） ==========
     const statIconMap = {
-        hpPercent: '/attribute_image/HP.webp',
-        hp: '/attribute_image/HP.webp',
-        atkPercent: '/attribute_image/ATK.webp',
-        atk: '/attribute_image/ATK.webp',
-        defPercent: '/attribute_image/DEF.webp',
-        def: '/attribute_image/DEF.webp',
+        hpPercent: '/attribute_image/HP.webp', hp: '/attribute_image/HP.webp',
+        atkPercent: '/attribute_image/ATK.webp', atk: '/attribute_image/ATK.webp',
+        defPercent: '/attribute_image/DEF.webp', def: '/attribute_image/DEF.webp',
         speed: '/attribute_image/SPD.webp',
         critRate: '/attribute_image/IconCriticalChance.webp',
         critDamage: '/attribute_image/IconCriticalDamage.webp',
         effectHitRate: '/attribute_image/IconStatusProbability.webp',
         effectRes: '/attribute_image/IconStatusResistance.webp',
         energyRegen: '/attribute_image/IconEnergyRecovery.webp',
-        windDamage: '/attribute_image/WindDamage.webp',    // 临时占位
-        fireDamage: '/attribute_image/FireDamage.webp',
-        iceDamage: '/attribute_image/IceDamage.webp',
-        imaginaryDamage: '/attribute_image/ImaginaryDamage.webp',
-        physicalDamage: '/attribute_image/PhysicalDamage.webp',
-        quantumDamage: '/attribute_image/QuantumDamage.webp'
+        windDamage: '/attribute_image/WindDamage.webp', fireDamage: '/attribute_image/FireDamage.webp',
+        iceDamage: '/attribute_image/IceDamage.webp', imaginaryDamage: '/attribute_image/ImaginaryDamage.webp',
+        physicalDamage: '/attribute_image/PhysicalDamage.webp', quantumDamage: '/attribute_image/QuantumDamage.webp'
     };
-
-    function getStatIcon(type) {
-        return statIconMap[type] || '/attribute_image/HP.webp';
-    }
-
+    function getStatIcon(type) { return statIconMap[type] || '/attribute_image/HP.webp'; }
     function formatStatValue(type, value) {
-        if (type === 'hpPercent' || type === 'atkPercent' || type === 'defPercent' || type === 'critRate' || type === 'critDamage' ||
-            type === 'effectHitRate' || type === 'effectRes' || type === 'energyRegen' ||
-            type === 'windDamage' || type === 'fireDamage' || type === 'iceDamage' || type === 'imaginaryDamage' ||
-            type === 'physicalDamage' || type === 'quantumDamage') {
-            return `${value}%`;
-        } else {
-            return `${value}`;
-        }
+        const percentTypes = ['hpPercent','atkPercent','defPercent','critRate','critDamage','effectHitRate','effectRes','energyRegen','windDamage','fireDamage','iceDamage','imaginaryDamage','physicalDamage','quantumDamage'];
+        return percentTypes.includes(type) ? `${value}%` : `${value}`;
     }
-
     function getStatName(type) {
         const map = {
-            hpPercent: '生命', atkPercent: '攻击', defPercent: '防御', critRate: '暴击率', critDamage: '暴伤',
-            speed: '速度', effectHitRate: '效果命中', effectRes: '效果抵抗', energyRegen: '能量回复',
-            windDamage: '风伤', fireDamage: '火伤', iceDamage: '冰伤', imaginaryDamage: '虚数伤', physicalDamage: '物理伤', quantumDamage: '量子伤',
-            hp: '生命', atk: '攻击', def: '防御'
+            hpPercent:'生命', atkPercent:'攻击', defPercent:'防御', critRate:'暴击率', critDamage:'暴伤',
+            speed:'速度', effectHitRate:'效果命中', effectRes:'效果抵抗', energyRegen:'能量回复',
+            windDamage:'风伤', fireDamage:'火伤', iceDamage:'冰伤', imaginaryDamage:'虚数伤', physicalDamage:'物理伤', quantumDamage:'量子伤',
+            hp:'生命', atk:'攻击', def:'防御'
         };
         return map[type] || type;
     }
 
-    // 随机强化副词条（在升级时调用）
-    function enhanceRandomSubStat(relic) {
-        if (!relic.subStats || relic.subStats.length === 0) return;
-        // 随机选择一个副词条
+    function getPartName(part) {
+        const map = { head:'智慧头套', hands:'指挥手套', body:'安心的护甲', feet:'健步如飞的靴子', sphere:'过去的球', rope:'过去的绳' };
+        return map[part] || part;
+    }
+
+    // 核心：遗器强化逻辑（升级时调用）
+    function enhanceRelicSubStat(relic) {
+        // 优先补满第4条副词条
+        if (relic.subStats.length < 4) {
+            const existingTypes = relic.subStats.map(s => s.type);
+            let candidates = SubStatPool.filter(t => t !== relic.mainStat.type && !existingTypes.includes(t));
+            if (candidates.length === 0) candidates = SubStatPool.filter(t => t !== relic.mainStat.type);
+            const newType = candidates[Math.floor(Math.random() * candidates.length)];
+            let base = SubStatBase[newType];
+            let roll = SubStatRollRange.min + Math.random() * (SubStatRollRange.max - SubStatRollRange.min);
+            let value = base * roll;
+            if (newType === 'speed') value = Math.round(value);
+            else if (newType === 'hp' || newType === 'atk' || newType === 'def') value = Math.floor(value);
+            else value = parseFloat(value.toFixed(1));
+            relic.subStats.push({ type: newType, value: value, enhanceCount: 0 });
+            return;
+        }
+        // 已有4条，随机强化一条
         const idx = Math.floor(Math.random() * relic.subStats.length);
         const sub = relic.subStats[idx];
-        // 记录强化次数（如果没有则初始为0，每次+1）
         if (sub.enhanceCount === undefined) sub.enhanceCount = 0;
         sub.enhanceCount++;
-        // 计算增量：基础值 * 随机系数 (0.8~1.2)
-        let base = window.SubStatBase?.[sub.type] || (sub.type === 'speed' ? 2 : (sub.type.includes('Percent') ? 3.4 : 19));
+        let base = SubStatBase[sub.type];
         let increment = base * (0.8 + Math.random() * 0.4);
         if (sub.type === 'speed') increment = Math.round(increment);
         else if (sub.type === 'hp' || sub.type === 'atk' || sub.type === 'def') increment = Math.floor(increment);
@@ -297,7 +297,6 @@
         sub.value = parseFloat(sub.value.toFixed(1));
     }
 
-    // 升级遗器（包含等级提升和每3级强化）
     function upgradeRelic(part) {
         let relic = relicEquips[part];
         if (!relic) return;
@@ -310,9 +309,7 @@
             return;
         }
         totalCredits -= RELIC_UPGRADE_COST;
-        const oldLevel = relic.level;
         relic.level++;
-        // 更新主属性
         if (window.getRelicMainStatValue) {
             relic.mainStat.value = getRelicMainStatValue(relic.mainStat.type, relic.level);
         } else {
@@ -320,9 +317,8 @@
             relic.mainStat.value = (relic.mainStat.value || 0) + step;
             relic.mainStat.value = parseFloat(relic.mainStat.value.toFixed(1));
         }
-        // 每3级强化一次副词条（3,6,9,12,15）
         if (relic.level % 3 === 0 && relic.level <= 15) {
-            enhanceRandomSubStat(relic);
+            enhanceRelicSubStat(relic);
             showToast(`${getPartName(part)} 副词条强化！`, false);
         }
         saveRelicEquips();
@@ -331,83 +327,65 @@
         showToast(`${getPartName(part)} 升至 +${relic.level}`);
     }
 
-    function getPartName(part) {
-        const map = { head: '智慧头套', hands: '指挥手套', body: '安心的护甲', feet: '健步如飞的靴子', sphere: '过去的球', rope: '过去的绳' };
-        return map[part] || part;
-    }
-
     function loadRelicEquips() {
         const saved = localStorage.getItem('hsr-relic-equips');
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
                 relicEquips = { ...relicEquips, ...parsed };
+                // 确保每个遗器的副词条都有 enhanceCount
+                for (let part of Object.keys(relicEquips)) {
+                    let r = relicEquips[part];
+                    if (r && r.subStats) {
+                        r.subStats.forEach(s => { if (s.enhanceCount === undefined) s.enhanceCount = 0; });
+                    }
+                }
             } catch(e) {}
         }
-        const parts = ['head', 'hands', 'body', 'feet', 'sphere', 'rope'];
+        const parts = ['head','hands','body','feet','sphere','rope'];
         for (let part of parts) {
             if (!relicEquips[part] && window.generateRandomRelic) {
                 relicEquips[part] = generateRandomRelic(part, 0);
-                // 确保副词条都有 enhanceCount 属性
-                if (relicEquips[part].subStats) {
-                    relicEquips[part].subStats.forEach(s => { if (s.enhanceCount === undefined) s.enhanceCount = 0; });
-                }
+                if (relicEquips[part].subStats) relicEquips[part].subStats.forEach(s => s.enhanceCount = 0);
             } else if (!relicEquips[part]) {
-                relicEquips[part] = {
-                    id: `relic_${part}_init`,
-                    setType: "新生的未来",
-                    part: part,
-                    level: 0,
-                    mainStat: { type: part === 'head' ? 'hpPercent' : (part === 'hands' ? 'atkPercent' : 'hpPercent'), value: 0 },
-                    subStats: []
-                };
+                relicEquips[part] = { id:`relic_${part}_init`, setType:"新生的未来", part:part, level:0, mainStat:{ type: part==='head'?'hpPercent':'atkPercent', value:0 }, subStats:[] };
             }
         }
         saveRelicEquips();
     }
-
-    function saveRelicEquips() {
-        localStorage.setItem('hsr-relic-equips', JSON.stringify(relicEquips));
-    }
+    function saveRelicEquips() { localStorage.setItem('hsr-relic-equips', JSON.stringify(relicEquips)); }
 
     function renderRelicSystem() {
         const container = document.getElementById('relicGrid');
         if (!container) return;
-        const parts = ['head', 'hands', 'body', 'feet', 'sphere', 'rope'];
+        const parts = ['head','hands','body','feet','sphere','rope'];
         container.innerHTML = parts.map(part => {
             const relic = relicEquips[part];
             if (!relic) return `<div class="relic-slot">${getPartName(part)}<div>无遗器</div></div>`;
-            const mainType = relic.mainStat.type;
-            const mainIcon = getStatIcon(mainType);
-            const mainVal = formatStatValue(mainType, relic.mainStat.value);
-            const mainName = getStatName(mainType);
+            const mainIcon = getStatIcon(relic.mainStat.type);
+            const mainName = getStatName(relic.mainStat.type);
+            const mainVal = formatStatValue(relic.mainStat.type, relic.mainStat.value);
             const subStatsHtml = relic.subStats.map(sub => {
                 const icon = getStatIcon(sub.type);
                 const name = getStatName(sub.type);
                 const val = formatStatValue(sub.type, sub.value);
-                const enhanceCount = sub.enhanceCount || 0;
-                let marks = '';
-                for (let i = 1; i <= enhanceCount; i++) marks += '①';
-                return `<div class="substat"><img src="${icon}" class="stat-icon"><span>${name}: ${val}${marks}</span></div>`;
+                const cnt = sub.enhanceCount || 0;
+                const marks = ['①','②','③','④','⑤'];
+                const markStr = cnt>0 ? marks[cnt-1] : '';
+                return `<div class="substat"><img src="${icon}" class="stat-icon"><span>${name}: ${val}${markStr}</span></div>`;
             }).join('');
-            const partName = getPartName(part);
             return `
                 <div class="relic-slot">
-                    <div class="relic-header">
-                        <span class="relic-partName">${partName}</span>
-                        <span class="relic-level">+${relic.level}</span>
-                    </div>
+                    <div class="relic-header"><span class="relic-partName">${getPartName(part)}</span><span class="relic-level">+${relic.level}</span></div>
                     <div class="relic-mainStat"><img src="${mainIcon}" class="stat-icon">${mainName}: ${mainVal}</div>
                     <div class="relic-subStats">${subStatsHtml || '<span style="color:#aaa;">无副词条</span>'}</div>
-                    <div class="relic-actions">
-                        <button class="relic-btn" onclick="upgradeRelic('${part}')">⬆️ 升级 (${RELIC_UPGRADE_COST})</button>
-                    </div>
+                    <div class="relic-actions"><button class="relic-btn" onclick="upgradeRelic('${part}')">⬆️ 升级 (${RELIC_UPGRADE_COST})</button></div>
                 </div>
             `;
         }).join('');
     }
 
-    // ========== 其余角色升级逻辑（保持原有不变） ==========
+    // ========== 其余角色升级逻辑（保持原有） ==========
     function rebuildCharacter() {
         if (!GameData) return;
         let initState = GameData.getInitialState(null, activatedEidolons);
@@ -429,138 +407,82 @@
         renderLevelUpPanel();
         renderSkillList();
     }
-
     function toggleEidolon(eidolonId) {
-        const index = activatedEidolons.indexOf(eidolonId);
-        if (index === -1) activatedEidolons.push(eidolonId);
-        else activatedEidolons.splice(index, 1);
+        const idx = activatedEidolons.indexOf(eidolonId);
+        if (idx === -1) activatedEidolons.push(eidolonId);
+        else activatedEidolons.splice(idx, 1);
         renderEidolonButtons();
         rebuildCharacter();
     }
-
     function renderEidolonButtons() {
         const container = document.getElementById('eidolonGrid');
         if (!container) return;
-        const fallbackEidolons = {
-            e1: { name: '疾风追影', description: '攻击敌方目标时，若其生命≥20%，受到的伤害提高50%。' },
-            e2: { name: '旋刃狩魂', description: '对拥有负面效果的目标暴击率提高18%，每有一个负面效果暴击伤害提高24%，最多144%。' },
-            e3: { name: '裂空破障', description: '普攻等级+1，天赋等级+2。' },
-            e4: { name: '破晓狩风', description: '消灭目标时恢复20能量并获得额外回合。' },
-            e5: { name: '风狩铭纹', description: '战技等级+2，终结技等级+2。' },
-            e6: { name: '逐影风刃', description: '天赋所有效果进入战斗后立即生效，且伤害无视目标24%防御。' }
-        };
+        const fallbackEidolons = { e1:{name:'疾风追影', description:'攻击敌方目标时，若其生命≥20%，受到的伤害提高50%。'}, e2:{name:'旋刃狩魂', description:'对拥有负面效果的目标暴击率提高18%，每有一个负面效果暴击伤害提高24%，最多144%。'}, e3:{name:'裂空破障', description:'普攻等级+1，天赋等级+2。'}, e4:{name:'破晓狩风', description:'消灭目标时恢复20能量并获得额外回合。'}, e5:{name:'风狩铭纹', description:'战技等级+2，终结技等级+2。'}, e6:{name:'逐影风刃', description:'天赋所有效果进入战斗后立即生效，且伤害无视目标24%防御。'} };
         let eidolonMap = (window.GameData && window.GameData.eidolons) ? window.GameData.eidolons : fallbackEidolons;
-        const allEidolons = ['e1', 'e2', 'e3', 'e4', 'e5', 'e6'];
+        const allEidolons = ['e1','e2','e3','e4','e5','e6'];
         container.innerHTML = allEidolons.map(id => {
             const eData = eidolonMap[id] || fallbackEidolons[id];
-            const name = eData ? eData.name : (id === 'e1' ? '疾风追影' : '未知命座');
+            const name = eData ? eData.name : (id==='e1'?'疾风追影':'未知命座');
             const desc = eData ? eData.description : '暂无描述';
             const isActive = activatedEidolons.includes(id);
-            return `
-                <div class="eidolon-card ${isActive ? 'active' : ''}" data-eidolon="${id}">
-                    <div class="eidolon-header"><span class="eidolon-name">${name}</span></div>
-                    <div class="eidolon-desc">${desc}</div>
-                    <button class="eidolon-activate-btn ${isActive ? 'active' : ''}" data-id="${id}">${isActive ? '✓ 已激活' : '🔘 未激活'}</button>
-                </div>
-            `;
+            return `<div class="eidolon-card ${isActive ? 'active' : ''}" data-eidolon="${id}"><div class="eidolon-header"><span class="eidolon-name">${name}</span></div><div class="eidolon-desc">${desc}</div><button class="eidolon-activate-btn ${isActive ? 'active' : ''}" data-id="${id}">${isActive ? '✓ 已激活' : '🔘 未激活'}</button></div>`;
         }).join('');
-        document.querySelectorAll('.eidolon-activate-btn').forEach(btn => {
-            btn.onclick = (e) => { e.stopPropagation(); toggleEidolon(btn.dataset.id); };
-        });
+        document.querySelectorAll('.eidolon-activate-btn').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); toggleEidolon(btn.dataset.id); }; });
     }
-
     function loadSavedEidolons() {
         const saved = localStorage.getItem('hsr-activated-eidolons');
-        if (saved) {
-            try { activatedEidolons = JSON.parse(saved); if (!Array.isArray(activatedEidolons)) activatedEidolons = []; } catch(e) { activatedEidolons = []; }
-        } else { activatedEidolons = []; }
+        if (saved) { try { activatedEidolons = JSON.parse(saved); if (!Array.isArray(activatedEidolons)) activatedEidolons = []; } catch(e) { activatedEidolons = []; } }
+        else { activatedEidolons = []; }
         renderEidolonButtons();
     }
-
     function renderCharacterInfo() {
         if (!currentCharacter) return;
         const char = currentCharacter;
         document.getElementById('characterCard').innerHTML = `
-            <div class="char-header">
-                <div class="char-avatar">${char.avatar || '🦌'}</div>
-                <div class="char-info">
-                    <div class="char-name">${char.name}</div>
-                    <div class="char-meta">
-                        <span class="char-tag">${char.path}</span>
-                        <span class="char-tag">${char.element === 'wind' ? '风' : char.element}</span>
-                        <span class="char-tag">Lv.${char.level}</span>
-                        ${activatedEidolons.length > 0 ? `<span class="char-tag">🌟${activatedEidolons.length}命</span>` : ''}
-                    </div>
-                </div>
-            </div>
-            <div class="stat-grid">
-                <div class="stat-item"><div class="stat-label">❤️ 生命</div><div class="stat-value">${char.maxHp}</div></div>
-                <div class="stat-item"><div class="stat-label">⚔️ 攻击</div><div class="stat-value">${char.attack}</div></div>
-                <div class="stat-item"><div class="stat-label">🛡️ 防御</div><div class="stat-value">${char.defense}</div></div>
-                <div class="stat-item"><div class="stat-label">⚡ 速度</div><div class="stat-value">${char.speed}</div></div>
-                <div class="stat-item"><div class="stat-label">💥 暴击率</div><div class="stat-value">${Math.round(char.critRate * 100)}%</div></div>
-                <div class="stat-item"><div class="stat-label">💢 暴伤</div><div class="stat-value">${Math.round(char.critDamage * 100)}%</div></div>
-            </div>
+            <div class="char-header"><div class="char-avatar">${char.avatar || '🦌'}</div><div class="char-info"><div class="char-name">${char.name}</div><div class="char-meta"><span class="char-tag">${char.path}</span><span class="char-tag">${char.element === 'wind' ? '风' : char.element}</span><span class="char-tag">Lv.${char.level}</span>${activatedEidolons.length>0 ? `<span class="char-tag">🌟${activatedEidolons.length}命</span>` : ''}</div></div></div>
+            <div class="stat-grid"><div class="stat-item"><div class="stat-label">❤️ 生命</div><div class="stat-value">${char.maxHp}</div></div><div class="stat-item"><div class="stat-label">⚔️ 攻击</div><div class="stat-value">${char.attack}</div></div><div class="stat-item"><div class="stat-label">🛡️ 防御</div><div class="stat-value">${char.defense}</div></div><div class="stat-item"><div class="stat-label">⚡ 速度</div><div class="stat-value">${char.speed}</div></div><div class="stat-item"><div class="stat-label">💥 暴击率</div><div class="stat-value">${Math.round(char.critRate * 100)}%</div></div><div class="stat-item"><div class="stat-label">💢 暴伤</div><div class="stat-value">${Math.round(char.critDamage * 100)}%</div></div></div>
         `;
     }
-
     function getNextDamage(skill) {
         if (skill.currentLevel >= skill.maxLevel) return null;
         let nextLv = skill.currentLevel + 1;
-        if (skill.type === 'normal') return GameData.getSkillValue('normal', nextLv, 0) / 100;
-        if (skill.type === 'skill') return GameData.getSkillValue('skill', nextLv, 0) / 100;
-        if (skill.type === 'ultimate') return GameData.getSkillValue('ultimate', nextLv, 0) / 100;
+        if (skill.type === 'normal') return GameData.getSkillValue('normal', nextLv, 0)/100;
+        if (skill.type === 'skill') return GameData.getSkillValue('skill', nextLv, 0)/100;
+        if (skill.type === 'ultimate') return GameData.getSkillValue('ultimate', nextLv, 0)/100;
         return null;
     }
-
     function getProcessedDescription(skill) {
         let desc = skill.description || '无描述';
-        if (skill.baseDamage && desc.includes('{damage}')) desc = desc.replace('{damage}', `${Math.round(skill.baseDamage * 100)}%`);
-        if (skill.extraDamage && desc.includes('{extra}')) desc = desc.replace('{extra}', `${Math.round(skill.extraDamage * 100)}%`);
+        if (skill.baseDamage && desc.includes('{damage}')) desc = desc.replace('{damage}', `${Math.round(skill.baseDamage*100)}%`);
+        if (skill.extraDamage && desc.includes('{extra}')) desc = desc.replace('{extra}', `${Math.round(skill.extraDamage*100)}%`);
         if (skill.type === 'talent') {
-            if (skill.penetration !== undefined && desc.includes('{penetration}')) desc = desc.replace('{penetration}', `${Math.round(skill.penetration * 100)}%`);
-            if (skill.atkBonus !== undefined && desc.includes('{atkBonus}')) desc = desc.replace('{atkBonus}', `${Math.round(skill.atkBonus * 100)}%`);
+            if (skill.penetration !== undefined && desc.includes('{penetration}')) desc = desc.replace('{penetration}', `${Math.round(skill.penetration*100)}%`);
+            if (skill.atkBonus !== undefined && desc.includes('{atkBonus}')) desc = desc.replace('{atkBonus}', `${Math.round(skill.atkBonus*100)}%`);
         }
         return desc;
     }
-
     function getNextTalentValues(skill) {
         if (skill.type !== 'talent' || skill.currentLevel >= skill.maxLevel) return null;
         let nextLv = skill.currentLevel + 1;
-        let nextPen = GameData.getSkillValue('talent', nextLv, 0) / 100;
-        let nextAtk = GameData.getSkillValue('talent', nextLv, 1) / 100;
+        let nextPen = GameData.getSkillValue('talent', nextLv, 0)/100;
+        let nextAtk = GameData.getSkillValue('talent', nextLv, 1)/100;
         return { curPen: skill.penetration, curAtk: skill.atkBonus, nextPen, nextAtk };
     }
-
     function renderLevelUpPanel() {
         const char = currentCharacter;
         const nextLevel = char.level + 1;
         const canLevelUp = nextLevel <= GameData.MAX_CHARACTER_LEVEL && totalCredits >= COST_LEVEL;
-        let nextHp = char.maxHp, nextAtk = char.attack, nextDef = char.defense;
+        let nextHp=char.maxHp, nextAtk=char.attack, nextDef=char.defense;
         if (nextLevel <= GameData.MAX_CHARACTER_LEVEL && GameData.getStatByLevel) {
             nextHp = GameData.getStatByLevel(nextLevel, 'hp');
             nextAtk = GameData.getStatByLevel(nextLevel, 'atk');
             nextDef = GameData.getStatByLevel(nextLevel, 'def');
         }
         const panel = document.getElementById('levelUpPanel');
-        panel.innerHTML = `
-            <div class="skill-item">
-                <div class="skill-info">
-                    <div class="skill-name">当前等级 ${char.level}</div>
-                    <div class="skill-desc">下一级 → Lv.${nextLevel}<br>
-                        生命 ${char.maxHp} → ${nextHp} &nbsp;|&nbsp;
-                        攻击 ${char.attack} → ${nextAtk} &nbsp;|&nbsp;
-                        防御 ${char.defense} → ${nextDef}
-                    </div>
-                </div>
-                <div class="skill-level"><span>消耗 ${COST_LEVEL} 信用点</span></div>
-                <button class="upgrade-btn" id="levelUpBtn" ${!canLevelUp ? 'disabled' : ''}>⬆️ 升级</button>
-            </div>
-        `;
+        panel.innerHTML = `<div class="skill-item"><div class="skill-info"><div class="skill-name">当前等级 ${char.level}</div><div class="skill-desc">下一级 → Lv.${nextLevel}<br>生命 ${char.maxHp} → ${nextHp} &nbsp;|&nbsp;攻击 ${char.attack} → ${nextAtk} &nbsp;|&nbsp;防御 ${char.defense} → ${nextDef}</div></div><div class="skill-level"><span>消耗 ${COST_LEVEL} 信用点</span></div><button class="upgrade-btn" id="levelUpBtn" ${!canLevelUp ? 'disabled' : ''}>⬆️ 升级</button></div>`;
         const btn = document.getElementById('levelUpBtn');
         if (btn) btn.onclick = () => levelUpCharacter();
     }
-
     function levelUpCharacter() {
         const char = currentCharacter;
         const nextLevel = char.level + 1;
@@ -575,16 +497,12 @@
             showToast(`升级成功！鹿馆升至 Lv.${char.level}`);
         } else showToast('升级失败', true);
     }
-
     function renderSkillList() {
         const char = currentCharacter;
         const skills = char.skills || [];
-        const displaySkills = skills.filter(s => ['normal', 'skill', 'ultimate', 'talent'].includes(s.type));
+        const displaySkills = skills.filter(s => ['normal','skill','ultimate','talent'].includes(s.type));
         const container = document.getElementById('skillList');
-        if (displaySkills.length === 0) {
-            container.innerHTML = '<div style="padding:20px;text-align:center;">技能加载中...</div>';
-            return;
-        }
+        if (displaySkills.length === 0) { container.innerHTML = '<div style="padding:20px;text-align:center;">技能加载中...</div>'; return; }
         container.innerHTML = displaySkills.map(skill => {
             const canUp = skill.currentLevel < skill.maxLevel && totalCredits >= COST_SKILL;
             const processedDesc = getProcessedDescription(skill);
@@ -593,41 +511,29 @@
                 if (skill.currentLevel < skill.maxLevel) {
                     const nextDamage = getNextDamage(skill);
                     if (nextDamage) {
-                        let currentPercent = Math.round(skill.baseDamage * 100);
-                        let nextPercent = Math.round(nextDamage * 100);
-                        nextPreview = `<div class="skill-next">下一级: ${currentPercent}% → ${nextPercent}%</div>`;
+                        let cur = Math.round(skill.baseDamage*100), nxt = Math.round(nextDamage*100);
+                        nextPreview = `<div class="skill-next">下一级: ${cur}% → ${nxt}%</div>`;
                     }
                 } else { nextPreview = `<div class="skill-max">✓ 已达最高等级</div>`; }
             } else {
                 if (skill.currentLevel < skill.maxLevel) {
                     const nextVals = getNextTalentValues(skill);
                     if (nextVals) {
-                        let curPen = Math.round(nextVals.curPen * 100), nextPen = Math.round(nextVals.nextPen * 100);
-                        let curAtk = Math.round(nextVals.curAtk * 100), nextAtk = Math.round(nextVals.nextAtk * 100);
-                        nextPreview = `<div class="skill-next">下一级: 穿透上限 ${curPen}% → ${nextPen}% &nbsp;|&nbsp; 攻击加成上限 ${curAtk}% → ${nextAtk}%</div>`;
+                        let curP = Math.round(nextVals.curPen*100), nxtP = Math.round(nextVals.nextPen*100);
+                        let curA = Math.round(nextVals.curAtk*100), nxtA = Math.round(nextVals.nextAtk*100);
+                        nextPreview = `<div class="skill-next">下一级: 穿透上限 ${curP}% → ${nxtP}% &nbsp;|&nbsp; 攻击加成上限 ${curA}% → ${nxtA}%</div>`;
                     } else { nextPreview = `<div class="skill-next">升级提升天赋效果</div>`; }
                 } else { nextPreview = `<div class="skill-max">✓ 天赋已达最高等级</div>`; }
             }
-            return `
-                <div class="skill-item" data-skill-id="${skill.id}">
-                    <div class="skill-info">
-                        <div class="skill-name">${skill.icon || '✨'} ${skill.name}</div>
-                        <div class="skill-desc">${processedDesc}</div>
-                        ${nextPreview}
-                    </div>
-                    <div class="skill-level">Lv.<span>${skill.currentLevel}</span> / ${skill.maxLevel}</div>
-                    <button class="upgrade-btn skill-upgrade" ${!canUp ? 'disabled' : ''}>⬆️ 升级 (${COST_SKILL})</button>
-                </div>
-            `;
+            return `<div class="skill-item" data-skill-id="${skill.id}"><div class="skill-info"><div class="skill-name">${skill.icon || '✨'} ${skill.name}</div><div class="skill-desc">${processedDesc}</div>${nextPreview}</div><div class="skill-level">Lv.<span>${skill.currentLevel}</span> / ${skill.maxLevel}</div><button class="upgrade-btn skill-upgrade" ${!canUp ? 'disabled' : ''}>⬆️ 升级 (${COST_SKILL})</button></div>`;
         }).join('');
         document.querySelectorAll('.skill-upgrade').forEach(btn => {
-            const skillItem = btn.closest('.skill-item');
-            const skillId = skillItem?.dataset.skillId;
+            const item = btn.closest('.skill-item');
+            const skillId = item?.dataset.skillId;
             const skill = currentCharacter.skills.find(s => s.id === skillId);
             if (skill) btn.onclick = () => upgradeSkill(skill);
         });
     }
-
     function upgradeSkill(skill) {
         if (skill.currentLevel >= skill.maxLevel) { showToast(`${skill.name} 已达最高等级！`, true); return; }
         if (totalCredits < COST_SKILL) { showToast('信用点不足！', true); return; }
@@ -639,20 +545,10 @@
             showToast(`${skill.name} 升至 Lv.${skill.currentLevel}`);
         } else showToast(`${skill.name} 升级失败`, true);
     }
-
     function saveCharacter() {
         const char = currentCharacter;
-        const teamData = {
-            characters: [{
-                id: char.id, name: char.name, avatar: char.avatar, path: char.path,
-                element: char.element === 'wind' ? '风' : char.element,
-                hp: char.maxHp, attack: char.attack, defense: char.defense, speed: char.speed,
-                level: char.level,
-                skills: char.skills.map(s => ({ id: s.id, currentLevel: s.currentLevel }))
-            }],
-            timestamp: Date.now(), teamName: '鹿馆·独行'
-        };
-        const upgradeData = { level: char.level, skillLevels: {} };
+        const teamData = { characters:[{ id:char.id, name:char.name, avatar:char.avatar, path:char.path, element:char.element==='wind'?'风':char.element, hp:char.maxHp, attack:char.attack, defense:char.defense, speed:char.speed, level:char.level, skills:char.skills.map(s=>({id:s.id,currentLevel:s.currentLevel})) }], timestamp:Date.now(), teamName:'鹿馆·独行' };
+        const upgradeData = { level:char.level, skillLevels:{} };
         char.skills.forEach(s => { upgradeData.skillLevels[s.id] = s.currentLevel; });
         localStorage.setItem('hsr-selected-team', JSON.stringify(teamData));
         localStorage.setItem('hsr-upgrade-data', JSON.stringify(upgradeData));
@@ -661,14 +557,11 @@
         showToast('角色数据已保存！');
         setTimeout(() => window.location.href = 'index.html', 800);
     }
-
     function loadSavedUpgradeData() {
         const saved = localStorage.getItem('hsr-upgrade-data');
         try { return saved ? JSON.parse(saved) : null; } catch(e) { return null; }
     }
-
     function saveCredits() { localStorage.setItem('hsr_credits', totalCredits); }
-
     function initTabs() {
         const btns = document.querySelectorAll('.tab-btn');
         const panes = document.querySelectorAll('.tab-pane');
@@ -677,12 +570,11 @@
                 const tabId = btn.dataset.tab;
                 btns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                panes.forEach(pane => pane.classList.remove('active'));
+                panes.forEach(p => p.classList.remove('active'));
                 document.getElementById(tabId).classList.add('active');
             });
         });
     }
-
     async function initUpgradePage() {
         if (!window.GameData) { setTimeout(initUpgradePage, 200); return; }
         loadSavedEidolons();
@@ -710,12 +602,9 @@
         if (window.RelicSets) {
             loadRelicEquips();
             renderRelicSystem();
-        } else {
-            console.warn('relic-data.js 未加载，遗器系统不可用');
-        }
+        } else { console.warn('relic-data.js 未加载，遗器系统不可用'); }
         initTabs();
     }
-
     window.upgradeRelic = upgradeRelic;
     window.addEventListener('DOMContentLoaded', initUpgradePage);
     document.getElementById('saveBtn').addEventListener('click', () => { saveCredits(); saveCharacter(); });
