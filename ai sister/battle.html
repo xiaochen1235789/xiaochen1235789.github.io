@@ -12,18 +12,34 @@
     <link rel="stylesheet" href="/css/info-popup.css">
 </head>
 <body>
-    <a href="index.html" class="back-btn">← 返回</a>
     <div class="battle-container" id="battleContainer">
         <div class="damage-stats" id="damageStats"></div>
         <div class="battle-log" id="battleLog">战斗开始</div>
+        <!-- 回合标识（顶部） -->
         <div class="status-bar">
             <div class="turn-badge" id="turnBadge"><span>⚡ 玩家回合</span></div>
-            <div class="skill-points" id="skillPoints"></div>
+            <!-- 战技点已移出此处 -->
         </div>
+
         <!-- 行动条 -->
         <div class="action-bar" id="actionBar"></div>
+
+        <!-- 敌人区域 -->
         <div class="enemy-area" id="enemyArea"></div>
-        <div class="party-area" id="partyArea"></div>
+
+        <!-- 角色区域（包含战技点 + 角色卡片） -->
+        <div class="party-area" id="partyArea">
+            <!-- 战技点容器（动态生成，位于角色卡片上方） -->
+            <div class="skill-points-container" id="skillPointsContainer">
+                <div class="skill-points-title">战技点</div>
+                <div class="skill-points-icons" id="skillPointsIcons"></div>
+                <button class="home-btn" id="homeBtn">Ⅱ</button>
+            </div>
+            <!-- 角色卡片将动态插入此处 -->
+            <div id="characterCardPlaceholder"></div>
+        </div>
+
+        <!-- 技能网格和结束按钮 -->
         <div class="action-area">
             <div class="skills-grid" id="skillsGrid"></div>
             <button class="end-turn-btn" id="endTurnBtn">⏩ 结束回合</button>
@@ -40,7 +56,32 @@
         }
         window.gameState = null;
 
-        // ========== 渲染行动条 ==========
+        // 返回主页
+        function goHome() {
+            window.location.href = 'index.html';
+        }
+
+        // 渲染战技点（使用图片）
+        function renderSkillPoints() {
+            const state = window.gameState;
+            if (!state) return;
+            const container = document.getElementById('skillPointsIcons');
+            if (!container) return;
+            const current = state.skillPoints;
+            const max = state.maxSkillPoints;
+            const imgUrl = '/attribute_image/PointBPFull.webp';
+            let html = '';
+            for (let i = 0; i < max; i++) {
+                const isActive = i < current;
+                // 有战技点时正常显示，无战技点时半透明 + 灰度
+                const opacity = isActive ? '1' : '0.3';
+                const filter = isActive ? 'none' : 'grayscale(0.5)';
+                html += `<img src="${imgUrl}" class="skill-point-img" style="opacity:${opacity}; filter:${filter};" alt="战技点">`;
+            }
+            container.innerHTML = html;
+        }
+
+        // 渲染行动条
         function renderActionBar() {
             const state = window.gameState;
             if (!state) return;
@@ -62,9 +103,6 @@
             let currentUid = null;
             if (state.isPlayerTurn) {
                 currentUid = 'player';
-            } else {
-                // 敌人回合时不显示高亮（暂不实现复杂逻辑）
-                currentUid = null;
             }
 
             actionBar.innerHTML = units.map(unit => {
@@ -96,7 +134,7 @@
             document.querySelectorAll('.enemy-card').forEach((card, idx) => { card.onclick = (e) => { if (e.target.classList.contains('info-btn')) return; selectEnemy(idx); }; });
             document.querySelectorAll('.info-btn[data-type="enemy"]').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); const idx = parseInt(btn.dataset.index); if (!isNaN(idx) && typeof showEnemyInfo === 'function') showEnemyInfo(idx); else console.warn('showEnemyInfo not defined'); }; });
 
-            // 角色区域
+            // 角色区域（使用占位符）
             const ch = state.party[0];
             let talentPenetration = 0, talentAtkBonus = 0;
             const talentSkill = ch.skills.find(s => s.type === 'talent');
@@ -118,27 +156,30 @@
                 else currentBonus = Math.min(atkBonusCap, (ch._actionCount || 0) * 0.05);
                 talentAtkBonus = currentBonus * 100;
             }
-            const partyArea = document.getElementById('partyArea');
-            partyArea.innerHTML = `
-                <div class="character-card active">
-                    <div class="info-btn" data-type="character" data-index="0">ℹ️</div>
-                    <div class="character-avatar">${ch.avatar || '🦌'}</div>
-                    <div class="character-info">
-                        <div class="character-name">${ch.name}</div>
-                        <div class="character-path">${ch.path}</div>
-                        <div class="stat-bars">
-                            <div class="stat-bar"><div class="bar-bg"><div class="hp-fill" style="width:${(ch.hp / ch.maxHp) * 100}%"></div></div><span class="stat-text">❤️ ${ch.hp}/${ch.maxHp}</span></div>
-                            <div class="stat-bar"><div class="bar-bg"><div class="energy-fill" style="width:${(ch.energy / ch.maxEnergy) * 100}%"></div></div><span class="stat-text">⚡ ${ch.energy}/${ch.maxEnergy}</span></div>
+            const placeholder = document.getElementById('characterCardPlaceholder');
+            if (placeholder) {
+                placeholder.innerHTML = `
+                    <div class="character-card active">
+                        <div class="info-btn" data-type="character" data-index="0">ℹ️</div>
+                        <div class="character-avatar">${ch.avatar || '🦌'}</div>
+                        <div class="character-info">
+                            <div class="character-name">${ch.name}</div>
+                            <div class="character-path">${ch.path}</div>
+                            <div class="stat-bars">
+                                <div class="stat-bar"><div class="bar-bg"><div class="hp-fill" style="width:${(ch.hp / ch.maxHp) * 100}%"></div></div><span class="stat-text">❤️ ${ch.hp}/${ch.maxHp}</span></div>
+                                <div class="stat-bar"><div class="bar-bg"><div class="energy-fill" style="width:${(ch.energy / ch.maxEnergy) * 100}%"></div></div><span class="stat-text">⚡ ${ch.energy}/${ch.maxEnergy}</span></div>
+                            </div>
+                            <div class="talent-status">🎯 猎杀强化: 穿透 +${talentPenetration.toFixed(1)}% &nbsp;|&nbsp; 攻击 +${talentAtkBonus.toFixed(1)}%</div>
                         </div>
-                        <div class="talent-status">🎯 猎杀强化: 穿透 +${talentPenetration.toFixed(1)}% &nbsp;|&nbsp; 攻击 +${talentAtkBonus.toFixed(1)}%</div>
                     </div>
-                </div>
-            `;
+                `;
+            }
             const charInfoBtn = document.querySelector('.info-btn[data-type="character"]');
             if (charInfoBtn && typeof showCharacterInfo === 'function') charInfoBtn.onclick = (e) => { e.stopPropagation(); showCharacterInfo(0); };
 
-            const skillPointsDiv = document.getElementById('skillPoints');
-            skillPointsDiv.innerHTML = Array(state.maxSkillPoints).fill().map((_, i) => `<div class="skill-point ${i < state.skillPoints ? 'active' : ''}"></div>`).join('');
+            // 更新战技点显示
+            renderSkillPoints();
+
             const turnBadge = document.getElementById('turnBadge');
             turnBadge.innerHTML = state.isPlayerTurn ? '<span>⚡ 玩家回合</span>' : '<span>🔥 敌人回合</span>';
             turnBadge.className = `turn-badge ${state.isPlayerTurn ? '' : 'enemy-turn'}`;
@@ -160,13 +201,12 @@
             const endBtn = document.getElementById('endTurnBtn');
             endBtn.disabled = !state.isPlayerTurn || state.gameOver;
 
-            // 刷新行动条
             renderActionBar();
         };
 
         window.selectEnemy = function(idx) { if (window.gameState && window.gameState.isPlayerTurn) { window.gameState.selectedEnemy = idx; window.updateBattleUI(); } };
 
-        // 光锥属性数组（1~90级）[保持原有]
+        // 光锥属性数组（1~90级）
         const lcBasePoints = {
             1:{hp:48,atk:26,def:21},20:{hp:242,atk:133,def:106},30:{hp:391,atk:215,def:171},40:{hp:540,atk:297,def:236},
             50:{hp:688,atk:378,def:301},60:{hp:837,atk:460,def:366},70:{hp:986,atk:542,def:431},80:{hp:1058,atk:582,def:463},
@@ -242,7 +282,7 @@
             character.critDamage += 0.4105;
             character.speed += 11;
 
-            // 遗器加成（简化，保持原有逻辑）
+            // 遗器加成
             if (window.RelicSets && localStorage.getItem('hsr-relic-equips')) {
                 const savedRelics = localStorage.getItem('hsr-relic-equips');
                 let relicEquips = {};
@@ -396,6 +436,7 @@
         };
 
         document.getElementById('endTurnBtn').onclick = () => window.endTurnLogic();
+        document.getElementById('homeBtn').onclick = () => goHome();
         window.getCharacterDataForPopup = () => window.gameState?.party[0];
         window.getEnemyDataForPopup = (idx) => window.gameState?.enemies[idx];
         waitForDeps();
