@@ -170,9 +170,9 @@ const statIconMap = {
     effectHitRate:'/attribute_image/IconStatusProbability.webp',
     effectRes:'/attribute_image/IconStatusResistance.webp',
     energyRegen:'/attribute_image/IconEnergyRecovery.webp',
-    windDamage:'/attribute_image/Wind.webp', fireDamage:'/attribute_image/Fire.webp',
-    iceDamage:'/attribute_image/Ice.webp', imaginaryDamage:'/attribute_image/Imaginary.webp',
-    physicalDamage:'/attribute_image/Phys.webp', quantumDamage:'/attribute_image/Quantum.webp'
+    windDamage:'/Wind.webp', fireDamage:'/Fire.webp',
+    iceDamage:'/Ice.webp', imaginaryDamage:'/Imaginary.webp',
+    physicalDamage:'/Phys.webp', quantumDamage:'/Quantum.webp'
 };
 function getStatIcon(type) { return statIconMap[type] || '/attribute_image/HP.webp'; }
 function formatStatValue(type,value) {
