@@ -10,7 +10,7 @@
     <script src="/css/relic-data.js"></script>
     <link rel="stylesheet" href="/css/info-popup.css">
 <style>
-        * {
+* {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
@@ -485,7 +485,7 @@
             let talentPenetration = 0, talentAtkBonus = 0;
             const talentSkill = ch.skills.find(s => s.type === 'talent');
             if (talentSkill) {
-                const hasTalent = ch.extraAbilities && ch.extraAbilities.some(a => a.id === 'luguan_talent');
+                const hasTalent = ch._activatedTraces && ch._activatedTraces.includes('luguan_talent');
                 if (hasTalent && ch.speed >= 100) {
                     let penetration = ch._talentMaxPenetration || 0;
                     if (!ch.activatedEidolons?.includes('e6')) {
@@ -573,6 +573,18 @@
                 if (eid) activatedEidolons = JSON.parse(eid);
             } catch(e) {}
 
+            // 读取行迹激活状态
+            let activatedTraces = [];
+            try {
+                const tracesData = localStorage.getItem('hsr-activated-traces');
+                if (tracesData) {
+                    const parsed = JSON.parse(tracesData);
+                    if (Array.isArray(parsed)) activatedTraces = parsed;
+                }
+            } catch(e) {}
+            // 默认全部激活（兼容旧存档）
+            if (activatedTraces.length === 0) activatedTraces = ['luguan_talent1', 'luguan_talent2', 'luguan_talent3'];
+
             let initState = GameData.getInitialState(null, activatedEidolons);
             let character = initState.party[0];
 
@@ -601,15 +613,18 @@
             } else if (character.level > 1) GameData.levelUpCharacter(character, character.level);
 
             character.activatedEidolons = activatedEidolons;
+            character._activatedTraces = activatedTraces;
             character.energy = 0;
             character.maxEnergy = 120;
             character.path = character.path || '巡猎';
 
             const baseHp = character.maxHp, baseAtk = character.attack, baseDef = character.defense;
-            // 行迹加成（硬编码）
+            
+            // ========== 恢复硬编码行迹属性（攻击、暴伤、速度） ==========
             character.attack += Math.floor(baseAtk * 0.198);
             character.critDamage += 0.4105;
             character.speed += 11;
+            // ============================================================
 
             // 遗器加成
             if (window.RelicSets && localStorage.getItem('hsr-relic-equips')) {
@@ -677,7 +692,6 @@
             const darkStacks = Math.min(10, Math.max(0, Math.floor((character.speed - 100) / 6)));
             character._darkSurgeStacks = darkStacks;
             character._lightconeBonus = { skillNormalDmg: skillDmgPerStack, ultimateCritDmg: ultDmgPerStack };
-            // 保存光锥信息供弹窗显示
             character._lightconeInfo = {
                 name: "快乐的路一天",
                 level: lightconeLevel,
@@ -690,16 +704,12 @@
             if (character.activatedEidolons && character.activatedEidolons.includes('e6')) {
                 const talentSkill = character.skills.find(s => s.type === 'talent');
                 if (talentSkill) {
-                    // 穿透直接设置最大值
                     character._talentMaxPenetration = talentSkill.penetration || 0.1;
-                    // 攻击力加成直接加满
                     const maxAtkBonus = talentSkill.atkBonus || 0.2;
                     character.attack += Math.floor(character._baseAttack * maxAtkBonus);
-                    // 同时把 baseAttack 也更新，避免后续行动再累加
                     character._baseAttack = character.attack;
-                    // 标记已经满层，防止后续行动重复增加
                     character._actionCountLock = true;
-                    character._actionCount = 999; // 防止再增加
+                    character._actionCount = 999;
                 }
                 console.log('六命效果已激活：天赋穿透和攻击加成开局满层');
             }
