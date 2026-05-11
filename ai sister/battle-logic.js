@@ -1,4 +1,4 @@
-// ===================== 战斗逻辑核心 =====================
+// ===================== 战斗逻辑核心（支持行迹激活状态）=====================
 const BattleLogic = {
     // 使用技能
     useSkill: function(skillIndex) {
@@ -108,6 +108,11 @@ const BattleLogic = {
         }
     },
 
+    // 行迹激活检查辅助函数
+    _isTraceActive: function(character, traceId) {
+        return character._activatedTraces && character._activatedTraces.includes(traceId);
+    },
+
     executeNormalAttack: function(character, enemy, skill) {
         const gameState = window.gameState;
         const damageResult = GameData.calculateDamage(character, enemy, skill);
@@ -121,7 +126,7 @@ const BattleLogic = {
         gameState.skillPoints = Math.min(gameState.skillPoints + 1, gameState.maxSkillPoints);
         
         // 额外能力3：风速迅捷（每回合最多触发一次）
-        const hasTalent3 = character.extraAbilities && character.extraAbilities.some(a => a.id === 'luguan_talent3');
+        const hasTalent3 = this._isTraceActive(character, 'luguan_talent3');
         if (hasTalent3 && !character._extraTurnUsedInThisTurn) {
             window._extraTurnPending = true;
             character._extraTurnUsedInThisTurn = true;
@@ -140,7 +145,7 @@ const BattleLogic = {
         const damageResult = GameData.calculateDamage(character, enemy, skill);
         let damage = damageResult.damage || 0;
         
-        const hasTalent2 = character.extraAbilities && character.extraAbilities.some(a => a.id === 'luguan_talent2');
+        const hasTalent2 = this._isTraceActive(character, 'luguan_talent2');
         if (hasTalent2 && enemy.debuffs && enemy.debuffs.length > 0) {
             damage = Math.floor(damage * 1.6);
             console.log(`${character.name} 触发精准狩猎，伤害增加60%`);
@@ -322,7 +327,7 @@ const BattleLogic = {
         let damage = Math.floor(enemy.attack * enemySkill.baseDamage);
         if (target.isDefending) damage = Math.floor(damage * (1 - (target.defenseBonus || 0)));
         
-        const hasTalent1 = target.extraAbilities && target.extraAbilities.some(a => a.id === 'luguan_talent1');
+        const hasTalent1 = this._isTraceActive(target, 'luguan_talent1');
         if (hasTalent1 && target.hp <= target.maxHp * 0.5) {
             damage = Math.floor(damage * 0.5);
             console.log(`${target.name} 触发疾风守护，伤害减半`);
