@@ -1,5 +1,8 @@
 // character-upgrade.js
-// 鹿馆升级页面核心逻辑（从原内联脚本拆分，功能完全一致）
+// 鹿馆升级核心逻辑（真实属性图标 + 加载等待，集成专属评分、颜色高亮、文本优化）
+
+// ========== 页面加载状态 ==========
+let loadingOverlay = null;
 
 // ========== 角色升级相关变量 ==========
 let currentCharacter = null;
@@ -96,41 +99,67 @@ function updateCreditUI() {
     if (creditSpan) creditSpan.innerHTML=`💰 ${totalCredits} 信用点`; 
 }
 
-// ========== 遗器评分系统（支持角色专属规则） ==========
-// 根据当前角色获取有效词条类型（可在此为特定角色定制规则）
-function getEffectiveStatsForCharacter(character) {
-    if (!character) return ['critRate','critDamage','speed','atkPercent','atk'];
-    // 示例：为“鹿馆”定制专属有效词条（包含风伤、效果命中）
-    if (character.name === '鹿馆' || character.id === 'deer_master') {
-        return ['critRate', 'critDamage', 'speed', 'atkPercent', 'windDamage', 'effectHitRate', 'atk'];
-    }
-    // 默认通用规则
-    return ['critRate','critDamage','speed','atkPercent','atk'];
+// ========== 遗器评分系统（支持角色专属规则，带档次加权） ==========
+function getRulesForCurrentCharacter() {
+    if (!currentCharacter) return window.getCharacterRules?.("default") || { tier1: [], tier2: [], scorePerTier1:1, scorePerTier2:0.5, enhanceScore:1, graduationScore:{ perfect:8, good:6, pass:4 } };
+    const rules = window.getCharacterRules?.(currentCharacter.name);
+    return rules || window.getCharacterRules?.("default") || { tier1: [], tier2: [], scorePerTier1:1, scorePerTier2:0.5, enhanceScore:1, graduationScore:{ perfect:8, good:6, pass:4 } };
 }
 
 function calcRelicScore(relic) {
     if (!relic || !relic.subStats) return 0;
-    const char = currentCharacter;
-    const effective = getEffectiveStatsForCharacter(char);
-    let score = 0;
-    relic.subStats.forEach(sub => { 
-        if(effective.includes(sub.type)) score+=1; 
-    });
-    relic.subStats.forEach(sub => { 
-        if(effective.includes(sub.type)) score+=(sub.enhanceCount||0); 
-    });
-    return score;
+    const rules = getRulesForCurrentCharacter();
+    const tier1Set = new Set(rules.tier1 || []);
+    const tier2Set = new Set(rules.tier2 || []);
+    const scorePerTier1 = rules.scorePerTier1 ?? 1.0;
+    const scorePerTier2 = rules.scorePerTier2 ?? 0.5;
+    const enhanceScore = rules.enhanceScore ?? 1.0;
+
+    let totalScore = 0;
+    for (let sub of relic.subStats) {
+        let baseWeight = 0;
+        if (tier1Set.has(sub.type)) baseWeight = scorePerTier1;
+        else if (tier2Set.has(sub.type)) baseWeight = scorePerTier2;
+        else continue;
+        totalScore += baseWeight;
+        totalScore += (sub.enhanceCount || 0) * enhanceScore;
+    }
+    return Math.round(totalScore * 10) / 10;
 }
 
 function getRelicRating(score) {
-    // 可针对不同角色调整分数线（这里保持原有通用标准）
-    if(score>=8) return '★★★★★ 毕业';
-    if(score>=6) return '★★★★☆ 小毕业';
-    if(score>=4) return '★★★☆☆ 过渡';
+    const rules = getRulesForCurrentCharacter();
+    const perfect = rules.graduationScore?.perfect ?? 8;
+    const good = rules.graduationScore?.good ?? 6;
+    const pass = rules.graduationScore?.pass ?? 4;
+    if (score >= perfect) return '★★★★★ 毕业';
+    if (score >= good)  return '★★★★☆ 小毕业';
+    if (score >= pass)  return '★★★☆☆ 过渡';
     return '★★☆☆☆ 未毕业';
 }
 
-// ========== 遗器渲染（含评分） ==========
+function getEffectiveStatsForCharacter(character) {
+    const rules = character ? (window.getCharacterRules?.(character.name) || window.getCharacterRules?.("default")) : window.getCharacterRules?.("default");
+    if (!rules) return ['critRate','critDamage','speed','atkPercent','atk'];
+    return [...(rules.tier1 || []), ...(rules.tier2 || [])];
+}
+
+function isMainStatRecommended(part, mainStatType) {
+    const rules = getRulesForCurrentCharacter();
+    const rec = rules.recommendedMainStats?.[part];
+    if (!rec) return false;
+    if (Array.isArray(rec)) return rec.includes(mainStatType);
+    return rec === mainStatType;
+}
+
+function getSubStatTier(statType) {
+    const rules = getRulesForCurrentCharacter();
+    if (rules.tier1?.includes(statType)) return 1;
+    if (rules.tier2?.includes(statType)) return 2;
+    return 0;
+}
+
+// ========== 遗器渲染 ==========
 const statIconMap = {
     hpPercent:'/attribute_image/HP.webp', hp:'/attribute_image/HP.webp',
     atkPercent:'/attribute_image/ATK.webp', atk:'/attribute_image/ATK.webp',
@@ -151,15 +180,21 @@ function formatStatValue(type,value) {
     return percentTypes.includes(type)?`${value}%`:`${value}`;
 }
 function getStatName(type) {
-    const map={hpPercent:'生命',atkPercent:'攻击',defPercent:'防御',critRate:'暴击率',critDamage:'暴伤',speed:'速度',effectHitRate:'效果命中',effectRes:'效果抵抗',energyRegen:'能量回复',windDamage:'风伤',fireDamage:'火伤',iceDamage:'冰伤',imaginaryDamage:'虚数伤',physicalDamage:'物理伤',quantumDamage:'量子伤',hp:'生命',atk:'攻击',def:'防御'};
-    return map[type]||type;
+    const map = {
+        hpPercent:'生命', atkPercent:'攻击', defPercent:'防御',
+        critRate:'暴击率', critDamage:'暴击伤害',
+        speed:'速度', effectHitRate:'效果命中', effectRes:'效果抵抗', energyRegen:'能量回复',
+        windDamage:'风属性伤害提高', fireDamage:'火属性伤害提高', iceDamage:'冰属性伤害提高',
+        imaginaryDamage:'虚数属性伤害提高', physicalDamage:'物理属性伤害提高', quantumDamage:'量子属性伤害提高',
+        hp:'生命', atk:'攻击', def:'防御'
+    };
+    return map[type] || type;
 }
 function getPartName(part) {
     const map={head:'智慧头套',hands:'指挥手套',body:'安心的护甲',feet:'健步如飞的靴子',sphere:'过去的球',rope:'过去的绳'};
     return map[part]||part;
 }
 
-// ========== 遗器强化逻辑 ==========
 function enhanceRelicSubStat(relic) {
     if (!window.SubStatPool || !window.SubStatBase || !window.SubStatRollRange) {
         console.warn("遗器统计数据未加载，无法强化副词条");
@@ -253,23 +288,33 @@ function renderRelicSystem() {
     container.innerHTML=parts.map(part=>{
         const relic=relicEquips[part];
         if(!relic) return `<div class="relic-slot">${getPartName(part)}<div>无遗器</div></div>`;
+        
+        const isMainGood = isMainStatRecommended(part, relic.mainStat.type);
+        const mainColor = isMainGood ? '#ffa500' : '#ffffff';
         const mainIcon=getStatIcon(relic.mainStat.type);
         const mainName=getStatName(relic.mainStat.type);
         const mainVal=formatStatValue(relic.mainStat.type,relic.mainStat.value);
+        
         const subStatsHtml=relic.subStats.map(sub=>{
-            const icon=getStatIcon(sub.type), name=getStatName(sub.type), val=formatStatValue(sub.type,sub.value);
+            const tier = getSubStatTier(sub.type);
+            let subColor = '#ffffff';
+            if (tier === 1) subColor = '#f5e6b0';
+            const icon=getStatIcon(sub.type);
+            const name=getStatName(sub.type);
+            const val=formatStatValue(sub.type,sub.value);
             const cnt=sub.enhanceCount||0;
             const marks=['①','②','③','④','⑤'];
             const markStr=cnt>0?marks[cnt-1]:'';
-            return `<div class="substat"><img src="${icon}" class="stat-icon"><span>${name}: ${val}${markStr}</span></div>`;
+            return `<div class="substat" style="color:${subColor};"><img src="${icon}" class="stat-icon">${name}: ${val}${markStr}</div>`;
         }).join('');
+        
         const score=calcRelicScore(relic);
         const rating=getRelicRating(score);
         const ratingColor=score>=8?'#ffaa44':(score>=6?'#e6c87e':'#aaa');
         return `
             <div class="relic-slot">
                 <div class="relic-header"><span class="relic-partName">${getPartName(part)}</span><span class="relic-level">+${relic.level}</span></div>
-                <div class="relic-mainStat"><img src="${mainIcon}" class="stat-icon">${mainName}: ${mainVal}</div>
+                <div class="relic-mainStat" style="color:${mainColor};"><img src="${mainIcon}" class="stat-icon">${mainName}: ${mainVal}</div>
                 <div class="relic-subStats">${subStatsHtml||'<span style="color:#aaa;">无副词条</span>'}</div>
                 <div class="relic-rating" style="color:${ratingColor};">📊 ${rating} (${score}分)</div>
                 <div class="relic-actions"><button class="relic-btn" onclick="upgradeRelic('${part}')">⬆️ 升级 (${RELIC_UPGRADE_COST})</button></div>
@@ -371,12 +416,30 @@ function renderCharacterInfo() {
             </div>
         </div>
         <div class="stat-grid">
-            <div class="stat-item"><div class="stat-label">❤️ 生命</div><div class="stat-value">${char.maxHp}</div></div>
-            <div class="stat-item"><div class="stat-label">⚔️ 攻击</div><div class="stat-value">${char.attack}</div></div>
-            <div class="stat-item"><div class="stat-label">🛡️ 防御</div><div class="stat-value">${char.defense}</div></div>
-            <div class="stat-item"><div class="stat-label">⚡ 速度</div><div class="stat-value">${char.speed}</div></div>
-            <div class="stat-item"><div class="stat-label">💥 暴击率</div><div class="stat-value">${Math.round(char.critRate * 100)}%</div></div>
-            <div class="stat-item"><div class="stat-label">💢 暴伤</div><div class="stat-value">${Math.round(char.critDamage * 100)}%</div></div>
+            <div class="stat-item">
+                <div class="stat-label"><img src="/attribute_image/HP.webp" class="stat-icon" style="width:20px;height:20px;vertical-align:middle;"> 生命</div>
+                <div class="stat-value">${char.maxHp}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label"><img src="/attribute_image/ATK.webp" class="stat-icon" style="width:20px;height:20px;vertical-align:middle;"> 攻击</div>
+                <div class="stat-value">${char.attack}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label"><img src="/attribute_image/DEF.webp" class="stat-icon" style="width:20px;height:20px;vertical-align:middle;"> 防御</div>
+                <div class="stat-value">${char.defense}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label"><img src="/attribute_image/SPD.webp" class="stat-icon" style="width:20px;height:20px;vertical-align:middle;"> 速度</div>
+                <div class="stat-value">${char.speed}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label"><img src="/attribute_image/IconCriticalChance.webp" class="stat-icon" style="width:20px;height:20px;vertical-align:middle;"> 暴击率</div>
+                <div class="stat-value">${Math.round(char.critRate * 100)}%</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label"><img src="/attribute_image/IconCriticalDamage.webp" class="stat-icon" style="width:20px;height:20px;vertical-align:middle;"> 暴击伤害</div>
+                <div class="stat-value">${Math.round(char.critDamage * 100)}%</div>
+            </div>
         </div>
     `;
 }
@@ -413,24 +476,34 @@ function renderLevelUpPanel() {
     const char = currentCharacter;
     const nextLevel = char.level + 1;
     const canLevelUp = nextLevel <= GameData.MAX_CHARACTER_LEVEL && totalCredits >= COST_LEVEL;
+    const isMaxLevel = char.level >= GameData.MAX_CHARACTER_LEVEL;
     let nextHp = char.maxHp, nextAtk = char.attack, nextDef = char.defense;
-    if (nextLevel <= GameData.MAX_CHARACTER_LEVEL && GameData.getStatByLevel) {
+    if (!isMaxLevel && nextLevel <= GameData.MAX_CHARACTER_LEVEL && GameData.getStatByLevel) {
         nextHp = GameData.getStatByLevel(nextLevel, 'hp');
         nextAtk = GameData.getStatByLevel(nextLevel, 'atk');
         nextDef = GameData.getStatByLevel(nextLevel, 'def');
     }
     const panel = document.getElementById('levelUpPanel');
     if (!panel) return;
+    
+    let levelInfo = '';
+    if (isMaxLevel) {
+        levelInfo = `<div class="skill-name">已满级 (Lv.${char.level})</div>
+                     <div class="skill-desc">⭐ 角色已达到最高等级 ⭐</div>`;
+    } else {
+        levelInfo = `<div class="skill-name">当前等级 ${char.level}</div>
+                     <div class="skill-desc">下一级 → Lv.${nextLevel}<br>生命 ${char.maxHp} → ${nextHp} &nbsp;|&nbsp;攻击 ${char.attack} → ${nextAtk} &nbsp;|&nbsp;防御 ${char.defense} → ${nextDef}</div>`;
+    }
+    
     panel.innerHTML = `<div class="skill-item">
         <div class="skill-info">
-            <div class="skill-name">当前等级 ${char.level}</div>
-            <div class="skill-desc">下一级 → Lv.${nextLevel}<br>生命 ${char.maxHp} → ${nextHp} &nbsp;|&nbsp;攻击 ${char.attack} → ${nextAtk} &nbsp;|&nbsp;防御 ${char.defense} → ${nextDef}</div>
+            ${levelInfo}
         </div>
-        <div class="skill-level"><span>消耗 ${COST_LEVEL} 信用点</span></div>
-        <button class="upgrade-btn" id="levelUpBtn" ${!canLevelUp ? 'disabled' : ''}>⬆️ 升级</button>
+        <div class="skill-level"><span>${isMaxLevel ? '无消耗' : `消耗 ${COST_LEVEL} 信用点`}</span></div>
+        <button class="upgrade-btn" id="levelUpBtn" ${(!canLevelUp || isMaxLevel) ? 'disabled' : ''}>${isMaxLevel ? '✓ 已达上限' : '⬆️ 升级'}</button>
     </div>`;
     const btn = document.getElementById('levelUpBtn');
-    if (btn) btn.onclick = () => levelUpCharacter();
+    if (btn && !isMaxLevel) btn.onclick = () => levelUpCharacter();
 }
 
 function levelUpCharacter() {
@@ -555,6 +628,22 @@ function initTabs() {
 }
 
 async function initUpgradePage() {
+    // 显示 loading 遮罩
+    if (!loadingOverlay) {
+        loadingOverlay = document.createElement('div');
+        loadingOverlay.id = 'loadingOverlay';
+        loadingOverlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:#0a0a14; z-index:9999; display:flex; align-items:center; justify-content:center; font-size:1.5rem; color:#00d4ff; backdrop-filter:blur(10px);';
+        loadingOverlay.innerHTML = '<div>加载中...<div style="margin-top:20px; width:40px; height:40px; border:4px solid #fff; border-top-color:#00d4ff; border-radius:50%; animation:spin 1s linear infinite;"></div></div>';
+        // 添加动画样式
+        if (!document.querySelector('#loading-spinner-style')) {
+            const style = document.createElement('style');
+            style.id = 'loading-spinner-style';
+            style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+            document.head.appendChild(style);
+        }
+        document.body.appendChild(loadingOverlay);
+    }
+
     if (!window.GameData) { setTimeout(initUpgradePage, 200); return; }
     loadSavedEidolons();
     let initState = GameData.getInitialState(null, activatedEidolons);
@@ -611,6 +700,17 @@ async function initUpgradePage() {
     const superSelect = document.getElementById('lcSuperimpose');
     if (superSelect) superSelect.addEventListener('change', () => changeSuperimpose());
     initTabs();
+
+    // 隐藏 loading 遮罩
+    if (loadingOverlay) {
+        setTimeout(() => {
+            loadingOverlay.style.opacity = '0';
+            setTimeout(() => {
+                if (loadingOverlay && loadingOverlay.remove) loadingOverlay.remove();
+                loadingOverlay = null;
+            }, 500);
+        }, 100);
+    }
 }
 
 // 挂载全局函数（供html onclick调用）
