@@ -10,63 +10,30 @@
     <script src="/css/relic-data.js"></script>
     <link rel="stylesheet" href="/css/battle.css">
     <link rel="stylesheet" href="/css/info-popup.css">
-    <style>
-        /* 额外针对终结技位置的微调 */
-        .character-ult {
-            position: absolute;
-            right: -20px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 70px;
-            height: 70px;
-            z-index: 5;
-        }
-        @media (max-width: 768px) {
-            .character-ult {
-                right: -16px;
-                width: 56px;
-                height: 56px;
-            }
-        }
-        .character-card {
-            position: relative;
-            margin-right: 60px;
-        }
-    </style>
 </head>
 <body>
 <div class="battle-container" id="battleContainer">
     <div class="damage-stats" id="damageStats"></div>
     <div class="battle-log" id="battleLog">战斗开始</div>
-    <!-- 回合标识 -->
     <div class="status-bar">
         <div class="turn-badge" id="turnBadge"><span>⚡ 玩家回合</span></div>
     </div>
-
-    <!-- 行动条 -->
     <div class="action-bar" id="actionBar"></div>
-
-    <!-- 敌人区域 -->
     <div class="enemy-area" id="enemyArea"></div>
-
-    <!-- 角色区域 -->
     <div class="party-area" id="partyArea">
-        <!-- 战技点容器 -->
         <div class="skill-points-container" id="skillPointsContainer">
             <div class="skill-points-title">战技点</div>
             <div class="skill-points-icons" id="skillPointsIcons"></div>
             <button class="home-btn" id="homeBtn">Ⅱ</button>
         </div>
-        <!-- 角色卡片 + 终结技按钮在此动态生成 -->
         <div id="characterCardPlaceholder"></div>
-        <!-- 普攻 & 战技 右侧圆盘 -->
         <div class="skills-dial" id="skillsDial"></div>
     </div>
 </div>
 
 <script src="/css/info-popup.js"></script>
 <script>
-    // ========== 等待依赖加载 ==========
+    // 等待依赖加载
     let initTimer;
     function waitForDeps() {
         if (typeof GameData !== 'undefined' && typeof BattleLogic !== 'undefined') initBattleUI();
@@ -74,7 +41,7 @@
     }
     window.gameState = null;
 
-    // ========== 辅助函数 ==========
+    // 返回主页
     function goHome() {
         window.location.href = 'index.html';
     }
@@ -126,7 +93,7 @@
         }).join('');
     }
 
-    // 渲染普攻 & 战技 右侧圆盘
+    // 渲染普攻和战技（左下普攻，右上战技）
     function renderNormalAndSkill() {
         const state = window.gameState;
         if (!state) return;
@@ -141,21 +108,19 @@
         const skillDisabled = !state.isPlayerTurn || state.gameOver || state.skillPoints < (skillSkill.skillPointCost || 1);
         const normalDisabled = !state.isPlayerTurn || state.gameOver;
 
-        let normalHtml = `
-            <div class="skill-circle ${normalDisabled ? 'disabled' : ''}" data-skill-type="normal">
+        // 使用绝对定位，普攻在左下，战技在右上
+        container.innerHTML = `
+            <div class="skill-circle skill-normal ${normalDisabled ? 'disabled' : ''}" data-skill-type="normal">
                 <div class="skill-icon">${normalSkill.icon}</div>
                 <div class="skill-name">普攻</div>
                 <div class="badge">+1</div>
             </div>
-        `;
-        let skillHtml = `
-            <div class="skill-circle ${skillDisabled ? 'disabled' : ''}" data-skill-type="skill">
+            <div class="skill-circle skill-skill ${skillDisabled ? 'disabled' : ''}" data-skill-type="skill">
                 <div class="skill-icon">${skillSkill.icon}</div>
                 <div class="skill-name">战技</div>
                 <div class="badge down">-1</div>
             </div>
         `;
-        container.innerHTML = normalHtml + skillHtml;
 
         // 绑定事件
         container.querySelectorAll('.skill-circle').forEach(btn => {
@@ -172,7 +137,7 @@
         });
     }
 
-    // 渲染终结技按钮（放在角色卡片旁边）
+    // 渲染终结技按钮（放在角色卡片旁边，无能量文字）
     function renderUltimateButton() {
         const state = window.gameState;
         if (!state) return;
@@ -187,7 +152,6 @@
         const currentDeg = (energyPercent / 100) * 360;
         const energyRingStyle = `conic-gradient(rgba(120, 220, 120, 0.9) ${currentDeg}deg, transparent ${currentDeg}deg)`;
 
-        // 查找或创建终结按钮容器
         let ultContainer = document.getElementById('characterUltContainer');
         if (!ultContainer) {
             const charCard = document.querySelector('.character-card');
@@ -202,7 +166,6 @@
                 <div class="skill-icon">${ultimateSkill.icon}</div>
                 <div class="skill-name">终结技</div>
                 <div class="energy-ring" style="background: ${energyRingStyle};"></div>
-                <div class="energy-percent">${Math.floor(energyPercent)}%</div>
             </div>
         `;
         const ultBtn = ultContainer.querySelector('.skill-circle');
@@ -219,6 +182,7 @@
     window.updateBattleUI = function () {
         if (!window.gameState) return;
         const state = window.gameState;
+
         // 敌人区域
         const enemyArea = document.getElementById('enemyArea');
         enemyArea.innerHTML = state.enemies.map((e, idx) => `
@@ -233,7 +197,7 @@
         document.querySelectorAll('.enemy-card').forEach((card, idx) => { card.onclick = (e) => { if (e.target.classList.contains('info-btn')) return; selectEnemy(idx); }; });
         document.querySelectorAll('.info-btn[data-type="enemy"]').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); const idx = parseInt(btn.dataset.index); if (!isNaN(idx) && typeof showEnemyInfo === 'function') showEnemyInfo(idx); else console.warn('showEnemyInfo not defined'); }; });
 
-        // 角色卡片区域
+        // 角色卡片
         const ch = state.party[0];
         let talentPenetration = 0, talentAtkBonus = 0;
         const talentSkill = ch.skills.find(s => s.type === 'talent');
@@ -278,7 +242,7 @@
 
         renderSkillPoints();
         renderNormalAndSkill();
-        renderUltimateButton();   // 终结技按钮放置在角色卡片旁边
+        renderUltimateButton();
         const turnBadge = document.getElementById('turnBadge');
         turnBadge.innerHTML = state.isPlayerTurn ? '<span>⚡ 玩家回合</span>' : '<span>🔥 敌人回合</span>';
         turnBadge.className = `turn-badge ${state.isPlayerTurn ? '' : 'enemy-turn'}`;
@@ -361,7 +325,7 @@
         character.critDamage += 0.4105;
         character.speed += 11;
 
-        // 遗器加成
+        // 遗器加成（保持原有逻辑）
         if (window.RelicSets && localStorage.getItem('hsr-relic-equips')) {
             const savedRelics = localStorage.getItem('hsr-relic-equips');
             let relicEquips = {};
