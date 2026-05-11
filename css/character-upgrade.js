@@ -1,5 +1,5 @@
 // character-upgrade.js
-// 鹿馆升级核心逻辑（真实属性图标 + 加载等待，集成专属评分、颜色高亮、文本优化）
+// 鹿馆升级核心逻辑（已集成专属评分、颜色高亮、文本优化，新增行迹系统）
 
 // ========== 页面加载状态 ==========
 let loadingOverlay = null;
@@ -8,6 +8,8 @@ let loadingOverlay = null;
 let currentCharacter = null;
 let totalCredits = 5000000;
 let activatedEidolons = [];
+let activatedTraces = [];        // 新增：行迹激活ID列表
+
 const COST_LEVEL = 1000;
 const COST_SKILL = 500;
 const RELIC_UPGRADE_COST = 500;
@@ -15,7 +17,14 @@ const LIGHTCONE_UPGRADE_COST = 500;
 
 let relicEquips = { head: null, hands: null, body: null, feet: null, sphere: null, rope: null };
 
-// ========== 光锥数据 ==========
+// 行迹数据（与 game-data.js 中的 extraAbilities 对应）
+const traceList = [
+    { id: "luguan_talent1", name: "疾风守护", description: "生命值≤50%时，受到的伤害降低50%。", icon: "🛡️" },
+    { id: "luguan_talent2", name: "精准狩猎", description: "战技对负面效果下的目标造成的伤害提高60%。", icon: "🎯" },
+    { id: "luguan_talent3", name: "风速迅捷", description: "施放普攻后自身行动提前20%。", icon: "⚡" }
+];
+
+// ========== 光锥数据（保持不变）==========
 const lcBasePoints = {
     1:{hp:48,atk:26,def:21},20:{hp:242,atk:133,def:106},30:{hp:391,atk:215,def:171},
     40:{hp:540,atk:297,def:236},50:{hp:688,atk:378,def:301},60:{hp:837,atk:460,def:366},
@@ -99,7 +108,66 @@ function updateCreditUI() {
     if (creditSpan) creditSpan.innerHTML=`💰 ${totalCredits} 信用点`; 
 }
 
-// ========== 遗器评分系统（支持角色专属规则，带档次加权） ==========
+// ========== 行迹管理 ==========
+function loadSavedTraces() {
+    const saved = localStorage.getItem('hsr-activated-traces');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) activatedTraces = parsed;
+            else activatedTraces = [];
+        } catch(e) { activatedTraces = []; }
+    } else {
+        // 默认全部激活
+        activatedTraces = traceList.map(t => t.id);
+    }
+    // 确保数组内容有效
+    activatedTraces = activatedTraces.filter(id => traceList.some(t => t.id === id));
+    if (activatedTraces.length === 0) activatedTraces = traceList.map(t => t.id);
+    renderTracesGrid();
+}
+
+function saveTracesToLocal() {
+    localStorage.setItem('hsr-activated-traces', JSON.stringify(activatedTraces));
+}
+
+function toggleTrace(traceId) {
+    const idx = activatedTraces.indexOf(traceId);
+    if (idx === -1) activatedTraces.push(traceId);
+    else activatedTraces.splice(idx, 1);
+    renderTracesGrid();
+    saveTracesToLocal();
+    showToast(`行迹 ${traceList.find(t=>t.id===traceId)?.name} ${idx===-1?'已激活':'已关闭'}`, false);
+}
+
+function renderTracesGrid() {
+    const container = document.getElementById('tracesGrid');
+    if (!container) return;
+    container.innerHTML = traceList.map(trace => {
+        const isActive = activatedTraces.includes(trace.id);
+        return `
+            <div class="trace-card ${isActive ? 'active' : ''}" data-trace-id="${trace.id}">
+                <div class="trace-header">
+                    <span class="trace-icon">${trace.icon}</span>
+                    <span class="trace-name">${trace.name}</span>
+                </div>
+                <div class="trace-desc">${trace.description}</div>
+                <button class="trace-toggle-btn ${isActive ? 'active' : ''}" data-id="${trace.id}">
+                    ${isActive ? '✓ 已激活' : '🔘 未激活'}
+                </button>
+            </div>
+        `;
+    }).join('');
+    document.querySelectorAll('.trace-toggle-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            if (id) toggleTrace(id);
+        };
+    });
+}
+
+// ========== 遗器评分系统（保持不变）==========
 function getRulesForCurrentCharacter() {
     if (!currentCharacter) return window.getCharacterRules?.("default") || { tier1: [], tier2: [], scorePerTier1:1, scorePerTier2:0.5, enhanceScore:1, graduationScore:{ perfect:8, good:6, pass:4 } };
     const rules = window.getCharacterRules?.(currentCharacter.name);
@@ -323,7 +391,7 @@ function renderRelicSystem() {
     }).join('');
 }
 
-// ========== 角色升级逻辑 ==========
+// ========== 角色升级逻辑（含行迹保存）==========
 function rebuildCharacter() {
     if (!window.GameData) return;
     let initState = GameData.getInitialState(null, activatedEidolons);
@@ -597,6 +665,8 @@ function saveCharacter() {
     localStorage.setItem('hsr-selected-team', JSON.stringify(teamData));
     localStorage.setItem('hsr-upgrade-data', JSON.stringify(upgradeData));
     localStorage.setItem('hsr-activated-eidolons', JSON.stringify(activatedEidolons));
+    // 保存行迹
+    saveTracesToLocal();
     saveRelicEquips();
     saveLightconeLevel();
     saveLightconeSuperimpose();
@@ -634,7 +704,6 @@ async function initUpgradePage() {
         loadingOverlay.id = 'loadingOverlay';
         loadingOverlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:#0a0a14; z-index:9999; display:flex; align-items:center; justify-content:center; font-size:1.5rem; color:#00d4ff; backdrop-filter:blur(10px);';
         loadingOverlay.innerHTML = '<div>加载中...<div style="margin-top:20px; width:40px; height:40px; border:4px solid #fff; border-top-color:#00d4ff; border-radius:50%; animation:spin 1s linear infinite;"></div></div>';
-        // 添加动画样式
         if (!document.querySelector('#loading-spinner-style')) {
             const style = document.createElement('style');
             style.id = 'loading-spinner-style';
@@ -645,7 +714,10 @@ async function initUpgradePage() {
     }
 
     if (!window.GameData) { setTimeout(initUpgradePage, 200); return; }
+    
     loadSavedEidolons();
+    loadSavedTraces();   // 加载行迹激活状态
+    
     let initState = GameData.getInitialState(null, activatedEidolons);
     let character = initState.party[0];
     const upgradeData = loadSavedUpgradeData();
@@ -701,7 +773,6 @@ async function initUpgradePage() {
     if (superSelect) superSelect.addEventListener('change', () => changeSuperimpose());
     initTabs();
 
-    // 隐藏 loading 遮罩
     if (loadingOverlay) {
         setTimeout(() => {
             loadingOverlay.style.opacity = '0';
@@ -713,10 +784,9 @@ async function initUpgradePage() {
     }
 }
 
-// 挂载全局函数（供html onclick调用）
+// 挂载全局函数
 window.upgradeRelic = upgradeRelic;
 
-// 启动页面
 window.addEventListener('DOMContentLoaded', initUpgradePage);
 const saveBtn = document.getElementById('saveBtn');
 if (saveBtn) saveBtn.addEventListener('click', () => { saveCredits(); saveCharacter(); });
