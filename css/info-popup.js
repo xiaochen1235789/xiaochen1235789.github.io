@@ -1,4 +1,4 @@
-// info-popup.js - 角色/敌人信息弹窗（四大板块：角色面板、遗器效果、技能详情、命座激活）
+// info-popup.js - 角色/敌人信息弹窗（四标签页切换，技能顺序固定，数值橙色高亮，套装详细）
 
 function renderStatusList(list) {
     if (!list || list.length === 0) return '<div style="color:#aaa;">无</div>';
@@ -30,7 +30,7 @@ function getEquippedRelics() {
     } catch(e) { return []; }
 }
 
-// 属性名称映射（与character-upgrade.js保持一致）
+// 属性名称映射
 function getStatName(type) {
     const map = {
         hpPercent:'生命%', atkPercent:'攻击%', defPercent:'防御%', critRate:'暴击率', critDamage:'暴击伤害',
@@ -46,15 +46,33 @@ function formatStatValue(type, value) {
     return percentTypes.includes(type) ? `${value}%` : `${value}`;
 }
 
-// 技能等级详情HTML
+// 橙色高亮数值
+function highlightNumbers(str) {
+    return str.replace(/(\d+(?:\.\d+)?%)/g, '<span class="golden">$1</span>');
+}
+
+// 技能详情HTML（固定顺序：普攻、战技、终结技、天赋；动态数值橙色高亮）
 function renderSkillsDetail(skills) {
     if (!skills || skills.length === 0) return '<div style="color:#aaa;">无技能信息</div>';
-    const skillOrder = { normal: '普攻', skill: '战技', ultimate: '终结技', talent: '天赋' };
-    const sorted = [...skills].sort((a,b) => (skillOrder[a.type]?.charCodeAt(0)||0) - (skillOrder[b.type]?.charCodeAt(0)||0));
+    // 固定顺序
+    const order = ['normal', 'skill', 'ultimate', 'talent'];
+    const nameMap = { normal:'普攻', skill:'战技', ultimate:'终结技', talent:'天赋' };
+    const sorted = [];
+    for (let type of order) {
+        const skill = skills.find(s => s.type === type);
+        if (skill) sorted.push(skill);
+    }
     return sorted.map(skill => {
         let desc = skill.description || '暂无描述';
-        if (skill.baseDamage) desc = desc.replace('{damage}', `${Math.round(skill.baseDamage*100)}%`);
-        if (skill.extraDamage) desc = desc.replace('{extra}', `${Math.round(skill.extraDamage*100)}%`);
+        // 替换占位符并转换为橙色高亮数值
+        if (skill.baseDamage) desc = desc.replace('{damage}', `<span class="golden">${Math.round(skill.baseDamage*100)}%</span>`);
+        if (skill.extraDamage) desc = desc.replace('{extra}', `<span class="golden">${Math.round(skill.extraDamage*100)}%</span>`);
+        if (skill.type === 'talent') {
+            if (skill.penetration !== undefined) desc = desc.replace('{penetration}', `<span class="golden">${Math.round(skill.penetration*100)}%</span>`);
+            if (skill.atkBonus !== undefined) desc = desc.replace('{atkBonus}', `<span class="golden">${Math.round(skill.atkBonus*100)}%</span>`);
+        }
+        // 额外处理可能未通过变量替换的纯数字百分比
+        desc = highlightNumbers(desc);
         const levelInfo = `Lv.${skill.currentLevel} / ${skill.maxLevel}`;
         return `
             <div class="skill-detail-item">
@@ -68,14 +86,32 @@ function renderSkillsDetail(skills) {
     }).join('');
 }
 
-// 角色详情弹窗（四大板块）
+// 获取详细套装效果文本（换行）
+function getDetailedSetEffects(setCounts) {
+    const lines = [];
+    const future = setCounts["新生的未来"] || 0;
+    const past = setCounts["过往的旧事物"] || 0;
+    if (future >= 2) {
+        lines.push("• 【新生的未来】2件套：暴击率提高8%");
+        if (future >= 4) {
+            lines.push("• 【新生的未来】4件套：装备者攻击力≥1800后，每增加200攻击，使装备者暴击伤害提高15%，最多提高60%");
+        }
+    }
+    if (past >= 2) {
+        lines.push("• 【过往的旧事物】2件套：若装备者速度≥115/140/160，则造成的伤害提高10%/15%/25%");
+    }
+    if (lines.length === 0) return null;
+    return lines.join('<br>');
+}
+
+// 角色详情弹窗（四标签页切换）
 function showCharacterInfo(characterIndex) {
     const char = window.getCharacterDataForPopup ? window.getCharacterDataForPopup() : null;
     if (!char) return;
 
     const imgStyle = 'width:20px; height:20px; vertical-align:middle; margin-right:6px;';
 
-    // ---- 板块1：角色面板 ----
+    // ---- 标签页1：角色面板 ----
     const statsHtml = `
         <div class="stat-row"><span class="stat-label"><img src="/attribute_image/HP.webp" style="${imgStyle}">生命值</span><span class="stat-value">${char.hp} / ${char.maxHp}</span></div>
         <div class="stat-row"><span class="stat-label"><img src="/attribute_image/ATK.webp" style="${imgStyle}">攻击力</span><span class="stat-value">${char.attack}</span></div>
@@ -84,8 +120,15 @@ function showCharacterInfo(characterIndex) {
         <div class="stat-row"><span class="stat-label"><img src="/attribute_image/IconCriticalChance.webp" style="${imgStyle}">暴击率</span><span class="stat-value">${Math.round((char.critRate || 0.05)*100)}%</span></div>
         <div class="stat-row"><span class="stat-label"><img src="/attribute_image/IconCriticalDamage.webp" style="${imgStyle}">暴击伤害</span><span class="stat-value">${Math.round((char.critDamage || 0.5)*100)}%</span></div>
     `;
+    const activatedTraces = char._activatedTraces || [];
+    let traceHtml = '';
+    if (activatedTraces.length) {
+        const traceNames = { luguan_talent1:'疾风守护', luguan_talent2:'精准狩猎', luguan_talent3:'风速迅捷' };
+        const activeTraceNames = activatedTraces.map(id => traceNames[id] || id).join('、');
+        traceHtml = `<div class="trace-status">🌿 激活行迹：${activeTraceNames}</div>`;
+    }
 
-    // ---- 板块2：遗器效果（装备及套装）----
+    // ---- 标签页2：遗器装备 ----
     const equippedRelics = getEquippedRelics();
     let relicsHtml = '';
     if (equippedRelics.length === 0) {
@@ -99,21 +142,17 @@ function showCharacterInfo(characterIndex) {
             </div>
         `).join('');
     }
-    // 套装效果额外说明（简单提取）
     const setCounts = char.relicSetCounts || {};
+    const setEffectText = getDetailedSetEffects(setCounts);
     let setEffectHtml = '';
-    if (Object.keys(setCounts).length) {
-        const effectLines = [];
-        if (setCounts["新生的未来"] >= 2) effectLines.push("【新生的未来】2件套：暴击率提高8%");
-        if (setCounts["新生的未来"] >= 4) effectLines.push("【新生的未来】4件套：攻击力达标后提升暴伤");
-        if (setCounts["过往的旧事物"] >= 2) effectLines.push("【过往的旧事物】2件套：速度达标后提升伤害");
-        if (effectLines.length) setEffectHtml = `<div class="set-effect">🎯 套装效果：${effectLines.join('；')}</div>`;
+    if (setEffectText) {
+        setEffectHtml = `<div class="set-effect">🎯 套装效果：<br>${setEffectText}</div>`;
     }
 
-    // ---- 板块3：技能介绍及技能等级详情 ----
+    // ---- 标签页3：技能详情 ----
     const skillsHtml = renderSkillsDetail(char.skills);
 
-    // ---- 板块4：星魂同调（命座激活情况） ----
+    // ---- 标签页4：星魂同调 ----
     const activatedEidolons = char.activatedEidolons || [];
     let eidolonHtml = '';
     if (activatedEidolons.length > 0) {
@@ -130,16 +169,7 @@ function showCharacterInfo(characterIndex) {
         eidolonHtml = '<div style="color:#aaa;">无激活命座</div>';
     }
 
-    // ---- 额外：行迹激活状态（可选，并入角色面板） ----
-    const activatedTraces = char._activatedTraces || [];
-    let traceHtml = '';
-    if (activatedTraces.length) {
-        const traceNames = { luguan_talent1:'疾风守护', luguan_talent2:'精准狩猎', luguan_talent3:'风速迅捷' };
-        const activeTraceNames = activatedTraces.map(id => traceNames[id] || id).join('、');
-        traceHtml = `<div class="trace-status">🌿 激活行迹：${activeTraceNames}</div>`;
-    }
-
-    // ---- 使用模态框展示四大板块 ----
+    // ---- 构建模态框（四标签页）----
     const modal = document.createElement('div');
     modal.className = 'info-modal';
     modal.innerHTML = `
@@ -148,25 +178,23 @@ function showCharacterInfo(characterIndex) {
                 <h3>${char.name}</h3>
                 <button class="close-info">&times;</button>
             </div>
-            <div class="info-sections">
-                <!-- 角色面板 -->
-                <div class="info-section">
-                    <div class="section-title">📊 角色面板</div>
+            <div class="info-tabs">
+                <button class="info-tab-btn active" data-tab="tab1">📊 角色面板</button>
+                <button class="info-tab-btn" data-tab="tab2">📿 遗器装备</button>
+                <button class="info-tab-btn" data-tab="tab3">✨ 技能详情</button>
+                <button class="info-tab-btn" data-tab="tab4">🌟 星魂同调</button>
+            </div>
+            <div class="info-tab-contents">
+                <div class="info-tab-pane active" id="tab1-pane">
                     <div class="section-content">${statsHtml}${traceHtml}</div>
                 </div>
-                <!-- 遗器效果 -->
-                <div class="info-section">
-                    <div class="section-title">📿 遗器装备</div>
+                <div class="info-tab-pane" id="tab2-pane">
                     <div class="section-content">${relicsHtml}${setEffectHtml}</div>
                 </div>
-                <!-- 技能介绍及等级 -->
-                <div class="info-section">
-                    <div class="section-title">✨ 技能详情</div>
+                <div class="info-tab-pane" id="tab3-pane">
                     <div class="section-content skill-detail-list">${skillsHtml}</div>
                 </div>
-                <!-- 命座激活情况 -->
-                <div class="info-section">
-                    <div class="section-title">🌟 星魂同调</div>
+                <div class="info-tab-pane" id="tab4-pane">
                     <div class="section-content">${eidolonHtml}</div>
                 </div>
             </div>
@@ -174,6 +202,19 @@ function showCharacterInfo(characterIndex) {
     `;
 
     document.body.appendChild(modal);
+    // 标签页切换逻辑
+    const tabs = modal.querySelectorAll('.info-tab-btn');
+    const panes = modal.querySelectorAll('.info-tab-pane');
+    tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.getAttribute('data-tab');
+            tabs.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            panes.forEach(pane => pane.classList.remove('active'));
+            const activePane = modal.querySelector(`#${tabId}-pane`);
+            if (activePane) activePane.classList.add('active');
+        });
+    });
     modal.querySelector('.close-info').onclick = () => modal.remove();
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 }
