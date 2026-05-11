@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>遗器·模拟刷取 - 鹿馆工坊</title>
+    <link rel="icon" href="/images/wangzhantupian.png" type="image/png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: linear-gradient(145deg, #0f0e17 0%, #1a1926 100%);
+            font-family: 'Segoe UI', 'Poppins', system-ui, -apple-system, 'Inter', sans-serif;
+            padding: 20px;
+            min-height: 100vh;
+            color: #f5efe9;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(20, 18, 30, 0.7);
+            backdrop-filter: blur(2px);
+            border-radius: 2rem;
+            padding: 1.5rem;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,215,140,0.2);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 28px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #ffd98c40;
+        }
+
+        .title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #FFE6B0, #FFB347);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 3px rgba(0,0,0,0.2);
+            letter-spacing: 1px;
+        }
+
+        .credits {
+            background: #2a2538;
+            padding: 8px 18px;
+            border-radius: 60px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: inset 0 1px 2px #ffffff10, 0 4px 8px #00000030;
+            backdrop-filter: blur(4px);
+            color: #f5cf7b;
+        }
+
+        .main-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 28px;
+            margin: 30px 0 20px;
+        }
+
+        .equip-panel, .farm-panel {
+            flex: 1;
+            min-width: 280px;
+            background: #13111cbb;
+            border-radius: 1.8rem;
+            padding: 1.4rem;
+            backdrop-filter: blur(8px);
+            border: 1px solid #ffdfa040;
+            transition: 0.2s;
+        }
+
+        .panel-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 5px solid #ffb347;
+            padding-left: 18px;
+        }
+
+        .part-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 28px;
+            background: #0b0a12;
+            padding: 15px;
+            border-radius: 48px;
+        }
+
+        .part-btn {
+            background: #26223c;
+            border: none;
+            color: #ddd8e8;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.1s;
+            font-size: 0.9rem;
+            flex: 1 0 auto;
+        }
+
+        .part-btn.active {
+            background: #ffb347;
+            color: #1e1b2c;
+            box-shadow: 0 0 8px #ffb347aa;
+        }
+
+        .relic-card {
+            background: #0e0c18;
+            border-radius: 1.5rem;
+            padding: 1rem;
+            margin-top: 12px;
+            border-left: 4px solid #ffb347;
+        }
+
+        .relic-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            margin-bottom: 12px;
+            border-bottom: 1px dashed #3f3a55;
+            padding-bottom: 6px;
+        }
+
+        .relic-set {
+            color: #ffcc88;
+        }
+
+        .relic-level {
+            background: #3a2e48;
+            padding: 2px 12px;
+            border-radius: 30px;
+        }
+
+        .main-stat {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 12px 0;
+            background: #1f1b2e;
+            padding: 8px 12px;
+            border-radius: 20px;
+        }
+
+        .sub-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 12px 0;
+        }
+
+        .sub-badge {
+            background: #25213a;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .score-rating {
+            display: inline-block;
+            margin-top: 10px;
+            font-size: 0.75rem;
+            background: #1e1b2c;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        .action-btn {
+            background: #ffb347;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 60px;
+            font-weight: bold;
+            color: #1a1628;
+            margin-top: 14px;
+            cursor: pointer;
+            transition: 0.1s;
+            width: 100%;
+            font-size: 1rem;
+        }
+
+        .farm-btn {
+            background: #4e3a6e;
+            color: #f5e3c6;
+            margin-bottom: 20px;
+        }
+
+        .farm-btn:hover, .action-btn:hover {
+            filter: brightness(1.08);
+            transform: scale(0.98);
+        }
+
+        .relic-new-badge {
+            background: #1f7a5c;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+        }
+
+        .cost-info {
+            font-size: 0.7rem;
+            color: #cca66b;
+            margin-top: 8px;
+            text-align: right;
+        }
+
+        .back-link {
+            color: #ffce8e;
+            text-decoration: none;
+            background: #2a253a;
+            padding: 6px 16px;
+            border-radius: 40px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #11101cee;
+            backdrop-filter: blur(12px);
+            padding: 12px 22px;
+            border-radius: 50px;
+            color: #ffda99;
+            font-weight: bold;
+            border: 1px solid #ffb347;
+            transition: opacity 0.2s;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        @media (max-width: 800px) {
+            .container { padding: 1rem; }
+            .title { font-size: 1.3rem; }
+        }
+        hr { border-color: #ffb34730; margin: 10px 0; }
+    </style>
+    <script src="/css/relic-data.js"></script>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="title">🎲 遗器 · 模拟凿光</div>
+        <div class="credits" id="creditDisplay">💰 加载中...</div>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+        <a href="character-upgrade.html" class="back-link">← 返回训练室</a>
+        <span style="font-size: 0.75rem; background: #00000055; padding: 6px 12px; border-radius: 50px;">⚡ 每次刷取消耗 500 信用点</span>
+    </div>
+
+    <div class="main-grid">
+        <!-- 左侧：当前装备展示区 -->
+        <div class="equip-panel">
+            <div class="panel-title">📿 当前装备</div>
+            <div class="part-selector" id="partSelector">
+                <!-- 动态部位按钮 -->
+            </div>
+            <div id="currentRelicDisplay">
+                <div style="text-align:center; padding:40px;">点击上方部位查看佩戴遗器</div>
+            </div>
+        </div>
+
+        <!-- 右侧：刷遗器区域 -->
+        <div class="farm-panel">
+            <div class="panel-title">✨ 新 · 遗器工坊</div>
+            <div style="margin-bottom: 20px;">
+                <div id="selectedPartLabel" style="font-weight: bold; margin-bottom: 8px;">当前部位: <span id="activePartName">头</span></div>
+                <button id="farmRelicBtn" class="action-btn farm-btn">🎲 消耗500信用点 · 刷取新遗器</button>
+            </div>
+            <div id="generatedRelicArea">
+                <div style="background:#0c0b16; border-radius: 24px; padding: 20px; text-align: center; color: #aa9fcc;">
+                    点击【刷取】随机生成一件遗器<br>
+                    ✨ 主属性/副词条全随机，可替换至当前部位
+                </div>
+            </div>
+            <div class="cost-info" id="costHint">当前信用点足够时即可刷取</div>
+        </div>
+    </div>
+    <div style="margin-top: 20px; text-align: center; font-size: 0.7rem; opacity: 0.7;">
+        ※ 生成的遗器初始等级0，替换后可在“训练室”中升级强化 ※
+    </div>
+</div>
+<div id="toastMsg" class="toast">提示</div>
+
+<script>
+    // ---------- 全局变量 ----------
+    let totalCredits = 50000;          // 默认读取localStorage
+    let currentPart = 'head';          // 当前选中的部位
+    let relicEquips = {};               // 存储六个部位
+    let currentGeneratedRelic = null;   // 最后生成的遗器对象
+
+    // 常量: 刷取消耗
+    const FARM_COST = 500;
+    // 有效词条类型 (用于评分)
+    const EFFECTIVE_STATS = ['critRate', 'critDamage', 'speed', 'atkPercent', 'atk'];
+    // 部位名称映射
+    const partNameMap = {
+        head: '智慧头套', hands: '指挥手套', body: '安心的护甲', feet: '健步如飞的靴子',
+        sphere: '过去的球', rope: '过去的绳'
+    };
+
+    // ---------- 辅助函数 ----------
+    function showToast(msg, isError = false) {
+        const toast = document.getElementById('toastMsg');
+        toast.textContent = msg;
+        toast.style.color = isError ? '#ff8a7a' : '#ffda99';
+        toast.style.borderColor = isError ? '#ff6a5c' : '#ffb347';
+        toast.style.opacity = '1';
+        setTimeout(() => toast.style.opacity = '0', 2200);
+    }
+
+    // 更新信用点UI
+    function updateCreditUI() {
+        const creditSpan = document.getElementById('creditDisplay');
+        if (creditSpan) creditSpan.innerHTML = `💰 ${totalCredits.toLocaleString()} 信用点`;
+        const costHint = document.getElementById('costHint');
+        if (costHint) {
+            costHint.innerHTML = totalCredits >= FARM_COST ? `✅ 信用点足够，每次刷取消耗 ${FARM_COST}` : `⚠️ 信用点不足 ${FARM_COST}，无法刷取`;
+        }
+    }
+
+    // 保存信用点到本地
+    function saveCreditsToLocal() {
+        localStorage.setItem('hsr_credits', totalCredits);
+    }
+
+    // 加载信用点
+    function loadCredits() {
+        const saved = localStorage.getItem('hsr_credits');
+        if (saved !== null && !isNaN(parseInt(saved))) {
+            totalCredits = parseInt(saved);
+        } else {
+            totalCredits = 50000;
+        }
+        updateCreditUI();
+    }
+
+    // 遗器评分 (同原页面规则)
+    function calcRelicScore(relic) {
+        if (!relic || !relic.subStats) return 0;
+        let score = 0;
+        relic.subStats.forEach(sub => {
+            if (EFFECTIVE_STATS.includes(sub.type)) score += 1;
+            if (sub.enhanceCount) score += (sub.enhanceCount || 0);
+        });
+        return score;
+    }
+
+    function getRelicRating(score) {
+        if (score >= 8) return '★★★★★ 毕业';
+        if (score >= 6) return '★★★★☆ 小毕业';
+        if (score >= 4) return '★★★☆☆ 过渡';
+        return '★★☆☆☆ 未毕业';
+    }
+
+    // 获取属性显示名称 & 图标(文本替代)
+    function getStatName(type) {
+        const map = {
+            hpPercent:'生命%', atkPercent:'攻击%', defPercent:'防御%', critRate:'暴击率', critDamage:'暴伤',
+            speed:'速度', effectHitRate:'效果命中', effectRes:'效果抵抗', energyRegen:'能量回复',
+            windDamage:'风伤', fireDamage:'火伤', iceDamage:'冰伤', imaginaryDamage:'虚数伤',
+            physicalDamage:'物理伤', quantumDamage:'量子伤', hp:'生命', atk:'攻击', def:'防御'
+        };
+        return map[type] || type;
+    }
+
+    function formatStatValue(type, val) {
+        const percentTypes = ['hpPercent','atkPercent','defPercent','critRate','critDamage','effectHitRate','effectRes','energyRegen','windDamage','fireDamage','iceDamage','imaginaryDamage','physicalDamage','quantumDamage'];
+        if (percentTypes.includes(type)) return `${val}%`;
+        return `${val}`;
+    }
+
+    // 渲染遗器卡片 (用于展示)
+    function renderRelicCard(relic, titlePrefix = "") {
+        if (!relic) return `<div style="background:#1a152a; border-radius:1.2rem; padding:20px; text-align:center; color:#887eb5;">❌ 未装备遗器</div>`;
+        const mainStat = relic.mainStat;
+        const subStatsHtml = relic.subStats.map(sub => {
+            return `<span class="sub-badge">${getStatName(sub.type)} ${formatStatValue(sub.type, sub.value)}</span>`;
+        }).join('');
+        const score = calcRelicScore(relic);
+        const rating = getRelicRating(score);
+        const ratingColor = score >= 8 ? '#ffaa55' : (score >= 6 ? '#e6c87e' : '#b0a7d9');
+        return `
+            <div class="relic-card">
+                <div class="relic-header">
+                    <span class="relic-set">📿 ${relic.setType || '未知套装'}</span>
+                    <span class="relic-level">+${relic.level || 0}</span>
+                </div>
+                <div class="main-stat">
+                    <span>✨ 主属性</span>
+                    <strong>${getStatName(mainStat.type)} ${formatStatValue(mainStat.type, mainStat.value)}</strong>
+                </div>
+                <div class="sub-stats">
+                    ${subStatsHtml || '<span style="color:#6a608a;">暂无副词条</span>'}
+                </div>
+                <div class="score-rating" style="color:${ratingColor};">📊 ${rating} (${score}分)</div>
+                ${titlePrefix ? `<div style="margin-top: 8px; font-size:0.7rem;">${titlePrefix}</div>` : ''}
+            </div>
+        `;
+    }
+
+    // 加载遗器装备 (从localStorage)
+    function loadRelicEquips() {
+        const saved = localStorage.getItem('hsr-relic-equips');
+        let defaultEquips = {
+            head: null, hands: null, body: null, feet: null, sphere: null, rope: null
+        };
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                relicEquips = { ...defaultEquips, ...parsed };
+                // 确保每个部位至少存在占位（防止null导致渲染错误）
+                for (let part of Object.keys(defaultEquips)) {
+                    if (!relicEquips[part]) {
+                        relicEquips[part] = null;
+                    }
+                }
+            } catch(e) { console.warn(e); relicEquips = defaultEquips; }
+        } else {
+            relicEquips = defaultEquips;
+        }
+        // 确保没有null时显示“空”，但保留null占位 便于UI
+        saveRelicEquipsToLocal();
+    }
+
+    function saveRelicEquipsToLocal() {
+        localStorage.setItem('hsr-relic-equips', JSON.stringify(relicEquips));
+        // 派发storage事件让升级页面同步（如果已打开）
+        window.dispatchEvent(new StorageEvent('storage', { key: 'hsr-relic-equips', newValue: JSON.stringify(relicEquips) }));
+    }
+
+    // 刷新左侧当前装备展示
+    function refreshCurrentDisplay() {
+        const container = document.getElementById('currentRelicDisplay');
+        if (!container) return;
+        const relic = relicEquips[currentPart];
+        if (!relic) {
+            container.innerHTML = `<div class="relic-card" style="text-align:center;">✨ 当前部位无遗器<br><span style="font-size:0.7rem;">刷取后点击替换即可装备</span></div>`;
+            return;
+        }
+        container.innerHTML = renderRelicCard(relic, `【已装备 · ${partNameMap[currentPart]}】`);
+    }
+
+    // 刷取新遗器 (调用 relic-data 的 generateRandomRelic)
+    function generateRandomRelicForPart(part) {
+        if (typeof window.generateRandomRelic !== 'function') {
+            console.error('generateRandomRelic 未加载，请检查 relic-data.js');
+            showToast('遗器数据加载失败，请刷新重试', true);
+            return null;
+        }
+        try {
+            // relic-data.js中的函数需要part参数(head,hands等) 默认等级0
+            const newRelic = window.generateRandomRelic(part, 0);
+            // 确保额外字段（部分版本可能缺失enhanceCount标记）
+            if (newRelic.subStats) {
+                newRelic.subStats.forEach(sub => { if (sub.enhanceCount === undefined) sub.enhanceCount = 0; });
+            }
+            return newRelic;
+        } catch (err) {
+            console.error(err);
+            showToast('生成遗器失败，请重试', true);
+            return null;
+        }
+    }
+
+    // 刷取逻辑
+    function farmRelic() {
+        if (totalCredits < FARM_COST) {
+            showToast(`信用点不足 ${FARM_COST}，无法刷取！`, true);
+            return;
+        }
+        const newRelic = generateRandomRelicForPart(currentPart);
+        if (!newRelic) return;
+        currentGeneratedRelic = newRelic;
+        // 扣信用点
+        totalCredits -= FARM_COST;
+        saveCreditsToLocal();
+        updateCreditUI();
+
+        // 渲染右侧生成区
+        const generatedArea = document.getElementById('generatedRelicArea');
+        const score = calcRelicScore(newRelic);
+        const rating = getRelicRating(score);
+        generatedArea.innerHTML = `
+            <div style="background:#121020; border-radius:1.8rem; padding:8px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                    <span class="relic-new-badge">✨ 新鲜凿出 · Lv.0</span>
+                    <span style="color:#ffc285;">${newRelic.setType || '随机套装'}</span>
+                </div>
+                ${renderRelicCard(newRelic, '全新未装备')}
+                <button id="replaceRelicBtn" class="action-btn" style="background: #3a2c5c; margin-top: 16px;">⚙️ 替换当前部位【${partNameMap[currentPart]}】</button>
+                <div style="font-size:0.7rem; text-align:center; margin-top:8px;">替换后立即保存并可返回训练室查看</div>
+            </div>
+        `;
+        // 绑定替换事件
+        const replaceBtn = document.getElementById('replaceRelicBtn');
+        if (replaceBtn) {
+            replaceBtn.onclick = () => equipGeneratedRelic();
+        }
+        showToast(`刷取成功！消耗 ${FARM_COST} 信用点`, false);
+    }
+
+    // 装备当前生成的遗器
+    function equipGeneratedRelic() {
+        if (!currentGeneratedRelic) {
+            showToast('没有可装备的遗器，请先刷取', true);
+            return;
+        }
+        // 确认部位一致
+        if (currentGeneratedRelic.part !== currentPart) {
+            // 修正遗器部位 （理论上生成时一致，强制同步）
+            currentGeneratedRelic.part = currentPart;
+        }
+        // 替换到 relicEquips 中
+        relicEquips[currentPart] = currentGeneratedRelic;
+        saveRelicEquipsToLocal();
+        // 刷新左侧展示
+        refreshCurrentDisplay();
+        showToast(`成功装备【${partNameMap[currentPart]}】新遗器！`, false);
+        // 可选：清除当前生成的显示或保留, 但依然可再次刷取
+        // 让右侧保留刚刚装备的遗器样式，但提示已经装备，可新刷
+        const area = document.getElementById('generatedRelicArea');
+        if (area && currentGeneratedRelic) {
+            area.innerHTML = `
+                <div style="background:#17142a; border-radius:1.8rem; padding:15px; text-align:center;">
+                    ✅ 已装备至 ${partNameMap[currentPart]}<br>
+                    <span style="font-size:0.8rem;">继续点击【刷取】可获得新遗器</span>
+                </div>
+            `;
+        }
+        currentGeneratedRelic = null; // 已装备缓存清空避免重复替换
+    }
+
+    // 部位切换，更新高亮+展示当前装备+刷新右侧提示（清除已有生成物）
+    function switchPart(part) {
+        currentPart = part;
+        // 刷新部位按钮样式
+        document.querySelectorAll('.part-btn').forEach(btn => {
+            if (btn.dataset.part === part) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+        document.getElementById('activePartName').innerText = partNameMap[part] || part;
+        refreshCurrentDisplay();
+        // 切换部位时清除右侧生成遗器显示区域，恢复到初始提示
+        const generatedArea = document.getElementById('generatedRelicArea');
+        generatedArea.innerHTML = `
+            <div style="background:#0c0b16; border-radius: 24px; padding: 20px; text-align: center; color: #aa9fcc;">
+                🎲 当前部位: ${partNameMap[part]}<br>
+                点击【刷取】生成全新遗器，可替换装备
+            </div>
+        `;
+        currentGeneratedRelic = null;
+    }
+
+    // 创建部位按钮栏
+    function buildPartButtons() {
+        const parts = ['head', 'hands', 'body', 'feet', 'sphere', 'rope'];
+        const container = document.getElementById('partSelector');
+        if (!container) return;
+        container.innerHTML = parts.map(part => `
+            <button class="part-btn ${part === currentPart ? 'active' : ''}" data-part="${part}">${partNameMap[part]}</button>
+        `).join('');
+        // 绑定事件
+        container.querySelectorAll('.part-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const part = btn.dataset.part;
+                if (part) switchPart(part);
+            });
+        });
+    }
+
+    // 监听localStorage跨页面同步（当升级页或别的页面修改遗器时，自动刷新）
+    function listenStorageChanges() {
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'hsr-relic-equips') {
+                try {
+                    const newEquips = JSON.parse(e.newValue);
+                    if (newEquips) {
+                        relicEquips = { ...relicEquips, ...newEquips };
+                        if (currentPart) refreshCurrentDisplay();
+                    }
+                } catch (er) {}
+            }
+            if (e.key === 'hsr_credits') {
+                if (e.newValue) totalCredits = parseInt(e.newValue) || 50000;
+                updateCreditUI();
+            }
+        });
+    }
+
+    // 初始化页面
+    async function initFarmPage() {
+        // 等待 relic-data 完全加载
+        if (typeof window.generateRandomRelic !== 'function') {
+            console.log('等待遗器库加载...');
+            await new Promise(resolve => {
+                let check = setInterval(() => {
+                    if (typeof window.generateRandomRelic === 'function') {
+                        clearInterval(check);
+                        resolve();
+                    }
+                }, 100);
+                setTimeout(() => resolve(), 1500);
+            });
+        }
+        loadCredits();
+        loadRelicEquips();
+        buildPartButtons();
+        switchPart('head');      // 默认显示头部
+        listenStorageChanges();
+
+        // 刷取按钮绑定
+        const farmBtn = document.getElementById('farmRelicBtn');
+        if (farmBtn) farmBtn.onclick = () => farmRelic();
+
+        // 若右区域初始刷新一下部位名称
+        document.getElementById('activePartName').innerText = partNameMap.head;
+        updateCreditUI();
+        
+        // 额外同步显示信用点确保
+        setInterval(() => {
+            if (totalCredits !== undefined) saveCreditsToLocal();
+        }, 3000);
+    }
+
+    initFarmPage();
+</script>
+</body>
+</html>
