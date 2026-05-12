@@ -7,130 +7,42 @@
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/admin.css">
+    <link rel="stylesheet" href="/css/admin0.css">
     <style>
-        /* 额外样式 */
-        .table-container {
-            overflow-x: auto;
-            margin-top: 10px;
-        }
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85rem;
-            min-width: 600px;
-            background: var(--card-bg);
-        }
-        .data-table th, .data-table td {
-            border: 1px solid var(--border-color);
-            padding: 8px 10px;
-            text-align: left;
-            vertical-align: middle;
-        }
-        .data-table th {
-            background: #2a3a35;
-            color: var(--text-highlight);
-            font-weight: 600;
-        }
-        .data-table tr:hover {
-            background: rgba(129, 199, 132, 0.1);
-        }
-        .table-img {
-            width: 40px;
-            height: 40px;
-            object-fit: cover;
-            border-radius: 4px;
-        }
-        .empty-data {
-            text-align: center;
-            padding: 40px;
-            color: var(--text-secondary);
-        }
-        /* 杂项管理样式 */
-        .misc-section {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 25px;
-        }
-        .misc-title {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: var(--text-highlight);
-            margin-bottom: 15px;
-            border-left: 4px solid #81c784;
-            padding-left: 12px;
-        }
-        .user-selector {
+        /* 追加日志模块样式 */
+        .log-filters {
             display: flex;
-            gap: 15px;
-            align-items: flex-end;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        .user-selector .form-field {
-            flex: 1;
-            min-width: 200px;
-        }
-        .asset-control {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-        }
-        .asset-item {
-            background: rgba(0,0,0,0.2);
-            border-radius: 20px;
-            padding: 10px 18px;
-            display: inline-flex;
-            align-items: center;
             gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
         }
-        .asset-item img {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
+        .log-filters input, .log-filters select {
+            background: #2d3748;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: var(--radius);
         }
-        .frames-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 12px;
-            margin-top: 15px;
+        .log-table {
+            max-height: 500px;
+            overflow-y: auto;
         }
-        .frame-checkbox-item {
-            background: rgba(0,0,0,0.2);
-            border-radius: 12px;
-            padding: 10px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            cursor: pointer;
+        .log-table .data-table th {
+            position: sticky;
+            top: 0;
+            background: #2a3a35;
         }
-        .frame-checkbox-item:hover {
-            background: rgba(129,199,132,0.2);
-        }
-        .frame-checkbox-item img {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-        .frame-checkbox-item .frame-name {
-            flex: 1;
-            font-size: 0.9rem;
-        }
-        .save-asset-btn, .save-frames-btn {
-            background: #81c784;
-            color: #121212;
+        .clear-logs-btn {
+            background: #c41e3a;
+            color: white;
             border: none;
-            padding: 8px 20px;
-            border-radius: 30px;
+            padding: 6px 12px;
+            border-radius: var(--radius);
             cursor: pointer;
-            font-weight: bold;
-            margin-top: 10px;
+            margin-left: 10px;
         }
-        .save-asset-btn:hover, .save-frames-btn:hover {
-            background: #6ab56f;
+        .clear-logs-btn:hover {
+            background: #a01830;
         }
     </style>
 </head>
@@ -150,6 +62,7 @@
         <button class="tab-btn" data-tab="light_cones">✨ 光锥管理</button>
         <button class="tab-btn" data-tab="materials">🧪 材料管理</button>
         <button class="tab-btn" data-tab="misc">📦 杂项管理</button>
+        <button class="tab-btn" data-tab="logs">📜 使用日志</button>
     </div>
 
     <!-- 用户管理面板 -->
@@ -198,17 +111,40 @@
                     <select id="miscUserSelect" class="form-select"></select>
                 </div>
             </div>
-            <div id="assetControlArea" class="asset-control">
-                <!-- 动态显示资产调整控件 -->
-            </div>
+            <div id="assetControlArea" class="asset-control"></div>
         </div>
-
         <div class="misc-section">
             <div class="misc-title"><i class="fas fa-image"></i> 头像框拥有管理</div>
-            <div id="framesManagementArea">
-                <p style="color: var(--text-secondary);">请先选择一个用户</p>
-            </div>
+            <div id="framesManagementArea"></div>
         </div>
+    </div>
+
+    <!-- 日志面板 -->
+    <div id="logs-panel" class="panel">
+        <div class="toolbar">
+            <div class="log-filters">
+                <input type="text" id="logSearch" placeholder="搜索操作人/目标/详情..." class="search-input" style="width:200px;">
+                <select id="logActionFilter">
+                    <option value="">所有操作类型</option>
+                    <option value="修改用户角色">修改用户角色</option>
+                    <option value="删除用户">删除用户</option>
+                    <option value="添加角色">添加角色</option>
+                    <option value="编辑角色">编辑角色</option>
+                    <option value="删除角色">删除角色</option>
+                    <option value="添加光锥">添加光锥</option>
+                    <option value="编辑光锥">编辑光锥</option>
+                    <option value="删除光锥">删除光锥</option>
+                    <option value="添加材料">添加材料</option>
+                    <option value="编辑材料">编辑材料</option>
+                    <option value="删除材料">删除材料</option>
+                    <option value="资产调整">资产调整</option>
+                    <option value="头像框调整">头像框调整</option>
+                </select>
+                <button class="clear-logs-btn" id="clearLogsBtn" style="background:#c41e3a;">清空日志(站长)</button>
+            </div>
+            <span style="color: var(--text-secondary);">共 <span id="totalLogs">0</span> 条记录</span>
+        </div>
+        <div id="logsListArea" class="table-container log-table"><div class="loading">加载日志中...</div></div>
     </div>
 </div>
 
@@ -238,13 +174,13 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
     const OWNER_ID = '2e617135-daa2-4619-a7df-dacd425da881';
 
-    // 头像框列表（与前台保持一致）
+    // 头像框列表
     const FRAMES_LIST = [
-        { id: 'frame_default', name: '默认头像框', description: '初始边框', price_candy: 0, price_rainbow: 0 },
-        { id: 'frame_gold', name: '黄金边框', description: '闪耀金色质感', price_candy: 50, price_rainbow: 0 },
-        { id: 'frame_rainbow', name: '彩虹炫光', description: '七彩流光特效', price_candy: 30, price_rainbow: 3 },
-        { id: 'frame_diamond', name: '钻石星辰', description: '璀璨钻石光环', price_candy: 100, price_rainbow: 5 },
-        { id: 'frame_legend', name: '传奇霸主', description: '至尊传说之框', price_candy: 200, price_rainbow: 10 }
+        { id: 'frame_default', name: '默认头像框' },
+        { id: 'frame_gold', name: '黄金边框' },
+        { id: 'frame_rainbow', name: '彩虹炫光' },
+        { id: 'frame_diamond', name: '钻石星辰' },
+        { id: 'frame_legend', name: '传奇霸主' }
     ];
 
     let supabaseAdmin = null;
@@ -256,7 +192,6 @@
     let editingContentId = null;
     let editingUserId = null;
 
-    // 杂项管理相关
     let selectedMiscUserId = null;
     let currentUserFrames = [];
 
@@ -297,6 +232,70 @@
             { name: 'display_order', label: '排序', type: 'number', default: 0 }
         ] }
     };
+
+    // ==================== 日志记录 ====================
+    async function logAction(actionType, targetType, targetId, targetName, details) {
+        if (!currentUser) return;
+        try {
+            await supabaseAdmin.from('admin_logs').insert({
+                admin_id: currentUser.id,
+                admin_email: currentUser.email,
+                admin_role: currentUserRole,
+                action_type: actionType,
+                target_type: targetType,
+                target_id: targetId,
+                target_name: targetName,
+                details: details
+            });
+        } catch(e) { console.warn('日志记录失败', e); }
+        // 如果当前在日志面板，刷新日志列表
+        if (document.getElementById('logs-panel').classList.contains('active-panel')) {
+            refreshLogs();
+        }
+    }
+
+    async function refreshLogs() {
+        if (!supabaseAdmin) return;
+        let query = supabaseAdmin.from('admin_logs').select('*', { count: 'exact' }).order('created_at', { ascending: false });
+        const searchVal = document.getElementById('logSearch')?.value.trim().toLowerCase();
+        const actionFilter = document.getElementById('logActionFilter')?.value;
+        if (searchVal) {
+            query = query.or(`admin_email.ilike.%${searchVal}%,target_name.ilike.%${searchVal}%,details.ilike.%${searchVal}%`);
+        }
+        if (actionFilter) {
+            query = query.eq('action_type', actionFilter);
+        }
+        const { data, error, count } = await query.range(0, 499);
+        if (error) { console.error(error); return; }
+        document.getElementById('totalLogs').innerText = count || 0;
+        const logsContainer = document.getElementById('logsListArea');
+        if (!data || data.length === 0) {
+            logsContainer.innerHTML = '<div class="empty-data">暂无日志</div>';
+            return;
+        }
+        let html = '<table class="data-table"><thead><tr><th>时间</th><th>操作人(角色)</th><th>操作类型</th><th>目标</th><th>详情</th></tr></thead><tbody>';
+        for (const log of data) {
+            const time = new Date(log.created_at).toLocaleString('zh-CN');
+            const roleDisplay = log.admin_role === 'owner' ? '站长' : (log.admin_role === 'admin' ? '管理员' : '用户');
+            html += `<tr>
+                <td>${time}</td>
+                <td>${escapeHtml(log.admin_email)}<br><span style="font-size:0.7rem;">(${roleDisplay})</span></td>
+                <td>${escapeHtml(log.action_type)}</td>
+                <td>${escapeHtml(log.target_name || log.target_type || '')}</td>
+                <td>${escapeHtml(log.details || '')}</td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        logsContainer.innerHTML = html;
+    }
+
+    async function clearAllLogs() {
+        if (currentUserRole !== 'owner') { showNotification('只有站长可以清空日志', 'error'); return; }
+        if (!confirm('确定清空所有操作日志吗？此操作不可恢复。')) return;
+        const { error } = await supabaseAdmin.from('admin_logs').delete().neq('id', 0);
+        if (error) showNotification('清空失败', 'error');
+        else { showNotification('日志已清空', 'success'); refreshLogs(); }
+    }
 
     // ==================== 通用函数 ====================
     function showNotification(msg, type = 'info') {
@@ -389,7 +388,12 @@
             if (newRole === currentRole) { closeModal(); return; }
             const { error } = await supabaseAdmin.from('user_profiles').update({ role: newRole }).eq('id', userId);
             if (error) showNotification('修改失败', 'error');
-            else { showNotification('角色已更新', 'success'); await refreshUserList(); closeModal(); }
+            else {
+                showNotification('角色已更新', 'success');
+                await refreshUserList();
+                await logAction('修改用户角色', 'user', userId, username, `角色由 ${currentRole} 改为 ${newRole}`);
+                closeModal();
+            }
         };
     };
     window.deleteUserById = async (userId, username) => {
@@ -398,8 +402,10 @@
         await supabaseAdmin.from('user_stats').delete().eq('user_id', userId);
         await supabaseAdmin.from('user_profiles').delete().eq('id', userId);
         await supabaseAdmin.from('user_frames').delete().eq('user_id', userId);
-        showNotification('已删除用户', 'success'); await refreshUserList(); 
+        showNotification('已删除用户', 'success');
+        await refreshUserList();
         if (selectedMiscUserId === userId) refreshMiscPanel();
+        await logAction('删除用户', 'user', userId, username, `删除了用户 ${username}`);
     };
 
     // ==================== 内容管理（角色/光锥/材料）====================
@@ -472,6 +478,9 @@
                 if (editingContentId) result = await supabaseAdmin.from(table).update(data).eq('id', editingContentId);
                 else result = await supabaseAdmin.from(table).insert([data]);
                 if (result.error) throw result.error;
+                const actionType = editingContentId ? `编辑${getTableChinese(table)}` : `添加${getTableChinese(table)}`;
+                const targetName = data.name || (existingData?.name || '');
+                await logAction(actionType, table, editingContentId || '', targetName, JSON.stringify(data));
                 showNotification(editingContentId ? '更新成功' : '添加成功', 'success');
                 closeModal();
                 await loadContentTable(table);
@@ -486,9 +495,16 @@
     };
     window.deleteContentItem = async (table, id) => {
         if (!confirm('确定删除？')) return;
+        const { data: item } = await supabaseAdmin.from(table).select('name').eq('id', id).single();
+        const targetName = item?.name || '未知';
         const { error } = await supabaseAdmin.from(table).delete().eq('id', id);
         if (error) showNotification('删除失败', 'error');
-        else { showNotification('删除成功', 'success'); await loadContentTable(table); filterContentTable(table); }
+        else {
+            showNotification('删除成功', 'success');
+            await loadContentTable(table);
+            filterContentTable(table);
+            await logAction(`删除${getTableChinese(table)}`, table, id, targetName, `删除了 ${targetName}`);
+        }
     };
     function getTableChinese(table) { const map = { characters: '角色', light_cones: '光锥', materials: '材料' }; return map[table] || table; }
 
@@ -499,38 +515,20 @@
         if (error) return [];
         return data.map(d => d.frame_id);
     }
-
     async function updateUserFrames(userId, ownedFrameIds) {
-        // 获取现有记录
         const existing = await loadUserFrames(userId);
-        // 需要添加的：在 ownedFrameIds 中但不在 existing 中
         const toAdd = ownedFrameIds.filter(id => !existing.includes(id));
-        // 需要删除的：在 existing 中但不在 ownedFrameIds 中（注意，不能删除默认框）
         const toRemove = existing.filter(id => !ownedFrameIds.includes(id) && id !== 'frame_default');
-        
-        // 逐个添加（使用 upsert 避免重复）
         for (const frameId of toAdd) {
-            await supabaseAdmin.from('user_frames').upsert({
-                user_id: userId,
-                frame_id: frameId,
-                equipped: false,
-                purchased_at: new Date().toISOString()
-            }, { onConflict: 'user_id, frame_id', ignoreDuplicates: true });
+            await supabaseAdmin.from('user_frames').upsert({ user_id: userId, frame_id: frameId, equipped: false, purchased_at: new Date().toISOString() }, { onConflict: 'user_id, frame_id', ignoreDuplicates: true });
         }
-        // 删除移除的项（但跳过默认框）
         for (const frameId of toRemove) {
             await supabaseAdmin.from('user_frames').delete().eq('user_id', userId).eq('frame_id', frameId);
         }
     }
-
     async function updateUserAssets(userId, candy, rainbow) {
-        await supabaseAdmin.from('user_stats').upsert({
-            user_id: userId,
-            candy_crumbles: candy,
-            rainbow_lollipops: rainbow
-        }, { onConflict: 'user_id' });
+        await supabaseAdmin.from('user_stats').upsert({ user_id: userId, candy_crumbles: candy, rainbow_lollipops: rainbow }, { onConflict: 'user_id' });
     }
-
     async function refreshMiscPanel() {
         const selectEl = document.getElementById('miscUserSelect');
         if (!selectEl) return;
@@ -544,21 +542,17 @@
             document.getElementById('framesManagementArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
         }
     }
-
     async function loadMiscUserData(userId) {
         if (!userId) return;
-        // 获取用户资产
         const { data: stats } = await supabaseAdmin.from('user_stats').select('candy_crumbles, rainbow_lollipops').eq('user_id', userId).single();
         const candy = stats?.candy_crumbles ?? 100;
         const rainbow = stats?.rainbow_lollipops ?? 5;
-        // 获取用户拥有的头像框
         currentUserFrames = await loadUserFrames(userId);
         if (!currentUserFrames.includes('frame_default')) currentUserFrames.push('frame_default');
         
-        // 渲染资产调整控件
         const assetHtml = `
-            <div class="asset-item"><img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp" alt="糖果碎">糖果碎: <input type="number" id="miscCandy" value="${candy}" min="0" style="width:100px; background:#1e2a2a; border:1px solid #3e5a5a; border-radius:8px; padding:4px 8px; color:#fff;"></div>
-            <div class="asset-item"><img src="https://xiaochen1235789.github.io/images/Super_Sweet.webp" alt="超级棒糖">超级棒糖: <input type="number" id="miscRainbow" value="${rainbow}" min="0" style="width:100px; background:#1e2a2a; border:1px solid #3e5a5a; border-radius:8px; padding:4px 8px; color:#fff;"></div>
+            <div class="asset-item"><img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp">糖果碎: <input type="number" id="miscCandy" value="${candy}" min="0" style="width:100px; background:#1e2a2a; border:1px solid #3e5a5a; border-radius:8px; padding:4px 8px; color:#fff;"></div>
+            <div class="asset-item"><img src="https://xiaochen1235789.github.io/images/Super_Sweet.webp">超级棒糖: <input type="number" id="miscRainbow" value="${rainbow}" min="0" style="width:100px;"></div>
             <button class="save-asset-btn" id="saveAssetBtn"><i class="fas fa-save"></i> 保存资产修改</button>
         `;
         document.getElementById('assetControlArea').innerHTML = assetHtml;
@@ -570,50 +564,41 @@
                 return;
             }
             await updateUserAssets(userId, newCandy, newRainbow);
+            const targetUser = allUsers.find(u => u.id === userId);
+            await logAction('资产调整', 'user_stats', userId, targetUser?.username || userId, `糖果碎: ${candy} → ${newCandy}, 棒糖: ${rainbow} → ${newRainbow}`);
             showNotification('资产已更新', 'success');
             await refreshUserList();
             await loadMiscUserData(userId);
         });
         
-        // 渲染头像框管理
         let framesHtml = '<div class="frames-grid">';
         for (const frame of FRAMES_LIST) {
             const isOwned = currentUserFrames.includes(frame.id);
             const disabledAttr = (frame.id === 'frame_default') ? 'disabled ' : '';
-            framesHtml += `
-                <label class="frame-checkbox-item">
-                    <input type="checkbox" class="frame-checkbox" data-frame-id="${frame.id}" ${isOwned ? 'checked' : ''} ${disabledAttr}>
-                    <div class="frame-name">${escapeHtml(frame.name)}</div>
-                    ${frame.id === 'frame_default' ? '<span style="font-size:0.7rem;">(默认，不可取消)</span>' : ''}
-                </label>
-            `;
+            framesHtml += `<label class="frame-checkbox-item"><input type="checkbox" class="frame-checkbox" data-frame-id="${frame.id}" ${isOwned ? 'checked' : ''} ${disabledAttr}><div class="frame-name">${escapeHtml(frame.name)}</div>${frame.id === 'frame_default' ? '<span style="font-size:0.7rem;">(默认，不可取消)</span>' : ''}</label>`;
         }
         framesHtml += '</div><button class="save-frames-btn" id="saveFramesBtn"><i class="fas fa-save"></i> 保存头像框修改</button>';
         document.getElementById('framesManagementArea').innerHTML = framesHtml;
-        
         document.getElementById('saveFramesBtn')?.addEventListener('click', async () => {
             const checkboxes = document.querySelectorAll('.frame-checkbox');
             const newOwned = [];
-            checkboxes.forEach(cb => {
-                if (cb.checked) newOwned.push(cb.dataset.frameId);
-            });
+            checkboxes.forEach(cb => { if (cb.checked) newOwned.push(cb.dataset.frameId); });
             await updateUserFrames(userId, newOwned);
+            const targetUser = allUsers.find(u => u.id === userId);
+            const added = newOwned.filter(id => !currentUserFrames.includes(id));
+            const removed = currentUserFrames.filter(id => !newOwned.includes(id) && id !== 'frame_default');
+            await logAction('头像框调整', 'user_frames', userId, targetUser?.username || userId, `新增: ${added.join(',')}, 移除: ${removed.join(',')}`);
             showNotification('头像框拥有状态已更新', 'success');
             await loadMiscUserData(userId);
         });
     }
-
     function initMiscPanel() {
         const selectEl = document.getElementById('miscUserSelect');
         if (selectEl) {
             selectEl.addEventListener('change', async (e) => {
                 selectedMiscUserId = e.target.value;
-                if (selectedMiscUserId) {
-                    await loadMiscUserData(selectedMiscUserId);
-                } else {
-                    document.getElementById('assetControlArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
-                    document.getElementById('framesManagementArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
-                }
+                if (selectedMiscUserId) { await loadMiscUserData(selectedMiscUserId); }
+                else { document.getElementById('assetControlArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>'; document.getElementById('framesManagementArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>'; }
             });
         }
         refreshMiscPanel();
@@ -629,10 +614,8 @@
         else if (tabId === 'characters') loadContentTable('characters');
         else if (tabId === 'light_cones') loadContentTable('light_cones');
         else if (tabId === 'materials') loadContentTable('materials');
-        else if (tabId === 'misc') { 
-            refreshMiscPanel(); 
-            initMiscPanel(); 
-        }
+        else if (tabId === 'misc') { refreshMiscPanel(); initMiscPanel(); }
+        else if (tabId === 'logs') { refreshLogs(); }
     }
 
     function bindEvents() {
@@ -650,6 +633,9 @@
         document.getElementById('addLightconeBtn').onclick = () => showContentForm('light_cones');
         document.getElementById('addMaterialBtn').onclick = () => showContentForm('materials');
         document.getElementById('logoutBtn').onclick = async () => { await supabaseAdmin.auth.signOut(); window.location.href = 'index.html'; };
+        document.getElementById('clearLogsBtn').onclick = () => clearAllLogs();
+        document.getElementById('logSearch').addEventListener('input', () => refreshLogs());
+        document.getElementById('logActionFilter').addEventListener('change', () => refreshLogs());
     }
 
     async function init() { 
