@@ -29,7 +29,7 @@
 
 <script src="/css/info-popup.js"></script>
 <script>
-    // 等待依赖加载
+    // ========== 等待依赖加载 ==========
     let initTimer;
     function waitForDeps() {
         if (typeof GameData !== 'undefined' && typeof BattleLogic !== 'undefined') initBattleUI();
@@ -37,9 +37,10 @@
     }
     window.gameState = null;
 
+    // ========== 返回主页 ==========
     function goHome() { window.location.href = 'index.html'; }
 
-    // 渲染战技点
+    // ========== 渲染战技点（图片） ==========
     function renderSkillPoints() {
         const state = window.gameState;
         if (!state) return;
@@ -58,7 +59,7 @@
         container.innerHTML = html;
     }
 
-    // 渲染行动条
+    // ========== 渲染行动条 ==========
     function renderActionBar() {
         const state = window.gameState;
         if (!state) return;
@@ -92,7 +93,7 @@
         }).join('');
     }
 
-    // 渲染普攻和战技（右侧圆盘）
+    // ========== 渲染普攻和战技（右侧圆盘） ==========
     function renderNormalAndSkill() {
         const state = window.gameState;
         if (!state) return;
@@ -133,7 +134,7 @@
         });
     }
 
-    // 渲染终结技按钮（放在头像旁边）
+    // ========== 渲染终结技按钮（放在头像旁边） ==========
     function renderUltimateButton() {
         const state = window.gameState;
         if (!state) return;
@@ -175,6 +176,7 @@
         }
     }
 
+    // ========== 主 UI 更新 ==========
     window.updateBattleUI = function () {
         if (!window.gameState) return;
         const state = window.gameState;
@@ -233,14 +235,19 @@
                     <div class="info-btn" data-type="character" data-index="0">ℹ️</div>
                     <div class="avatar-row">
                         <div class="character-avatar">${ch.avatar || '🦌'}</div>
-                        <!-- 终结技按钮容器将动态添加到这里 -->
                     </div>
                     <div class="character-info">
                         <div class="character-name">${ch.name}</div>
                         <div class="character-path">${ch.path}</div>
                         <div class="stat-bars">
-                            <div class="stat-bar"><div class="bar-bg"><div class="hp-fill" style="width:${(ch.hp / ch.maxHp) * 100}%"></div></div><span class="stat-text">❤️ ${ch.hp}/${ch.maxHp}</span></div>
-                            <div class="stat-bar"><div class="bar-bg"><div class="energy-fill" style="width:${(ch.energy / ch.maxEnergy) * 100}%"></div></div><span class="stat-text">⚡ ${ch.energy}/${ch.maxEnergy}</span></div>
+                            <div class="stat-bar">
+                                <div class="bar-bg"><div class="hp-fill" style="width:${(ch.hp / ch.maxHp) * 100}%"></div></div>
+                                <span class="stat-text">❤️ ${ch.hp}/${ch.maxHp}</span>
+                            </div>
+                            <div class="stat-bar">
+                                <div class="bar-bg"><div class="energy-fill" style="width:${(ch.energy / ch.maxEnergy) * 100}%"></div></div>
+                                <span class="stat-text">⚡ ${ch.energy}/${ch.maxEnergy}</span>
+                            </div>
                         </div>
                         <div class="talent-status">🎯 猎杀强化: 穿透 +${talentPenetration.toFixed(1)}% &nbsp;|&nbsp; 攻击 +${talentAtkBonus.toFixed(1)}%</div>
                     </div>
@@ -249,21 +256,24 @@
             </div>
         `;
 
-        // 绑定角色信息按钮（注意元素存在后再绑定）
+        // 绑定角色信息按钮
         const charInfoBtn = document.querySelector('.info-btn[data-type="character"]');
         if (charInfoBtn && typeof showCharacterInfo === 'function') {
             charInfoBtn.onclick = (e) => { e.stopPropagation(); showCharacterInfo(0); };
         }
+        // 绑定战技点容器中的返回按钮
+        const homeBtn = document.getElementById('homeBtn');
+        if (homeBtn) homeBtn.onclick = goHome;
 
         renderSkillPoints();
         renderNormalAndSkill();
-        renderUltimateButton();  // 在 avatar-row 中添加终结技按钮
+        renderUltimateButton();  // 会在 avatar-row 中添加终结技按钮
 
         const turnBadge = document.getElementById('turnBadge');
         turnBadge.innerHTML = state.isPlayerTurn ? '<span>⚡ 玩家回合</span>' : '<span>🔥 敌人回合</span>';
         turnBadge.className = `turn-badge ${state.isPlayerTurn ? '' : 'enemy-turn'}`;
 
-        // 技能网格（旧版，以备不时之需）
+        // 技能网格（旧版，可保留或隐藏）
         const skillsGrid = document.getElementById('skillsGrid');
         if (state.isPlayerTurn && !state.gameOver) {
             const character = state.party[0];
@@ -274,7 +284,11 @@
                 if (sk.type === 'skill') { disabled = state.skillPoints < (sk.skillPointCost || 1); costText = `✦${sk.skillPointCost || 1}`; }
                 else if (sk.type === 'ultimate') { disabled = character.energy < (sk.energyCost || 120); costText = `⚡${sk.energyCost || 120}`; }
                 const originalIndex = allSkills.findIndex(s => s.id === sk.id);
-                return `<div class="skill-btn ${disabled ? 'disabled' : ''}" data-skill-original-index="${originalIndex}"><div class="skill-icon">${sk.icon}</div><div class="skill-name">${sk.name}</div>${costText ? `<div class="skill-cost">${costText}</div>` : ''}</div>`;
+                return `<div class="skill-btn ${disabled ? 'disabled' : ''}" data-skill-original-index="${originalIndex}">
+                            <div class="skill-icon">${sk.icon}</div>
+                            <div class="skill-name">${sk.name}</div>
+                            ${costText ? `<div class="skill-cost">${costText}</div>` : ''}
+                        </div>`;
             }).join('');
             document.querySelectorAll('.skill-btn').forEach(btn => {
                 btn.onclick = () => {
@@ -293,7 +307,7 @@
 
     window.selectEnemy = function(idx) { if (window.gameState && window.gameState.isPlayerTurn) { window.gameState.selectedEnemy = idx; window.updateBattleUI(); } };
 
-    // ========== 光锥属性数组 ==========
+    // ========== 光锥属性数组（1~90级） ==========
     const lcBasePoints = {
         1:{hp:48,atk:26,def:21},20:{hp:242,atk:133,def:106},30:{hp:391,atk:215,def:171},40:{hp:540,atk:297,def:236},
         50:{hp:688,atk:378,def:301},60:{hp:837,atk:460,def:366},70:{hp:986,atk:542,def:431},80:{hp:1058,atk:582,def:463},
@@ -364,6 +378,7 @@
         character.path = character.path || '巡猎';
 
         const baseHp = character.maxHp, baseAtk = character.attack, baseDef = character.defense;
+        // 硬编码行迹属性（保留原数值）
         character.attack += Math.floor(baseAtk * 0.198);
         character.critDamage += 0.4105;
         character.speed += 11;
@@ -521,7 +536,6 @@
     };
 
     document.getElementById('endTurnBtn').onclick = () => window.endTurnLogic();
-    document.getElementById('homeBtn').onclick = () => goHome();
     window.getCharacterDataForPopup = () => window.gameState?.party[0];
     window.getEnemyDataForPopup = (idx) => window.gameState?.enemies[idx];
     waitForDeps();
