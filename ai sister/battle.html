@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>六哥荣耀 · 鹿馆实战</title>
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
-    <!-- 外部依赖 -->
     <script src="/ai sister/game-data.js"></script>
     <script src="/ai sister/battle-logic.js"></script>
     <script src="/css/relic-data.js"></script>
-    <!-- 外部样式表（已修复平板布局） -->
     <link rel="stylesheet" href="/css/battle.css">
     <link rel="stylesheet" href="/css/info-popup.css">
 </head>
@@ -31,7 +29,7 @@
 
 <script src="/css/info-popup.js"></script>
 <script>
-    // ========== 等待依赖加载 ==========
+    // 等待依赖加载
     let initTimer;
     function waitForDeps() {
         if (typeof GameData !== 'undefined' && typeof BattleLogic !== 'undefined') initBattleUI();
@@ -39,10 +37,9 @@
     }
     window.gameState = null;
 
-    // ========== 返回主页 ==========
     function goHome() { window.location.href = 'index.html'; }
 
-    // ========== 渲染战技点（图片） ==========
+    // 渲染战技点
     function renderSkillPoints() {
         const state = window.gameState;
         if (!state) return;
@@ -61,7 +58,7 @@
         container.innerHTML = html;
     }
 
-    // ========== 渲染行动条 ==========
+    // 渲染行动条
     function renderActionBar() {
         const state = window.gameState;
         if (!state) return;
@@ -76,7 +73,7 @@
             if (enemy.hp > 0) {
                 units.push({
                     type: 'enemy',
-                    name: enemy.name || '敌人',   // 防止 undefined
+                    name: enemy.name || '敌人',
                     avatar: enemy.emoji || '👹',
                     speed: enemy.speed,
                     idx
@@ -95,7 +92,7 @@
         }).join('');
     }
 
-    // ========== 渲染普攻和战技（右侧圆盘） ==========
+    // 渲染普攻和战技（右侧圆盘）
     function renderNormalAndSkill() {
         const state = window.gameState;
         if (!state) return;
@@ -136,7 +133,7 @@
         });
     }
 
-    // ========== 渲染终结技按钮（放在角色卡片右上角） ==========
+    // 渲染终结技按钮（放在头像旁边）
     function renderUltimateButton() {
         const state = window.gameState;
         if (!state) return;
@@ -153,12 +150,12 @@
 
         let ultContainer = document.getElementById('characterUltContainer');
         if (!ultContainer) {
-            const charCard = document.querySelector('.character-card');
-            if (!charCard) return;
+            const avatarRow = document.querySelector('.avatar-row');
+            if (!avatarRow) return;
             ultContainer = document.createElement('div');
             ultContainer.id = 'characterUltContainer';
             ultContainer.className = 'character-ult';
-            charCard.appendChild(ultContainer);
+            avatarRow.appendChild(ultContainer);
         }
         ultContainer.innerHTML = `
             <div class="skill-circle ${ultDisabled ? 'disabled' : ''}" data-skill-type="ultimate">
@@ -178,7 +175,6 @@
         }
     }
 
-    // ========== 主 UI 更新 ==========
     window.updateBattleUI = function () {
         if (!window.gameState) return;
         const state = window.gameState;
@@ -224,7 +220,7 @@
             talentAtkBonus = currentBonus * 100;
         }
 
-        // 组装 party-area 区域（使用 Flex 布局的 character-row）
+        // 组装 party-area
         const partyArea = document.getElementById('partyArea');
         partyArea.innerHTML = `
             <div class="skill-points-container">
@@ -235,7 +231,10 @@
             <div class="character-row">
                 <div class="character-card active">
                     <div class="info-btn" data-type="character" data-index="0">ℹ️</div>
-                    <div class="character-avatar">${ch.avatar || '🦌'}</div>
+                    <div class="avatar-row">
+                        <div class="character-avatar">${ch.avatar || '🦌'}</div>
+                        <!-- 终结技按钮容器将动态添加到这里 -->
+                    </div>
                     <div class="character-info">
                         <div class="character-name">${ch.name}</div>
                         <div class="character-path">${ch.path}</div>
@@ -250,20 +249,21 @@
             </div>
         `;
 
-        // 绑定角色信息按钮
+        // 绑定角色信息按钮（注意元素存在后再绑定）
         const charInfoBtn = document.querySelector('.info-btn[data-type="character"]');
-        if (charInfoBtn && typeof showCharacterInfo === 'function') charInfoBtn.onclick = (e) => { e.stopPropagation(); showCharacterInfo(0); };
+        if (charInfoBtn && typeof showCharacterInfo === 'function') {
+            charInfoBtn.onclick = (e) => { e.stopPropagation(); showCharacterInfo(0); };
+        }
 
-        // 渲染战技点、技能圆盘、终结技、回合标识等
         renderSkillPoints();
         renderNormalAndSkill();
-        renderUltimateButton();
+        renderUltimateButton();  // 在 avatar-row 中添加终结技按钮
 
         const turnBadge = document.getElementById('turnBadge');
         turnBadge.innerHTML = state.isPlayerTurn ? '<span>⚡ 玩家回合</span>' : '<span>🔥 敌人回合</span>';
         turnBadge.className = `turn-badge ${state.isPlayerTurn ? '' : 'enemy-turn'}`;
 
-        // 技能网格（旧版，可保留或隐藏）
+        // 技能网格（旧版，以备不时之需）
         const skillsGrid = document.getElementById('skillsGrid');
         if (state.isPlayerTurn && !state.gameOver) {
             const character = state.party[0];
@@ -276,19 +276,24 @@
                 const originalIndex = allSkills.findIndex(s => s.id === sk.id);
                 return `<div class="skill-btn ${disabled ? 'disabled' : ''}" data-skill-original-index="${originalIndex}"><div class="skill-icon">${sk.icon}</div><div class="skill-name">${sk.name}</div>${costText ? `<div class="skill-cost">${costText}</div>` : ''}</div>`;
             }).join('');
-            document.querySelectorAll('.skill-btn').forEach(btn => { btn.onclick = () => { const originalIdx = parseInt(btn.dataset.skillOriginalIndex); if (!isNaN(originalIdx)) window.useSkillLogic(originalIdx); }; });
+            document.querySelectorAll('.skill-btn').forEach(btn => {
+                btn.onclick = () => {
+                    const originalIdx = parseInt(btn.dataset.skillOriginalIndex);
+                    if (!isNaN(originalIdx)) window.useSkillLogic(originalIdx);
+                };
+            });
         } else {
             skillsGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#aaa;">等待敌人行动...</div>';
         }
         const endBtn = document.getElementById('endTurnBtn');
-        endBtn.disabled = !state.isPlayerTurn || state.gameOver;
+        if (endBtn) endBtn.disabled = !state.isPlayerTurn || state.gameOver;
 
         renderActionBar();
     };
 
     window.selectEnemy = function(idx) { if (window.gameState && window.gameState.isPlayerTurn) { window.gameState.selectedEnemy = idx; window.updateBattleUI(); } };
 
-    // ========== 光锥属性数组（1~90级） ==========
+    // ========== 光锥属性数组 ==========
     const lcBasePoints = {
         1:{hp:48,atk:26,def:21},20:{hp:242,atk:133,def:106},30:{hp:391,atk:215,def:171},40:{hp:540,atk:297,def:236},
         50:{hp:688,atk:378,def:301},60:{hp:837,atk:460,def:366},70:{hp:986,atk:542,def:431},80:{hp:1058,atk:582,def:463},
@@ -303,7 +308,7 @@
         lightconeStatsByLevel[i] = { hp: Math.round(low.hp + (high.hp - low.hp) * ratio), atk: Math.round(low.atk + (high.atk - low.atk) * ratio), def: Math.round(low.def + (high.def - low.def) * ratio) };
     }
 
-    // ========== 初始化战斗（加载所有保存数据）==========
+    // ========== 初始化战斗 ==========
     function initBattleUI() {
         let savedTeam = null, savedUpgrade = null, activatedEidolons = [];
         try {
@@ -315,7 +320,6 @@
             if (eid) activatedEidolons = JSON.parse(eid);
         } catch(e) {}
 
-        // 行迹激活状态
         let activatedTraces = [];
         try {
             const tracesData = localStorage.getItem('hsr-activated-traces');
@@ -360,7 +364,6 @@
         character.path = character.path || '巡猎';
 
         const baseHp = character.maxHp, baseAtk = character.attack, baseDef = character.defense;
-        // 硬编码行迹属性
         character.attack += Math.floor(baseAtk * 0.198);
         character.critDamage += 0.4105;
         character.speed += 11;
@@ -439,7 +442,6 @@
             desc: `暴击率提高${(critRateBonus*100).toFixed(1)}%；速度＞100时，每超过6点获得1层【暗涌】（当前${darkStacks}层），每层使普攻/战技伤害提高${(skillDmgPerStack*100).toFixed(0)}%，终结技暴伤提高${(ultDmgPerStack*100).toFixed(0)}%`
         };
 
-        // 六命效果
         if (character.activatedEidolons && character.activatedEidolons.includes('e6')) {
             const talentSkill = character.skills.find(s => s.type === 'talent');
             if (talentSkill) {
