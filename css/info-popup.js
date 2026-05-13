@@ -1,5 +1,15 @@
 // info-popup.js - 角色/敌人信息弹窗（四标签页切换，技能顺序固定，数值橙色高亮，套装详细）
+// 优化版：懒加载标签页内容，减少初始 DOM 节点，低性能设备自动降级模糊效果
+// 2025-05-13 新增：角色面板显示正面状态和负面状态
 
+// 检测设备是否低性能（可根据需要调整阈值）
+const isLowPerfDevice = (() => {
+    const cores = navigator.hardwareConcurrency || 4;
+    const memory = navigator.deviceMemory || 4;
+    return cores <= 2 || memory <= 2;
+})();
+
+// 辅助函数：渲染状态列表
 function renderStatusList(list) {
     if (!list || list.length === 0) return '<div style="color:#aaa;">无</div>';
     return list.map(s => `<div class="status-item">${s.name || s}</div>`).join('');
@@ -54,9 +64,7 @@ function highlightNumbers(str) {
 // 技能详情HTML（固定顺序：普攻、战技、终结技、天赋；动态数值橙色高亮）
 function renderSkillsDetail(skills) {
     if (!skills || skills.length === 0) return '<div style="color:#aaa;">无技能信息</div>';
-    // 固定顺序
     const order = ['normal', 'skill', 'ultimate', 'talent'];
-    const nameMap = { normal:'普攻', skill:'战技', ultimate:'终结技', talent:'天赋' };
     const sorted = [];
     for (let type of order) {
         const skill = skills.find(s => s.type === type);
@@ -64,14 +72,12 @@ function renderSkillsDetail(skills) {
     }
     return sorted.map(skill => {
         let desc = skill.description || '暂无描述';
-        // 替换占位符并转换为橙色高亮数值
         if (skill.baseDamage) desc = desc.replace('{damage}', `<span class="golden">${Math.round(skill.baseDamage*100)}%</span>`);
         if (skill.extraDamage) desc = desc.replace('{extra}', `<span class="golden">${Math.round(skill.extraDamage*100)}%</span>`);
         if (skill.type === 'talent') {
             if (skill.penetration !== undefined) desc = desc.replace('{penetration}', `<span class="golden">${Math.round(skill.penetration*100)}%</span>`);
             if (skill.atkBonus !== undefined) desc = desc.replace('{atkBonus}', `<span class="golden">${Math.round(skill.atkBonus*100)}%</span>`);
         }
-        // 额外处理可能未通过变量替换的纯数字百分比
         desc = highlightNumbers(desc);
         const levelInfo = `Lv.${skill.currentLevel} / ${skill.maxLevel}`;
         return `
@@ -104,14 +110,12 @@ function getDetailedSetEffects(setCounts) {
     return lines.join('<br>');
 }
 
-// 角色详情弹窗（四标签页切换）
-function showCharacterInfo(characterIndex) {
-    const char = window.getCharacterDataForPopup ? window.getCharacterDataForPopup() : null;
-    if (!char) return;
+// --- 懒加载内容构建函数（避免一次性生成所有 DOM）---
+let contentCache = { tab1: null, tab2: null, tab3: null, tab4: null };
 
+// ========== 修改点：在角色面板中增加正面状态和负面状态 ==========
+function buildTab1(char, traceHtml) {
     const imgStyle = 'width:20px; height:20px; vertical-align:middle; margin-right:6px;';
-
-    // ---- 标签页1：角色面板 ----
     const statsHtml = `
         <div class="stat-row"><span class="stat-label"><img src="/attribute_image/HP.webp" style="${imgStyle}">生命值</span><span class="stat-value">${char.hp} / ${char.maxHp}</span></div>
         <div class="stat-row"><span class="stat-label"><img src="/attribute_image/ATK.webp" style="${imgStyle}">攻击力</span><span class="stat-value">${char.attack}</span></div>
@@ -120,15 +124,25 @@ function showCharacterInfo(characterIndex) {
         <div class="stat-row"><span class="stat-label"><img src="/attribute_image/IconCriticalChance.webp" style="${imgStyle}">暴击率</span><span class="stat-value">${Math.round((char.critRate || 0.05)*100)}%</span></div>
         <div class="stat-row"><span class="stat-label"><img src="/attribute_image/IconCriticalDamage.webp" style="${imgStyle}">暴击伤害</span><span class="stat-value">${Math.round((char.critDamage || 0.5)*100)}%</span></div>
     `;
-    const activatedTraces = char._activatedTraces || [];
-    let traceHtml = '';
-    if (activatedTraces.length) {
-        const traceNames = { luguan_talent1:'疾风守护', luguan_talent2:'精准狩猎', luguan_talent3:'风速迅捷' };
-        const activeTraceNames = activatedTraces.map(id => traceNames[id] || id).join('、');
-        traceHtml = `<div class="trace-status">🌿 激活行迹：${activeTraceNames}</div>`;
-    }
 
-    // ---- 标签页2：遗器装备 ----
+    // 正面状态（buffs）和负面状态（debuffs）
+    const buffsHtml = `
+        <div class="status-section">
+            <div class="status-title">✨ 正面状态</div>
+            <div class="status-list">${renderStatusList(char.buffs)}</div>
+        </div>
+    `;
+    const debuffsHtml = `
+        <div class="status-section">
+            <div class="status-title">⚠️ 负面状态</div>
+            <div class="status-list">${renderStatusList(char.debuffs)}</div>
+        </div>
+    `;
+
+    return `<div class="section-content">${statsHtml}${traceHtml}${buffsHtml}${debuffsHtml}</div>`;
+}
+
+function buildTab2(char) {
     const equippedRelics = getEquippedRelics();
     let relicsHtml = '';
     if (equippedRelics.length === 0) {
@@ -145,14 +159,16 @@ function showCharacterInfo(characterIndex) {
     const setCounts = char.relicSetCounts || {};
     const setEffectText = getDetailedSetEffects(setCounts);
     let setEffectHtml = '';
-    if (setEffectText) {
-        setEffectHtml = `<div class="set-effect">🎯 套装效果：<br>${setEffectText}</div>`;
-    }
+    if (setEffectText) setEffectHtml = `<div class="set-effect">🎯 套装效果：<br>${setEffectText}</div>`;
+    return `<div class="section-content">${relicsHtml}${setEffectHtml}</div>`;
+}
 
-    // ---- 标签页3：技能详情 ----
+function buildTab3(char) {
     const skillsHtml = renderSkillsDetail(char.skills);
+    return `<div class="section-content skill-detail-list">${skillsHtml}</div>`;
+}
 
-    // ---- 标签页4：星魂同调 ----
+function buildTab4(char) {
     const activatedEidolons = char.activatedEidolons || [];
     let eidolonHtml = '';
     if (activatedEidolons.length > 0) {
@@ -168,10 +184,28 @@ function showCharacterInfo(characterIndex) {
     } else {
         eidolonHtml = '<div style="color:#aaa;">无激活命座</div>';
     }
+    return `<div class="section-content">${eidolonHtml}</div>`;
+}
 
-    // ---- 构建模态框（四标签页）----
+// 角色详情弹窗（四标签页，懒加载内容）
+function showCharacterInfo(characterIndex) {
+    const char = window.getCharacterDataForPopup ? window.getCharacterDataForPopup() : null;
+    if (!char) return;
+
+    // 清除缓存（保证每次打开数据最新）
+    contentCache = { tab1: null, tab2: null, tab3: null, tab4: null };
+
+    const activatedTraces = char._activatedTraces || [];
+    let traceHtml = '';
+    if (activatedTraces.length) {
+        const traceNames = { luguan_talent1:'疾风守护', luguan_talent2:'精准狩猎', luguan_talent3:'风速迅捷' };
+        const activeTraceNames = activatedTraces.map(id => traceNames[id] || id).join('、');
+        traceHtml = `<div class="trace-status">🌿 激活行迹：${activeTraceNames}</div>`;
+    }
+
     const modal = document.createElement('div');
     modal.className = 'info-modal';
+    if (isLowPerfDevice) modal.classList.add('low-perf');
     modal.innerHTML = `
         <div class="info-card expanded">
             <div class="info-header">
@@ -185,36 +219,50 @@ function showCharacterInfo(characterIndex) {
                 <button class="info-tab-btn" data-tab="tab4">🌟 星魂同调</button>
             </div>
             <div class="info-tab-contents">
-                <div class="info-tab-pane active" id="tab1-pane">
-                    <div class="section-content">${statsHtml}${traceHtml}</div>
-                </div>
-                <div class="info-tab-pane" id="tab2-pane">
-                    <div class="section-content">${relicsHtml}${setEffectHtml}</div>
-                </div>
-                <div class="info-tab-pane" id="tab3-pane">
-                    <div class="section-content skill-detail-list">${skillsHtml}</div>
-                </div>
-                <div class="info-tab-pane" id="tab4-pane">
-                    <div class="section-content">${eidolonHtml}</div>
-                </div>
+                <div class="info-tab-pane active" id="tab1-pane"></div>
+                <div class="info-tab-pane" id="tab2-pane"></div>
+                <div class="info-tab-pane" id="tab3-pane"></div>
+                <div class="info-tab-pane" id="tab4-pane"></div>
             </div>
         </div>
     `;
 
     document.body.appendChild(modal);
-    // 标签页切换逻辑
+
+    // 加载第一个标签页内容
+    const pane1 = modal.querySelector('#tab1-pane');
+    if (pane1) {
+        if (!contentCache.tab1) contentCache.tab1 = buildTab1(char, traceHtml);
+        pane1.innerHTML = contentCache.tab1;
+    }
+
+    // 标签页切换：懒加载其他标签页
     const tabs = modal.querySelectorAll('.info-tab-btn');
     const panes = modal.querySelectorAll('.info-tab-pane');
     tabs.forEach(btn => {
         btn.addEventListener('click', () => {
             const tabId = btn.getAttribute('data-tab');
+            if (btn.classList.contains('active')) return;
             tabs.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            panes.forEach(pane => pane.classList.remove('active'));
+            panes.forEach(p => p.classList.remove('active'));
             const activePane = modal.querySelector(`#${tabId}-pane`);
             if (activePane) activePane.classList.add('active');
+
+            if (!contentCache[tabId]) {
+                let html = '';
+                if (tabId === 'tab1') html = buildTab1(char, traceHtml);
+                else if (tabId === 'tab2') html = buildTab2(char);
+                else if (tabId === 'tab3') html = buildTab3(char);
+                else if (tabId === 'tab4') html = buildTab4(char);
+                contentCache[tabId] = html;
+                if (activePane) activePane.innerHTML = html;
+            } else {
+                if (activePane) activePane.innerHTML = contentCache[tabId];
+            }
         });
     });
+
     modal.querySelector('.close-info').onclick = () => modal.remove();
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 }
