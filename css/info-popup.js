@@ -1,13 +1,13 @@
-// info-popup.js - 角色/敌人信息弹窗（四标签页切换，技能顺序固定，数值橙色高亮，套装详细）
+// info-popup.js - 角色/敌人信息弹窗（五标签页切换，新增光锥展示）
 // 优化版：懒加载标签页内容，减少初始 DOM 节点，低性能设备自动降级模糊效果
-// 低性能触发条件：内存 < 6GB 或 CPU 核心数 < 6
+// 低性能触发条件：内存 <  8GB 或 CPU 核心数 < 8
 
 // 检测设备是否低性能
 const isLowPerfDevice = (() => {
     const cores = navigator.hardwareConcurrency;
     const memory = navigator.deviceMemory;
-    const lowCores = cores !== undefined ? cores < 6 : false;
-    const lowMemory = memory !== undefined ? memory < 6 : false;
+    const lowCores = cores !== undefined ? cores < 8 : false;
+    const lowMemory = memory !== undefined ? memory < 8 : false;
     return lowCores || lowMemory;
 })();
 
@@ -108,7 +108,7 @@ function getDetailedSetEffects(setCounts) {
 }
 
 // --- 懒加载内容构建函数 ---
-let contentCache = { tab1: null, tab2: null, tab3: null, tab4: null };
+let contentCache = { tab1: null, tab2: null, tab3: null, tab4: null, tab5: null };
 
 function buildTab1(char, traceHtml) {
     const imgStyle = 'width:20px; height:20px; vertical-align:middle; margin-right:6px;';
@@ -170,6 +170,36 @@ function buildTab4(char) {
     return `<div class="section-content">${eidolonHtml}</div>`;
 }
 
+// 新增：光锥标签页
+function buildTab5(char) {
+    const lc = char._lightconeInfo;
+    if (!lc || !lc.name) {
+        return '<div class="section-content" style="color:#aaa;">未装备光锥</div>';
+    }
+    const superimposeRoman = ['①','②','③','④','⑤'][lc.superimpose - 1] || '①';
+    let statsHtml = '';
+    if (lc.stats) {
+        statsHtml = `
+            <div class="stat-row"><span class="stat-label">❤️ 生命值</span><span class="stat-value">${lc.stats.hp || 0}</span></div>
+            <div class="stat-row"><span class="stat-label">⚔️ 攻击力</span><span class="stat-value">${lc.stats.atk || 0}</span></div>
+            <div class="stat-row"><span class="stat-label">🛡️ 防御力</span><span class="stat-value">${lc.stats.def || 0}</span></div>
+        `;
+    }
+    const desc = lc.desc || '效果描述';
+    return `
+        <div class="section-content">
+            <div class="stat-row"><span class="stat-label">光锥名</span><span class="stat-value">${lc.name}</span></div>
+            <div class="stat-row"><span class="stat-label">等级</span><span class="stat-value">Lv.${lc.level}</span></div>
+            <div class="stat-row"><span class="stat-label">叠影</span><span class="stat-value">${superimposeRoman}</span></div>
+            ${statsHtml}
+            <div class="status-section">
+                <div class="status-title">✨ 效果</div>
+                <div class="status-item" style="white-space: normal;">${desc}</div>
+            </div>
+        </div>
+    `;
+}
+
 // ==================== 角色详情弹窗 ====================
 function showCharacterInfo(characterIndex) {
     const char = window.getCharacterDataForPopup ? window.getCharacterDataForPopup() : null;
@@ -178,7 +208,7 @@ function showCharacterInfo(characterIndex) {
         return;
     }
 
-    contentCache = { tab1: null, tab2: null, tab3: null, tab4: null };
+    contentCache = { tab1: null, tab2: null, tab3: null, tab4: null, tab5: null };
 
     const activatedTraces = char._activatedTraces || [];
     let traceHtml = '';
@@ -202,12 +232,14 @@ function showCharacterInfo(characterIndex) {
                 <button class="info-tab-btn" data-tab="tab2">📿 遗器装备</button>
                 <button class="info-tab-btn" data-tab="tab3">✨ 技能详情</button>
                 <button class="info-tab-btn" data-tab="tab4">🌟 星魂同调</button>
+                <button class="info-tab-btn" data-tab="tab5">📖 光锥</button>
             </div>
             <div class="info-tab-contents">
                 <div class="info-tab-pane active" id="tab1-pane"></div>
                 <div class="info-tab-pane" id="tab2-pane"></div>
                 <div class="info-tab-pane" id="tab3-pane"></div>
                 <div class="info-tab-pane" id="tab4-pane"></div>
+                <div class="info-tab-pane" id="tab5-pane"></div>
             </div>
         </div>
     `;
@@ -238,6 +270,7 @@ function showCharacterInfo(characterIndex) {
                 else if (tabId === 'tab2') html = buildTab2(char);
                 else if (tabId === 'tab3') html = buildTab3(char);
                 else if (tabId === 'tab4') html = buildTab4(char);
+                else if (tabId === 'tab5') html = buildTab5(char);
                 contentCache[tabId] = html;
                 if (activePane) activePane.innerHTML = html;
             } else {
@@ -279,6 +312,6 @@ function showEnemyInfo(enemyIndex) {
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 }
 
-// 确保函数挂载到全局（供 HTML 内联事件调用）
+// 确保函数挂载到全局
 window.showCharacterInfo = showCharacterInfo;
 window.showEnemyInfo = showEnemyInfo;
