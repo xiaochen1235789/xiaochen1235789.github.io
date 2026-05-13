@@ -1,21 +1,22 @@
 // info-popup.js - 角色/敌人信息弹窗（四标签页切换，技能顺序固定，数值橙色高亮，套装详细）
 // 优化版：懒加载标签页内容，减少初始 DOM 节点，低性能设备自动降级模糊效果
-// 2025-05-13 新增：角色面板显示正面状态和负面状态
+// 低性能触发条件：内存 < 6GB 或 CPU 核心数 < 6
 
-// 检测设备是否低性能（可根据需要调整阈值）
+// 检测设备是否低性能
 const isLowPerfDevice = (() => {
-    const cores = navigator.hardwareConcurrency || 4;
-    const memory = navigator.deviceMemory || 4;
-    return cores <= 2 || memory <= 2;
+    const cores = navigator.hardwareConcurrency;
+    const memory = navigator.deviceMemory;
+    const lowCores = cores !== undefined ? cores < 6 : false;
+    const lowMemory = memory !== undefined ? memory < 6 : false;
+    return lowCores || lowMemory;
 })();
 
-// 辅助函数：渲染状态列表
+// ==================== 辅助函数 ====================
 function renderStatusList(list) {
     if (!list || list.length === 0) return '<div style="color:#aaa;">无</div>';
     return list.map(s => `<div class="status-item">${s.name || s}</div>`).join('');
 }
 
-// 获取当前装备的遗器列表
 function getEquippedRelics() {
     const saved = localStorage.getItem('hsr-relic-equips');
     if (!saved) return [];
@@ -40,7 +41,6 @@ function getEquippedRelics() {
     } catch(e) { return []; }
 }
 
-// 属性名称映射
 function getStatName(type) {
     const map = {
         hpPercent:'生命%', atkPercent:'攻击%', defPercent:'防御%', critRate:'暴击率', critDamage:'暴击伤害',
@@ -56,12 +56,10 @@ function formatStatValue(type, value) {
     return percentTypes.includes(type) ? `${value}%` : `${value}`;
 }
 
-// 橙色高亮数值
 function highlightNumbers(str) {
     return str.replace(/(\d+(?:\.\d+)?%)/g, '<span class="golden">$1</span>');
 }
 
-// 技能详情HTML（固定顺序：普攻、战技、终结技、天赋；动态数值橙色高亮）
 function renderSkillsDetail(skills) {
     if (!skills || skills.length === 0) return '<div style="color:#aaa;">无技能信息</div>';
     const order = ['normal', 'skill', 'ultimate', 'talent'];
@@ -92,7 +90,6 @@ function renderSkillsDetail(skills) {
     }).join('');
 }
 
-// 获取详细套装效果文本（换行）
 function getDetailedSetEffects(setCounts) {
     const lines = [];
     const future = setCounts["新生的未来"] || 0;
@@ -110,10 +107,9 @@ function getDetailedSetEffects(setCounts) {
     return lines.join('<br>');
 }
 
-// --- 懒加载内容构建函数（避免一次性生成所有 DOM）---
+// --- 懒加载内容构建函数 ---
 let contentCache = { tab1: null, tab2: null, tab3: null, tab4: null };
 
-// ========== 修改点：在角色面板中增加正面状态和负面状态 ==========
 function buildTab1(char, traceHtml) {
     const imgStyle = 'width:20px; height:20px; vertical-align:middle; margin-right:6px;';
     const statsHtml = `
@@ -124,21 +120,8 @@ function buildTab1(char, traceHtml) {
         <div class="stat-row"><span class="stat-label"><img src="/attribute_image/IconCriticalChance.webp" style="${imgStyle}">暴击率</span><span class="stat-value">${Math.round((char.critRate || 0.05)*100)}%</span></div>
         <div class="stat-row"><span class="stat-label"><img src="/attribute_image/IconCriticalDamage.webp" style="${imgStyle}">暴击伤害</span><span class="stat-value">${Math.round((char.critDamage || 0.5)*100)}%</span></div>
     `;
-
-    // 正面状态（buffs）和负面状态（debuffs）
-    const buffsHtml = `
-        <div class="status-section">
-            <div class="status-title">✨ 正面状态</div>
-            <div class="status-list">${renderStatusList(char.buffs)}</div>
-        </div>
-    `;
-    const debuffsHtml = `
-        <div class="status-section">
-            <div class="status-title">⚠️ 负面状态</div>
-            <div class="status-list">${renderStatusList(char.debuffs)}</div>
-        </div>
-    `;
-
+    const buffsHtml = `<div class="status-section"><div class="status-title">✨ 正面状态</div><div class="status-list">${renderStatusList(char.buffs)}</div></div>`;
+    const debuffsHtml = `<div class="status-section"><div class="status-title">⚠️ 负面状态</div><div class="status-list">${renderStatusList(char.debuffs)}</div></div>`;
     return `<div class="section-content">${statsHtml}${traceHtml}${buffsHtml}${debuffsHtml}</div>`;
 }
 
@@ -187,12 +170,14 @@ function buildTab4(char) {
     return `<div class="section-content">${eidolonHtml}</div>`;
 }
 
-// 角色详情弹窗（四标签页，懒加载内容）
+// ==================== 角色详情弹窗 ====================
 function showCharacterInfo(characterIndex) {
     const char = window.getCharacterDataForPopup ? window.getCharacterDataForPopup() : null;
-    if (!char) return;
+    if (!char) {
+        console.warn('showCharacterInfo: 无法获取角色数据');
+        return;
+    }
 
-    // 清除缓存（保证每次打开数据最新）
     contentCache = { tab1: null, tab2: null, tab3: null, tab4: null };
 
     const activatedTraces = char._activatedTraces || [];
@@ -229,14 +214,12 @@ function showCharacterInfo(characterIndex) {
 
     document.body.appendChild(modal);
 
-    // 加载第一个标签页内容
     const pane1 = modal.querySelector('#tab1-pane');
     if (pane1) {
         if (!contentCache.tab1) contentCache.tab1 = buildTab1(char, traceHtml);
         pane1.innerHTML = contentCache.tab1;
     }
 
-    // 标签页切换：懒加载其他标签页
     const tabs = modal.querySelectorAll('.info-tab-btn');
     const panes = modal.querySelectorAll('.info-tab-pane');
     tabs.forEach(btn => {
@@ -267,7 +250,7 @@ function showCharacterInfo(characterIndex) {
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 }
 
-// 敌人详情弹窗（保持简洁）
+// ==================== 敌人详情弹窗 ====================
 function showEnemyInfo(enemyIndex) {
     const enemy = window.getEnemyDataForPopup ? window.getEnemyDataForPopup(enemyIndex) : null;
     if (!enemy) return;
@@ -295,3 +278,7 @@ function showEnemyInfo(enemyIndex) {
     modal.querySelector('.close-info').onclick = () => modal.remove();
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 }
+
+// 确保函数挂载到全局（供 HTML 内联事件调用）
+window.showCharacterInfo = showCharacterInfo;
+window.showEnemyInfo = showEnemyInfo;
