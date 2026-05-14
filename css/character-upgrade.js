@@ -1,5 +1,6 @@
 // character-upgrade.js
 // 鹿馆升级核心逻辑（已集成专属评分、颜色高亮、文本优化，新增行迹系统）
+// 修复保存按钮失效问题，增加错误捕获和详细日志，保存后不自动返回
 
 // ========== 页面加载状态 ==========
 let loadingOverlay = null;
@@ -8,7 +9,7 @@ let loadingOverlay = null;
 let currentCharacter = null;
 let totalCredits = 5000000;
 let activatedEidolons = [];
-let activatedTraces = [];        // 新增：行迹激活ID列表
+let activatedTraces = [];
 
 const COST_LEVEL = 1000;
 const COST_SKILL = 500;
@@ -118,19 +119,15 @@ function loadSavedTraces() {
             else activatedTraces = [];
         } catch(e) { activatedTraces = []; }
     } else {
-        // 默认全部激活
         activatedTraces = traceList.map(t => t.id);
     }
-    // 确保数组内容有效
     activatedTraces = activatedTraces.filter(id => traceList.some(t => t.id === id));
     if (activatedTraces.length === 0) activatedTraces = traceList.map(t => t.id);
     renderTracesGrid();
 }
-
 function saveTracesToLocal() {
     localStorage.setItem('hsr-activated-traces', JSON.stringify(activatedTraces));
 }
-
 function toggleTrace(traceId) {
     const idx = activatedTraces.indexOf(traceId);
     if (idx === -1) activatedTraces.push(traceId);
@@ -139,7 +136,6 @@ function toggleTrace(traceId) {
     saveTracesToLocal();
     showToast(`行迹 ${traceList.find(t=>t.id===traceId)?.name} ${idx===-1?'已激活':'已关闭'}`, false);
 }
-
 function renderTracesGrid() {
     const container = document.getElementById('tracesGrid');
     if (!container) return;
@@ -167,7 +163,7 @@ function renderTracesGrid() {
     });
 }
 
-// ========== 遗器评分系统（保持不变）==========
+// ========== 遗器评分系统 ==========
 function getRulesForCurrentCharacter() {
     if (!currentCharacter) return window.getCharacterRules?.("default") || { tier1: [], tier2: [], scorePerTier1:1, scorePerTier2:0.5, enhanceScore:1, graduationScore:{ perfect:8, good:6, pass:4 } };
     const rules = window.getCharacterRules?.(currentCharacter.name);
@@ -648,38 +644,63 @@ function upgradeSkill(skill) {
     } else showToast(`${skill.name} 升级失败`, true);
 }
 
+// ==================== 修复保存函数（增加错误捕获，不跳转） ====================
 function saveCharacter() {
-    const char = currentCharacter;
-    const teamData = {
-        characters: [{
-            id: char.id, name: char.name, avatar: char.avatar, path: char.path,
-            element: char.element === 'wind' ? '风' : char.element,
-            hp: char.maxHp, attack: char.attack, defense: char.defense, speed: char.speed,
-            level: char.level,
-            skills: char.skills.map(s => ({ id: s.id, currentLevel: s.currentLevel }))
-        }],
-        timestamp: Date.now(), teamName: '鹿馆·独行'
-    };
-    const upgradeData = { level: char.level, skillLevels: {} };
-    char.skills.forEach(s => { upgradeData.skillLevels[s.id] = s.currentLevel; });
-    localStorage.setItem('hsr-selected-team', JSON.stringify(teamData));
-    localStorage.setItem('hsr-upgrade-data', JSON.stringify(upgradeData));
-    localStorage.setItem('hsr-activated-eidolons', JSON.stringify(activatedEidolons));
-    // 保存行迹
-    saveTracesToLocal();
-    saveRelicEquips();
-    saveLightconeLevel();
-    saveLightconeSuperimpose();
-    showToast('角色数据已保存！');
-    setTimeout(() => window.location.href = 'index.html', 800);
+    try {
+        const char = currentCharacter;
+        if (!char) {
+            showToast('角色数据异常，保存失败', true);
+            console.error('saveCharacter: currentCharacter is null');
+            return;
+        }
+
+        const teamData = {
+            characters: [{
+                id: char.id, name: char.name, avatar: char.avatar, path: char.path,
+                element: char.element === 'wind' ? '风' : char.element,
+                hp: char.maxHp, attack: char.attack, defense: char.defense, speed: char.speed,
+                level: char.level,
+                skills: char.skills.map(s => ({ id: s.id, currentLevel: s.currentLevel }))
+            }],
+            timestamp: Date.now(),
+            teamName: '鹿馆·独行'
+        };
+        const upgradeData = { level: char.level, skillLevels: {} };
+        char.skills.forEach(s => { upgradeData.skillLevels[s.id] = s.currentLevel; });
+
+        localStorage.setItem('hsr-selected-team', JSON.stringify(teamData));
+        localStorage.setItem('hsr-upgrade-data', JSON.stringify(upgradeData));
+        localStorage.setItem('hsr-activated-eidolons', JSON.stringify(activatedEidolons));
+        
+        saveTracesToLocal();
+        saveRelicEquips();
+        saveLightconeLevel();
+        saveLightconeSuperimpose();
+        
+        // 验证关键数据是否写入成功（可选）
+        const testRead = localStorage.getItem('hsr-upgrade-data');
+        if (!testRead) throw new Error('hsr-upgrade-data 保存失败');
+        
+        showToast('角色数据已保存！', false);
+        console.log('保存成功：', { teamData, upgradeData });
+    } catch (err) {
+        console.error('保存失败：', err);
+        showToast('保存失败：' + err.message, true);
+    }
+}
+
+function saveCredits() {
+    try {
+        localStorage.setItem('hsr_credits', totalCredits);
+    } catch (err) {
+        console.error('信用点保存失败：', err);
+    }
 }
 
 function loadSavedUpgradeData() {
     const saved = localStorage.getItem('hsr-upgrade-data');
     try { return saved ? JSON.parse(saved) : null; } catch (e) { return null; }
 }
-
-function saveCredits() { localStorage.setItem('hsr_credits', totalCredits); }
 
 function initTabs() {
     const btns = document.querySelectorAll('.tab-btn');
@@ -784,10 +805,20 @@ async function initUpgradePage() {
     }
 }
 
-// 挂载全局函数
+// 挂载全局函数（供html onclick调用）
 window.upgradeRelic = upgradeRelic;
+window.saveCharacter = saveCharacter;
+window.saveCredits = saveCredits;
 
+// 启动页面
 window.addEventListener('DOMContentLoaded', initUpgradePage);
 const saveBtn = document.getElementById('saveBtn');
-if (saveBtn) saveBtn.addEventListener('click', () => { saveCredits(); saveCharacter(); });
+if (saveBtn) {
+    // 移除可能重复的监听器
+    saveBtn.removeEventListener('click', saveHandler);
+    const saveHandler = () => { saveCredits(); saveCharacter(); };
+    saveBtn.addEventListener('click', saveHandler);
+} else {
+    console.warn('未找到保存按钮');
+}
 setInterval(() => { if (totalCredits !== undefined) saveCredits(); }, 5000);
