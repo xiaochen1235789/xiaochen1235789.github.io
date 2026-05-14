@@ -805,20 +805,31 @@ async function initUpgradePage() {
     }
 }
 
+// ========== 全局保存按钮绑定（确保 DOM 加载完成后执行） ==========
+function bindSaveButton() {
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {
+        // 移除可能已有的监听器，避免重复绑定
+        const newHandler = () => { saveCredits(); saveCharacter(); };
+        // 移除旧监听（如果有，但不知道旧函数引用，可以替换 onclick 属性）
+        saveBtn.onclick = null;
+        saveBtn.addEventListener('click', newHandler);
+        console.log('保存按钮已绑定');
+    } else {
+        console.warn('未找到保存按钮，请检查 HTML 中是否有 id="saveBtn" 的元素');
+    }
+}
+
 // 挂载全局函数（供html onclick调用）
 window.upgradeRelic = upgradeRelic;
 window.saveCharacter = saveCharacter;
 window.saveCredits = saveCredits;
 
 // 启动页面
-window.addEventListener('DOMContentLoaded', initUpgradePage);
-const saveBtn = document.getElementById('saveBtn');
-if (saveBtn) {
-    // 移除可能重复的监听器
-    saveBtn.removeEventListener('click', saveHandler);
-    const saveHandler = () => { saveCredits(); saveCharacter(); };
-    saveBtn.addEventListener('click', saveHandler);
-} else {
-    console.warn('未找到保存按钮');
-}
+window.addEventListener('DOMContentLoaded', () => {
+    initUpgradePage();
+    bindSaveButton();
+});
+
+// 定时保存信用点
 setInterval(() => { if (totalCredits !== undefined) saveCredits(); }, 5000);
