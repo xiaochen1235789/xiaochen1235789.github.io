@@ -7,6 +7,7 @@ const GameData = (function() {
         ultimate: 10,
         talent: 10
     };
+    const MAX_CHARACTER_LEVEL = 90;
 
     // ---------- 2. 属性预设点（等级 → {hp, atk, def}）----------
     const STAT_PRESETS = {
@@ -198,7 +199,7 @@ const GameData = (function() {
             charLevel = levelConfig.luguan.level || 1;
             skillLevels = levelConfig.luguan.skillLevels || {};
         }
-        charLevel = Math.min(90, Math.max(1, charLevel));
+        charLevel = Math.min(MAX_CHARACTER_LEVEL, Math.max(1, charLevel));
 
         const hp = getStatByLevel(charLevel, 'hp');
         const atk = getStatByLevel(charLevel, 'atk');
@@ -296,7 +297,7 @@ const GameData = (function() {
     function levelUpCharacter(character, targetLevel) {
         if (!character) return false;
         let newLevel = targetLevel || (character.level + 1);
-        if (newLevel > 90) newLevel = 90;
+        if (newLevel > MAX_CHARACTER_LEVEL) newLevel = MAX_CHARACTER_LEVEL;
         if (newLevel <= character.level) return false;
         const oldHp = character.hp;
         const oldMaxHp = character.maxHp;
@@ -338,13 +339,10 @@ const GameData = (function() {
         }
         
         let resistance = target.resistances?.[skill.element] || 0;
-        // 天赋穿透：根据天赋技能 level 和当前速度计算（但六命开局满层，后面会直接设置 _talentMaxPenetration 等）
         const hasTalent = attacker.extraAbilities && attacker.extraAbilities.some(a => a.id === 'luguan_talent');
         if (hasTalent) {
-            // 如果六命激活，使用满层穿透
             let penetration = attacker._talentMaxPenetration || 0;
             if (!attacker.activatedEidolons?.includes('e6')) {
-                // 非六命，按速度计算
                 if (attacker.speed >= 100) {
                     const speedOver = attacker.speed - 100;
                     const stacks = Math.floor(speedOver / 5);
@@ -359,7 +357,7 @@ const GameData = (function() {
         
         let defense = target.defense;
         if (target.isDefDown) defense *= (1 - (skill.defDownAmount || 0.35));
-        if (attacker.activatedEidolons && attacker.activatedEidolons.includes('e6')) defense *= 0.76;  // 六命无视防御
+        if (attacker.activatedEidolons && attacker.activatedEidolons.includes('e6')) defense *= 0.76;
         const defenseReducer = 1000 / (1000 + defense);
         damage *= defenseReducer;
 
@@ -397,9 +395,12 @@ const GameData = (function() {
         eidolons: eidolonsMap,
         enemies: [],
         constants: { maxSkillPoints: 5, minDamageMultiplier: 0.1 },
+        MAX_CHARACTER_LEVEL: MAX_CHARACTER_LEVEL,
         getInitialState,
         levelUpCharacter,
         levelUpSkill,
+        getSkillValue,
+        getStatByLevel,
         getSkillById: (id) => skillsMap[id] || null,
         getExtraAbilityById: (id) => extraAbilitiesMap[id] || null,
         getEidolonById: (id) => eidolonsMap[id] || null,
