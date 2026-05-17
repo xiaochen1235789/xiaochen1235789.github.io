@@ -33,47 +33,55 @@
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ========== 伸缩窗菜单样式 ========== */
-        .user-menu {
-            position: absolute;
-            top: calc(100% + 8px);
-            right: 0;
-            background: var(--card-bg);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            min-width: 160px;
-            z-index: 10000;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-            animation: menuFadeIn 0.2s ease;
-        }
-        @keyframes menuFadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .user-menu-item {
-            padding: 10px 16px;
-            cursor: pointer;
-            transition: background 0.2s;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        /* 面包屑样式补充（确保与深色主题协调） */
+        .breadcrumb {
+            max-width: 1200px;
+            margin: 12px auto 0;
+            padding: 8px 16px;
+            background: var(--card-bg, #1e3a2f);
+            border-radius: var(--radius, 6px);
+            box-shadow: var(--shadow, 0 4px 12px rgba(0,0,0,0.3));
             font-size: 0.9rem;
         }
-        .user-menu-item i {
-            width: 20px;
-            color: var(--text-highlight);
+        .breadcrumb ul {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0;
+            padding: 0;
         }
-        .user-menu-item:hover {
-            background: var(--card-bg-hover);
+        .breadcrumb li {
+            display: inline-flex;
+            align-items: center;
         }
-        .user-menu-item:first-child {
-            border-bottom: 1px solid var(--border-color);
+        .breadcrumb li:not(:last-child)::after {
+            content: "›";
+            margin: 0 8px;
+            color: var(--text-secondary, #99aabb);
+            font-size: 1.1em;
         }
-        /* 登录/注册样式不变 */
-        .user-nav-section {
-            position: relative;
+        .breadcrumb a {
+            color: var(--text-highlight, #81c784);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+            color: var(--special-color, #ffd700);
+        }
+        .breadcrumb .current {
+            color: var(--text-main, #e0e0e0);
+            font-weight: 500;
+        }
+        @media (max-width: 768px) {
+            .breadcrumb {
+                font-size: 0.8rem;
+                padding: 6px 12px;
+                margin-top: 8px;
+            }
+            .breadcrumb li:not(:last-child)::after {
+                margin: 0 5px;
+            }
         }
     </style>
 </head>
@@ -88,7 +96,7 @@
     <nav class="top-nav" aria-label="主要导航">
         <div class="nav-title"><span>六哥荣耀WIKI</span></div>
         <a href="profile.html" class="nav-link" target="_blank">个人主页</a>
-        <a href="chouka.html" class="nav-link" target="_blank">抽卡模拟器</a>
+<a href="chouka.html" class="nav-link" target="_blank">抽卡模拟器</a>
         <a href="#lightcone" class="nav-link" data-target="lightcone">光锥</a>
         <a href="#material" class="nav-link" data-target="material">养成材料</a>
         <a href="javascript:void(0)" class="nav-link" onclick="openChangelogModal()" id="changelog-link" title="查看更新日志">
@@ -99,7 +107,12 @@
         </div>
     </nav>
 
-    <!-- 面包屑导航已移除 -->
+    <!-- ==================== 面包屑导航 ==================== -->
+    <nav class="breadcrumb" aria-label="面包屑导航">
+        <ul id="breadcrumb-list">
+            <li><a href="/">首页</a></li>
+        </ul>
+    </nav>
 
     <div class="search-container">
         <input type="text" id="search-input" placeholder="搜索角色/光锥/材料（支持关键词模糊匹配）" aria-label="搜索内容">
@@ -142,8 +155,6 @@
         // ==================== 全局变量 ====================
         let supabaseClient = null;
         let currentUser = null;
-        let currentProfile = null;
-        let userStats = null;   // 签到相关数据
         let searchTimeout;
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
@@ -174,125 +185,57 @@
         }
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
-        // ==================== 签到奖励计算（与 profile.html 完全一致） ====================
-        function getCheckinRewards(streak) {
-            if (streak === 1) return { candy: 3, rainbow: 0, active: 2 };
-            if (streak === 2) return { candy: 5, rainbow: 0, active: 2 };
-            if (streak === 3) return { candy: 7, rainbow: 0, active: 2 };
-            if (streak === 4) return { candy: 9, rainbow: 0, active: 2 };
-            if (streak === 5) return { candy: 10, rainbow: 0, active: 2 };
-            if (streak === 6) return { candy: 12, rainbow: 0, active: 2 };
-            if (streak === 7) return { candy: 15, rainbow: 1, active: 5 };
-            if (streak >= 8 && streak <= 14) return { candy: 10 + Math.floor((streak-8)*2), rainbow: 2, active: 8 };
-            if (streak === 15) return { candy: 30, rainbow: 5, active: 15 };
-            if (streak >= 16 && streak <= 29) return { candy: 50, rainbow: 10, active: 10 };
-            if (streak === 30) return { candy: 100, rainbow: 20, active: 50 };
-            if (streak >= 31) return { candy: 80, rainbow: 15, active: 20 };
-            return { candy: 5, rainbow: 0, active: 1 };
-        }
-
-        async function performCheckin() {
-            if (!currentUser) { showNotification('请先登录', 'error'); return; }
-            if (!userStats) { showNotification('数据加载中，请稍后', 'warning'); return; }
-            const today = new Date().toISOString().slice(0,10);
-            if (userStats.last_checkin_date === today) {
-                showNotification('今天已经签到过了！', 'warning');
-                return;
-            }
-            // 计算连续签到天数
-            let newStreak = 1;
-            if (userStats.last_checkin_date) {
-                const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-                const yesterdayStr = yesterday.toISOString().slice(0,10);
-                if (userStats.last_checkin_date === yesterdayStr) {
-                    newStreak = (userStats.checkin_streak || 0) + 1;
-                }
-            }
-            const rewards = getCheckinRewards(newStreak);
-            const newCandy = (userStats.candy_crumbles || 0) + rewards.candy;
-            const newRainbow = (userStats.rainbow_lollipops || 0) + rewards.rainbow;
-            const newActive = (userStats.active_points || 0) + rewards.active;
-
-            try {
-                const { error } = await supabaseClient.from('user_stats').update({
-                    candy_crumbles: newCandy,
-                    rainbow_lollipops: newRainbow,
-                    active_points: newActive,
-                    last_checkin_date: today,
-                    checkin_streak: newStreak
-                }).eq('user_id', currentUser.id);
-                if (error) throw error;
-                // 更新本地数据
-                userStats.candy_crumbles = newCandy;
-                userStats.rainbow_lollipops = newRainbow;
-                userStats.active_points = newActive;
-                userStats.last_checkin_date = today;
-                userStats.checkin_streak = newStreak;
-                // 显示签到结果
-                let msg = `签到成功！获得 🍬${rewards.candy} 糖果碎`;
-                if (rewards.rainbow > 0) msg += `，🌈+${rewards.rainbow} 超级棒糖`;
-                msg += `，⚡+${rewards.active} 活跃度。连续签到 ${newStreak} 天！`;
-                showNotification(msg, 'success');
-                // 重新渲染菜单（更新签到按钮状态）
-                closeMenu();
-            } catch (err) {
-                console.error(err);
-                showNotification('签到失败：' + err.message, 'error');
-            }
-        }
-
         // ==================== 网站运行天数 ====================
         function initializeSiteAge() {
             const launchDate = new Date(2025, 10, 1);
             const siteAgeElem = document.getElementById('site-age');
             const specialDays = {
-                30: '🎉 六哥荣耀WIKI上线30天啦！感恩陪伴 🎉',
-                50: '⛄冬至快乐，记得吃饺子🥟⛄',
-                58: '🍰 恭喜言哥哥18岁，生日快乐🍰',
-                59: '🧨跨年倒计时2天🧨',
-                60: '🎉跨年倒计时1天🎉',
-                61: '🎉欢迎来到2026年🎉',
-                78: '_(:з」∠)_话说78这个数字很好看吗或者说很有意思吗？(*´I`*)',
-                100: '🎊 百日庆典！六哥荣耀WIKI与你同行100天 🎊',
-                107: '🧨 除夕快乐！🧨',
-                108: '🎆 新年快乐！ 🎆',
-                124: '✌🏻元宵节快乐，记得吃汤圆哦！✌🏻',
-                151: '👿六哥荣耀是什么几把👿……愚人节快乐(ᵕ—ᴗ—)',
-                181: '劳动光荣，奋斗幸福，劳动节快乐，致每一个努力生活的你 ⌯ᵔᗜᵔ⌯',
-                231: '🐲 端午安康！愿岁岁平安，万事顺遂 🐲',
-                242: '🇨🇳 七一建党节，愿山河无恙，国泰民安 🇨🇳',
-                273: '💪 八一建军节，致敬最可爱的人 💪',
-                313: '👩‍🏫 教师节快乐！感恩遇见，不负教诲 👩‍🏫',
-                324: '🌕 中秋月圆，阖家团圆，佳节安康 🌕',
-                334: '🇨🇳 国庆快乐！盛世华诞，举国同庆 🇨🇳',
-                335: '🎉 举国欢腾，红旗飘扬，祝祖国生日快乐 🎉',
-                336: '🏮 万家灯火，共庆华诞，愿山河锦绣，国泰民安 🏮',
-                337: '🌸 金秋十月，丹桂飘香，祝福祖国繁花似锦 🌸',
-                338: '✨ 五星闪耀，皆为信仰；盛世如愿，中华自强 ✨',
-                339: '🎈 国庆佳节，普天同庆，愿你好运连连，喜气洋洋 🎈',
-                340: '💐 生在红旗下，长在春风里，祝祖国繁荣昌盛，万岁无疆 💐',
-                355: '🍁 重阳佳节，敬老安康，岁岁长乐 🍁',
-                365: '🎂六哥荣耀WIKI一周年纪念🎂'
-            };
+    30: '🎉 六哥荣耀WIKI上线30天啦！感恩陪伴 🎉',
+    50: '⛄冬至快乐，记得吃饺子🥟⛄',
+    58: '🍰 恭喜言哥哥18岁，生日快乐🍰',
+    59: '🧨跨年倒计时2天🧨',
+    60: '🎉跨年倒计时1天🎉',
+    61: '🎉欢迎来到2026年🎉',
+    78: '_(:з」∠)_话说78这个数字很好看吗或者说很有意思吗？(*´I`*)',
+    100: '🎊 百日庆典！六哥荣耀WIKI与你同行100天 🎊',
+    107: '🧨 除夕快乐！🧨',                // 除夕 2026-02-16
+    108: '🎆 新年快乐！ 🎆',               // 春节 2026-02-17
+    124: '✌🏻元宵节快乐，记得吃汤圆哦！✌🏻', // 元宵 2026-03-05
+    151: '👿六哥荣耀是什么几把👿……愚人节快乐(ᵕ—ᴗ—)', // 愚人节 2026-04-01
+    181: '劳动光荣，奋斗幸福，劳动节快乐，致每一个努力生活的你 ⌯ᵔᗜᵔ⌯', // 劳动节 2026-05-01
+    231: '🐲 端午安康！愿岁岁平安，万事顺遂 🐲', // 端午节 2026-06-19
+    242: '🇨🇳 七一建党节，愿山河无恙，国泰民安 🇨🇳', // 建党节 2026-07-01
+    273: '💪 八一建军节，致敬最可爱的人 💪', // 建军节 2026-08-01
+    313: '👩‍🏫 教师节快乐！感恩遇见，不负教诲 👩‍🏫', // 教师节 2026-09-10
+    324: '🌕 中秋月圆，阖家团圆，佳节安康 🌕', // 中秋节 2026-09-21
+    334: '🇨🇳 国庆快乐！盛世华诞，举国同庆 🇨🇳',//国庆节 2026-10
+    335: '🎉 举国欢腾，红旗飘扬，祝祖国生日快乐 🎉',
+    336: '🏮 万家灯火，共庆华诞，愿山河锦绣，国泰民安 🏮',
+    337: '🌸 金秋十月，丹桂飘香，祝福祖国繁花似锦 🌸',
+    338: '✨ 五星闪耀，皆为信仰；盛世如愿，中华自强 ✨',
+    339: '🎈 国庆佳节，普天同庆，愿你好运连连，喜气洋洋 🎈',
+    340: '💐 生在红旗下，长在春风里，祝祖国繁荣昌盛，万岁无疆 💐',
+    355: '🍁 重阳佳节，敬老安康，岁岁长乐 🍁',   // 重阳节 2026-10-22
+    365: '🎂六哥荣耀WIKI一周年纪念🎂'         // 一周年 2026-11-01
+};
             function getChinaHour() { return (new Date().getUTCHours() + 8) % 24; }
             function getGreetingByHour(hour) {
-                // 原问候语精简保留
-                const midnightGreetings = ['♪凌晨星星不睡你在熬，月亮都困了你还在嗨？快睡吧～♪'];
-                const morningGreetings = ['♪枣尚耗！新的一天从美味早餐开始♪'];
-                const lateMorningGreetings = ['♪上午好呀！工作/学习别太累♪'];
-                const noonGreetings = ['♪中午好！午饭吃饱饱，下午没烦恼♪'];
-                const afternoonGreetings = ['♪下午容易犯困？来杯奶茶提神♪'];
-                const eveningGreetings = ['♪傍晚夕阳无限好，只是近黄昏♪'];
-                const nightGreetings = ['♪晚上好！追剧打游戏的同时别忘了休息♪'];
-                const lateNightGreetings = ['♪深夜夜深了，快躺下，梦里啥都有♪'];
-                if (hour >= 0 && hour < 5) return midnightGreetings[0];
-                if (hour >= 5 && hour < 8) return morningGreetings[0];
-                if (hour >= 8 && hour < 11) return lateMorningGreetings[0];
-                if (hour >= 11 && hour < 13) return noonGreetings[0];
-                if (hour >= 13 && hour < 17) return afternoonGreetings[0];
-                if (hour >= 17 && hour < 19) return eveningGreetings[0];
-                if (hour >= 19 && hour < 23) return nightGreetings[0];
-                return lateNightGreetings[0];
+                const midnightGreetings = ['♪凌晨星星不睡你在熬，月亮都困了你还在嗨？快睡吧，别让黑眼圈“熊”霸你的脸♪','♪夜深人静，正是修仙好时节——但小心肝儿会抗议哦，早点休息吧～♪','♪这个点还在逛WIKI，是真爱没错了！但别忘了给手机也“充个电”，明天见♪','♪夜猫子专属福利：嘘～小声告诉你，熬夜的你已经偷偷赚到一天的“先机”啦♪','♪凌晨的世界很安静，适合思考人生，也适合——睡觉！快闭眼，梦里啥都有♪'];
+                const morningGreetings = ['♪枣尚耗！新的一天从美味早餐开始，记得“早”点开心，“早”点元气满满哦！♪','♪清晨的第一缕阳光，配上六哥荣耀WIKI，今天也是能量满满的一天！♪','♪早安！一日之计在于晨，今天的你比昨天更接近梦想～♪','♪揉揉眼睛，伸个懒腰，新的一天从打开WIKI开始，冲鸭！♪','♪早上好呀！记得吃早餐，胃饱了，心就暖了～♪'];
+                const lateMorningGreetings = ['♪上午好呀！工作/学习别太累，偶尔“摸鱼”也是生活的艺术，但别被老板“捉”到！♪','♪元气满满的一上午！看看WIKI，充充电，效率翻倍♪','♪阳光正好，微风不燥，正是摸鱼查攻略的好时光～♪','♪上午时间宝贵，但劳逸结合更聪明，来WIKI歇口气吧♪','♪滴！上午卡已刷，今日份快乐已送达～♪'];
+                const noonGreetings = ['♪中午好！午饭吃饱饱，下午没烦恼，“饱”持微笑，你就是最“粽”要的人！♪','♪午饭时间到！不管吃啥，记得对自己好一点，毕竟下午还要继续“肝”♪','♪肚子咕咕叫了？快去吃饭，吃饱了才有力气抽卡～♪','♪午休片刻，养精蓄锐，下午又是精神小伙/小妹♪','♪午饭+WIKI=双倍快乐，今天的你也很会享受生活呢♪'];
+                const afternoonGreetings = ['♪下午容易犯困？来杯奶茶“茶”一会儿，精神抖擞“下”午继续冲！','♪下午茶时间到！提神醒脑，WIKI陪你度过慵懒时光♪','♪阳光斜照，正是刷材料、看攻略的好时候，加油打工人♪','♪下午犯困不可怕，可怕的是错过WIKI的更新！快醒醒♪','♪一杯咖啡，一份WIKI，下午的快乐就是这么简单♪'];
+                const eveningGreetings = ['♪傍晚夕阳无限好，只是近黄昏——赶紧抓住今天的尾巴，把快乐“傍”在身边！♪','♪夕阳西下，WIKI陪你回家，今天也是充实的一天～♪','♪傍晚的微风，吹散一天的疲惫，来看看WIKI放松一下吧♪','♪天色渐暗，但你的WIKI之旅还在继续，夜生活刚刚开始♪','♪落日余晖，配上WIKI的温馨，今天也要圆满收官♪'];
+                const nightGreetings = ['♪晚上好！追剧打游戏的同时，别忘了喝杯水，眼睛也要“晚”上休息一下哦♪','♪华灯初上，WIKI与你共度良宵，愿你好梦♪','♪晚上是放松的时间，看看角色，想想配队，也是一种享受♪','♪夜生活开始！但别忘了给手机也“放个假”，早点休息～♪','♪星光点点，WIKI陪伴，愿你的夜晚温暖如初♪'];
+                const lateNightGreetings = ['♪深夜夜深了，再不睡就要“深夜emo”了！快躺下，梦里啥都有，包括你想见的人♪','♪夜已深，WIKI即将打烊，明天见！晚安好梦♪','♪凌晨的钟声即将敲响，快闭上眼睛，明天又是新的一天♪','♪深夜还在努力的你，值得被世界温柔以待，晚安～♪','♪月色如水，WIKI陪你入眠，愿你今夜无梦，醒来皆是惊喜♪'];
+                if (hour >= 0 && hour < 5) return midnightGreetings[Math.floor(Math.random() * midnightGreetings.length)];
+                if (hour >= 5 && hour < 8) return morningGreetings[Math.floor(Math.random() * morningGreetings.length)];
+                if (hour >= 8 && hour < 11) return lateMorningGreetings[Math.floor(Math.random() * lateMorningGreetings.length)];
+                if (hour >= 11 && hour < 13) return noonGreetings[Math.floor(Math.random() * noonGreetings.length)];
+                if (hour >= 13 && hour < 17) return afternoonGreetings[Math.floor(Math.random() * afternoonGreetings.length)];
+                if (hour >= 17 && hour < 19) return eveningGreetings[Math.floor(Math.random() * eveningGreetings.length)];
+                if (hour >= 19 && hour < 23) return nightGreetings[Math.floor(Math.random() * nightGreetings.length)];
+                return lateNightGreetings[Math.floor(Math.random() * lateNightGreetings.length)];
             }
             function updateSiteAge() {
                 const today = new Date();
@@ -358,7 +301,7 @@
             });
         }
 
-        // ==================== 更新日志弹窗（保持不变） ====================
+        // ==================== 更新日志弹窗 ====================
         function openChangelogModal() {
             const modal = document.getElementById('changelog-modal');
             const iframe = document.getElementById('changelog-iframe');
@@ -389,136 +332,105 @@
             if (event.data && event.data.type === 'closeModal') closeChangelogModal();
         });
 
-        // ==================== 浮层菜单管理 ====================
-        let currentMenu = null;
-        function closeMenu() {
-            if (currentMenu && currentMenu.parentNode) currentMenu.remove();
-            currentMenu = null;
-        }
-        function openUserMenu(event) {
-            event.stopPropagation();
-            closeMenu();
-            const container = document.getElementById('userNavSection');
-            if (!container) return;
-            const rect = container.getBoundingClientRect();
-            const menuDiv = document.createElement('div');
-            menuDiv.className = 'user-menu';
-            menuDiv.style.position = 'fixed';
-            menuDiv.style.top = `${rect.bottom + 5}px`;
-            menuDiv.style.right = `${window.innerWidth - rect.right}px`;
-            const todaySigned = userStats && userStats.last_checkin_date === new Date().toISOString().slice(0,10);
-            menuDiv.innerHTML = `
-                <div class="user-menu-item" id="menuGoProfile">
-                    <i class="fas fa-user"></i> 前往个人主页
-                </div>
-                <div class="user-menu-item" id="menuDailyCheckin">
-                    <i class="fas fa-calendar-check"></i> ${todaySigned ? '今日已签到' : '每日签到'}
-                </div>
-            `;
-            document.body.appendChild(menuDiv);
-            currentMenu = menuDiv;
-
-            const goProfile = document.getElementById('menuGoProfile');
-            const checkinBtn = document.getElementById('menuDailyCheckin');
-            if (goProfile) goProfile.onclick = () => { window.location.href = 'profile.html'; };
-            if (checkinBtn) {
-                if (todaySigned) {
-                    checkinBtn.style.opacity = '0.6';
-                    checkinBtn.style.cursor = 'default';
-                    checkinBtn.onclick = () => { showNotification('今天已经签到过了！', 'warning'); closeMenu(); };
-                } else {
-                    checkinBtn.onclick = async () => {
-                        await performCheckin();
-                        closeMenu();
-                        // 刷新用户头像区域以更新签到状态（重新加载用户信息）
-                        await loadUserProfileAndStats();
-                        updateNavbar();
-                    };
+        // ==================== 用户认证和头像 (增强跨页签同步) ====================
+        // 强制刷新用户状态，供页面显示时调用，保证登录状态与缓存同步
+        async function refreshUserState() {
+            if (!supabaseClient) return;
+            try {
+                const { data: { user }, error } = await supabaseClient.auth.getUser();
+                if (error || !user) {
+                    // 无有效session, 但若有缓存则不立即清除，避免闪烁
+                    const cachedName = localStorage.getItem('cachedUsername');
+                    if (!cachedName) {
+                        updateNavbar(null, null);
+                    }
+                    return;
                 }
+                // 有效用户，同步个人信息并刷新navbar
+                currentUser = user;
+                const { data: profile } = await supabaseClient.from('user_profiles').select('username, avatar_url, avatar_frame').eq('id', user.id).single();
+                if (profile) {
+                    const username = profile.username || user.email.split('@')[0];
+                    localStorage.setItem('cachedUsername', username);
+                    if (profile.avatar_url) localStorage.setItem('cachedAvatar', profile.avatar_url);
+                    if (profile.avatar_frame) localStorage.setItem('avatarFrame', profile.avatar_frame);
+                    updateNavbar(username, profile.avatar_url, profile.avatar_frame);
+                } else {
+                    updateNavbarFromCache();
+                }
+            } catch (err) {
+                console.warn('refreshUserState error:', err);
+                updateNavbarFromCache();
             }
-            // 点击其他地方关闭菜单
-            const clickOutside = (e) => { if (!menuDiv.contains(e.target) && !container.contains(e.target)) { closeMenu(); document.removeEventListener('click', clickOutside); } };
-            setTimeout(() => document.addEventListener('click', clickOutside), 0);
-        }
-
-        // ==================== 用户认证和头像 ====================
-        async function loadUserProfileAndStats() {
-            if (!currentUser) return;
-            // 获取 profile
-            const { data: profile } = await supabaseClient.from('user_profiles').select('*').eq('id', currentUser.id).single();
-            if (profile) currentProfile = profile;
-            // 获取 stats
-            let { data: stats } = await supabaseClient.from('user_stats').select('candy_crumbles, rainbow_lollipops, active_points, last_checkin_date, checkin_streak').eq('user_id', currentUser.id).single();
-            if (!stats) {
-                // 初始化 stats
-                await supabaseClient.from('user_stats').upsert({ user_id: currentUser.id, candy_crumbles: 100, rainbow_lollipops: 5, active_points: 0, last_checkin_date: null, checkin_streak: 0 });
-                stats = { candy_crumbles: 100, rainbow_lollipops: 5, active_points: 0, last_checkin_date: null, checkin_streak: 0 };
-            }
-            userStats = stats;
-            localStorage.setItem('cachedUserStats', JSON.stringify(userStats));
         }
 
         async function initializeUserProfile() {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            const { data: { user }, error } = await supabaseClient.auth.getUser();
-            if (error || !user) {
-                updateNavbar(false);
-                return;
+            try {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                const { data: { user }, error } = await supabaseClient.auth.getUser();
+                if (error || !user) {
+                    updateNavbarFromCache();
+                    return;
+                }
+                currentUser = user;
+                const { data: profile } = await supabaseClient.from('user_profiles').select('username, avatar_url, avatar_frame').eq('id', user.id).single();
+                if (profile) {
+                    const username = profile.username || user.email.split('@')[0];
+                    localStorage.setItem('cachedUsername', username);
+                    if (profile.avatar_url) localStorage.setItem('cachedAvatar', profile.avatar_url);
+                    if (profile.avatar_frame) localStorage.setItem('avatarFrame', profile.avatar_frame);
+                    updateNavbar(username, profile.avatar_url, profile.avatar_frame);
+                } else {
+                    updateNavbarFromCache();
+                }
+            } catch (error) {
+                console.error('用户初始化失败:', error);
+                updateNavbarFromCache();
             }
-            currentUser = user;
-            await loadUserProfileAndStats();
-            updateNavbar(true);
         }
-
-        function updateNavbar(isLoggedIn) {
-            const userNavSection = document.getElementById('userNavSection');
-            if (!userNavSection) return;
-            if (!isLoggedIn || !currentUser) {
-                userNavSection.innerHTML = `<a href="login-real.html" class="nav-link">登录/注册</a>`;
-                return;
-            }
-            const username = currentProfile?.username || currentUser.email.split('@')[0];
-            const avatarUrl = currentProfile?.avatar_url || localStorage.getItem('userAvatar');
-            const avatarLetter = username.charAt(0).toUpperCase();
-            let avatarHtml = '';
-            if (avatarUrl) {
-                avatarHtml = `<img src="${avatarUrl}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">`;
-                avatarHtml += `<div class="avatar-placeholder" style="position:absolute;top:0;left:0;width:36px;height:36px;display:none;align-items:center;justify-content:center;background:linear-gradient(135deg,#3ecf8e,#8a4baf);border-radius:50%;font-size:1rem;font-weight:600;">${avatarLetter}</div>`;
-            } else {
-                avatarHtml = `<div class="avatar-placeholder" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#3ecf8e,#8a4baf);border-radius:50%;font-size:1rem;font-weight:600;">${avatarLetter}</div>`;
-            }
-            // 构建可点击区域（无退出按钮）
-            userNavSection.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 8px; border-radius: var(--radius);" id="userMenuTrigger">
-                    <div style="position: relative; width: 36px; height: 36px;">
-                        ${avatarHtml}
-                    </div>
-                    <span class="username" style="color: var(--text-highlight); font-weight: 600;">${username}</span>
-                </div>
-            `;
-            const trigger = document.getElementById('userMenuTrigger');
-            if (trigger) trigger.addEventListener('click', openUserMenu);
-        }
-
         function updateNavbarFromCache() {
             const cachedUsername = localStorage.getItem('cachedUsername');
-            if (cachedUsername) {
-                // 如果有缓存，显示占位，但实际需要重新登录才真实有效
+            const cachedAvatar = localStorage.getItem('cachedAvatar');
+            const avatarFrame = localStorage.getItem('avatarFrame') || 'default';
+            if (cachedUsername) updateNavbar(cachedUsername, cachedAvatar, avatarFrame);
+            else {
                 const userNavSection = document.getElementById('userNavSection');
-                if (userNavSection) {
-                    userNavSection.innerHTML = `
-                        <div style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 8px; border-radius: var(--radius);" id="userMenuTrigger">
-                            <div class="avatar-placeholder" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#3ecf8e,#8a4baf);border-radius:50%;font-size:1rem;font-weight:600;">${cachedUsername.charAt(0).toUpperCase()}</div>
-                            <span class="username" style="color: var(--text-highlight); font-weight: 600;">${cachedUsername}</span>
-                        </div>
-                    `;
-                    const trigger = document.getElementById('userMenuTrigger');
-                    if (trigger) trigger.addEventListener('click', openUserMenu);
-                }
+                if(userNavSection) userNavSection.innerHTML = `<a href="login-real.html" class="nav-link">登录/注册</a>`;
             }
         }
+        function updateNavbar(username, avatarUrl, avatarFrame = 'default') {
+            const userNavSection = document.getElementById('userNavSection');
+            if (!userNavSection) return;
+            if (username) {
+                const avatarLetter = username.charAt(0).toUpperCase();
+                let avatarHtml = `<div class="user-avatar-with-frame" onclick="window.location.href='profile.html'" title="前往个人主页">
+                    <div class="user-avatar-frame ${avatarFrame === 'horse' ? 'horse-frame' : 'default-frame'}"></div>
+                    <div class="user-avatar-img">`;
+                if (avatarUrl) {
+                    avatarHtml += `<img src="${avatarUrl}" alt="${username}" onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML='<div class=\\'avatar-placeholder\\'>${avatarLetter}</div>';">`;
+                } else {
+                    avatarHtml += `<div class="avatar-placeholder">${avatarLetter}</div>`;
+                }
+                avatarHtml += `</div></div>`;
+                userNavSection.innerHTML = `<div class="user-info-container">${avatarHtml}<span class="username">${username}</span><button class="logout-btn" onclick="logout()" title="退出登录"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
+            } else {
+                userNavSection.innerHTML = `<a href="login-real.html" class="nav-link">登录/注册</a>`;
+            }
+        }
+        async function logout() {
+            if (!confirm('确定要退出登录吗？')) return;
+            if (supabaseClient) await supabaseClient.auth.signOut();
+            localStorage.removeItem('cachedUsername');
+            localStorage.removeItem('cachedAvatar');
+            localStorage.removeItem('avatarFrame');
+            localStorage.removeItem('cachedUserProfile');
+            localStorage.removeItem('cachedUserStats');
+            updateNavbar(null, null);
+            showNotification('已退出登录', 'success');
+            setTimeout(() => { window.location.href = 'index.html'; }, 500);
+        }
 
-        // ==================== 动态渲染函数（保持不变） ====================
+        // ==================== 动态渲染函数 ====================
         async function loadAndRenderAll() {
             if (!supabaseClient) {
                 console.warn('Supabase 客户端未初始化');
@@ -581,6 +493,92 @@
             });
         }
 
+        // ==================== 面包屑导航 ====================
+        (function() {
+            const breadcrumbConfig = {
+                '/yunli-detail.html':          ['角色详情', '云璃'],
+                '/luguan-detail.html':         ['角色详情', '鹿将军'],
+                '/pige-detail.html':           ['角色详情', '皮哥'],
+                '/jiazijie-detail.html':       ['角色详情', '夹子姐'],
+                '/han-detail.html':            ['角色详情', '涵'],
+                '/yuzhiboyan-detail.html':     ['角色详情', '宇智波言'],
+                '/banxierencheng-detail.html': ['角色详情', '半械人成'],
+                '/meng-detail.html':           ['角色详情', '梦'],
+                '/shenshengpige-detail.html':  ['角色详情', '神圣·皮哥'],
+                '/tianmingrenhouge-detail.html':['角色详情', '天命人·猴哥'],
+                '/2.0下~2.0终末/ying.html':    ['角色详情', '萤'],
+                '/2.0下~2.0终末/goudan.html':  ['角色详情', '瑜哥'],
+                '/2.0下~2.0终末/xiaomi.html':  ['角色详情', '小咪'],
+                '/4.0~4.0终末/maolaoda.html':  ['角色详情', '猫老大'],
+                '/Light cone data/changjinglu.html': ['光锥列表', '快乐的路一天'],
+                '/Light cone data/xiaomi.html':      ['光锥列表', '幻灵猫魅'],
+                '/materials_html/清风碎片.html':  ['养成材料', '清风碎片'],
+                '/materials_html/御风晶片.html':  ['养成材料', '御风晶片'],
+                '/materials_html/万风核心.html':  ['养成材料', '万风核心'],
+                '/materials_html/纯白祈愿结晶.html': ['养成材料', '纯白祈愿结晶']
+            };
+
+            function getCurrentPath() {
+                let path = window.location.pathname;
+                path = decodeURIComponent(path);
+                if (!path.startsWith('/')) path = '/' + path;
+                return path;
+            }
+
+            function generateBreadcrumb() {
+                const breadcrumbUl = document.getElementById('breadcrumb-list');
+                if (!breadcrumbUl) return;
+                const currentPath = getCurrentPath();
+                const crumbs = breadcrumbConfig[currentPath];
+                breadcrumbUl.innerHTML = '';
+                const homeLi = document.createElement('li');
+                homeLi.innerHTML = '<a href="/">首页</a>';
+                breadcrumbUl.appendChild(homeLi);
+                if (!crumbs) {
+                    const fileName = currentPath.split('/').pop() || '当前页面';
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span class="current">${escapeHtml(fileName)}</span>`;
+                    breadcrumbUl.appendChild(li);
+                    return;
+                }
+                for (let i = 0; i < crumbs.length; i++) {
+                    const crumb = crumbs[i];
+                    const li = document.createElement('li');
+                    if (i === crumbs.length - 1) {
+                        li.innerHTML = `<span class="current">${escapeHtml(crumb)}</span>`;
+                    } else {
+                        li.innerHTML = `<a href="#">${escapeHtml(crumb)}</a>`;
+                    }
+                    breadcrumbUl.appendChild(li);
+                }
+            }
+            document.addEventListener('DOMContentLoaded', generateBreadcrumb);
+        })();
+
+        // ==================== 跨页签同步和页面可见性增强 ====================
+        function setupCrossTabSync() {
+            // 监听 storage 事件，其他页面修改缓存时同步更新 navbar
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'cachedUsername' || e.key === 'cachedAvatar' || e.key === 'avatarFrame') {
+                    updateNavbarFromCache();
+                }
+                // 若有自定义的同步触发器，主动刷新用户状态
+                if (e.key === 'forceRefreshUserState') {
+                    refreshUserState();
+                }
+            });
+            // 页面可见性变化时刷新状态（从其他标签页返回）
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    refreshUserState();
+                }
+            });
+            // pageshow 确保页面从 bfcache 恢复时也刷新
+            window.addEventListener('pageshow', (event) => {
+                if (event.persisted) refreshUserState();
+            });
+        }
+
         // ==================== 页面初始化 ====================
         async function initializePage() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -588,8 +586,14 @@
                 const cleanUrl = window.location.href.split('?')[0];
                 history.replaceState(null, '', cleanUrl);
                 setTimeout(async () => {
-                    await initializeUserProfile();
-                    showNotification('登录成功！', 'success');
+                    if (supabaseClient) {
+                        await initializeUserProfile();
+                        showNotification('登录成功！', 'success');
+                    } else {
+                        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                        await initializeUserProfile();
+                        showNotification('登录成功！', 'success');
+                    }
                 }, 200);
             }
             document.getElementById('year').textContent = new Date().getFullYear();
@@ -597,11 +601,17 @@
             initializeSearch();
             initializeNavigation();
             updateNavbarFromCache();
-            await initializeUserProfile();
+            if (!supabaseClient) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
             await loadAndRenderAll();
+            // 跨页签同步 + 页面刷新机制
+            setupCrossTabSync();
+            // 初次加载后刷新一次确保状态正确
+            await refreshUserState();
             setTimeout(() => { document.getElementById('global-loading').style.display = 'none'; }, 800);
         }
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', function() {
             updateNavbarFromCache();
             initializePage();
         });
