@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+<head>
+<meta charset="UTF-8">
+<title>薇丝特 · 六哥荣耀WIKI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+<meta name="description" content="薇丝特(火·毁灭·限定五星) 糖果爆破专家，狂欢模式主宰 · 技能等级调节 + 基础属性滑动等级">
+<link rel="icon" href="/images/wangzhantupian.png" type="image/png">
+<link rel="preconnect" href="">
+
+<style>
+/* ====== 薇丝特主题：糖果焦糖色 ====== */
+:root {
+  --bg: #121212;
+  --surface: #1a1a1a;
+  --card: #202020;
+  --primary: #e07a5f;
+  --primary-light: #f4a261;
+  --primary-dark: #bc6c48;
+  --secondary: #e9c46a;
+  --text: #e0e0e0;
+  --sub-text: #bbbbcc;
+  --line: #333;
+  --radius: 6px;
+  --transition: .3s ease;
+  --button-bg: #9c6644;
+  --button-hover: #b87b56;
+  --button-disabled: #5e3e2c;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --legend-gradient: linear-gradient(45deg, #e07a5f, #f4a261, #e9c46a);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+  line-height: 1.5;
+  padding-bottom: 30px;
+}
+a { color: var(--secondary); text-decoration: none; transition: color var(--transition); }
+a:hover { color: var(--primary-light); }
+img { max-width: 100%; height: auto; display: block; }
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  background-color: rgba(26, 26, 26, 0.9);
+}
+.top-bar .title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  flex-grow: 1;
+  text-align: center;
+  color: var(--primary-light);
+}
+
+.hero-section {
+  position: relative;
+  background: linear-gradient(135deg, #5e3a2a 0%, #2a2218 100%);
+  overflow: hidden;
+}
+.hero-image {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  opacity: 0.95;
+  display: block;
+}
+.hero-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+}
+.hero-name {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  margin-bottom: 8px;
+}
+.tag-container { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag {
+  background: rgba(224, 122, 95, 0.15);
+  color: var(--primary);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  border: 1px solid rgba(224, 122, 95, 0.3);
+  backdrop-filter: blur(4px);
+}
+
+.card {
+  background: var(--card);
+  margin: 12px 16px;
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+.skill-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+}
+.skill-name {
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--secondary);
+  flex-grow: 1;
+}
+.level-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.level-value {
+  min-width: 50px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: var(--primary);
+  transition: all var(--transition);
+}
+.level-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--button-bg);
+  color: var(--text);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  user-select: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.level-btn:hover:not(:disabled) {
+  background: var(--button-hover);
+  transform: translateY(-2px);
+}
+.level-btn:disabled {
+  background: var(--button-disabled);
+  color: #666;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.base-slider {
+  width: 160px;
+  height: 6px;
+  -webkit-appearance: none;
+  background: var(--line);
+  border-radius: 3px;
+  outline: none;
+  margin: 0 4px;
+}
+.base-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(224,122,95,0.6);
+  border: 1px solid rgba(255,255,255,0.3);
+}
+.base-slider::-webkit-slider-thumb:hover { transform: scale(1.15); background: var(--primary-light); }
+
+.skill-content { font-size: 0.95rem; color: var(--sub-text); line-height: 1.6; }
+.skill-val { color: var(--primary); font-weight: 700; transition: all var(--transition); display: inline-block; padding: 0 2px; }
+.legend-text {
+  background: var(--legend-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 800;
+}
+.highlight-text { color: #ffb870; font-weight: 600; }
+.special-text { color: #ffae70; font-weight: 600; }
+
+.attr-container { margin-bottom: 20px; }
+.attr-row { display: flex; gap: 12px; margin-bottom: 15px; flex-wrap: wrap; }
+.attr-icon {
+  background: var(--card);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  min-width: 60px;
+  flex: 1;
+  max-width: 100px;
+  border: 1px solid rgba(224,122,95,0.1);
+}
+.attr-icon img { width: 32px; height: 32px; margin-bottom: 4px; object-fit: contain; }
+.attr-value { color: white; font-size: 14px; font-weight: 600; text-align: center; line-height: 1.2; }
+.attr-label { color: var(--sub-text); font-size: 12px; text-align: center; margin-top: 2px; }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 12px; border-radius: var(--radius); overflow: hidden; }
+.data-table th, .data-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+.data-table th { background-color: rgba(255, 255, 255, 0.05); color: var(--primary); font-weight: 600; }
+
+.section-title { font-size: 1.2rem; color: var(--secondary); margin-bottom: 15px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.ability-item { margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--line); }
+.ability-name { color: var(--primary); font-weight: 600; margin-bottom: 6px; font-size: 1rem; }
+
+.constellation-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.constellation-table th, .constellation-table td { padding: 12px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+.constellation-table th { color: var(--primary); font-weight: 600; }
+.constellation-table td:first-child { color: var(--primary); font-weight: 700; min-width: 60px; }
+
+@media (max-width: 480px) {
+  .hero-name { font-size: 1.5rem; }
+  .card { margin: 10px 12px; padding: 16px; }
+  .skill-header { flex-direction: column; align-items: flex-start; }
+  .base-slider { width: 100%; max-width: 200px; }
+  .attr-icon { min-width: calc(50% - 6px); flex: 0 0 calc(50% - 6px); }
+}
+@media (min-width: 481px) and (max-width: 768px) {
+  .attr-icon { min-width: calc(33.333% - 8px); flex: 0 0 calc(33.333% - 8px); }
+}
+.wiki-footer { text-align: center; margin-top: 20px; color: #7f9e8c; font-size: 13px; padding: 20px 0 10px; border-top: 1px solid #4a705f; max-width: 600px; margin-left: auto; margin-right: auto; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <span class="title">薇丝特 · 六哥荣耀WIKI · 狂欢校准版</span>
+</div>
+
+<section class="hero-section">
+  <img class="hero-image" src="/images/weisite.webp" alt="薇丝特" onerror="this.src='https://via.placeholder.com/800x450?text=Vistra+Candy'">
+  <div class="hero-overlay">
+    <div class="hero-name">薇丝特</div>
+    <div class="tag-container"><span class="tag">稀有度:✭✭✭✭✭</span></div>
+  </div>
+</section>
+
+<!-- 基础属性 -->
+<section class="card" id="base-attr">
+  <div class="skill-header">
+    <div class="skill-name" id="base-level-label">基础属性 Lv.90</div>
+    <div class="level-controls" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      <button class="level-btn down" id="base-level-down">↓</button>
+      <span class="level-value" id="base-level-display">90</span>
+      <button class="level-btn up" id="base-level-up">↑</button>
+      <span style="color: var(--sub-text); font-size: 0.9rem;">滑动(1~90)</span>
+      <input type="range" id="base-level-slider" class="base-slider" min="1" max="90" value="90" step="1">
+    </div>
+  </div>
+  <div class="skill-content">
+    <div class="attr-container">
+      <div class="attr-row">
+        <div class="attr-icon"><img src="/attribute_image/Destruction.webp" alt="毁灭"><div class="attr-label">毁灭</div></div>
+        <div class="attr-icon"><img src="Fire.webp" alt="火"><div class="attr-label">火</div></div>
+        <div class="attr-icon"><div class="attr-label">限定五星</div></div>
+      </div>
+    </div>
+    <div class="attr-container">
+      <div class="attr-row">
+        <div class="attr-icon"><img src="/attribute_image/HP.webp" alt="生命"><div class="attr-value" id="base-hp">1579</div><div class="attr-label">生命</div></div>
+        <div class="attr-icon"><img src="/attribute_image/ATK.webp" alt="攻击"><div class="attr-value" id="base-atk">640</div><div class="attr-label">攻击</div></div>
+        <div class="attr-icon"><img src="/attribute_image/DEF.webp" alt="防御"><div class="attr-value" id="base-def">773</div><div class="attr-label">防御</div></div>
+        <div class="attr-icon"><img src="/attribute_image/SPD.webp" alt="速度"><div class="attr-value" id="base-spd">94</div><div class="attr-label">速度</div></div>
+        <div class="attr-icon"><img src="/attribute_image/ENERGY.webp" alt="能量"><div class="attr-value" id="base-energy">130</div><div class="attr-label">能量上限</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 普攻 + 强化普攻 -->
+<section class="card" id="normal-attack">
+  <div class="skill-header">
+    <div class="skill-name">普攻 · 彩虹糖弹幕 / 强化普攻 · 彩虹糖弹幕pro</div>
+    <div class="level-controls">
+      <button class="level-btn down" id="normal-down">↓</button>
+      <span class="level-value" id="normal-level">1/7</span>
+      <button class="level-btn up" id="normal-up">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    <div><strong>普通普攻：</strong>对指定敌方单体造成<span id="normal-dmg1" class="skill-val">50%</span>攻击力的火属性伤害，并对两旁目标造成<span id="normal-dmg2" class="skill-val">25%</span>攻击力的火属性伤害。<br>
+    <span class="special-text">削韧：</span>单体10点 / 两旁5点<span class="special-text">战技点变动：</span>+1<span class="special-text">能量回复：</span>20点</div>
+    <div style="margin-top: 12px;"><strong>强化普攻（狂欢模式）：</strong>对敌方全体造成<span id="enhanced-dmg1" class="skill-val">100%</span>攻击力的火属性伤害，并额外附加<span id="enhanced-dmg2" class="skill-val">50%</span>攻击力的真实伤害。<br>
+    <span class="special-text">削韧：</span>全体20点<span class="special-text">战技点变动：</span>+1<span class="special-text">能量回复：</span>10点</div>
+  </div>
+</section>
+
+<!-- 战技 + 强化战技 -->
+<section class="card" id="skill-attack">
+  <div class="skill-header">
+    <div class="skill-name">战技 · 双倍泡泡的狂欢 / 强化战技(狂欢模式)</div>
+    <div class="level-controls">
+      <button class="level-btn down" id="skill-down">↓</button>
+      <span class="level-value" id="skill-level">1/12</span>
+      <button class="level-btn up" id="skill-up">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    <div><strong>普通战技：</strong>对敌方全体造成两次伤害：第一次<span id="skill-dmg1" class="skill-val">65%</span>攻击力的火属性伤害，第二次<span id="skill-dmg2" class="skill-val">75%</span>攻击力的火属性伤害。施加1层<span class="highlight-text">[焦糖印记]</span>（最多3层，每层使目标受到伤害提高20%，防御降低5%），并获得1层<span class="special-text">[泡泡充能]</span>（最多3层）。<br>
+    <span class="special-text">削韧：</span>群攻20点<span class="special-text">战技点：</span>-1<span class="special-text">能量回复：</span>40点</div>
+    <div style="margin-top: 12px;"><strong>强化战技（狂欢模式）：</strong>对敌方全体造成四次伤害：<span id="skill-pro-dmg1" class="skill-val">50%</span> / <span id="skill-pro-dmg2" class="skill-val">100%</span> / <span id="skill-pro-dmg3" class="skill-val">150%</span> 的火属性伤害，最后一次<span id="skill-pro-dmg4" class="skill-val">100%</span>真实伤害。<br>
+    <span class="special-text">削韧：</span>群攻20点<span class="special-text">战技点：</span>-1<span class="special-text">能量回复：</span>20点</div>
+    <div class="special-text" style="margin-top: 8px;">焦糖印记：每层使目标受到伤害提高20%，防御力降低5%。泡泡充能初始最多3层（星魂4提升至5层）。</div>
+  </div>
+</section>
+
+<!-- 终结技 -->
+<section class="card" id="ultimate">
+  <div class="skill-header">
+    <div class="skill-name">终结技 · 薇丝特的宇宙大爆炸</div>
+    <div class="level-controls">
+      <button class="level-btn down" id="ult-down">↓</button>
+      <span class="level-value" id="ult-level">1/12</span>
+      <button class="level-btn up" id="ult-up">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    <p>消耗全部层数的<span class="special-text">[泡泡充能]</span>，根据层数使<span class="highlight-text">强化普攻和强化战技</span>伤害提高：<br>
+    • 消耗1层：伤害提高<span id="ult-bonus1" class="skill-val">25%</span><br>
+    • 消耗2层：伤害提高<span id="ult-bonus2" class="skill-val">62.5%</span><br>
+    • 消耗3层：伤害提高<span id="ult-bonus3" class="skill-val">100%</span><br>
+    • 消耗超过3层时，每多1层额外提高<span id="ult-extra" class="skill-val">25.5%</span>。<br>
+    随后进入<span class="legend-text">[狂欢模式]</span>，行动提前100%，技能强化（只可使用强化普攻/战技），持续2回合，期间终结技锁定。退出狂欢模式后回复40点能量。</p>
+    <table class="data-table"><thead><tr><th>消耗层数</th><th>强化技能伤害提高</th></tr></thead>
+    <tbody>
+      <tr><td colspan="2">（具体数值随终结技等级提升）</td></tr>
+      <tr><td>1层</td><td><span id="ult-val1">25%</span></td></tr>
+      <tr><td>2层</td><td><span id="ult-val2">62.5%</span></td></tr>
+      <tr><td>3层</td><td><span id="ult-val3">100%</span></td></tr>
+      <tr><td>＞3层每层</td><td>额外+<span id="ult-val4">25.5%</span></td></tr>
+    </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 天赋 -->
+<section class="card" id="talent">
+  <div class="skill-header">
+    <div class="skill-name">天赋 · 爆裂糖科学</div>
+    <div class="level-controls">
+      <button class="level-btn down" id="talent-down">↓</button>
+      <span class="level-value" id="talent-level">1/12</span>
+      <button class="level-btn up" id="talent-up">↑</button>
+    </div>
+  </div>
+  <div class="skill-content">
+    <p>在<span class="legend-text">[狂欢模式]</span>中，暴击伤害提高<span id="talent-cdmg" class="skill-val">30%</span>，无视敌方目标<span id="talent-defpen" class="skill-val">1%</span>防御力。退出狂欢模式后立即恢复3个战技点，并且每次受到敌方攻击后，触发1次追加攻击，造成等同于薇丝特<span id="talent-fua" class="skill-val">30%</span>攻击力的真实伤害。</p>
+  </div>
+</section>
+
+<!-- 行迹加成+额外能力 -->
+<section class="card">
+  <div class="section-title">行迹加成(总)</div>
+  <div class="attr-row">
+    <div class="attr-icon"><img src="/attribute_image/IconCriticalChance.webp" alt="暴击率"><div class="attr-value">19.8%</div><div class="attr-label">暴击率</div></div>
+    <div class="attr-icon"><img src="/attribute_image/IconCriticalDamage.webp" alt="暴击伤害"><div class="attr-value">41.05%</div><div class="attr-label">暴击伤害</div></div>
+    <div class="attr-icon"><img src="/attribute_image/SPD.webp" alt="速度"><div class="attr-value">11</div><div class="attr-label">速度</div></div>
+  </div>
+  <div class="section-title" style="margin-top: 16px;">额外能力</div>
+  <div class="ability-item"><div class="ability-name">甜味惯性</div><div>退出[狂欢模式]后立即获得 <span style="color:orange; font-size: 16px;">2</span> 层[泡泡充能]。</div></div>
+  <div class="ability-item"><div class="ability-name">爱吃糖的女孩都很可爱</div><div>在[狂欢模式]中受到的伤害降低 <span style="color:orange; font-size: 16px;">35%</span> 。</div></div>
+  <div class="ability-item"><div class="ability-name">无限糖库</div><div>进入战斗后，获得 <span style="color:orange; font-size: 16px;">1</span> 层[泡泡充能]。</div></div>
+</section>
+
+<!-- 星魂 -->
+<section class="card">
+  <div class="section-title">命之座 · 星魂</div>
+  <table class="constellation-table">
+    <thead><tr><th>层数</th><th>名称</th><th>效果</th></tr></thead>
+    <tbody>
+      <tr><td>1命</td><td>糖霜暴走</td><td>[焦糖印记]产生的效果提高 <span style="color:orange; font-size: 16px;">100%</span> 。</td></tr>
+      <tr><td>2命</td><td>彩虹糖衣</td><td>施放终结技时每消耗1层[泡泡充能]，退出终结技后额外恢复 <span style="color:orange; font-size: 16px;">10</span> 点能量。</td></tr>
+      <tr><td>3命</td><td>爱吃糖的好女孩</td><td>普攻等级+ <span style="color:orange; font-size: 16px;">1</span> ，最多不超过 <span style="color:orange; font-size: 16px;">10</span> 级<br>天赋等级+  <span style="color:orange; font-size: 16px;">2</span>，最多不超过  <span style="color:orange; font-size: 16px;">15</span>级。</td></tr>
+      <tr><td>4命</td><td>泡泡永动机</td><td>[泡泡充能]可叠加层数提高至 <span style="color:orange; font-size: 16px;">5</span>层 。</td></tr>
+      <tr><td>5命</td><td>快点快点打怪兽</td><td>战技等级+ <span style="color:orange; font-size: 16px;">2</span> ，最多不超过 <span style="color:orange; font-size: 16px;">15</span> 级<br>终结技等级+ <span style="color:orange; font-size: 16px;">2</span> 最多不超过 <span style="color:orange; font-size: 16px;">15</span> 级。</td></tr>
+      <tr><td>6命</td><td>超新星糖霜爆炸</td><td>火属性抗性穿透提高 <span style="color:orange; font-size: 16px;">20%</span> ，施放终结技后返还 <span style="color:orange; font-size: 16px;">80%</span> 消耗的[泡泡充能]，且每消耗1层使[狂欢模式]中造成的伤害提高 <span style="color:orange; font-size: 16px;">24%</span>，最多120%。</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<footer class="wiki-footer">© <span id="year"></span> 六哥荣耀WIKI · 本WIKI纯属虚构娱乐，所有图片AI生成。<br>数据基于薇丝特3.2版本，技能等级调节实时生效。</footer>
+
+<script>
+const skillConfig = {
+  normal: { level: 1, maxLevel: 7, values: [
+    { id: 'normal-dmg1', base: 50, step: 10 },
+    { id: 'normal-dmg2', base: 25, step: 10 },
+    { id: 'enhanced-dmg1', base: 100, step: 20 },
+    { id: 'enhanced-dmg2', base: 50, step: 6 }
+  ]},
+  skill: { level: 1, maxLevel: 12, values: [
+    { id: 'skill-dmg1', base: 65, step: 10 },
+    { id: 'skill-dmg2', base: 75, step: 12.5 },
+    { id: 'skill-pro-dmg1', base: 50, step: 15 },
+    { id: 'skill-pro-dmg2', base: 100, step: 20 },
+    { id: 'skill-pro-dmg3', base: 150, step: 20 },
+    { id: 'skill-pro-dmg4', base: 100, step: 10 }
+  ]},
+  ultimate: { level: 1, maxLevel: 12, values: [
+    { id: 'ult-val1', base: 20, step: 0.5 },
+    { id: 'ult-val2', base: 50, step: 1.25 },
+    { id: 'ult-val3', base: 80, step: 2 },
+    { id: 'ult-val4', base: 20, step: 0.5 },
+    { id: 'ult-bonus1', base: 20, step: 0.5 },
+    { id: 'ult-bonus2', base: 50, step: 1.25 },
+    { id: 'ult-bonus3', base: 80, step: 2 },
+    { id: 'ult-extra', base: 20, step: 0.5 }
+  ]},
+  talent: { level: 1, maxLevel: 12, values: [
+    { id: 'talent-cdmg', base: 30, step: 5 },
+    { id: 'talent-defpen', base: 1, step: 1 },
+    { id: 'talent-fua', base: 30, step: 5 }
+  ]}
+};
+
+// 基础属性插值
+const baseLevelNodes = [1, 20, 30, 40, 50, 60, 70, 80, 90];
+const baseStatsMap = {
+  1:   { hp: 195, atk: 79, def: 95 },
+  20:  { hp: 459, atk: 186, def: 224 },
+  30:  { hp: 634, atk: 257, def: 311 },
+  40:  { hp: 810, atk: 328, def: 397 },
+  50:  { hp: 986, atk: 399, def: 483 },
+  60:  { hp: 1162, atk: 471, def: 569 },
+  70:  { hp: 1338, atk: 542, def: 655 },
+  80:  { hp: 1435, atk: 582, def: 703 },
+  90:  { hp: 1579, atk: 640, def: 773 }
+};
+
+function lerpAttr(level) {
+  if (level <= 1) return { ...baseStatsMap[1] };
+  if (level >= 90) return { ...baseStatsMap[90] };
+  let lower = 1, upper = 90;
+  for (let i = 0; i < baseLevelNodes.length - 1; i++) {
+    if (level >= baseLevelNodes[i] && level <= baseLevelNodes[i+1]) {
+      lower = baseLevelNodes[i];
+      upper = baseLevelNodes[i+1];
+      break;
+    }
+  }
+  const lowStats = baseStatsMap[lower];
+  const highStats = baseStatsMap[upper];
+  const t = (level - lower) / (upper - lower);
+  return {
+    hp: Math.round(lowStats.hp + t * (highStats.hp - lowStats.hp)),
+    atk: Math.round(lowStats.atk + t * (highStats.atk - lowStats.atk)),
+    def: Math.round(lowStats.def + t * (highStats.def - lowStats.def))
+  };
+}
+
+let currentBaseLevel = 90;
+const state = {
+  normal: { level: 1 },
+  skill: { level: 1 },
+  ultimate: { level: 1 },
+  talent: { level: 1 }
+};
+
+function updateSkillUI(skillKey) {
+  const cfg = skillConfig[skillKey];
+  if (!cfg) return;
+  const lvl = state[skillKey].level;
+  
+  // 更新等级显示
+  let levelElem = null;
+  if (skillKey === 'ultimate') {
+    levelElem = document.getElementById('ult-level');
+  } else {
+    levelElem = document.getElementById(`${skillKey}-level`);
+  }
+  if (levelElem) levelElem.textContent = `${lvl}/${cfg.maxLevel}`;
+  
+  // 更新数值
+  cfg.values.forEach(v => {
+    let val = v.base + v.step * (lvl - 1);
+    let displayVal = val.toFixed(1);
+    const elem = document.getElementById(v.id);
+    if (elem) elem.textContent = displayVal + '%';
+  });
+  
+  // 更新按钮禁用状态（修正：终结技使用 ult-down/ult-up）
+  let downBtn, upBtn;
+  if (skillKey === 'ultimate') {
+    downBtn = document.getElementById('ult-down');
+    upBtn = document.getElementById('ult-up');
+  } else {
+    downBtn = document.getElementById(`${skillKey}-down`);
+    upBtn = document.getElementById(`${skillKey}-up`);
+  }
+  if (downBtn) downBtn.disabled = lvl <= 1;
+  if (upBtn) upBtn.disabled = lvl >= cfg.maxLevel;
+}
+
+function changeSkillLevel(skillKey, delta) {
+  const cfg = skillConfig[skillKey];
+  if (!cfg) return;
+  let newLvl = state[skillKey].level + delta;
+  if (newLvl < 1) newLvl = 1;
+  if (newLvl > cfg.maxLevel) newLvl = cfg.maxLevel;
+  if (newLvl === state[skillKey].level) return;
+  state[skillKey].level = newLvl;
+  updateSkillUI(skillKey);
+  saveState();
+}
+
+function updateBaseAttrUI(level) {
+  const stats = lerpAttr(level);
+  document.getElementById('base-hp').innerText = stats.hp;
+  document.getElementById('base-atk').innerText = stats.atk;
+  document.getElementById('base-def').innerText = stats.def;
+  document.getElementById('base-spd').innerText = 94;
+  document.getElementById('base-energy').innerText = 130;
+  document.getElementById('base-level-label').innerText = `基础属性 Lv.${level}`;
+  document.getElementById('base-level-display').innerText = level;
+  const slider = document.getElementById('base-level-slider');
+  if (slider && slider.value != level) slider.value = level;
+  const down = document.getElementById('base-level-down');
+  const up = document.getElementById('base-level-up');
+  if (down) down.disabled = level <= 1;
+  if (up) up.disabled = level >= 90;
+}
+
+function changeBaseLevel(delta) {
+  let newLvl = currentBaseLevel + delta;
+  if (newLvl < 1) newLvl = 1;
+  if (newLvl > 90) newLvl = 90;
+  if (newLvl === currentBaseLevel) return;
+  currentBaseLevel = newLvl;
+  updateBaseAttrUI(currentBaseLevel);
+  saveState();
+}
+
+function saveState() {
+  try {
+    const save = {
+      normal: state.normal.level,
+      skill: state.skill.level,
+      ultimate: state.ultimate.level,
+      talent: state.talent.level,
+      baseLevel: currentBaseLevel
+    };
+    localStorage.setItem('weisateState', JSON.stringify(save));
+  } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem('weisateState');
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (typeof d.normal === 'number') state.normal.level = Math.min(d.normal, skillConfig.normal.maxLevel);
+      if (typeof d.skill === 'number') state.skill.level = Math.min(d.skill, skillConfig.skill.maxLevel);
+      if (typeof d.ultimate === 'number') state.ultimate.level = Math.min(d.ultimate, skillConfig.ultimate.maxLevel);
+      if (typeof d.talent === 'number') state.talent.level = Math.min(d.talent, skillConfig.talent.maxLevel);
+      if (typeof d.baseLevel === 'number' && d.baseLevel >= 1 && d.baseLevel <= 90) currentBaseLevel = d.baseLevel;
+    }
+  } catch(e) {}
+}
+
+function bindEvents() {
+  document.getElementById('normal-down')?.addEventListener('click', () => changeSkillLevel('normal', -1));
+  document.getElementById('normal-up')?.addEventListener('click', () => changeSkillLevel('normal', 1));
+  document.getElementById('skill-down')?.addEventListener('click', () => changeSkillLevel('skill', -1));
+  document.getElementById('skill-up')?.addEventListener('click', () => changeSkillLevel('skill', 1));
+  document.getElementById('ult-down')?.addEventListener('click', () => changeSkillLevel('ultimate', -1));
+  document.getElementById('ult-up')?.addEventListener('click', () => changeSkillLevel('ultimate', 1));
+  document.getElementById('talent-down')?.addEventListener('click', () => changeSkillLevel('talent', -1));
+  document.getElementById('talent-up')?.addEventListener('click', () => changeSkillLevel('talent', 1));
+  document.getElementById('base-level-down')?.addEventListener('click', () => changeBaseLevel(-1));
+  document.getElementById('base-level-up')?.addEventListener('click', () => changeBaseLevel(1));
+  const slider = document.getElementById('base-level-slider');
+  if (slider) {
+    slider.addEventListener('input', (e) => {
+      currentBaseLevel = parseInt(e.target.value, 10);
+      updateBaseAttrUI(currentBaseLevel);
+      saveState();
+    });
+  }
+}
+
+function init() {
+  loadState();
+  bindEvents();
+  updateSkillUI('normal');
+  updateSkillUI('skill');
+  updateSkillUI('ultimate');
+  updateSkillUI('talent');
+  updateBaseAttrUI(currentBaseLevel);
+  document.getElementById('year').innerText = new Date().getFullYear();
+}
+init();
+</script>
+</body>
+</html>
