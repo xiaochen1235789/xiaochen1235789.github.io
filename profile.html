@@ -314,6 +314,8 @@
             if(avatarUrl) localStorage.setItem('cachedAvatar', avatarUrl); 
             localStorage.setItem('profileLastUpdated', Date.now()); 
             if(window.opener && !window.opener.closed) window.opener.postMessage({type:'PROFILE_UPDATED', username, avatarUrl}, '*'); 
+            // 强制触发其他标签页刷新状态
+            localStorage.setItem('forceRefreshUserState', Date.now().toString());
             showSyncNotice(); 
         }
         
@@ -709,6 +711,8 @@
             checkinBtn.innerHTML = '<i class="fas fa-check-circle"></i> 今日已签到';
             showNotification(`签到成功！获得 🍬${rewards.candy} 糖果碎 ${rewards.rainbow>0?`🌈+${rewards.rainbow} 棒糖 ` : ''}⚡+${rewards.active} 活跃度`, 'success');
             localStorage.setItem('cachedUserStats', JSON.stringify(userStats));
+            // 跨页签同步：触发其他页面刷新用户状态
+            localStorage.setItem('forceRefreshUserState', Date.now().toString());
         }
         
         // ========== 资料加载（支持缓存） ==========
@@ -813,10 +817,31 @@
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('profileContent').style.display = 'block';
                 bindEventListeners();
+                // 页面可见性同步
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden) {
+                        refreshUserStateQuietly();
+                    }
+                });
             } catch(err) {
                 showNotification('请先登录','error');
                 setTimeout(()=>window.location.href='login-real.html',1500);
             }
+        }
+        
+        async function refreshUserStateQuietly() {
+            if (!supabaseClient) return;
+            try {
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                if (user && user.id === currentUser?.id) {
+                    const { data: profile } = await supabaseClient.from('user_profiles').select('username, avatar_url, avatar_frame').eq('id', user.id).single();
+                    if (profile && (profile.username !== userProfile?.username || profile.avatar_url !== userProfile?.avatar_url)) {
+                        userProfile = { ...userProfile, ...profile };
+                        applyProfileToUI();
+                        updateNavbar();
+                    }
+                }
+            } catch(e) { console.warn(e); }
         }
         
         function bindEventListeners() {
