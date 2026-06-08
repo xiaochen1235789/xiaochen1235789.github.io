@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="manifest" href="manifest.json">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="keywords" content="六哥荣耀WIKI,角色,光锥,养成材料,游戏攻略">
     <meta name="description" content="六哥荣耀WIKI，整理游戏内角色、光锥、养成材料等信息，为玩家提供详细参考，纯属虚构娱乐。">
     <meta name="msvalidate.01" content="40BA1755FA42BA4AC37FB824A1308402" />
@@ -26,61 +26,27 @@
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <title>六哥荣耀WIKI</title>
-    <!-- 外部 CSS -->
     <link rel="stylesheet" href="./css/zhuye0.css">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 面包屑样式补充（确保与深色主题协调） */
-        .breadcrumb {
-            max-width: 1200px;
-            margin: 12px auto 0;
-            padding: 8px 16px;
-            background: var(--card-bg, #1e3a2f);
-            border-radius: var(--radius, 6px);
-            box-shadow: var(--shadow, 0 4px 12px rgba(0,0,0,0.3));
-            font-size: 0.9rem;
-        }
-        .breadcrumb ul {
-            list-style: none;
-            display: flex;
-            flex-wrap: wrap;
-            margin: 0;
-            padding: 0;
-        }
-        .breadcrumb li {
-            display: inline-flex;
-            align-items: center;
-        }
-        .breadcrumb li:not(:last-child)::after {
-            content: "›";
-            margin: 0 8px;
-            color: var(--text-secondary, #99aabb);
-            font-size: 1.1em;
-        }
-        .breadcrumb a {
-            color: var(--text-highlight, #81c784);
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-        .breadcrumb a:hover {
-            text-decoration: underline;
-            color: var(--special-color, #ffd700);
-        }
-        .breadcrumb .current {
-            color: var(--text-main, #e0e0e0);
-            font-weight: 500;
+        /* 额外样式优化，已移除面包屑样式 */
+        .back-to-top {
+            /* 确保按钮可点击区域合适 */
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--special-color, #ffd700);
+            color: #1e3a2f;
+            bottom: 20px;
+            right: 20px;
         }
         @media (max-width: 768px) {
-            .breadcrumb {
-                font-size: 0.8rem;
-                padding: 6px 12px;
-                margin-top: 8px;
-            }
-            .breadcrumb li:not(:last-child)::after {
-                margin: 0 5px;
+            .back-to-top {
+                width: 44px;
+                height: 44px;
+                bottom: 16px;
+                right: 16px;
             }
         }
     </style>
@@ -96,7 +62,7 @@
     <nav class="top-nav" aria-label="主要导航">
         <div class="nav-title"><span>六哥荣耀WIKI</span></div>
         <a href="profile.html" class="nav-link" target="_blank">个人主页</a>
-<a href="chouka.html" class="nav-link" target="_blank">抽卡模拟器</a>
+        <a href="chouka.html" class="nav-link" target="_blank">抽卡模拟器</a>
         <a href="#lightcone" class="nav-link" data-target="lightcone">光锥</a>
         <a href="#material" class="nav-link" data-target="material">养成材料</a>
         <a href="javascript:void(0)" class="nav-link" onclick="openChangelogModal()" id="changelog-link" title="查看更新日志">
@@ -105,13 +71,6 @@
         <div class="user-nav-section" id="userNavSection">
             <a href="login-real.html" class="nav-link">登录/注册</a>
         </div>
-    </nav>
-
-    <!-- ==================== 面包屑导航 ==================== -->
-    <nav class="breadcrumb" aria-label="面包屑导航">
-        <ul id="breadcrumb-list">
-            <li><a href="/">首页</a></li>
-        </ul>
     </nav>
 
     <div class="search-container">
@@ -160,6 +119,16 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
         // ==================== 辅助函数 ====================
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
         function showNotification(message, type = 'info') {
             const notification = document.getElementById('notification');
             if (!notification) return;
@@ -175,12 +144,24 @@
             if (parent) parent.classList.remove('skeleton');
         }
         function imageError(img) {
-            img.style.display = 'none';
-            const parent = img.closest('.skeleton');
-            if (parent) parent.classList.remove('skeleton');
+            // 显示占位符
+            const parent = img.closest('.card-img');
+            if (parent) {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'img-placeholder';
+                placeholder.textContent = '🖼️';
+                placeholder.style.cssText = 'display:flex; align-items:center; justify-content:center; width:100%; height:100%; background:#2a4a3a; color:#ccc; font-size:2rem;';
+                img.style.display = 'none';
+                parent.appendChild(placeholder);
+            }
+            const skeleton = img.closest('.skeleton');
+            if (skeleton) skeleton.classList.remove('skeleton');
         }
         function jumpToDetail(targetUrl, charName) {
-            if (!targetUrl) { showNotification('详情页地址不存在', 'error'); return; }
+            if (!targetUrl || targetUrl === '#' || targetUrl === '') {
+                showNotification(`「${charName}」的详情页暂未开放`, 'error');
+                return;
+            }
             window.open(targetUrl, '_blank');
         }
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -262,6 +243,25 @@
             const searchInput = document.getElementById('search-input');
             const allCards = () => document.querySelectorAll('.content-card');
             const emptyResult = document.querySelector('.empty-result');
+            // 添加清空按钮
+            const searchContainer = document.querySelector('.search-container');
+            if (searchContainer && !document.querySelector('.search-clear')) {
+                const clearBtn = document.createElement('span');
+                clearBtn.className = 'search-clear';
+                clearBtn.innerHTML = '✕';
+                clearBtn.style.cssText = 'position:absolute; right:40px; top:50%; transform:translateY(-50%); cursor:pointer; color:#999; display:none; font-size:1.2rem;';
+                clearBtn.addEventListener('click', () => {
+                    searchInput.value = '';
+                    searchInput.dispatchEvent(new Event('input'));
+                    clearBtn.style.display = 'none';
+                    searchInput.focus();
+                });
+                searchContainer.style.position = 'relative';
+                searchContainer.appendChild(clearBtn);
+                searchInput.addEventListener('input', () => {
+                    clearBtn.style.display = searchInput.value ? 'block' : 'none';
+                });
+            }
             searchInput.addEventListener('input', function() {
                 clearTimeout(searchTimeout);
                 searchTimeout = setTimeout(() => {
@@ -302,6 +302,14 @@
                     });
                 }
             });
+            // 页面加载时处理hash
+            if (window.location.hash) {
+                setTimeout(() => {
+                    const targetId = window.location.hash.substring(1);
+                    const target = document.getElementById(targetId);
+                    if (target) window.scrollTo({ top: target.offsetTop - 80, behavior: 'smooth' });
+                }, 500);
+            }
         }
 
         // ==================== 更新日志弹窗 ====================
@@ -335,21 +343,16 @@
             if (event.data && event.data.type === 'closeModal') closeChangelogModal();
         });
 
-        // ==================== 用户认证和头像 (增强跨页签同步) ====================
-        // 强制刷新用户状态，供页面显示时调用，保证登录状态与缓存同步
+        // ==================== 用户认证和头像 ====================
         async function refreshUserState() {
             if (!supabaseClient) return;
             try {
                 const { data: { user }, error } = await supabaseClient.auth.getUser();
                 if (error || !user) {
-                    // 无有效session, 但若有缓存则不立即清除，避免闪烁
                     const cachedName = localStorage.getItem('cachedUsername');
-                    if (!cachedName) {
-                        updateNavbar(null, null);
-                    }
+                    if (!cachedName) updateNavbar(null, null);
                     return;
                 }
-                // 有效用户，同步个人信息并刷新navbar
                 currentUser = user;
                 const { data: profile } = await supabaseClient.from('user_profiles').select('username, avatar_url, avatar_frame').eq('id', user.id).single();
                 if (profile) {
@@ -405,17 +408,18 @@
             const userNavSection = document.getElementById('userNavSection');
             if (!userNavSection) return;
             if (username) {
-                const avatarLetter = username.charAt(0).toUpperCase();
+                const safeUsername = escapeHtml(username);
+                const avatarLetter = safeUsername.charAt(0).toUpperCase();
                 let avatarHtml = `<div class="user-avatar-with-frame" onclick="window.location.href='profile.html'" title="前往个人主页">
                     <div class="user-avatar-frame ${avatarFrame === 'horse' ? 'horse-frame' : 'default-frame'}"></div>
                     <div class="user-avatar-img">`;
                 if (avatarUrl) {
-                    avatarHtml += `<img src="${avatarUrl}" alt="${username}" onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML='<div class=\\'avatar-placeholder\\'>${avatarLetter}</div>';">`;
+                    avatarHtml += `<img src="${escapeHtml(avatarUrl)}" alt="${safeUsername}" onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML='<div class=\\'avatar-placeholder\\'>${avatarLetter}</div>';">`;
                 } else {
                     avatarHtml += `<div class="avatar-placeholder">${avatarLetter}</div>`;
                 }
                 avatarHtml += `</div></div>`;
-                userNavSection.innerHTML = `<div class="user-info-container">${avatarHtml}<span class="username">${username}</span><button class="logout-btn" onclick="logout()" title="退出登录"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
+                userNavSection.innerHTML = `<div class="user-info-container">${avatarHtml}<span class="username">${safeUsername}</span><button class="logout-btn" onclick="logout()" title="退出登录"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
             } else {
                 userNavSection.innerHTML = `<a href="login-real.html" class="nav-link">登录/注册</a>`;
             }
@@ -476,107 +480,39 @@
                 card.setAttribute('data-type', typeLabel);
                 card.setAttribute('data-name', item.name);
                 card.setAttribute('data-desc', item.description || '');
+                // 键盘访问支持
+                card.setAttribute('role', 'button');
+                card.setAttribute('tabindex', '0');
+                card.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        card.click();
+                    }
+                });
                 const detailUrl = item.detail_url || '#';
                 card.onclick = () => jumpToDetail(detailUrl, item.name);
                 const imgSrc = item.image_url || '';
-                const imgHtml = `<div class="card-img skeleton"><img src="${imgSrc}" alt="${escapeHtml(item.name)}" loading="lazy" onload="imageLoaded(this)" onerror="imageError(this)"></div>`;
+                const imgHtml = `<div class="card-img skeleton"><img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(item.name)}" loading="lazy" onload="imageLoaded(this)" onerror="imageError(this)"></div>`;
                 const nameHtml = `<div class="card-name">${escapeHtml(item.name)}</div>`;
                 const descHtml = `<div class="card-desc">${escapeHtml(item.description || '')}</div>`;
                 card.innerHTML = imgHtml + nameHtml + descHtml;
                 container.appendChild(card);
             });
         }
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        }
 
-        // ==================== 面包屑导航 ====================
-        (function() {
-            const breadcrumbConfig = {
-                '/yunli-detail.html':          ['角色详情', '云璃'],
-                '/luguan-detail.html':         ['角色详情', '鹿将军'],
-                '/pige-detail.html':           ['角色详情', '皮哥'],
-                '/jiazijie-detail.html':       ['角色详情', '夹子姐'],
-                '/han-detail.html':            ['角色详情', '涵'],
-                '/yuzhiboyan-detail.html':     ['角色详情', '宇智波言'],
-                '/banxierencheng-detail.html': ['角色详情', '半械人成'],
-                '/meng-detail.html':           ['角色详情', '梦'],
-                '/shenshengpige-detail.html':  ['角色详情', '神圣·皮哥'],
-                '/tianmingrenhouge-detail.html':['角色详情', '天命人·猴哥'],
-                '/2.0下~2.0终末/ying.html':    ['角色详情', '萤'],
-                '/2.0下~2.0终末/goudan.html':  ['角色详情', '瑜哥'],
-                '/2.0下~2.0终末/xiaomi.html':  ['角色详情', '小咪'],
-                '/4.0~4.0终末/maolaoda.html':  ['角色详情', '猫老大'],
-                '/Light cone data/changjinglu.html': ['光锥列表', '快乐的路一天'],
-                '/Light cone data/xiaomi.html':      ['光锥列表', '幻灵猫魅'],
-                '/materials_html/清风碎片.html':  ['养成材料', '清风碎片'],
-                '/materials_html/御风晶片.html':  ['养成材料', '御风晶片'],
-                '/materials_html/万风核心.html':  ['养成材料', '万风核心'],
-                '/materials_html/纯白祈愿结晶.html': ['养成材料', '纯白祈愿结晶']
-            };
-
-            function getCurrentPath() {
-                let path = window.location.pathname;
-                path = decodeURIComponent(path);
-                if (!path.startsWith('/')) path = '/' + path;
-                return path;
-            }
-
-            function generateBreadcrumb() {
-                const breadcrumbUl = document.getElementById('breadcrumb-list');
-                if (!breadcrumbUl) return;
-                const currentPath = getCurrentPath();
-                const crumbs = breadcrumbConfig[currentPath];
-                breadcrumbUl.innerHTML = '';
-                const homeLi = document.createElement('li');
-                homeLi.innerHTML = '<a href="/">首页</a>';
-                breadcrumbUl.appendChild(homeLi);
-                if (!crumbs) {
-                    const fileName = currentPath.split('/').pop() || '当前页面';
-                    const li = document.createElement('li');
-                    li.innerHTML = `<span class="current">${escapeHtml(fileName)}</span>`;
-                    breadcrumbUl.appendChild(li);
-                    return;
-                }
-                for (let i = 0; i < crumbs.length; i++) {
-                    const crumb = crumbs[i];
-                    const li = document.createElement('li');
-                    if (i === crumbs.length - 1) {
-                        li.innerHTML = `<span class="current">${escapeHtml(crumb)}</span>`;
-                    } else {
-                        li.innerHTML = `<a href="#">${escapeHtml(crumb)}</a>`;
-                    }
-                    breadcrumbUl.appendChild(li);
-                }
-            }
-            document.addEventListener('DOMContentLoaded', generateBreadcrumb);
-        })();
-
-        // ==================== 跨页签同步和页面可见性增强 ====================
+        // ==================== 跨页签同步 ====================
         function setupCrossTabSync() {
-            // 监听 storage 事件，其他页面修改缓存时同步更新 navbar
             window.addEventListener('storage', (e) => {
                 if (e.key === 'cachedUsername' || e.key === 'cachedAvatar' || e.key === 'avatarFrame') {
                     updateNavbarFromCache();
                 }
-                // 若有自定义的同步触发器，主动刷新用户状态
                 if (e.key === 'forceRefreshUserState') {
                     refreshUserState();
                 }
             });
-            // 页面可见性变化时刷新状态（从其他标签页返回）
             document.addEventListener('visibilitychange', () => {
-                if (!document.hidden) {
-                    refreshUserState();
-                }
+                if (!document.hidden) refreshUserState();
             });
-            // pageshow 确保页面从 bfcache 恢复时也刷新
             window.addEventListener('pageshow', (event) => {
                 if (event.persisted) refreshUserState();
             });
@@ -608,9 +544,7 @@
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             }
             await loadAndRenderAll();
-            // 跨页签同步 + 页面刷新机制
             setupCrossTabSync();
-            // 初次加载后刷新一次确保状态正确
             await refreshUserState();
             setTimeout(() => { document.getElementById('global-loading').style.display = 'none'; }, 800);
         }
