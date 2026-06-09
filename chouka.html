@@ -196,18 +196,13 @@
         <div class="modal-body">
             <div class="info-content">
                 <p><span class="highlight-gold">✨ 统计页面说明 ✨</span><br>
-                只有在 <strong>第一次获得某个角色</strong> 时，该角色才会出现在统计页面的“已获角色命座”列表中，并且角色的名字会以<span class="highlight-gold">金色高亮</span>显示（在统计弹窗中，角色名和命座等级均为金色）。</p>
-                <p><span class="highlight-gold">⭐ 重复获得角色（命座系统）⭐</span><br>
-                当角色已经未达到<span class="highlight-gold">溢出状态</span>时，再次获得该角色时，会自动转换为星琼补偿：<br>
-                • 五星角色重复 → 补偿 <span style="color:orange; font-size: 16px;">320</span> 星琼<br>
-                • 四星角色重复 → 补偿 <span style="color:orange; font-size: 16px;">64</span> 星琼<br>
-                补偿的星琼会直接添加到您的账户中，并在抽卡结果中显示转化提示。</p><br>
-                再次获得已经拥有的角色时，将提升该角色的命座等级（最高6命）。每提升1命，都会在抽卡结果中显示提升提示。</p><br>
-                <p><span class="highlight-gold">💰 满星魂溢出补偿 💰</span><br>
-                当角色已经达到<span class="highlight-gold">6命</span>后，再次获得该角色时，会自动转换为星琼补偿：<br>
-                • 五星角色重复 → 补偿 <span style="color:orange; font-size: 16px;">800</span> 星琼<br>
-                • 四星角色重复 → 补偿 <span style="color:orange; font-size: 16px;">160</span> 星琼<br>
-                补偿的星琼会直接添加到您的账户中，并在抽卡结果中显示转化提示。</p>
+                只有在 <strong>第一次获得某个角色</strong> 时，该角色才会出现在统计页面的“已获角色命座”列表中，并且命座等级显示为 <span class="highlight-gold">0/6</span>。<br>
+                再次获得同一角色时，命座等级+1，最高6/6。满命后再次获得将转换为星琼补偿。</p>
+                <p><span class="highlight-gold">⭐ 命座与补偿规则 ⭐</span><br>
+                • 第一次获得角色 → 仅解锁图鉴，命座0/6，无补偿。<br>
+                • 重复获得角色（未满命）→ 命座+1，无补偿。<br>
+                • 满命后重复获得五星角色 → 补偿 <span style="color:orange;">800</span> 星琼<br>
+                • 满命后重复获得四星角色 → 补偿 <span style="color:orange;">160</span> 星琼</p>
                 <p style="margin-top: 16px; text-align: center;">💡 祝您欧气满满，每抽都出金！</p>
             </div>
         </div>
@@ -250,7 +245,7 @@ let guaranteedUp = false;
 let userNumber = null;
 let isLoadingData = false;
 
-// 命座数据
+// 命座数据 Map: character_name -> constellation_level (0~6)
 let constellationsMap = new Map();
 
 // 统计变量
@@ -464,7 +459,7 @@ function updateButtonsState() {
     }
 }
 
-// ======================= 数据库操作（原版完整）=======================
+// ======================= 命座数据库操作（新版：首次0命）=======================
 async function loadConstellations() {
     if (!currentUser) return;
     try {
@@ -475,7 +470,10 @@ async function loadConstellations() {
         if (error) throw error;
         constellationsMap.clear();
         for (let row of data) {
-            constellationsMap.set(row.character_name, row.constellation_level);
+            // 确保存储的等级为0~6
+            let level = row.constellation_level;
+            if (level === undefined || level === null) level = 0;
+            constellationsMap.set(row.character_name, level);
         }
     } catch (err) { console.warn('加载命座失败:', err); }
 }
@@ -487,15 +485,28 @@ async function saveConstellation(characterName, level) {
             .upsert({ user_id: currentUser.id, character_name: characterName, constellation_level: level, updated_at: new Date() }, { onConflict: 'user_id, character_name' });
     } catch (err) { console.error('保存命座失败:', err); }
 }
+// 处理角色获得：返回 { action, newLevel, compensation? }
 async function processCharacterObtain(characterName, starLevel) {
-    const currentLevel = constellationsMap.get(characterName) || 0;
+    const currentLevel = constellationsMap.get(characterName) ?? 0; // 未获得时为0
     if (currentLevel < 6) {
-        const newLevel = currentLevel + 1;
-        constellationsMap.set(characterName, newLevel);
-        await saveConstellation(characterName, newLevel);
-        showTip(`${characterName} 命座提升至 ${newLevel} 阶！`);
-        return { action: 'constellation', newLevel };
+        // 第一次获得（currentLevel === 0）且是首次获得，仍然保持0命（不提升）
+        // 如果 currentLevel === 0 且之前没有记录，则为首次获得 → 不提升命座，只保存0
+        if (currentLevel === 0 && !constellationsMap.has(characterName)) {
+            // 首次获得，保持0命
+            constellationsMap.set(characterName, 0);
+            await saveConstellation(characterName, 0);
+            showTip(`✨ 首次获得 ${characterName} ✨`);
+            return { action: 'first', newLevel: 0 };
+        } else {
+            // 重复获得，命座+1
+            const newLevel = currentLevel + 1;
+            constellationsMap.set(characterName, newLevel);
+            await saveConstellation(characterName, newLevel);
+            showTip(`${characterName} 命座提升至 ${newLevel} 阶！`);
+            return { action: 'constellation', newLevel };
+        }
     } else {
+        // 已满命，补偿星琼
         const compensation = (starLevel === 5) ? OVERFLOW_COMPENSATION_5 : OVERFLOW_COMPENSATION_4;
         starJade += compensation;
         updateUI();
@@ -504,6 +515,7 @@ async function processCharacterObtain(characterName, starLevel) {
         return { action: 'overflow', compensation };
     }
 }
+
 async function saveAfterDraw(resultList) {
     if (!currentUser) return;
     try {
@@ -606,7 +618,9 @@ async function performSingleDrawWithConstellation() {
     let constellationMsg = null;
     if (resultStar >= 4) {
         const res = await processCharacterObtain(resultName, resultStar);
-        if (res.action === 'constellation') {
+        if (res.action === 'first') {
+            constellationMsg = `首次获得`;
+        } else if (res.action === 'constellation') {
             constellationMsg = `命座 ${res.newLevel}`;
         } else if (res.action === 'overflow') {
             constellationMsg = `满命转化 ${res.compensation}星琼`;
@@ -694,13 +708,42 @@ function updateStatsModalContent() {
         <div class="stat-card"><div class="stat-label">🎯 UP命中率</div><div class="stat-number">${upRate}</div></div>
     `;
     statsGrid.innerHTML = statsHtml;
+    
+    // 整理命座列表并排序：限定五星 > 常驻五星 > 四星角色
     if (constellationsMap.size === 0) {
         constellationListDiv.innerHTML = '<div style="color:#aab9de; font-size:0.7rem;">暂无角色命座信息</div>';
         return;
     }
-    let constHtml = '';
+    const fiveStarSet = new Set([UP_FIVE_STAR, ...PERMANENT_FIVE_STAR]);
+    const limitedFive = UP_FIVE_STAR;
+    let limitedList = [];
+    let permanentFiveList = [];
+    let fourList = [];
     for (let [name, level] of constellationsMap.entries()) {
-        constHtml += `<div class="constellation-item"><span class="constellation-name">${escapeHtml(name)}</span><span class="constellation-level">${level}/6</span></div>`;
+        if (name === limitedFive) {
+            limitedList.push({ name, level });
+        } else if (PERMANENT_FIVE_STAR.includes(name)) {
+            permanentFiveList.push({ name, level });
+        } else if (FOUR_STAR_CHARS.includes(name)) {
+            fourList.push({ name, level });
+        } else {
+            // 未知类型（理论上只有以上三类）
+            fourList.push({ name, level });
+        }
+    }
+    // 按名称排序（可选）
+    limitedList.sort((a,b) => a.name.localeCompare(b.name));
+    permanentFiveList.sort((a,b) => a.name.localeCompare(b.name));
+    fourList.sort((a,b) => a.name.localeCompare(b.name));
+    const sorted = [...limitedList, ...permanentFiveList, ...fourList];
+    let constHtml = '';
+    for (let item of sorted) {
+        const isFiveStar = (item.name === limitedFive || PERMANENT_FIVE_STAR.includes(item.name));
+        const colorClass = isFiveStar ? 'constellation-five' : 'constellation-four';
+        constHtml += `<div class="constellation-item ${colorClass}">
+            <span class="constellation-name">${escapeHtml(item.name)}</span>
+            <span class="constellation-level">(${item.level}/6)</span>
+        </div>`;
     }
     constellationListDiv.innerHTML = constHtml;
 }
