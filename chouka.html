@@ -9,6 +9,12 @@
     <title>卡池 - 六哥荣耀WIKI (动态卡池)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://xiaochen1235789.github.io/css/chouka.css">
+    <style>
+        /* 记录星星颜色 */
+        .star-gold { color: #ffd966; font-weight: bold; letter-spacing: 2px; }
+        .star-purple { color: #c084fc; font-weight: bold; letter-spacing: 2px; }
+        .record-star3 .star-gray { color: #bbccdd; font-weight: bold; letter-spacing: 2px; }
+    </style>
 </head>
 <body>
 <div class="star-bg" id="starBg"></div>
@@ -130,7 +136,7 @@
 <div id="recordModal" class="modal-mask">
     <div class="record-modal">
         <div class="modal-header">
-            <span>📜 跃迁记录 (最多500条)</span>
+            <span>📜 跃迁记录 (最多2000条)</span>
             <button class="close-modal" id="closeModalBtn">✖</button>
         </div>
         <div id="recordList" class="record-list">
@@ -245,7 +251,7 @@ let guaranteedUp = false;
 let userNumber = null;
 let isLoadingData = false;
 
-// 命座数据 Map: character_name -> constellation_level (0~6)
+// 命座数据
 let constellationsMap = new Map();
 
 // 统计变量
@@ -459,7 +465,7 @@ function updateButtonsState() {
     }
 }
 
-// ======================= 命座数据库操作（新版：首次0命）=======================
+// ======================= 命座数据库操作 =======================
 async function loadConstellations() {
     if (!currentUser) return;
     try {
@@ -470,7 +476,6 @@ async function loadConstellations() {
         if (error) throw error;
         constellationsMap.clear();
         for (let row of data) {
-            // 确保存储的等级为0~6
             let level = row.constellation_level;
             if (level === undefined || level === null) level = 0;
             constellationsMap.set(row.character_name, level);
@@ -485,20 +490,15 @@ async function saveConstellation(characterName, level) {
             .upsert({ user_id: currentUser.id, character_name: characterName, constellation_level: level, updated_at: new Date() }, { onConflict: 'user_id, character_name' });
     } catch (err) { console.error('保存命座失败:', err); }
 }
-// 处理角色获得：返回 { action, newLevel, compensation? }
 async function processCharacterObtain(characterName, starLevel) {
-    const currentLevel = constellationsMap.get(characterName) ?? 0; // 未获得时为0
+    const currentLevel = constellationsMap.get(characterName) ?? 0;
     if (currentLevel < 6) {
-        // 第一次获得（currentLevel === 0）且是首次获得，仍然保持0命（不提升）
-        // 如果 currentLevel === 0 且之前没有记录，则为首次获得 → 不提升命座，只保存0
         if (currentLevel === 0 && !constellationsMap.has(characterName)) {
-            // 首次获得，保持0命
             constellationsMap.set(characterName, 0);
             await saveConstellation(characterName, 0);
             showTip(`✨ 首次获得 ${characterName} ✨`);
             return { action: 'first', newLevel: 0 };
         } else {
-            // 重复获得，命座+1
             const newLevel = currentLevel + 1;
             constellationsMap.set(characterName, newLevel);
             await saveConstellation(characterName, newLevel);
@@ -506,7 +506,6 @@ async function processCharacterObtain(characterName, starLevel) {
             return { action: 'constellation', newLevel };
         }
     } else {
-        // 已满命，补偿星琼
         const compensation = (starLevel === 5) ? OVERFLOW_COMPENSATION_5 : OVERFLOW_COMPENSATION_4;
         starJade += compensation;
         updateUI();
@@ -516,6 +515,7 @@ async function processCharacterObtain(characterName, starLevel) {
     }
 }
 
+// ======================= 历史记录（上限2000，星星格式）=======================
 async function saveAfterDraw(resultList) {
     if (!currentUser) return;
     try {
@@ -534,7 +534,8 @@ async function saveAfterDraw(resultList) {
 }
 function addHistoryRecord(itemName, starLevel) {
     gachaHistory.unshift({ name: itemName, star: starLevel });
-    if (gachaHistory.length > 500) gachaHistory.pop();
+    // 保持最多2000条
+    while (gachaHistory.length > 2000) gachaHistory.pop();
     renderHistoryModal();
 }
 function renderHistoryModal() {
@@ -546,11 +547,21 @@ function renderHistoryModal() {
     let html = '';
     for (let rec of gachaHistory) {
         let starClass = '';
-        let starColorText = '';
-        if (rec.star === 5) { starClass = 'record-star5'; starColorText = '★五星'; }
-        else if (rec.star === 4) { starClass = 'record-star4'; starColorText = '★四星'; }
-        else { starClass = 'record-star3'; starColorText = '★★★三星'; }
-        html += `<div class="record-item ${starClass}"><span>${escapeHtml(rec.name)}</span><span style="font-weight:bold;">${starColorText}</span></div>`;
+        let starsHtml = '';
+        if (rec.star === 5) {
+            starClass = 'record-star5';
+            starsHtml = '<span class="star-gold">★★★★★</span>';
+        } else if (rec.star === 4) {
+            starClass = 'record-star4';
+            starsHtml = '<span class="star-purple">★★★★</span>';
+        } else {
+            starClass = 'record-star3';
+            starsHtml = '<span class="star-gray">★★★</span>';
+        }
+        html += `<div class="record-item ${starClass}">
+                    <span>${escapeHtml(rec.name)}</span>
+                    ${starsHtml}
+                  </div>`;
     }
     recordListDiv.innerHTML = html;
 }
@@ -709,29 +720,18 @@ function updateStatsModalContent() {
     `;
     statsGrid.innerHTML = statsHtml;
     
-    // 整理命座列表并排序：限定五星 > 常驻五星 > 四星角色
     if (constellationsMap.size === 0) {
         constellationListDiv.innerHTML = '<div style="color:#aab9de; font-size:0.7rem;">暂无角色命座信息</div>';
         return;
     }
     const fiveStarSet = new Set([UP_FIVE_STAR, ...PERMANENT_FIVE_STAR]);
     const limitedFive = UP_FIVE_STAR;
-    let limitedList = [];
-    let permanentFiveList = [];
-    let fourList = [];
+    let limitedList = [], permanentFiveList = [], fourList = [];
     for (let [name, level] of constellationsMap.entries()) {
-        if (name === limitedFive) {
-            limitedList.push({ name, level });
-        } else if (PERMANENT_FIVE_STAR.includes(name)) {
-            permanentFiveList.push({ name, level });
-        } else if (FOUR_STAR_CHARS.includes(name)) {
-            fourList.push({ name, level });
-        } else {
-            // 未知类型（理论上只有以上三类）
-            fourList.push({ name, level });
-        }
+        if (name === limitedFive) limitedList.push({ name, level });
+        else if (PERMANENT_FIVE_STAR.includes(name)) permanentFiveList.push({ name, level });
+        else fourList.push({ name, level });
     }
-    // 按名称排序（可选）
     limitedList.sort((a,b) => a.name.localeCompare(b.name));
     permanentFiveList.sort((a,b) => a.name.localeCompare(b.name));
     fourList.sort((a,b) => a.name.localeCompare(b.name));
@@ -866,12 +866,13 @@ async function loadUserData() {
         guaranteedUp = stateData.guaranteed_up;
 
         try {
+            // 从数据库加载最多2000条历史记录
             let { data: historyData, error: histErr } = await supabaseClient
                 .from('gacha_history')
                 .select('item_name, star_level, created_at')
                 .eq('user_id', currentUser.id)
                 .order('created_at', { ascending: false })
-                .limit(500);
+                .limit(2000);
             if (!histErr) {
                 gachaHistory = (historyData || []).map(h => ({ name: h.item_name, star: h.star_level, time: h.created_at }));
             } else {
@@ -935,7 +936,7 @@ async function loadUserData() {
     }
 }
 
-// 弹窗事件绑定
+// ======================= 弹窗事件绑定 =======================
 function openExchangeModal() { exchangeModal.classList.add('active'); }
 function closeExchangeModal() { exchangeModal.classList.remove('active'); }
 function updateExchangePreview() {
