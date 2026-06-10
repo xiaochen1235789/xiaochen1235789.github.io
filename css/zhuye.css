@@ -28,7 +28,7 @@ body {
     border: 1px solid var(--border-color);
 }
 .banner-overlay { background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.5)); height: 100%; }
-.banner-content { display: flex; flex-wrap: wrap; gap: 20px; padding: 20px 25px; align-items: flex-end; }
+.banner-content { display: flex; flex-wrap: wrap; gap: 20px; padding: 20px 25px; align-items: flex-start; }  /* 改为 flex-start 防止压缩 */
 .avatar-container { position: relative; width: 100px; height: 100px; }
 .avatar {
     width: 100px; height: 100px; border-radius: 50%;
@@ -172,52 +172,47 @@ body {
 .loading-spinner { width: 40px; height: 40px; border: 3px solid rgba(129,199,132,0.2); border-top-color: var(--text-highlight); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ========== 修复头像框导致布局缩小（全局生效）========== */
+.frame-gold,
+.frame-rainbow,
+.frame-diamond,
+.frame-legend {
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    border: none !important;
+}
+
+/* 确保头像容器尺寸严格固定 */
+.avatar-container,
+.avatar {
+    width: 100px;
+    height: 100px;
+    min-width: 100px;
+    min-height: 100px;
+    max-width: 100px;
+    max-height: 100px;
+}
+
+/* 避免右侧内容被压缩 */
+.user-info {
+    flex: 1 1 auto;
+    min-width: 180px;
+}
+
+/* 响应式适配（平板/手机） */
 @media (max-width: 768px) {
     .banner-content { padding: 15px; flex-direction: column; align-items: flex-start; }
     .username { font-size: 1.5rem; }
     .settings-item { flex-direction: column; align-items: flex-start; }
     .checkin-card { flex-direction: column; align-items: stretch; }
-
-/* 修复平板装备头像框导致布局缩小的 bug */
-.frame-gold,
-.frame-rainbow,
-.frame-diamond,
-.frame-legend {
-    box-shadow: none !important;        /* 避免阴影引起额外尺寸 */
-    background: transparent !important; /* 去除可能影响尺寸的背景 */
-    padding: 0 !important;              /* 关键：去除 padding */
-    border: none !important;
-}
-
-/* 确保头像容器尺寸固定，不被任何装饰撑大 */
-.avatar-container,
-.avatar {
-    width: 100px;
-    height: 100px;
-    max-width: 100px;
-    max-height: 100px;
-    min-width: 100px;
-    min-height: 100px;
-}
-
-/* 响应式平板上保持稳定 */
-@media (max-width: 768px) {
     .avatar-container,
     .avatar {
         width: 80px;
         height: 80px;
         min-width: 80px;
         min-height: 80px;
+        max-width: 80px;
+        max-height: 80px;
     }
-}
-
-/* 避免 flex 子项因兄弟元素变化而被压缩 */
-.banner-content {
-    align-items: flex-start;  /* 原来是 flex-end，改一下布局稳定性 */
-}
-.user-info {
-    flex-shrink: 1;
-    min-width: 0;  /* 防止溢出 */
-    width: auto;
-}
 }
