@@ -88,7 +88,19 @@
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
-        // ========== 头像框系统 (data-frame 方式，不改尺寸) ==========
+        // ========== 本地缓存同步（修复点1） ==========
+        function refreshLocalCache() {
+            if (userProfile) localStorage.setItem('cachedUserProfile', JSON.stringify(userProfile));
+            if (userStats) localStorage.setItem('cachedUserStats', JSON.stringify(userStats));
+            localStorage.setItem('profileLastUpdated', Date.now());
+        }
+
+        // 获取本地日期 YYYY-MM-DD（修复点2：时区问题）
+        function getLocalDateString(date = new Date()) {
+            return date.toLocaleDateString('sv-SE'); // 返回 YYYY-MM-DD
+        }
+
+        // ========== 头像框系统 ==========
         window.FrameSystem = (function() {
             const FRAMES = [
                 { id: 'frame_default', name: '默认头像框', description: '初始边框', price_candy: 0, price_rainbow: 0, cssClass: '' },
@@ -123,6 +135,8 @@
                 await supabaseClient.from('user_stats').update({ candy_crumbles: newCandy, rainbow_lollipops: newRainbow }).eq('user_id', currentUser.id);
                 await supabaseClient.from('user_frames').upsert({ user_id: currentUser.id, frame_id: frameId, equipped: false, purchased_at: new Date().toISOString() }, { onConflict: 'user_id, frame_id', ignoreDuplicates: true });
                 if (window.userStats) { window.userStats.candy_crumbles = newCandy; window.userStats.rainbow_lollipops = newRainbow; }
+                // 同步本地缓存（修复点7）
+                if (window.refreshLocalCache) window.refreshLocalCache();
                 if (onSuccess) onSuccess(newCandy, newRainbow);
                 if (window.updateShopBalanceDisplay) window.updateShopBalanceDisplay();
             }
@@ -132,6 +146,7 @@
                 await supabaseClient.from('user_frames').update({ equipped: false }).eq('user_id', currentUser.id).eq('equipped', true);
                 await supabaseClient.from('user_frames').update({ equipped: true }).eq('user_id', currentUser.id).eq('frame_id', frameId);
                 applyFrameAttribute(frameId);
+                // 装备不会改变stats，无需同步缓存，但可以刷新页面显示
             }
             function applyFrameAttribute(frameId) {
                 const avatarDiv = document.getElementById('userAvatar');
@@ -185,6 +200,7 @@
                 let letter = (userProfile?.username || currentUser?.email?.charAt(0) || 'U').charAt(0).toUpperCase();
                 avatarDiv.innerHTML = `<div class="avatar-placeholder">${letter}</div>`;
             }
+            // 重新应用头像框（修复点14）
             if(window.FrameSystem && currentUser) {
                 window.FrameSystem.loadUserFrames(currentUser.id).then(({ equipped }) => {
                     if(equipped) window.FrameSystem.applyFrameAttribute(equipped);
@@ -221,17 +237,21 @@
             let usernameSpan = document.getElementById('displayUsername');
             if(usernameSpan) usernameSpan.innerHTML = `${newName} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
             cacheUserProfile(newName, userProfile.avatar_url);
+            refreshLocalCache();          // 修复点1
             updateNavbar();
             closeModal('usernameModal');
             showNotification('用户名已更新','success');
+            showSyncNotice();             // 修复点12
         }
         async function updateBio() {
             let newBio = document.getElementById('newBio').value.trim() || '';
             await supabaseClient.from('user_profiles').update({ bio: newBio }).eq('id', currentUser.id);
             userProfile.bio = newBio;
             safeSetText('userBio', newBio);
+            refreshLocalCache();          // 修复点1
             closeModal('bioModal');
             showNotification('简介已更新','success');
+            showSyncNotice();             // 修复点12
         }
         async function updatePassword() {
             let cur = document.getElementById('currentPassword').value;
@@ -244,7 +264,15 @@
             if(signErr) return showNotification('当前密码错误','error');
             let { error } = await supabaseClient.auth.updateUser({ password: np });
             if(error) showNotification('修改失败','error');
-            else showNotification('密码已更新，请重新登录','success');
+            else {
+                showNotification('密码已更新，请重新登录','success');
+                // 修复点4：修改密码后自动退出
+                setTimeout(() => {
+                    supabaseClient.auth.signOut();
+                    localStorage.clear();
+                    window.location.href = 'login-real.html';
+                }, 1500);
+            }
             closeModal('passwordModal');
         }
         async function deleteAccount() {
@@ -291,12 +319,13 @@
         async function performCheckin() {
             let btn = document.getElementById('checkinBtn');
             if(btn.disabled) return showNotification('今日已签到','warning');
-            let today = new Date().toISOString().slice(0,10);
+            let today = getLocalDateString();          // 修复点2
             let last = userStats.last_checkin_date;
             let newStreak = 1;
             if(last) {
                 let yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
-                if(last === yesterday.toISOString().slice(0,10)) newStreak = (userStats.checkin_streak||0)+1;
+                let yesterdayStr = getLocalDateString(yesterday);
+                if(last === yesterdayStr) newStreak = (userStats.checkin_streak||0)+1;
                 else if(last !== today) newStreak = 1;
                 else return;
             }
@@ -310,6 +339,7 @@
             }).eq('user_id', currentUser.id);
             if(error) return showNotification('签到失败','error');
             userStats = {...userStats, candy_crumbles:newCandy, rainbow_lollipops:newRainbow, active_points:newActive, last_checkin_date:today, checkin_streak:newStreak};
+            refreshLocalCache();          // 修复点1
             updateActivePointsDisplay();
             updateShopBalanceDisplay();
             document.getElementById('streakDays').innerText = newStreak;
@@ -317,8 +347,6 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-check-circle"></i> 已签到';
             showNotification(`签到 +${rewards.candy}🍬 ${rewards.rainbow>0?`+${rewards.rainbow}🌈 `:''}+${rewards.active}⚡`,'success');
-            localStorage.setItem('cachedUserStats', JSON.stringify(userStats));
-            localStorage.setItem('forceRefreshUserState', Date.now().toString());
         }
 
         // ========== 商店渲染 ==========
@@ -359,7 +387,7 @@
             document.querySelectorAll('.btn-buy').forEach(btn => btn.addEventListener('click', async (e) => {
                 let fid = btn.dataset.id;
                 try {
-                    await window.FrameSystem.purchaseFrame(fid, userStats, (c, r) => { userStats.candy_crumbles = c; userStats.rainbow_lollipops = r; updateShopBalanceDisplay(); showNotification('购买成功','success'); loadFramesList(); });
+                    await window.FrameSystem.purchaseFrame(fid, userStats, (c, r) => { userStats.candy_crumbles = c; userStats.rainbow_lollipops = r; updateShopBalanceDisplay(); showNotification('购买成功','success'); loadFramesList(); refreshLocalCache(); });
                 } catch(err) { showNotification(err.message,'error'); }
             }));
             document.querySelectorAll('.btn-equip').forEach(btn => btn.addEventListener('click', async (e) => {
@@ -371,12 +399,13 @@
         // ========== 头像上传裁剪 ==========
         async function deleteOldAvatarFiles(userId) {
             try {
-                const { data: files } = await supabaseClient.storage.from('avatars').list(userId);
+                const { data: files, error: listErr } = await supabaseClient.storage.from('avatars').list(userId);
+                if (listErr && listErr.statusCode === 404) return; // 修复点5：文件夹不存在忽略
                 if(files && files.length) {
                     let paths = files.map(f => `${userId}/${f.name}`);
                     await supabaseClient.storage.from('avatars').remove(paths);
                 }
-            } catch(e) {}
+            } catch(e) { console.warn('删除旧头像文件失败:', e); }
         }
         async function uploadCroppedImage(blob) {
             if(!currentUser || isUploading) return false;
@@ -392,6 +421,7 @@
                 localStorage.setItem('userAvatar', publicUrl);
                 updateAvatarDisplay(publicUrl);
                 cacheUserProfile(userProfile?.username, publicUrl);
+                refreshLocalCache();          // 修复点1
                 updateNavbar();
                 showNotification('头像已更新','success');
                 return true;
@@ -426,9 +456,15 @@
                 if(blob) await uploadCroppedImage(blob);
                 closeModal('cropModal');
                 if(cropper){ cropper.destroy(); cropper=null; }
+                // 修复点10：清空图片src
+                document.getElementById('cropImage').removeAttribute('src');
             },'image/png');
         }
-        function cancelCrop() { if(cropper){ cropper.destroy(); cropper=null; } closeModal('cropModal'); }
+        function cancelCrop() { 
+            if(cropper){ cropper.destroy(); cropper=null; } 
+            closeModal('cropModal');
+            document.getElementById('cropImage').removeAttribute('src');
+        }
 
         // ========== 资料加载（含缓存） ==========
         async function loadUserProfile() {
@@ -452,6 +488,7 @@
             let roleRow = document.getElementById('userRoleDisplay');
             if(roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
             cacheUserProfile(username, userProfile.avatar_url);
+            refreshLocalCache();
         }
         async function loadUserStats() {
             let { data, error } = await supabaseClient.from('user_stats').select('*').eq('user_id', currentUser.id).single();
@@ -464,24 +501,25 @@
             updateShopBalanceDisplay();
             document.getElementById('streakDays').innerText = userStats.checkin_streak;
             updateRewardPreview();
-            let today = new Date().toISOString().slice(0,10);
+            let today = getLocalDateString();
             let btn = document.getElementById('checkinBtn');
             if(btn) {
                 let checked = (userStats.last_checkin_date === today);
                 btn.disabled = checked;
                 btn.innerHTML = checked ? '<i class="fas fa-check-circle"></i> 已签到' : '<i class="fas fa-calendar-check"></i> 签到';
             }
+            refreshLocalCache();
         }
         async function updateLastLogin() {
             await supabaseClient.from('user_stats').upsert({ user_id: currentUser.id, last_login: new Date().toISOString() }, { onConflict: 'user_id' });
             safeSetText('lastLogin', new Date().toLocaleString());
         }
         function hasTodayCachedLogin(userId) {
-            let today = new Date().toISOString().slice(0,10);
+            let today = getLocalDateString();
             return localStorage.getItem('lastLoginDate') === today && localStorage.getItem('lastLoginUserId') === userId;
         }
         function setTodayCachedLogin(userId) {
-            let today = new Date().toISOString().slice(0,10);
+            let today = getLocalDateString();
             localStorage.setItem('lastLoginDate', today);
             localStorage.setItem('lastLoginUserId', userId);
         }
@@ -511,19 +549,21 @@
                     updateShopBalanceDisplay();
                     document.getElementById('streakDays').innerText = userStats.checkin_streak;
                     updateRewardPreview();
-                    let today = new Date().toISOString().slice(0,10);
+                    let today = getLocalDateString();
                     let btn = document.getElementById('checkinBtn');
                     if(btn) { btn.disabled = (userStats.last_checkin_date === today); btn.innerHTML = btn.disabled ? '<i class="fas fa-check-circle"></i> 已签到' : '<i class="fas fa-calendar-check"></i> 签到'; }
                     updateNavbar();
+                    // 修复点3 & 修复点6：缓存分支也要初始化头像框 + 后台更新最后登录时间
                     if(window.FrameSystem) await window.FrameSystem.initFrameForUser(currentUser.id);
+                    updateLastLogin();  // 静默更新最后登录时间
                     return true;
                 }
             }
             await loadUserProfile();
             await loadUserStats();
             await updateLastLogin();
-            localStorage.setItem('cachedUserProfile', JSON.stringify(userProfile));
-            localStorage.setItem('cachedUserStats', JSON.stringify(userStats));
+            // 修复点3：新用户必需初始化头像框
+            if(window.FrameSystem) await window.FrameSystem.initFrameForUser(currentUser.id);
             setTodayCachedLogin(currentUser.id);
             return false;
         }
