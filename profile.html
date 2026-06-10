@@ -193,15 +193,27 @@
         // ========== 通用辅助 ==========
         function safeSetText(id, text) { let e = document.getElementById(id); if(e) e.textContent = text || '--'; }
         let notificationTimeout = null;
-        function showNotification(msg, type='info') {
+        // 修复：使用类名控制显隐，不用内联 transform
+        function showNotification(msg, type = 'info') {
             let n = document.getElementById('notification');
-            if(!n) { n = document.createElement('div'); n.id = 'notification'; document.body.appendChild(n); }
+            if (!n) {
+                n = document.createElement('div');
+                n.id = 'notification';
+                document.body.appendChild(n);
+            }
             n.textContent = msg;
-            n.style.background = type==='error'?'#f87171':(type==='success'?'#10b981':'#3b82f6');
-            n.style.color='#fff';
-            n.style.transform='translateX(0)';
-            if(notificationTimeout) clearTimeout(notificationTimeout);
-            notificationTimeout = setTimeout(()=>{ if(n) n.style.transform='translateX(120%)'; },3000);
+            n.style.background = type === 'error' ? '#f87171' : (type === 'success' ? '#10b981' : '#3b82f6');
+            n.style.color = '#fff';
+            // 移除可能残留的 show 类
+            n.classList.remove('show');
+            // 强制重绘
+            void n.offsetWidth;
+            // 添加 show 类触发滑入
+            n.classList.add('show');
+            if (notificationTimeout) clearTimeout(notificationTimeout);
+            notificationTimeout = setTimeout(() => {
+                if (n) n.classList.remove('show');
+            }, 3000);
         }
         function showSyncNotice() { let sn = document.getElementById('syncNotice'); if(sn){ sn.classList.add('show'); setTimeout(()=>sn.classList.remove('show'),2000); } }
         function cacheUserProfile(username, avatarUrl) { 
