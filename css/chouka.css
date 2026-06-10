@@ -37,6 +37,9 @@ body {
     border-radius: 50%;
     opacity: 0;
     animation: twinkle 3s infinite alternate;
+    will-change: transform, opacity;
+    transform: translateZ(0);
+    backface-visibility: hidden;
 }
 
 @keyframes twinkle {
@@ -59,6 +62,8 @@ body {
     box-shadow: 0 0 6px 1px rgba(255, 245, 180, 0.8);
     animation: shoot 6s linear infinite;
     opacity: 0;
+    will-change: transform, opacity;
+    transform: translateZ(0);
 }
 
 @keyframes shoot {
@@ -111,6 +116,8 @@ body {
     overflow-y: auto;
     padding: 20px 16px;
     scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+    contain: content; /* 限制重绘范围 */
 }
 
 /* UID 徽章 */
@@ -458,6 +465,8 @@ body {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    will-change: transform;
+    transform: translateZ(0);
 }
 
 .gacha-btn img {
@@ -528,6 +537,7 @@ body {
     overflow-y: auto;
     padding: 24px;
     scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
 }
 
 .constellation-section {
@@ -705,6 +715,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    contain: content;
 }
 
 .record-item {
@@ -732,6 +743,19 @@ body {
 .record-star3 {
     border-left-color: #5f7f9e;
     color: #bbccdd;
+}
+
+.load-more-btn {
+    text-align: center;
+    justify-content: center;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.7);
+    color: #ffbc6e;
+    border-left: none;
+}
+
+.load-more-btn:hover {
+    background: rgba(0, 0, 0, 0.9);
 }
 
 .empty-history {
@@ -817,6 +841,8 @@ body {
     font-weight: 500;
     border-left: 6px solid;
     animation: fadeInUp 0.2s ease;
+    will-change: transform;
+    transform: translateZ(0);
 }
 
 .dialog-star5 {
@@ -1003,6 +1029,59 @@ body {
     margin: 8px 0;
 }
 
+/* ========== 性能优化：低端设备减少星星数量 ========== */
+@media (max-width: 480px) {
+    .star, .shooting-star {
+        opacity: 0.4;
+    }
+}
+
+/* 用户偏好减少动画时，关闭所有动画 */
+@media (prefers-reduced-motion: reduce) {
+    .star, .shooting-star, .gacha-btn, .dialog-item {
+        animation: none !important;
+        transition: none !important;
+    }
+    .star {
+        opacity: 0.5;
+    }
+    .shooting-star {
+        display: none;
+    }
+}
+
+/* 命座列表颜色：五星淡金色，四星淡紫色 */
+.constellation-five .constellation-name,
+.constellation-five .constellation-level {
+    color: #ffd966 !important;
+}
+.constellation-four .constellation-name,
+.constellation-four .constellation-level {
+    color: #c084fc !important;
+}
+
+/* 增强滚动区域的惯性滑动 */
+.left-panel-scroll,
+.record-list,
+.dialog-content,
+.constellation-section,
+#statsModal .modal-body {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+}
+
+/* 调整圆角使界面更柔和 */
+.landscape-wrapper {
+    border-radius: 0px;
+}
+.left-panel,
+.character-splash {
+    border-radius: 48px;
+}
+.pool-name {
+    letter-spacing: 2px;
+}
+
 /* 响应式适配 */
 @media (max-width: 800px) {
     .landscape-wrapper {
@@ -1053,36 +1132,4 @@ body {
     .constellation-section {
         max-height: 180px;
     }
-
-    /* 命座列表颜色：五星淡金色，四星淡紫色 */
-.constellation-five .constellation-name,
-.constellation-five .constellation-level {
-    color: #ffd966 !important;
-}
-.constellation-four .constellation-name,
-.constellation-four .constellation-level {
-    color: #c084fc !important;
-}
-
-/* 增强滚动区域的惯性滑动 */
-.left-panel-scroll,
-.record-list,
-.dialog-content,
-.constellation-section,
-#statsModal .modal-body {
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-}
-
-/* 调整圆角使界面更柔和 */
-.landscape-wrapper {
-    border-radius: 0px; /* 无额外圆角，保持原样 */
-}
-.left-panel,
-.character-splash {
-    border-radius: 48px;
-}
-.pool-name {
-    letter-spacing: 2px;
-}
 }
