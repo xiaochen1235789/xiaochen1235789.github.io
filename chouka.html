@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, orientation=landscape">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>卡池 - 六哥荣耀WIKI (动态卡池)</title>
+    <title>卡池 - 六哥荣耀WIKI (动态卡池 | 性能优化版)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://xiaochen1235789.github.io/css/chouka.css">
     <style>
@@ -263,10 +263,6 @@ let upFiveStarCount = 0;
 let fiveStarDistances = [];
 let lastFiveStarPullIndex = 0;
 
-// 管理员权限
-const ADMIN_USER_ID = '2e617135-daa2-4619-a7df-dacd425da881';
-let isAdmin = false;
-
 // DOM 元素
 const jadeSpan = document.getElementById('jadeAmount');
 const ticketSpan = document.getElementById('ticketAmount');
@@ -313,6 +309,42 @@ const resetHistoryBtn = document.getElementById('resetHistoryBtn');
 const infoModal = document.getElementById('infoModal');
 const infoBtn = document.getElementById('infoBtn');
 const closeInfoBtn = document.getElementById('closeInfoBtn');
+
+// ======================= 性能优化：动态星星数量 =======================
+function initStars() {
+    const starContainer = document.getElementById('starBg');
+    if (!starContainer) return;
+    starContainer.innerHTML = '';
+    const screenWidth = window.innerWidth;
+    let starCount = 180;
+    let meteorCount = 4;
+    if (screenWidth <= 480) {
+        starCount = 60;
+        meteorCount = 2;
+    } else if (screenWidth <= 768) {
+        starCount = 100;
+        meteorCount = 3;
+    }
+    for (let i = 0; i < starCount; i++) {
+        const star = document.createElement('div');
+        star.classList.add('star');
+        const size = Math.random() * 3 + 1;
+        star.style.width = size + 'px';
+        star.style.height = size + 'px';
+        star.style.left = Math.random() * 100 + '%';
+        star.style.top = Math.random() * 100 + '%';
+        star.style.animationDelay = Math.random() * 5 + 's';
+        starContainer.appendChild(star);
+    }
+    for (let i = 0; i < meteorCount; i++) {
+        const meteor = document.createElement('div');
+        meteor.classList.add('shooting-star');
+        meteor.style.left = Math.random() * 80 + '%';
+        meteor.style.top = Math.random() * 50 + '%';
+        meteor.style.animationDelay = Math.random() * 8 + 's';
+        starContainer.appendChild(meteor);
+    }
+}
 
 // ======================= 动态加载配置 =======================
 async function fetchCurrentBanner() {
@@ -515,7 +547,11 @@ async function processCharacterObtain(characterName, starLevel) {
     }
 }
 
-// ======================= 历史记录（上限2000，星星格式）=======================
+// ======================= 历史记录（分页加载，优化性能）=======================
+let historyPageSize = 50;
+let historyCurrentPage = 1;
+let historyTotal = 0;
+
 async function saveAfterDraw(resultList) {
     if (!currentUser) return;
     try {
@@ -534,7 +570,6 @@ async function saveAfterDraw(resultList) {
 }
 function addHistoryRecord(itemName, starLevel) {
     gachaHistory.unshift({ name: itemName, star: starLevel });
-    // 保持最多2000条
     while (gachaHistory.length > 2000) gachaHistory.pop();
     renderHistoryModal();
 }
@@ -544,8 +579,17 @@ function renderHistoryModal() {
         recordListDiv.innerHTML = '<div class="empty-history">暂无抽卡记录</div>';
         return;
     }
+    historyTotal = gachaHistory.length;
+    historyCurrentPage = 1;
+    _renderHistoryPage();
+}
+function _renderHistoryPage() {
+    if (!recordListDiv) return;
+    const start = 0;
+    const end = historyCurrentPage * historyPageSize;
+    const visible = gachaHistory.slice(start, end);
     let html = '';
-    for (let rec of gachaHistory) {
+    for (let rec of visible) {
         let starClass = '';
         let starsHtml = '';
         if (rec.star === 5) {
@@ -563,11 +607,27 @@ function renderHistoryModal() {
                     ${starsHtml}
                   </div>`;
     }
+    if (historyTotal > end) {
+        html += `<div class="record-item load-more-btn" style="text-align:center; justify-content:center; cursor:pointer;">加载更多 (${end}/${historyTotal})</div>`;
+    }
     recordListDiv.innerHTML = html;
+    const loadMore = recordListDiv.querySelector('.load-more-btn');
+    if (loadMore) {
+        loadMore.addEventListener('click', () => {
+            if ((historyCurrentPage + 1) * historyPageSize <= historyTotal) {
+                historyCurrentPage++;
+                _renderHistoryPage();
+            } else {
+                loadMore.remove();
+            }
+        });
+    }
 }
+
+// ======================= 抽卡结果弹窗优化（DocumentFragment）=======================
 function showResultDialog(resultsArray) {
     if (!resultsArray || resultsArray.length === 0) return;
-    dialogContent.innerHTML = '';
+    const fragment = document.createDocumentFragment();
     for (let item of resultsArray) {
         const starClass = item.star === 5 ? 'dialog-star5' : (item.star === 4 ? 'dialog-star4' : 'dialog-star3');
         const starLabel = item.star === 5 ? '五星' : (item.star === 4 ? '四星' : '三星');
@@ -576,13 +636,17 @@ function showResultDialog(resultsArray) {
         const div = document.createElement('div');
         div.className = `dialog-item ${starClass}`;
         div.innerHTML = `<span>${escapeHtml(item.name)}</span><span class="dialog-star-label">${starLabel}${extraInfo}</span>`;
-        dialogContent.appendChild(div);
+        fragment.appendChild(div);
     }
+    dialogContent.innerHTML = '';
+    dialogContent.appendChild(fragment);
     resultDialog.classList.add('active');
 }
 window.closeResultDialogGlobal = function() {
     resultDialog.classList.remove('active');
 };
+
+// ======================= 抽卡核心逻辑 =======================
 async function performSingleDrawWithConstellation() {
     let isFiveStar = false;
     if (fiveStarPity + 1 >= PITY_5_MAX) {
@@ -724,7 +788,6 @@ function updateStatsModalContent() {
         constellationListDiv.innerHTML = '<div style="color:#aab9de; font-size:0.7rem;">暂无角色命座信息</div>';
         return;
     }
-    const fiveStarSet = new Set([UP_FIVE_STAR, ...PERMANENT_FIVE_STAR]);
     const limitedFive = UP_FIVE_STAR;
     let limitedList = [], permanentFiveList = [], fourList = [];
     for (let [name, level] of constellationsMap.entries()) {
@@ -770,58 +833,76 @@ async function attemptDraw(needTickets, costJade, drawFunc) {
         });
     }
 }
+// 单抽（防抖优化）
 async function singlePull() {
-    const now = new Date();
-    if (!BANNER_START || !BANNER_END || now < BANNER_START || now > BANNER_END) {
-        if (!BANNER_START) showTip('卡池未加载');
-        else if (now < BANNER_START) showTip('卡池尚未开启');
-        else showTip('卡池已结束');
-        return;
-    }
-    if (isDrawing) { showTip('跃迁进行中...'); return; }
-    isDrawing = true;
-    await attemptDraw(1, EXCHANGE_RATE, async () => {
-        const result = await drawOneWithTicketAndConstellation();
-        if (result) {
-            let msg = `获得: ${result.name} (${result.star}★)`;
-            if (result.constellationMsg) msg += ` · ${result.constellationMsg}`;
-            showTip(msg);
-            showResultDialog([result]);
-            updateUI();
-            await saveAfterDraw([result]);
-            updateStatsModalContent();
+    if (singleBtn.disabled || tenBtn.disabled) return;
+    singleBtn.disabled = true;
+    tenBtn.disabled = true;
+    try {
+        const now = new Date();
+        if (!BANNER_START || !BANNER_END || now < BANNER_START || now > BANNER_END) {
+            if (!BANNER_START) showTip('卡池未加载');
+            else if (now < BANNER_START) showTip('卡池尚未开启');
+            else showTip('卡池已结束');
+            return;
         }
-        return result;
-    });
-    isDrawing = false;
-}
-async function tenPull() {
-    const now = new Date();
-    if (!BANNER_START || !BANNER_END || now < BANNER_START || now > BANNER_END) {
-        if (!BANNER_START) showTip('卡池未加载');
-        else if (now < BANNER_START) showTip('卡池尚未开启');
-        else showTip('卡池已结束');
-        return;
-    }
-    if (isDrawing) { showTip('当前正在跃迁中，请稍等…'); return; }
-    isDrawing = true;
-    await attemptDraw(10, EXCHANGE_RATE * 10, async () => {
-        showTip('十连跃迁开启，群星闪烁 ✨✨');
-        const pullResults = [];
-        for (let i = 0; i < 10; i++) {
-            await new Promise(r => setTimeout(r, 50));
-            if (tickets < 1) break;
+        if (isDrawing) { showTip('跃迁进行中...'); return; }
+        isDrawing = true;
+        await attemptDraw(1, EXCHANGE_RATE, async () => {
             const result = await drawOneWithTicketAndConstellation();
-            if (result) pullResults.push(result);
+            if (result) {
+                let msg = `获得: ${result.name} (${result.star}★)`;
+                if (result.constellationMsg) msg += ` · ${result.constellationMsg}`;
+                showTip(msg);
+                showResultDialog([result]);
+                updateUI();
+                await saveAfterDraw([result]);
+                updateStatsModalContent();
+            }
+            return result;
+        });
+        isDrawing = false;
+    } finally {
+        singleBtn.disabled = false;
+        tenBtn.disabled = false;
+    }
+}
+// 十连（防抖优化）
+async function tenPull() {
+    if (singleBtn.disabled || tenBtn.disabled) return;
+    singleBtn.disabled = true;
+    tenBtn.disabled = true;
+    try {
+        const now = new Date();
+        if (!BANNER_START || !BANNER_END || now < BANNER_START || now > BANNER_END) {
+            if (!BANNER_START) showTip('卡池未加载');
+            else if (now < BANNER_START) showTip('卡池尚未开启');
+            else showTip('卡池已结束');
+            return;
         }
-        const fiveCount = pullResults.filter(r => r.star === 5).length;
-        showTip(`十连完成！获得 ${fiveCount} 位五星 ✨`);
-        showResultDialog(pullResults);
-        await saveAfterDraw(pullResults);
-        updateStatsModalContent();
-        return pullResults;
-    });
-    isDrawing = false;
+        if (isDrawing) { showTip('当前正在跃迁中，请稍等…'); return; }
+        isDrawing = true;
+        await attemptDraw(10, EXCHANGE_RATE * 10, async () => {
+            showTip('十连跃迁开启，群星闪烁 ✨✨');
+            const pullResults = [];
+            for (let i = 0; i < 10; i++) {
+                await new Promise(r => setTimeout(r, 50));
+                if (tickets < 1) break;
+                const result = await drawOneWithTicketAndConstellation();
+                if (result) pullResults.push(result);
+            }
+            const fiveCount = pullResults.filter(r => r.star === 5).length;
+            showTip(`十连完成！获得 ${fiveCount} 位五星 ✨`);
+            showResultDialog(pullResults);
+            await saveAfterDraw(pullResults);
+            updateStatsModalContent();
+            return pullResults;
+        });
+        isDrawing = false;
+    } finally {
+        singleBtn.disabled = false;
+        tenBtn.disabled = false;
+    }
 }
 async function loadUserData() {
     if (!currentUser) return;
@@ -866,7 +947,6 @@ async function loadUserData() {
         guaranteedUp = stateData.guaranteed_up;
 
         try {
-            // 从数据库加载最多2000条历史记录
             let { data: historyData, error: histErr } = await supabaseClient
                 .from('gacha_history')
                 .select('item_name, star_level, created_at')
@@ -899,25 +979,15 @@ async function loadUserData() {
         renderHistoryModal();
         rebuildStatsFromHistory();
         
-        if (currentUser.id === ADMIN_USER_ID) {
-            isAdmin = true;
-            resetHistoryBtn.disabled = false;
-            resetHistoryBtn.style.opacity = '1';
-            resetHistoryBtn.style.cursor = 'pointer';
-            resetConstellationsBtn.disabled = false;
-            resetConstellationsBtn.style.opacity = '1';
-            resetConstellationsBtn.style.cursor = 'pointer';
-        } else {
-            isAdmin = false;
-            resetHistoryBtn.disabled = true;
-            resetHistoryBtn.style.opacity = '0.5';
-            resetHistoryBtn.style.cursor = 'not-allowed';
-            resetHistoryBtn.title = '仅管理员可清空历史记录';
-            resetConstellationsBtn.disabled = true;
-            resetConstellationsBtn.style.opacity = '0.5';
-            resetConstellationsBtn.style.cursor = 'not-allowed';
-            resetConstellationsBtn.title = '仅管理员可重置命座';
-        }
+        // 权限移除：所有用户均可使用重置功能，不再检查 isAdmin
+        resetHistoryBtn.disabled = false;
+        resetHistoryBtn.style.opacity = '1';
+        resetHistoryBtn.style.cursor = 'pointer';
+        resetHistoryBtn.removeAttribute('title');
+        resetConstellationsBtn.disabled = false;
+        resetConstellationsBtn.style.opacity = '1';
+        resetConstellationsBtn.style.cursor = 'pointer';
+        resetConstellationsBtn.removeAttribute('title');
     } catch (err) {
         console.error('加载用户数据失败:', err);
         showTip('加载数据失败，将使用本地默认值');
@@ -994,7 +1064,6 @@ async function addTickets() {
     showTip(`成功添加 ${amount} 张星轨专票`);
 }
 async function resetConstellations() {
-    if (!isAdmin) { showTip('权限不足，只有管理员可以重置命座'); return; }
     if (!confirm('⚠️ 确定要清空所有角色命座数据吗？此操作不可恢复！')) return;
     if (!currentUser) return;
     await supabaseClient.from('user_constellations').delete().eq('user_id', currentUser.id);
@@ -1003,7 +1072,6 @@ async function resetConstellations() {
     showTip('所有命座已重置');
 }
 async function resetHistory() {
-    if (!isAdmin) { showTip('权限不足，只有管理员可以清空历史记录'); return; }
     if (!confirm('⚠️ 确定要清空所有抽卡记录和统计吗？此操作不可恢复！')) return;
     if (!currentUser) return;
     const { error } = await supabaseClient.from('gacha_history').delete().eq('user_id', currentUser.id);
@@ -1020,29 +1088,6 @@ function preventScrollRefresh() {
         const isScrollable = target.closest('.record-list') || target.closest('.dialog-content') || target.closest('.left-panel-scroll') || target.closest('#statsModal .modal-body') || target.closest('#settingsModal .modal-body') || target.closest('#infoModal .modal-body');
         if (!isScrollable) e.preventDefault();
     }, { passive: false });
-}
-function initStars() {
-    const starContainer = document.getElementById('starBg');
-    starContainer.innerHTML = '';
-    for (let i = 0; i < 180; i++) {
-        const star = document.createElement('div');
-        star.classList.add('star');
-        const size = Math.random() * 3 + 1;
-        star.style.width = size + 'px';
-        star.style.height = size + 'px';
-        star.style.left = Math.random() * 100 + '%';
-        star.style.top = Math.random() * 100 + '%';
-        star.style.animationDelay = Math.random() * 5 + 's';
-        starContainer.appendChild(star);
-    }
-    for (let i = 0; i < 4; i++) {
-        const meteor = document.createElement('div');
-        meteor.classList.add('shooting-star');
-        meteor.style.left = Math.random() * 80 + '%';
-        meteor.style.top = Math.random() * 50 + '%';
-        meteor.style.animationDelay = Math.random() * 8 + 's';
-        starContainer.appendChild(meteor);
-    }
 }
 function bindEvents() {
     singleBtn.addEventListener('click', singlePull);
