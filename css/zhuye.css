@@ -33,24 +33,18 @@ body {
     flex-wrap: wrap;
     gap: 20px;
     padding: 20px 25px;
-    align-items: flex-start;  /* 防止因头像高度变化压缩右侧 */
+    align-items: flex-start;
 }
-/* 头像容器：严格固定尺寸，禁止收缩 */
-.avatar-container,
-.avatar {
-    width: 100px !important;
-    height: 100px !important;
-    min-width: 100px !important;
-    max-width: 100px !important;
-    min-height: 100px !important;
-    max-height: 100px !important;
-    flex-shrink: 0 !important;
-    flex-grow: 0 !important;
-}
+/* 头像容器：严格固定尺寸，禁止任何收缩 */
 .avatar-container {
     position: relative;
+    width: 100px;
+    height: 100px;
+    flex: 0 0 100px;
 }
 .avatar {
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--supabase-blue), var(--supabase-purple));
     overflow: hidden;
@@ -71,6 +65,41 @@ body {
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; border: 2px solid white;
     z-index: 10;
+}
+/* 头像框效果用伪元素实现，完全不影响布局 */
+.avatar::after {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
+    border-radius: 50%;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    opacity: 0;
+}
+/* 通过 data-frame 属性控制不同头像框 */
+.avatar[data-frame="frame_gold"]::after {
+    opacity: 1;
+    outline: 4px solid gold;
+    outline-offset: 2px;
+}
+.avatar[data-frame="frame_rainbow"]::after {
+    opacity: 1;
+    background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
+    mask: radial-gradient(circle at center, transparent 65%, black 66%);
+    -webkit-mask: radial-gradient(circle at center, transparent 65%, black 66%);
+}
+.avatar[data-frame="frame_diamond"]::after {
+    opacity: 1;
+    outline: 4px solid #b9f2ff;
+    outline-offset: 2px;
+}
+.avatar[data-frame="frame_legend"]::after {
+    opacity: 1;
+    outline: 4px solid #ff4500;
+    outline-offset: 2px;
 }
 .user-info {
     flex: 1;
@@ -441,34 +470,6 @@ body {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
-
-/* ========== 头像框效果（使用 outline，不改变元素尺寸）========== */
-.frame-gold {
-    outline: 4px solid gold;
-    outline-offset: 2px;
-    border-radius: 50%;
-}
-.frame-rainbow {
-    outline: 4px solid transparent;
-    background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet) border-box;
-    -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
-    mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    border-radius: 50%;
-}
-.frame-diamond {
-    outline: 4px solid #b9f2ff;
-    outline-offset: 2px;
-    border-radius: 50%;
-}
-.frame-legend {
-    outline: 4px solid #ff4500;
-    outline-offset: 2px;
-    border-radius: 50%;
-}
-
-/* 响应式适配 */
 @media (max-width: 768px) {
     .banner-content {
         padding: 15px;
@@ -486,13 +487,9 @@ body {
         flex-direction: column;
         align-items: stretch;
     }
-    .avatar-container,
-    .avatar {
-        width: 80px !important;
-        height: 80px !important;
-        min-width: 80px !important;
-        max-width: 80px !important;
-        min-height: 80px !important;
-        max-height: 80px !important;
+    .avatar-container {
+        width: 80px;
+        height: 80px;
+        flex: 0 0 80px;
     }
 }
