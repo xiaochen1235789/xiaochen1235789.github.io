@@ -4,318 +4,11 @@
 <meta charset="UTF-8">
 <title>鹿将军 · 六哥荣耀WIKI</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-<meta name="description" content="鹿管技能等级调节器 + 基础属性滑动等级">
+<meta name="description" content="鹿管技能等级调节器 + 基础属性滑动等级（自由滑动无吸附）">
 <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
 <link rel="preconnect" href="https://xiaochen1235789.github.io">
-
-<style>
-:root {
-  --bg: #121212;
-  --surface: #1a1a1a;
-  --card: #202020;
-  --primary: #d3af37;
-  --primary-light: #e8c96b;
-  --primary-dark: #b8941a;
-  --secondary: #81c784;
-  --text: #e0e0e0;
-  --sub-text: #99aabb;
-  --line: #333;
-  --radius: 6px;
-  --transition: .3s ease;
-  --button-bg: #2d5243;
-  --button-hover: #3d725f;
-  --button-disabled: #1f2e28;
-  --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  --legend-gradient: linear-gradient(45deg, #d3af37, #e8c96b);
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
-  line-height: 1.5;
-  padding-bottom: 30px;
-  -webkit-font-smoothing: antialiased;
-}
-a { color: var(--secondary); text-decoration: none; transition: color var(--transition); }
-a:hover { color: var(--primary-light); }
-img { max-width: 100%; height: auto; display: block; }
-
-.top-bar {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  backdrop-filter: blur(10px);
-  background-color: rgba(26, 26, 26, 0.9);
-}
-.top-bar .title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  flex-grow: 1;
-  text-align: center;
-  color: var(--primary-light);
-}
-
-.hero-section {
-  position: relative;
-  background: linear-gradient(135deg, #1a2f1a 0%, #0f1f0f 100%);
-  overflow: hidden;
-}
-.hero-image {
-  width: 100%;
-  aspect-ratio: 16/9;
-  object-fit: cover;
-  opacity: 0.95;
-  display: block;
-}
-.hero-overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 20px 16px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
-}
-.hero-name {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
-  margin-bottom: 8px;
-}
-.tag-container { display: flex; flex-wrap: wrap; gap: 8px; }
-.tag {
-  background: rgba(211, 175, 55, 0.15);
-  color: var(--primary);
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  border: 1px solid rgba(211, 175, 55, 0.3);
-  backdrop-filter: blur(4px);
-}
-
-.card {
-  background: var(--card);
-  margin: 12px 16px;
-  border-radius: var(--radius);
-  padding: 20px;
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow);
-  transition: transform var(--transition), box-shadow var(--transition);
-}
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-}
-.skill-header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--line);
-  gap: 12px;
-}
-.skill-name {
-  font-weight: 600;
-  font-size: 1.15rem;
-  color: var(--secondary);
-  flex-grow: 1;
-}
-.level-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.level-value {
-  min-width: 50px;
-  text-align: center;
-  font-weight: 700;
-  font-size: 1.3rem;
-  color: var(--primary);
-  transition: all var(--transition);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-.level-btn {
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: var(--radius);
-  background: var(--button-bg);
-  color: var(--text);
-  font-size: 1.2rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition);
-  user-select: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-.level-btn:hover:not(:disabled) {
-  background: var(--button-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-}
-.level-btn:active:not(:disabled) { transform: translateY(0); }
-.level-btn:disabled {
-  background: var(--button-disabled);
-  color: #666;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-.level-btn.up { color: #ffd966; }
-.level-btn.down { color: #ffaa7a; }
-
-.base-slider {
-  width: 160px;
-  height: 6px;
-  -webkit-appearance: none;
-  background: var(--line);
-  border-radius: 3px;
-  outline: none;
-  margin: 0 4px;
-}
-.base-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 20px;
-  height: 20px;
-  background: var(--primary);
-  border-radius: 50%;
-  cursor: pointer;
-  box-shadow: 0 0 8px rgba(211,175,55,0.6);
-  border: 1px solid rgba(255,255,255,0.3);
-  transition: 0.1s;
-}
-.base-slider::-webkit-slider-thumb:hover { transform: scale(1.15); background: var(--primary-light); }
-.base-slider::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
-  background: var(--primary);
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  box-shadow: 0 0 8px rgba(211,175,55,0.6);
-}
-
-.skill-content { font-size: 0.95rem; color: var(--sub-text); line-height: 1.6; }
-.skill-val {
-  color: var(--primary);
-  font-weight: 700;
-  transition: all var(--transition);
-  display: inline-block;
-  padding: 0 2px;
-}
-.legend-text {
-  background: var(--legend-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  font-weight: 800;
-}
-.highlight-text { color: orange; font-weight: 600; }
-.special-text { color: #ffae70; font-weight: 600; }
-.energy-text { color: #66ccff; font-weight: 600; }
-
-.attr-container { margin-bottom: 20px; }
-.attr-row { display: flex; gap: 12px; margin-bottom: 15px; flex-wrap: wrap; }
-.attr-icon {
-  background: var(--card);
-  border-radius: 4px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-  min-width: 60px;
-  flex: 1;
-  max-width: 100px;
-  border: 1px solid rgba(211,175,55,0.1);
-}
-.attr-icon img { width: 32px; height: 32px; margin-bottom: 4px; object-fit: contain; }
-.attr-value { color: white; font-size: 14px; font-weight: 600; text-align: center; line-height: 1.2; word-break: break-word; }
-.attr-label { color: var(--sub-text); font-size: 12px; text-align: center; line-height: 1.2; margin-top: 2px; }
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-  margin-top: 12px;
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.data-table th, .data-table td {
-  padding: 8px 12px;
-  text-align: left;
-  border-bottom: 1px solid var(--line);
-}
-.data-table th { background-color: rgba(255, 255, 255, 0.05); color: var(--primary); font-weight: 600; }
-
-.section-title {
-  font-size: 1.2rem;
-  color: var(--secondary);
-  margin-bottom: 15px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--line);
-}
-.ability-item { margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--line); }
-.ability-item:last-child { border-bottom: none; }
-.ability-name { color: var(--primary); font-weight: 600; margin-bottom: 6px; font-size: 1rem; }
-
-.constellation-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-.constellation-table th, .constellation-table td {
-  padding: 12px 8px;
-  text-align: left;
-  vertical-align: top;
-  border-bottom: 1px solid var(--line);
-}
-.constellation-table th { color: var(--primary); font-weight: 600; }
-.constellation-table td:first-child { color: var(--primary); font-weight: 700; min-width: 60px; }
-.constellation-table td:nth-child(2) { color: var(--secondary); min-width: 80px; font-weight: 600; }
-.const-val {
-  color: var(--primary);
-  font-weight: 700;
-  text-shadow: 0 0 4px rgba(211,175,55,0.3);
-  transition: all var(--transition);
-  display: inline-block;
-}
-.const-val:hover { text-shadow: 0 0 12px rgba(211,175,55,0.7); transform: scale(1.05); }
-
-@media (max-width: 480px) {
-  .hero-name { font-size: 1.5rem; }
-  .card { margin: 10px 12px; padding: 16px; }
-  .skill-header { flex-direction: column; align-items: flex-start; }
-  .level-controls { align-self: stretch; justify-content: center; flex-wrap: wrap; }
-  .base-slider { width: 100%; max-width: 200px; }
-  .attr-icon { min-width: calc(50% - 6px); flex: 0 0 calc(50% - 6px); }
-}
-@media (min-width: 481px) and (max-width: 768px) {
-  .attr-icon { min-width: calc(33.333% - 8px); flex: 0 0 calc(33.333% - 8px); }
-}
-@media (min-width: 769px) { .attr-icon { min-width: 80px; } }
-
-.wiki-footer {
-  text-align: center;
-  margin-top: 20px;
-  color: #7f9e8c;
-  font-size: 13px;
-  opacity: 0.9;
-  padding: 20px 0 10px;
-  border-top: 1px solid #4a705f;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-  width: 100%;
-}
-.wiki-footer a { color: #8FBC8F; text-decoration: none; }
-</style>
+<!-- 引入统一角色详情页样式 -->
+<link rel="stylesheet" href="https://xiaochen1235789.github.io/css/tongyi.css">
 </head>
 <body>
 
@@ -331,6 +24,7 @@ img { max-width: 100%; height: auto; display: block; }
   </div>
 </section>
 
+<!-- 基础属性卡片（自由滑动） -->
 <section class="card" id="base-attr">
   <div class="skill-header">
     <div class="skill-name" id="base-level-label">基础属性 Lv.90</div>
@@ -338,7 +32,7 @@ img { max-width: 100%; height: auto; display: block; }
       <button class="level-btn down" id="base-level-down">↓</button>
       <span class="level-value" id="base-level-display">90</span>
       <button class="level-btn up" id="base-level-up">↑</button>
-      <span style="color: var(--sub-text); font-size: 0.9rem;">滑动</span>
+      <span style="color: var(--sub-text); font-size: 0.9rem;">自由滑动</span>
       <input type="range" id="base-level-slider" class="base-slider" min="1" max="90" value="90" step="1">
     </div>
   </div>
@@ -362,6 +56,7 @@ img { max-width: 100%; height: auto; display: block; }
   </div>
 </section>
 
+<!-- 后续技能卡片不变（省略，与原来完全相同） -->
 <section class="card" id="normal-attack">
   <div class="skill-header">
     <div class="skill-name">普攻 · 迅风斩</div>
@@ -459,6 +154,7 @@ img { max-width: 100%; height: auto; display: block; }
 </footer>
 
 <script>
+// ========== 技能调节器核心（与原来相同） ==========
 const skillConfig = {
   normal: { level: 1, maxLevel: 7, values: [ { id: 'normal-val1', base: 50, step: 10 } ] },
   skill: { level: 1, maxLevel: 12, values: [ { id: 'skill-val1', base: 150, step: 20 } ] },
@@ -486,6 +182,29 @@ const baseStats = {
 };
 
 const state = { skills: JSON.parse(JSON.stringify(skillConfig)), baseLevel: 90 };
+
+// 线性插值函数：根据等级 level（1~90），返回对应的 hp, atk, def
+function interpolateStats(level) {
+  if (level <= 1) return { ...baseStats[1] };
+  if (level >= 90) return { ...baseStats[90] };
+  // 找到 level 所在的区间
+  let lower = 1, upper = 90;
+  for (let i = 0; i < baseLevelPresets.length - 1; i++) {
+    if (level >= baseLevelPresets[i] && level <= baseLevelPresets[i+1]) {
+      lower = baseLevelPresets[i];
+      upper = baseLevelPresets[i+1];
+      break;
+    }
+  }
+  const lowStats = baseStats[lower];
+  const highStats = baseStats[upper];
+  const t = (level - lower) / (upper - lower);
+  return {
+    hp: Math.round(lowStats.hp + t * (highStats.hp - lowStats.hp)),
+    atk: Math.round(lowStats.atk + t * (highStats.atk - lowStats.atk)),
+    def: Math.round(lowStats.def + t * (highStats.def - lowStats.def))
+  };
+}
 
 function getSkillValue(base, step, level) { return base + step * (level - 1); }
 function applyLevelColor(element, level, max) {
@@ -525,35 +244,37 @@ window.changeSkillLevel = function(skillType, change) {
   saveState();
 };
 
+// ========== 基础属性：自由滑动 + 插值 ==========
 function updateBaseAttributes(level) {
-  const nearest = baseLevelPresets.reduce((prev, curr) => Math.abs(curr - level) < Math.abs(prev - level) ? curr : prev);
-  if (nearest !== level) level = nearest;
+  // 直接使用传入的等级，不做吸附
   state.baseLevel = level;
   document.getElementById('base-level-label').innerText = `基础属性 Lv.${level}`;
   document.getElementById('base-level-display').textContent = level;
   const slider = document.getElementById('base-level-slider');
-  if (slider) slider.value = level;
-  const stats = baseStats[level];
-  if (stats) {
-    document.getElementById('base-hp').textContent = stats.hp;
-    document.getElementById('base-atk').textContent = stats.atk;
-    document.getElementById('base-def').textContent = stats.def;
-  }
+  if (slider && slider.value != level) slider.value = level;
+  
+  const stats = interpolateStats(level);
+  document.getElementById('base-hp').textContent = stats.hp;
+  document.getElementById('base-atk').textContent = stats.atk;
+  document.getElementById('base-def').textContent = stats.def;
+  // 速度和能量不随等级变化
   document.getElementById('base-spd').textContent = 115;
   document.getElementById('base-energy').textContent = 120;
+  
   const downBtn = document.getElementById('base-level-down');
   const upBtn = document.getElementById('base-level-up');
-  if (downBtn) downBtn.disabled = level === 1;
-  if (upBtn) upBtn.disabled = level === 90;
+  if (downBtn) downBtn.disabled = level <= 1;
+  if (upBtn) upBtn.disabled = level >= 90;
 }
+
 function changeBaseLevel(direction) {
-  let idx = baseLevelPresets.indexOf(state.baseLevel);
-  if (idx === -1) idx = baseLevelPresets.indexOf(90);
-  const newIdx = idx + direction;
-  if (newIdx < 0 || newIdx >= baseLevelPresets.length) return;
-  updateBaseAttributes(baseLevelPresets[newIdx]);
+  let newLevel = state.baseLevel + direction;
+  newLevel = Math.min(90, Math.max(1, newLevel));
+  if (newLevel === state.baseLevel) return;
+  updateBaseAttributes(newLevel);
   saveState();
 }
+
 function saveState() {
   try {
     const saveData = {
@@ -566,6 +287,7 @@ function saveState() {
     localStorage.setItem('deerSkillState', JSON.stringify(saveData));
   } catch (e) { console.warn('保存失败', e); }
 }
+
 function loadState() {
   try {
     const saved = localStorage.getItem('deerSkillState');
@@ -575,21 +297,25 @@ function loadState() {
       if (parsed.skill) state.skills.skill.level = Math.min(parsed.skill, state.skills.skill.maxLevel);
       if (parsed.ultimate) state.skills.ultimate.level = Math.min(parsed.ultimate, state.skills.ultimate.maxLevel);
       if (parsed.talent) state.skills.talent.level = Math.min(parsed.talent, state.skills.talent.maxLevel);
-      if (parsed.baseLevel && baseLevelPresets.includes(parsed.baseLevel)) state.baseLevel = parsed.baseLevel;
+      if (parsed.baseLevel && parsed.baseLevel >= 1 && parsed.baseLevel <= 90) state.baseLevel = parsed.baseLevel;
       else state.baseLevel = 90;
     }
   } catch (e) {}
 }
+
 function initBaseLevelControls() {
   const slider = document.getElementById('base-level-slider');
   const downBtn = document.getElementById('base-level-down');
   const upBtn = document.getElementById('base-level-up');
-  if (slider) slider.addEventListener('input', function(e) {
-    const val = parseInt(e.target.value, 10);
-    const nearest = baseLevelPresets.reduce((prev, curr) => Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev);
-    if (state.baseLevel !== nearest) { updateBaseAttributes(nearest); saveState(); }
-    else e.target.value = state.baseLevel;
-  });
+  if (slider) {
+    slider.addEventListener('input', function(e) {
+      const val = parseInt(e.target.value, 10);
+      if (state.baseLevel !== val) {
+        updateBaseAttributes(val);
+        saveState();
+      }
+    });
+  }
   if (downBtn) downBtn.addEventListener('click', () => { changeBaseLevel(-1); saveState(); });
   if (upBtn) upBtn.addEventListener('click', () => { changeBaseLevel(1); saveState(); });
 }
