@@ -6,11 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, orientation=landscape">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>卡池 - 六哥荣耀WIKI (动态卡池 | 性能优化版)</title>
+    <title>卡池 - 六哥荣耀WIKI (优化版)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://xiaochen1235789.github.io/css/chouka.css">
     <style>
-        /* 记录星星颜色 */
+        /* 记录星星颜色 (已在CSS中定义，此处仅为兼容) */
         .star-gold { color: #ffd966; font-weight: bold; letter-spacing: 2px; }
         .star-purple { color: #c084fc; font-weight: bold; letter-spacing: 2px; }
         .record-star3 .star-gray { color: #bbccdd; font-weight: bold; letter-spacing: 2px; }
@@ -19,7 +19,8 @@
 <body>
 <div class="star-bg" id="starBg"></div>
 <div id="orientationTip" class="orientation-tip">
-    <span>🔄</span> 请将设备旋转至横屏模式<br><small>获得最佳抽卡体验</small>
+    <span>🔄</span> 请将设备旋转至横屏模式<br><small>获得最佳抽卡体验</small><br>
+    <button id="ignoreOrientationBtn" style="margin-top: 20px; padding: 8px 16px; background: #ffbc6e; color: #1a132e; border: none; border-radius: 30px; cursor: pointer;">继续竖屏使用</button>
 </div>
 <div id="loginLoading" class="login-loading">
     <div class="spinner"></div>
@@ -218,613 +219,439 @@
 <div id="toastNotice" class="toast-notice"></div>
 
 <script>
-// ======================= Supabase 配置 =======================
-const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// ======================= 优化后的抽卡模拟器 =======================
+(function(){
+    // --- 配置 ---
+    const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ======================= 抽卡动态参数 =======================
-let currentBanner = null;
-let BANNER_START = null;
-let BANNER_END = null;
-let UP_FIVE_STAR = '';
-let PERMANENT_FIVE_STAR = [];
-let FOUR_STAR_CHARS = [];
-let THREE_STAR_ITEMS = [];
-let BASE_RATE_4 = 0.051;
-let PITY_5_MAX = 90;
-let PITY_4_MAX = 10;
-let SOFT_PITY_START = 74;
-let OVERFLOW_COMPENSATION_5 = 800;
-let OVERFLOW_COMPENSATION_4 = 160;
-let EXCHANGE_RATE = 160;
+    // --- DOM 元素 ---
+    const dom = {
+        jade: document.getElementById('jadeAmount'),
+        tickets: document.getElementById('ticketAmount'),
+        pity5: document.getElementById('pityCounter'),
+        pity4: document.getElementById('fourPityCounter'),
+        rate: document.getElementById('rateDisplay'),
+        softRemain: document.getElementById('softPityRemain'),
+        nextType: document.getElementById('nextFiveType'),
+        fourRemain: document.getElementById('fourPityRemain'),
+        poolName: document.getElementById('poolName'),
+        poolSub: document.getElementById('poolSub'),
+        upCharName: document.getElementById('upCharName'),
+        splashImg: document.getElementById('charSplash'),
+        splashCaption: document.getElementById('splashCaption'),
+        disabledNotice: document.getElementById('disabledNotice'),
+        countdownTimer: document.getElementById('countdownTimer'),
+        uidBadge: document.getElementById('uidBadge'),
+        singleBtn: document.getElementById('singlePullBtn'),
+        tenBtn: document.getElementById('tenPullBtn'),
+        recordList: document.getElementById('recordList'),
+        dialogContent: document.getElementById('dialogContent'),
+        resultDialog: document.getElementById('resultDialog'),
+        statsGrid: document.getElementById('statsGrid'),
+        constellationList: document.getElementById('constellationList'),
+        toast: document.getElementById('toastNotice'),
+        loginLoading: document.getElementById('loginLoading'),
+        mainContent: document.getElementById('mainContent')
+    };
 
-// 原有状态变量
-let currentUser = null;
-let starJade = 0;
-let tickets = 0;
-let fiveStarPity = 0;
-let fourStarPity = 0;
-let gachaHistory = [];
-let isDrawing = false;
-let guaranteedUp = false;
-let userNumber = null;
-let isLoadingData = false;
+    // --- 状态 ---
+    let state = {
+        user: null,
+        currentBanner: null,
+        bannerStart: null,
+        bannerEnd: null,
+        upFiveStar: '',
+        permanentFiveStar: [],
+        fourStarChars: [],
+        threeStarItems: [],
+        baseRate4: 0.051,
+        pity5Max: 90,
+        pity4Max: 10,
+        softPityStart: 74,
+        overflowComp5: 800,
+        overflowComp4: 160,
+        exchangeRate: 160,
+        starJade: 0,
+        tickets: 0,
+        fiveStarPity: 0,
+        fourStarPity: 0,
+        guaranteedUp: false,
+        userNumber: null,
+        gachaHistory: [],
+        constellations: new Map(),
+        totalPulls: 0,
+        fiveStarCount: 0,
+        fourStarCount: 0,
+        threeStarCount: 0,
+        upFiveStarCount: 0,
+        fiveStarDistances: [],
+        lastFiveStarPullIndex: 0,
+        isDrawing: false
+    };
 
-// 命座数据
-let constellationsMap = new Map();
+    // 历史记录分页
+    let historyPageSize = 50;
+    let historyCurrentPage = 1;
+    let historyTotal = 0;
 
-// 统计变量
-let totalPulls = 0;
-let fiveStarCount = 0;
-let fourStarCount = 0;
-let threeStarCount = 0;
-let upFiveStarCount = 0;
-let fiveStarDistances = [];
-let lastFiveStarPullIndex = 0;
-
-// DOM 元素
-const jadeSpan = document.getElementById('jadeAmount');
-const ticketSpan = document.getElementById('ticketAmount');
-const pitySpan = document.getElementById('pityCounter');
-const fourPitySpan = document.getElementById('fourPityCounter');
-const rateDisplaySpan = document.getElementById('rateDisplay');
-const recordModal = document.getElementById('recordModal');
-const recordListDiv = document.getElementById('recordList');
-const resultDialog = document.getElementById('resultDialog');
-const dialogContent = document.getElementById('dialogContent');
-const splashImg = document.getElementById('charSplash');
-const singleBtn = document.getElementById('singlePullBtn');
-const tenBtn = document.getElementById('tenPullBtn');
-const countdownTimerSpan = document.getElementById('countdownTimer');
-const disabledNoticeSpan = document.getElementById('disabledNotice');
-const toastNotice = document.getElementById('toastNotice');
-const exchangeModal = document.getElementById('exchangeModal');
-const exchangeAmountInput = document.getElementById('exchangeAmount');
-const exchangePreview = document.getElementById('exchangePreview');
-const confirmExchangeBtn = document.getElementById('confirmExchangeBtn');
-const cancelExchangeBtn = document.getElementById('cancelExchangeBtn');
-const closeExchangeBtn = document.getElementById('closeExchangeBtn');
-const uidBadge = document.getElementById('uidBadge');
-const loginLoadingDiv = document.getElementById('loginLoading');
-const mainContentDiv = document.getElementById('mainContent');
-const statsBtn = document.getElementById('statsBtn');
-const statsModal = document.getElementById('statsModal');
-const closeStatsBtn = document.getElementById('closeStatsBtn');
-const statsGrid = document.getElementById('statsGrid');
-const constellationListDiv = document.getElementById('constellationList');
-const softPityRemainSpan = document.getElementById('softPityRemain');
-const nextFiveTypeSpan = document.getElementById('nextFiveType');
-const fourPityRemainSpan = document.getElementById('fourPityRemain');
-
-const settingsModal = document.getElementById('settingsModal');
-const closeSettingsBtn = document.getElementById('closeSettingsBtn');
-const addJadeAmountInput = document.getElementById('addJadeAmount');
-const confirmAddJadeBtn = document.getElementById('confirmAddJadeBtn');
-const addTicketAmountInput = document.getElementById('addTicketAmount');
-const confirmAddTicketBtn = document.getElementById('confirmAddTicketBtn');
-const resetConstellationsBtn = document.getElementById('resetConstellationsBtn');
-const resetHistoryBtn = document.getElementById('resetHistoryBtn');
-
-const infoModal = document.getElementById('infoModal');
-const infoBtn = document.getElementById('infoBtn');
-const closeInfoBtn = document.getElementById('closeInfoBtn');
-
-// ======================= 性能优化：动态星星数量 =======================
-function initStars() {
-    const starContainer = document.getElementById('starBg');
-    if (!starContainer) return;
-    starContainer.innerHTML = '';
-    const screenWidth = window.innerWidth;
-    let starCount = 180;
-    let meteorCount = 4;
-    if (screenWidth <= 480) {
-        starCount = 60;
-        meteorCount = 2;
-    } else if (screenWidth <= 768) {
-        starCount = 100;
-        meteorCount = 3;
+    // 辅助函数
+    function escapeHtml(str) { return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+    function showTip(msg) { showNotification(msg, 'info'); }
+    function showNotification(msg, type='info') {
+        dom.toast.textContent = msg;
+        dom.toast.className = `toast-notice ${type}`;
+        setTimeout(() => dom.toast.classList.add('show'), 10);
+        setTimeout(() => dom.toast.classList.remove('show'), 3000);
     }
-    for (let i = 0; i < starCount; i++) {
-        const star = document.createElement('div');
-        star.classList.add('star');
-        const size = Math.random() * 3 + 1;
-        star.style.width = size + 'px';
-        star.style.height = size + 'px';
-        star.style.left = Math.random() * 100 + '%';
-        star.style.top = Math.random() * 100 + '%';
-        star.style.animationDelay = Math.random() * 5 + 's';
-        starContainer.appendChild(star);
-    }
-    for (let i = 0; i < meteorCount; i++) {
-        const meteor = document.createElement('div');
-        meteor.classList.add('shooting-star');
-        meteor.style.left = Math.random() * 80 + '%';
-        meteor.style.top = Math.random() * 50 + '%';
-        meteor.style.animationDelay = Math.random() * 8 + 's';
-        starContainer.appendChild(meteor);
-    }
-}
 
-// ======================= 动态加载配置 =======================
-async function fetchCurrentBanner() {
-    const now = new Date().toISOString();
-    const { data, error } = await supabaseClient
-        .from('gacha_banners')
-        .select('*')
-        .lte('start_time', now)
-        .gte('end_time', now)
-        .maybeSingle();
-    if (error) {
-        console.error('获取卡池失败', error);
+    // 概率计算
+    function getCurrentFiveStarRate(pity) {
+        if (pity >= state.pity5Max - 1) return 1.0;
+        if (pity < state.softPityStart) return 0.006;
+        let step = pity - (state.softPityStart - 1);
+        let maxStep = state.pity5Max - state.softPityStart;
+        return Math.min(0.006 + (1.0 - 0.006) * (step / maxStep), 1.0);
+    }
+
+    // UI 更新
+    function updateUI() {
+        dom.jade.innerText = state.starJade;
+        dom.tickets.innerText = state.tickets;
+        dom.pity5.innerText = state.fiveStarPity;
+        dom.pity4.innerText = state.fourStarPity;
+        let rate = getCurrentFiveStarRate(state.fiveStarPity);
+        dom.rate.innerText = `当前5星概率: ${(rate*100).toFixed(2)}%`;
+        if (state.fiveStarPity < state.softPityStart) {
+            dom.softRemain.innerText = `${state.softPityStart - state.fiveStarPity} 抽后进入软保底区`;
+        } else {
+            dom.softRemain.innerText = `已进入软保底区 (${state.fiveStarPity}/${state.pity5Max})`;
+        }
+        dom.nextType.innerText = state.guaranteedUp ? "大保底（必得UP）" : "小保底（50%概率UP）";
+        dom.fourRemain.innerText = `${state.pity4Max - state.fourStarPity} 抽后必出四星`;
+    }
+
+    // 倒计时
+    function updateCountdown() {
+        if (!state.bannerStart || !state.bannerEnd) {
+            dom.countdownTimer.innerText = '卡池未加载';
+            return;
+        }
+        const now = new Date();
+        if (now >= state.bannerEnd) {
+            dom.countdownTimer.innerText = '卡池已结束';
+            return;
+        }
+        if (now < state.bannerStart) {
+            const diff = state.bannerStart - now;
+            const days = Math.floor(diff / (86400000));
+            const hours = Math.floor((diff % 86400000) / 3600000);
+            const mins = Math.floor((diff % 3600000) / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            dom.countdownTimer.innerText = `距离开启 ${days}天 ${hours}时 ${mins}分 ${secs}秒`;
+            return;
+        }
+        const diff = state.bannerEnd - now;
+        const days = Math.floor(diff / (86400000));
+        const hours = Math.floor((diff % 86400000) / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        dom.countdownTimer.innerText = `${days}天 ${hours}时 ${mins}分 ${secs}秒`;
+    }
+
+    function updateButtonsState() {
+        if (!state.bannerStart || !state.bannerEnd) return;
+        const now = new Date();
+        const active = now >= state.bannerStart && now <= state.bannerEnd;
+        if (!active) {
+            dom.singleBtn.classList.add('disabled');
+            dom.tenBtn.classList.add('disabled');
+            dom.singleBtn.disabled = true;
+            dom.tenBtn.disabled = true;
+            if (now < state.bannerStart) {
+                dom.disabledNotice.style.display = 'block';
+                dom.disabledNotice.innerText = '⏳ 卡池尚未开启，敬请期待！';
+            } else if (now > state.bannerEnd) {
+                dom.disabledNotice.style.display = 'block';
+                dom.disabledNotice.innerText = '⚠️ 卡池已结束，无法跃迁';
+            }
+        } else {
+            dom.singleBtn.classList.remove('disabled');
+            dom.tenBtn.classList.remove('disabled');
+            dom.singleBtn.disabled = false;
+            dom.tenBtn.disabled = false;
+            dom.disabledNotice.style.display = 'none';
+        }
+    }
+
+    // 星空动态数量
+    function initStars() {
+        const starContainer = document.getElementById('starBg');
+        if (!starContainer) return;
+        starContainer.innerHTML = '';
+        const w = window.innerWidth;
+        let starCount = w <= 480 ? 60 : (w <= 768 ? 100 : 180);
+        let meteorCount = w <= 480 ? 2 : (w <= 768 ? 3 : 4);
+        for (let i = 0; i < starCount; i++) {
+            const star = document.createElement('div');
+            star.classList.add('star');
+            const size = Math.random() * 3 + 1;
+            star.style.width = size + 'px';
+            star.style.height = size + 'px';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.animationDelay = Math.random() * 5 + 's';
+            starContainer.appendChild(star);
+        }
+        for (let i = 0; i < meteorCount; i++) {
+            const meteor = document.createElement('div');
+            meteor.classList.add('shooting-star');
+            meteor.style.left = Math.random() * 80 + '%';
+            meteor.style.top = Math.random() * 50 + '%';
+            meteor.style.animationDelay = Math.random() * 8 + 's';
+            starContainer.appendChild(meteor);
+        }
+    }
+
+    // 抽卡结果弹窗
+    function showResultDialog(results) {
+        if (!results || results.length === 0) return;
+        const fragment = document.createDocumentFragment();
+        for (let item of results) {
+            const starClass = item.star === 5 ? 'dialog-star5' : (item.star === 4 ? 'dialog-star4' : 'dialog-star3');
+            const starLabel = item.star === 5 ? '五星' : (item.star === 4 ? '四星' : '三星');
+            let extra = item.constellationMsg ? `<span style="margin-left:8px; font-size:0.7rem;">${item.constellationMsg}</span>` : '';
+            const div = document.createElement('div');
+            div.className = `dialog-item ${starClass}`;
+            div.innerHTML = `<span>${escapeHtml(item.name)}</span><span class="dialog-star-label">${starLabel}${extra}</span>`;
+            fragment.appendChild(div);
+        }
+        dom.dialogContent.innerHTML = '';
+        dom.dialogContent.appendChild(fragment);
+        dom.resultDialog.classList.add('active');
+    }
+    window.closeResultDialogGlobal = () => dom.resultDialog.classList.remove('active');
+
+    // 历史记录分页渲染
+    function renderHistoryModal() {
+        if (!dom.recordList) return;
+        if (state.gachaHistory.length === 0) {
+            dom.recordList.innerHTML = '<div class="empty-history">暂无抽卡记录</div>';
+            return;
+        }
+        historyTotal = state.gachaHistory.length;
+        historyCurrentPage = 1;
+        _renderHistoryPage();
+    }
+    function _renderHistoryPage() {
+        const start = 0;
+        const end = historyCurrentPage * historyPageSize;
+        const visible = state.gachaHistory.slice(start, end);
+        let html = '';
+        for (let rec of visible) {
+            let stars = '';
+            if (rec.star === 5) stars = '<span class="star-gold">★★★★★</span>';
+            else if (rec.star === 4) stars = '<span class="star-purple">★★★★</span>';
+            else stars = '<span class="star-gray">★★★</span>';
+            html += `<div class="record-item record-star${rec.star}"><span>${escapeHtml(rec.name)}</span>${stars}</div>`;
+        }
+        if (historyTotal > end) {
+            html += `<div class="record-item load-more-btn" style="text-align:center; justify-content:center; cursor:pointer;">加载更多 (${end}/${historyTotal})</div>`;
+        }
+        dom.recordList.innerHTML = html;
+        const loadMore = dom.recordList.querySelector('.load-more-btn');
+        if (loadMore) {
+            loadMore.addEventListener('click', () => {
+                if ((historyCurrentPage + 1) * historyPageSize <= historyTotal) {
+                    historyCurrentPage++;
+                    _renderHistoryPage();
+                } else {
+                    loadMore.remove();
+                }
+            });
+        }
+    }
+
+    // 数据库相关函数（与原版一致，但引用 state）
+    async function loadConstellations() {
+        if (!state.user) return;
+        const { data, error } = await supabase.from('user_constellations').select('character_name, constellation_level').eq('user_id', state.user.id);
+        if (!error && data) {
+            state.constellations.clear();
+            for (let row of data) {
+                state.constellations.set(row.character_name, row.constellation_level ?? 0);
+            }
+        }
+    }
+    async function saveConstellation(name, level) {
+        if (!state.user) return;
+        await supabase.from('user_constellations').upsert({ user_id: state.user.id, character_name: name, constellation_level: level, updated_at: new Date() }, { onConflict: 'user_id, character_name' });
+    }
+    async function processCharacterObtain(name, starLevel) {
+        let current = state.constellations.get(name) ?? 0;
+        if (current < 6) {
+            if (current === 0 && !state.constellations.has(name)) {
+                state.constellations.set(name, 0);
+                await saveConstellation(name, 0);
+                showTip(`✨ 首次获得 ${name} ✨`);
+                return { action: 'first', newLevel: 0 };
+            } else {
+                let newLevel = current + 1;
+                state.constellations.set(name, newLevel);
+                await saveConstellation(name, newLevel);
+                showTip(`${name} 命座提升至 ${newLevel} 阶！`);
+                return { action: 'constellation', newLevel };
+            }
+        } else {
+            let compensation = starLevel === 5 ? state.overflowComp5 : state.overflowComp4;
+            state.starJade += compensation;
+            updateUI();
+            await saveAfterDraw([]);
+            showTip(`✨ ${name} 已满命，转换为 ${compensation} 星琼 ✨`);
+            return { action: 'overflow', compensation };
+        }
+    }
+    async function saveAfterDraw(resultList) {
+        if (!state.user) return;
+        await supabase.from('user_resources').update({ star_jade: state.starJade, tickets: state.tickets }).eq('user_id', state.user.id);
+        await supabase.from('user_gacha_state').update({ five_star_pity: state.fiveStarPity, four_star_pity: state.fourStarPity, guaranteed_up: state.guaranteedUp }).eq('user_id', state.user.id);
+        if (resultList && resultList.length) {
+            const inserts = resultList.map(item => ({ user_id: state.user.id, item_name: item.name, star_level: item.star, created_at: new Date().toISOString() }));
+            await supabase.from('gacha_history').insert(inserts);
+        }
+    }
+    function addHistoryRecord(name, star) {
+        state.gachaHistory.unshift({ name, star });
+        while (state.gachaHistory.length > 2000) state.gachaHistory.pop();
+        renderHistoryModal();
+    }
+    function updateStatsAfterPull(item) {
+        state.totalPulls++;
+        if (item.star === 5) {
+            state.fiveStarCount++;
+            if (state.lastFiveStarPullIndex !== 0) {
+                let dist = state.totalPulls - state.lastFiveStarPullIndex;
+                state.fiveStarDistances.push(Math.min(dist, state.pity5Max));
+            }
+            state.lastFiveStarPullIndex = state.totalPulls;
+            if (item.name === state.upFiveStar) state.upFiveStarCount++;
+        } else if (item.star === 4) {
+            state.fourStarCount++;
+        } else {
+            state.threeStarCount++;
+        }
+        updateStatsModalContent();
+    }
+    function updateStatsModalContent() {
+        let avg = state.fiveStarCount === 0 ? '--' : (state.totalPulls / state.fiveStarCount).toFixed(1);
+        let best = state.fiveStarDistances.length ? Math.min(...state.fiveStarDistances) : '--';
+        let worst = state.fiveStarDistances.length ? Math.max(...state.fiveStarDistances) : '--';
+        let upRate = state.fiveStarCount === 0 ? '--' : ((state.upFiveStarCount / state.fiveStarCount) * 100).toFixed(1) + '%';
+        dom.statsGrid.innerHTML = `
+            <div class="stat-card"><div class="stat-label">🎲 总抽数</div><div class="stat-number">${state.totalPulls}</div></div>
+            <div class="stat-card"><div class="stat-label">⭐ 五星数量</div><div class="stat-number">${state.fiveStarCount}</div></div>
+            <div class="stat-card"><div class="stat-label">✨ 四星数量</div><div class="stat-number">${state.fourStarCount}</div></div>
+            <div class="stat-card"><div class="stat-label">🌀 三星数量</div><div class="stat-number">${state.threeStarCount}</div></div>
+            <div class="stat-card"><div class="stat-label">📊 平均出货抽数</div><div class="stat-number">${avg}</div><div class="stat-unit"> (五星)</div></div>
+            <div class="stat-card"><div class="stat-label">🏆 最欧记录</div><div class="stat-number">${best}</div><div class="stat-unit"> 抽出五星</div></div>
+            <div class="stat-card"><div class="stat-label">💀 最非记录</div><div class="stat-number">${worst}</div><div class="stat-unit"> 抽出五星</div></div>
+            <div class="stat-card"><div class="stat-label">🎯 UP命中率</div><div class="stat-number">${upRate}</div></div>
+        `;
+        // 命座列表排序
+        let limited = [], permanent = [], four = [];
+        for (let [name, lv] of state.constellations.entries()) {
+            if (name === state.upFiveStar) limited.push({name, lv});
+            else if (state.permanentFiveStar.includes(name)) permanent.push({name, lv});
+            else four.push({name, lv});
+        }
+        limited.sort((a,b)=>a.name.localeCompare(b.name));
+        permanent.sort((a,b)=>a.name.localeCompare(b.name));
+        four.sort((a,b)=>a.name.localeCompare(b.name));
+        let constHtml = '';
+        for (let item of [...limited, ...permanent, ...four]) {
+            let cls = (item.name === state.upFiveStar || state.permanentFiveStar.includes(item.name)) ? 'constellation-five' : 'constellation-four';
+            constHtml += `<div class="constellation-item ${cls}"><span class="constellation-name">${escapeHtml(item.name)}</span><span class="constellation-level">(${item.lv}/6)</span></div>`;
+        }
+        dom.constellationList.innerHTML = constHtml || '<div style="color:#aab9de;">暂无角色命座信息</div>';
+    }
+
+    // 抽卡逻辑
+    async function performSingleDrawWithConstellation() {
+        let isFiveStar = false;
+        if (state.fiveStarPity + 1 >= state.pity5Max) {
+            isFiveStar = true;
+        } else {
+            let rate = getCurrentFiveStarRate(state.fiveStarPity);
+            if (Math.random() < rate) isFiveStar = true;
+        }
+        let resultName, resultStar;
+        if (isFiveStar) {
+            let selected;
+            if (state.guaranteedUp) {
+                selected = state.upFiveStar;
+                state.guaranteedUp = false;
+            } else {
+                if (Math.random() < 0.5) {
+                    selected = state.upFiveStar;
+                } else {
+                    selected = state.permanentFiveStar[Math.floor(Math.random() * state.permanentFiveStar.length)];
+                    state.guaranteedUp = true;
+                }
+            }
+            resultName = selected;
+            resultStar = 5;
+            state.fiveStarPity = 0;
+            state.fourStarPity = 0;
+        } else {
+            let mustFour = false;
+            if (state.fourStarPity + 1 >= state.pity4Max) mustFour = true;
+            else if (Math.random() < state.baseRate4) mustFour = true;
+            if (mustFour) {
+                resultName = state.fourStarChars[Math.floor(Math.random() * state.fourStarChars.length)];
+                resultStar = 4;
+                state.fourStarPity = 0;
+                state.fiveStarPity++;
+            } else {
+                resultName = state.threeStarItems[Math.floor(Math.random() * state.threeStarItems.length)];
+                resultStar = 3;
+                state.fourStarPity++;
+                state.fiveStarPity++;
+            }
+        }
+        let constellationMsg = null;
+        if (resultStar >= 4) {
+            let res = await processCharacterObtain(resultName, resultStar);
+            if (res.action === 'first') constellationMsg = '首次获得';
+            else if (res.action === 'constellation') constellationMsg = `命座 ${res.newLevel}`;
+            else if (res.action === 'overflow') constellationMsg = `满命转化 ${res.compensation}星琼`;
+        }
+        return { name: resultName, star: resultStar, constellationMsg };
+    }
+    async function drawOne() {
+        if (state.tickets >= 1) {
+            state.tickets -= 1;
+            let result = await performSingleDrawWithConstellation();
+            updateUI();
+            addHistoryRecord(result.name, result.star);
+            updateStatsAfterPull(result);
+            return result;
+        }
         return null;
     }
-    currentBanner = data;
-    if (currentBanner) {
-        BANNER_START = new Date(currentBanner.start_time);
-        BANNER_END = new Date(currentBanner.end_time);
-        UP_FIVE_STAR = currentBanner.up_five_star;
-        document.getElementById('poolName').innerText = currentBanner.name;
-        document.getElementById('poolSub').innerText = currentBanner.sub_name || '';
-        document.getElementById('upCharName').innerHTML = `🌟 ${currentBanner.up_five_star} 🌟`;
-        splashImg.src = currentBanner.splash_url;
-        splashImg.onerror = () => { splashImg.src = "https://xiaochen1235789.github.io/images/changjinglu.webp"; };
-        document.getElementById('splashCaption').innerText = currentBanner.caption || '';
-        disabledNoticeSpan.style.display = 'none';
-        singleBtn.disabled = false;
-        tenBtn.disabled = false;
-    } else {
-        document.getElementById('poolName').innerText = '暂无卡池';
-        document.getElementById('poolSub').innerText = '敬请期待';
-        disabledNoticeSpan.style.display = 'block';
-        disabledNoticeSpan.innerText = '⏳ 当前没有开放卡池';
-        singleBtn.disabled = true;
-        tenBtn.disabled = true;
-    }
-    updateCountdown();
-    updateButtonsState();
-}
-
-async function fetchGachaPools() {
-    const { data: permFive } = await supabaseClient.from('gacha_permanent_five').select('character_name').order('sort_order');
-    PERMANENT_FIVE_STAR = permFive.map(p => p.character_name);
-    const { data: four } = await supabaseClient.from('gacha_four_star').select('character_name').order('sort_order');
-    FOUR_STAR_CHARS = four.map(f => f.character_name);
-    const { data: three } = await supabaseClient.from('gacha_three_star').select('item_name').order('sort_order');
-    THREE_STAR_ITEMS = three.map(t => t.item_name);
-}
-
-async function fetchGachaConfig() {
-    const { data } = await supabaseClient.from('gacha_config').select('*').single();
-    if (data) {
-        BASE_RATE_4 = data.base_rate_4;
-        PITY_5_MAX = data.pity_5_max;
-        PITY_4_MAX = data.pity_4_max;
-        SOFT_PITY_START = data.soft_pity_start;
-        OVERFLOW_COMPENSATION_5 = data.compensation_5_overflow;
-        OVERFLOW_COMPENSATION_4 = data.compensation_4_overflow;
-        EXCHANGE_RATE = data.exchange_rate;
-    }
-}
-
-// ======================= 辅助函数 =======================
-function showTip(msg) { showNotification(msg, 'info'); }
-function showNotification(message, type = 'info') {
-    toastNotice.textContent = message;
-    toastNotice.className = `toast-notice ${type}`;
-    setTimeout(() => toastNotice.classList.add('show'), 10);
-    setTimeout(() => toastNotice.classList.remove('show'), 3000);
-}
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
-}
-function updateUI() {
-    jadeSpan.innerText = starJade;
-    ticketSpan.innerText = tickets;
-    pitySpan.innerText = fiveStarPity;
-    fourPitySpan.innerText = fourStarPity;
-    let currentRate = getCurrentFiveStarRate(fiveStarPity);
-    rateDisplaySpan.innerText = `当前5星概率: ${(currentRate * 100).toFixed(2)}%`;
-    updateEnhancedPityHints();
-}
-function updateEnhancedPityHints() {
-    if (fiveStarPity < SOFT_PITY_START) {
-        softPityRemainSpan.innerText = `${SOFT_PITY_START - fiveStarPity} 抽后进入软保底区`;
-    } else {
-        softPityRemainSpan.innerText = `已进入软保底区 (${fiveStarPity}/${PITY_5_MAX})`;
-    }
-    nextFiveTypeSpan.innerText = guaranteedUp ? "大保底（必得UP）" : "小保底（50%概率UP）";
-    const fourRemain = PITY_4_MAX - fourStarPity;
-    fourPityRemainSpan.innerText = `${fourRemain} 抽后必出四星`;
-}
-function getCurrentFiveStarRate(pityCount) {
-    if (pityCount >= PITY_5_MAX - 1) return 1.0;
-    if (pityCount < SOFT_PITY_START) return 0.006;
-    let step = pityCount - (SOFT_PITY_START - 1);
-    let maxStep = PITY_5_MAX - SOFT_PITY_START;
-    let rate = 0.006 + (1.0 - 0.006) * (step / maxStep);
-    return Math.min(rate, 1.0);
-}
-function updateCountdown() {
-    if (!BANNER_START || !BANNER_END) {
-        countdownTimerSpan.innerText = '卡池未加载';
-        return;
-    }
-    const now = new Date();
-    if (now >= BANNER_END) {
-        countdownTimerSpan.innerText = '卡池已结束';
-        return;
-    }
-    if (now < BANNER_START) {
-        const diff = BANNER_START - now;
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (86400000)) / 3600000);
-        const minutes = Math.floor((diff % 3600000) / 60000);
-        const seconds = Math.floor((diff % 60000) / 1000);
-        countdownTimerSpan.innerText = `距离开启 ${days}天 ${hours}时 ${minutes}分 ${seconds}秒`;
-        return;
-    }
-    const diff = BANNER_END - now;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (86400000)) / 3600000);
-    const minutes = Math.floor((diff % 3600000) / 60000);
-    const seconds = Math.floor((diff % 60000) / 1000);
-    countdownTimerSpan.innerText = `${days}天 ${hours}时 ${minutes}分 ${seconds}秒`;
-}
-function updateButtonsState() {
-    if (!BANNER_START || !BANNER_END) return;
-    const now = new Date();
-    const isActive = now >= BANNER_START && now <= BANNER_END;
-    if (!isActive) {
-        singleBtn.classList.add('disabled');
-        tenBtn.classList.add('disabled');
-        singleBtn.disabled = true;
-        tenBtn.disabled = true;
-        if (now < BANNER_START) {
-            disabledNoticeSpan.style.display = 'block';
-            disabledNoticeSpan.innerText = '⏳ 卡池尚未开启，敬请期待！';
-        } else if (now > BANNER_END) {
-            disabledNoticeSpan.style.display = 'block';
-            disabledNoticeSpan.innerText = '⚠️ 卡池已结束，无法跃迁';
-        }
-    } else {
-        singleBtn.classList.remove('disabled');
-        tenBtn.classList.remove('disabled');
-        singleBtn.disabled = false;
-        tenBtn.disabled = false;
-        disabledNoticeSpan.style.display = 'none';
-    }
-}
-
-// ======================= 命座数据库操作 =======================
-async function loadConstellations() {
-    if (!currentUser) return;
-    try {
-        const { data, error } = await supabaseClient
-            .from('user_constellations')
-            .select('character_name, constellation_level')
-            .eq('user_id', currentUser.id);
-        if (error) throw error;
-        constellationsMap.clear();
-        for (let row of data) {
-            let level = row.constellation_level;
-            if (level === undefined || level === null) level = 0;
-            constellationsMap.set(row.character_name, level);
-        }
-    } catch (err) { console.warn('加载命座失败:', err); }
-}
-async function saveConstellation(characterName, level) {
-    if (!currentUser) return;
-    try {
-        await supabaseClient
-            .from('user_constellations')
-            .upsert({ user_id: currentUser.id, character_name: characterName, constellation_level: level, updated_at: new Date() }, { onConflict: 'user_id, character_name' });
-    } catch (err) { console.error('保存命座失败:', err); }
-}
-async function processCharacterObtain(characterName, starLevel) {
-    const currentLevel = constellationsMap.get(characterName) ?? 0;
-    if (currentLevel < 6) {
-        if (currentLevel === 0 && !constellationsMap.has(characterName)) {
-            constellationsMap.set(characterName, 0);
-            await saveConstellation(characterName, 0);
-            showTip(`✨ 首次获得 ${characterName} ✨`);
-            return { action: 'first', newLevel: 0 };
-        } else {
-            const newLevel = currentLevel + 1;
-            constellationsMap.set(characterName, newLevel);
-            await saveConstellation(characterName, newLevel);
-            showTip(`${characterName} 命座提升至 ${newLevel} 阶！`);
-            return { action: 'constellation', newLevel };
-        }
-    } else {
-        const compensation = (starLevel === 5) ? OVERFLOW_COMPENSATION_5 : OVERFLOW_COMPENSATION_4;
-        starJade += compensation;
-        updateUI();
-        await saveAfterDraw([]);
-        showTip(`✨ ${characterName} 已满命，转换为 ${compensation} 星琼 ✨`);
-        return { action: 'overflow', compensation };
-    }
-}
-
-// ======================= 历史记录（分页加载，优化性能）=======================
-let historyPageSize = 50;
-let historyCurrentPage = 1;
-let historyTotal = 0;
-
-async function saveAfterDraw(resultList) {
-    if (!currentUser) return;
-    try {
-        await supabaseClient.from('user_resources').update({ star_jade: starJade, tickets: tickets }).eq('user_id', currentUser.id);
-        await supabaseClient.from('user_gacha_state').update({ five_star_pity: fiveStarPity, four_star_pity: fourStarPity, guaranteed_up: guaranteedUp }).eq('user_id', currentUser.id);
-        if (resultList && resultList.length > 0) {
-            const historyInserts = resultList.map(item => ({
-                user_id: currentUser.id,
-                item_name: item.name,
-                star_level: item.star,
-                created_at: new Date().toISOString()
-            }));
-            await supabaseClient.from('gacha_history').insert(historyInserts);
-        }
-    } catch (err) { console.error('保存数据失败:', err); showTip('数据保存失败，请检查网络'); }
-}
-function addHistoryRecord(itemName, starLevel) {
-    gachaHistory.unshift({ name: itemName, star: starLevel });
-    while (gachaHistory.length > 2000) gachaHistory.pop();
-    renderHistoryModal();
-}
-function renderHistoryModal() {
-    if (!recordListDiv) return;
-    if (gachaHistory.length === 0) {
-        recordListDiv.innerHTML = '<div class="empty-history">暂无抽卡记录</div>';
-        return;
-    }
-    historyTotal = gachaHistory.length;
-    historyCurrentPage = 1;
-    _renderHistoryPage();
-}
-function _renderHistoryPage() {
-    if (!recordListDiv) return;
-    const start = 0;
-    const end = historyCurrentPage * historyPageSize;
-    const visible = gachaHistory.slice(start, end);
-    let html = '';
-    for (let rec of visible) {
-        let starClass = '';
-        let starsHtml = '';
-        if (rec.star === 5) {
-            starClass = 'record-star5';
-            starsHtml = '<span class="star-gold">★★★★★</span>';
-        } else if (rec.star === 4) {
-            starClass = 'record-star4';
-            starsHtml = '<span class="star-purple">★★★★</span>';
-        } else {
-            starClass = 'record-star3';
-            starsHtml = '<span class="star-gray">★★★</span>';
-        }
-        html += `<div class="record-item ${starClass}">
-                    <span>${escapeHtml(rec.name)}</span>
-                    ${starsHtml}
-                  </div>`;
-    }
-    if (historyTotal > end) {
-        html += `<div class="record-item load-more-btn" style="text-align:center; justify-content:center; cursor:pointer;">加载更多 (${end}/${historyTotal})</div>`;
-    }
-    recordListDiv.innerHTML = html;
-    const loadMore = recordListDiv.querySelector('.load-more-btn');
-    if (loadMore) {
-        loadMore.addEventListener('click', () => {
-            if ((historyCurrentPage + 1) * historyPageSize <= historyTotal) {
-                historyCurrentPage++;
-                _renderHistoryPage();
-            } else {
-                loadMore.remove();
-            }
-        });
-    }
-}
-
-// ======================= 抽卡结果弹窗优化（DocumentFragment）=======================
-function showResultDialog(resultsArray) {
-    if (!resultsArray || resultsArray.length === 0) return;
-    const fragment = document.createDocumentFragment();
-    for (let item of resultsArray) {
-        const starClass = item.star === 5 ? 'dialog-star5' : (item.star === 4 ? 'dialog-star4' : 'dialog-star3');
-        const starLabel = item.star === 5 ? '五星' : (item.star === 4 ? '四星' : '三星');
-        let extraInfo = '';
-        if (item.constellationMsg) extraInfo = `<span style="margin-left:8px; font-size:0.7rem;">${item.constellationMsg}</span>`;
-        const div = document.createElement('div');
-        div.className = `dialog-item ${starClass}`;
-        div.innerHTML = `<span>${escapeHtml(item.name)}</span><span class="dialog-star-label">${starLabel}${extraInfo}</span>`;
-        fragment.appendChild(div);
-    }
-    dialogContent.innerHTML = '';
-    dialogContent.appendChild(fragment);
-    resultDialog.classList.add('active');
-}
-window.closeResultDialogGlobal = function() {
-    resultDialog.classList.remove('active');
-};
-
-// ======================= 抽卡核心逻辑 =======================
-async function performSingleDrawWithConstellation() {
-    let isFiveStar = false;
-    if (fiveStarPity + 1 >= PITY_5_MAX) {
-        isFiveStar = true;
-    } else {
-        const currentRate = getCurrentFiveStarRate(fiveStarPity);
-        if (Math.random() < currentRate) isFiveStar = true;
-    }
-    let resultName, resultStar;
-    if (isFiveStar) {
-        let selected;
-        if (guaranteedUp) {
-            selected = UP_FIVE_STAR;
-            guaranteedUp = false;
-        } else {
-            const upRand = Math.random() < 0.5;
-            if (upRand) {
-                selected = UP_FIVE_STAR;
-            } else {
-                selected = PERMANENT_FIVE_STAR[Math.floor(Math.random() * PERMANENT_FIVE_STAR.length)];
-                guaranteedUp = true;
-            }
-        }
-        resultName = selected;
-        resultStar = 5;
-        fiveStarPity = 0;
-        fourStarPity = 0;
-    } else {
-        let mustFourStar = false;
-        if (fourStarPity + 1 >= PITY_4_MAX) mustFourStar = true;
-        else if (Math.random() < BASE_RATE_4) mustFourStar = true;
-        if (mustFourStar) {
-            resultName = FOUR_STAR_CHARS[Math.floor(Math.random() * FOUR_STAR_CHARS.length)];
-            resultStar = 4;
-            fourStarPity = 0;
-            fiveStarPity++;
-        } else {
-            resultName = THREE_STAR_ITEMS[Math.floor(Math.random() * THREE_STAR_ITEMS.length)];
-            resultStar = 3;
-            fourStarPity++;
-            fiveStarPity++;
-        }
-    }
-    let constellationMsg = null;
-    if (resultStar >= 4) {
-        const res = await processCharacterObtain(resultName, resultStar);
-        if (res.action === 'first') {
-            constellationMsg = `首次获得`;
-        } else if (res.action === 'constellation') {
-            constellationMsg = `命座 ${res.newLevel}`;
-        } else if (res.action === 'overflow') {
-            constellationMsg = `满命转化 ${res.compensation}星琼`;
-        }
-    }
-    return { name: resultName, star: resultStar, constellationMsg };
-}
-async function drawOneWithTicketAndConstellation() {
-    if (tickets >= 1) {
-        tickets -= 1;
-        const result = await performSingleDrawWithConstellation();
-        updateUI();
-        addHistoryRecord(result.name, result.star);
-        updateStatsAfterPull(result);
-        return result;
-    }
-    return null;
-}
-function updateStatsAfterPull(resultItem) {
-    totalPulls++;
-    if (resultItem.star === 5) {
-        fiveStarCount++;
-        if (lastFiveStarPullIndex !== 0) {
-            let distance = totalPulls - lastFiveStarPullIndex;
-            distance = Math.min(distance, PITY_5_MAX);
-            fiveStarDistances.push(distance);
-        }
-        lastFiveStarPullIndex = totalPulls;
-        if (resultItem.name === UP_FIVE_STAR) upFiveStarCount++;
-    } else if (resultItem.star === 4) {
-        fourStarCount++;
-    } else {
-        threeStarCount++;
-    }
-    updateStatsModalContent();
-}
-function resetStatistics() {
-    totalPulls = 0;
-    fiveStarCount = 0;
-    fourStarCount = 0;
-    threeStarCount = 0;
-    upFiveStarCount = 0;
-    fiveStarDistances = [];
-    lastFiveStarPullIndex = 0;
-    updateStatsModalContent();
-}
-function rebuildStatsFromHistory() {
-    resetStatistics();
-    const reversed = [...gachaHistory].reverse();
-    for (let rec of reversed) {
-        totalPulls++;
-        if (rec.star === 5) {
-            fiveStarCount++;
-            if (lastFiveStarPullIndex !== 0) {
-                let distance = totalPulls - lastFiveStarPullIndex;
-                distance = Math.min(distance, PITY_5_MAX);
-                fiveStarDistances.push(distance);
-            }
-            lastFiveStarPullIndex = totalPulls;
-            if (rec.name === UP_FIVE_STAR) upFiveStarCount++;
-        } else if (rec.star === 4) {
-            fourStarCount++;
-        } else {
-            threeStarCount++;
-        }
-    }
-    updateStatsModalContent();
-}
-function updateStatsModalContent() {
-    const avgPulls = fiveStarCount === 0 ? '--' : (totalPulls / fiveStarCount).toFixed(1);
-    let best = '--', worst = '--';
-    if (fiveStarDistances.length > 0) {
-        best = Math.min(...fiveStarDistances);
-        worst = Math.max(...fiveStarDistances);
-    }
-    const upRate = fiveStarCount === 0 ? '--' : ((upFiveStarCount / fiveStarCount) * 100).toFixed(1) + '%';
-    const statsHtml = `
-        <div class="stat-card"><div class="stat-label">🎲 总抽数</div><div class="stat-number">${totalPulls}</div></div>
-        <div class="stat-card"><div class="stat-label">⭐ 五星数量</div><div class="stat-number">${fiveStarCount}</div></div>
-        <div class="stat-card"><div class="stat-label">✨ 四星数量</div><div class="stat-number">${fourStarCount}</div></div>
-        <div class="stat-card"><div class="stat-label">🌀 三星数量</div><div class="stat-number">${threeStarCount}</div></div>
-        <div class="stat-card"><div class="stat-label">📊 平均出货抽数</div><div class="stat-number">${avgPulls}</div><div class="stat-unit"> (五星)</div></div>
-        <div class="stat-card"><div class="stat-label">🏆 最欧记录</div><div class="stat-number">${best}</div><div class="stat-unit"> 抽出五星</div></div>
-        <div class="stat-card"><div class="stat-label">💀 最非记录</div><div class="stat-number">${worst}</div><div class="stat-unit"> 抽出五星</div></div>
-        <div class="stat-card"><div class="stat-label">🎯 UP命中率</div><div class="stat-number">${upRate}</div></div>
-    `;
-    statsGrid.innerHTML = statsHtml;
-    
-    if (constellationsMap.size === 0) {
-        constellationListDiv.innerHTML = '<div style="color:#aab9de; font-size:0.7rem;">暂无角色命座信息</div>';
-        return;
-    }
-    const limitedFive = UP_FIVE_STAR;
-    let limitedList = [], permanentFiveList = [], fourList = [];
-    for (let [name, level] of constellationsMap.entries()) {
-        if (name === limitedFive) limitedList.push({ name, level });
-        else if (PERMANENT_FIVE_STAR.includes(name)) permanentFiveList.push({ name, level });
-        else fourList.push({ name, level });
-    }
-    limitedList.sort((a,b) => a.name.localeCompare(b.name));
-    permanentFiveList.sort((a,b) => a.name.localeCompare(b.name));
-    fourList.sort((a,b) => a.name.localeCompare(b.name));
-    const sorted = [...limitedList, ...permanentFiveList, ...fourList];
-    let constHtml = '';
-    for (let item of sorted) {
-        const isFiveStar = (item.name === limitedFive || PERMANENT_FIVE_STAR.includes(item.name));
-        const colorClass = isFiveStar ? 'constellation-five' : 'constellation-four';
-        constHtml += `<div class="constellation-item ${colorClass}">
-            <span class="constellation-name">${escapeHtml(item.name)}</span>
-            <span class="constellation-level">(${item.level}/6)</span>
-        </div>`;
-    }
-    constellationListDiv.innerHTML = constHtml;
-}
-async function attemptDraw(needTickets, costJade, drawFunc) {
-    if (tickets >= needTickets) {
-        return await drawFunc();
-    } else {
+    async function attemptDraw(needTickets, cost, drawFunc) {
+        if (state.tickets >= needTickets) return await drawFunc();
         return new Promise((resolve) => {
-            const msg = `星轨专票数量不足，是否用 ${costJade} 星琼兑换 ${needTickets} 张星轨专票？`;
+            let msg = `星轨专票数量不足，是否用 ${cost} 星琼兑换 ${needTickets} 张星轨专票？`;
             if (confirm(msg)) {
-                if (starJade >= costJade) {
-                    starJade -= costJade;
-                    tickets += needTickets;
+                if (state.starJade >= cost) {
+                    state.starJade -= cost;
+                    state.tickets += needTickets;
                     updateUI();
                     showTip(`兑换成功！获得 ${needTickets} 张星轨专票`);
                     drawFunc().then(resolve);
                 } else {
-                    showTip(`星琼不足，无法兑换！需要 ${costJade} 星琼`);
+                    showTip(`星琼不足，无法兑换！需要 ${cost} 星琼`);
                     resolve(false);
                 }
             } else {
@@ -832,322 +659,242 @@ async function attemptDraw(needTickets, costJade, drawFunc) {
             }
         });
     }
-}
-// 单抽（防抖优化）
-async function singlePull() {
-    if (singleBtn.disabled || tenBtn.disabled) return;
-    singleBtn.disabled = true;
-    tenBtn.disabled = true;
-    try {
-        const now = new Date();
-        if (!BANNER_START || !BANNER_END || now < BANNER_START || now > BANNER_END) {
-            if (!BANNER_START) showTip('卡池未加载');
-            else if (now < BANNER_START) showTip('卡池尚未开启');
-            else showTip('卡池已结束');
-            return;
-        }
-        if (isDrawing) { showTip('跃迁进行中...'); return; }
-        isDrawing = true;
-        await attemptDraw(1, EXCHANGE_RATE, async () => {
-            const result = await drawOneWithTicketAndConstellation();
-            if (result) {
-                let msg = `获得: ${result.name} (${result.star}★)`;
-                if (result.constellationMsg) msg += ` · ${result.constellationMsg}`;
-                showTip(msg);
-                showResultDialog([result]);
-                updateUI();
-                await saveAfterDraw([result]);
-                updateStatsModalContent();
-            }
-            return result;
-        });
-        isDrawing = false;
-    } finally {
-        singleBtn.disabled = false;
-        tenBtn.disabled = false;
-    }
-}
-// 十连（防抖优化）
-async function tenPull() {
-    if (singleBtn.disabled || tenBtn.disabled) return;
-    singleBtn.disabled = true;
-    tenBtn.disabled = true;
-    try {
-        const now = new Date();
-        if (!BANNER_START || !BANNER_END || now < BANNER_START || now > BANNER_END) {
-            if (!BANNER_START) showTip('卡池未加载');
-            else if (now < BANNER_START) showTip('卡池尚未开启');
-            else showTip('卡池已结束');
-            return;
-        }
-        if (isDrawing) { showTip('当前正在跃迁中，请稍等…'); return; }
-        isDrawing = true;
-        await attemptDraw(10, EXCHANGE_RATE * 10, async () => {
-            showTip('十连跃迁开启，群星闪烁 ✨✨');
-            const pullResults = [];
-            for (let i = 0; i < 10; i++) {
-                await new Promise(r => setTimeout(r, 50));
-                if (tickets < 1) break;
-                const result = await drawOneWithTicketAndConstellation();
-                if (result) pullResults.push(result);
-            }
-            const fiveCount = pullResults.filter(r => r.star === 5).length;
-            showTip(`十连完成！获得 ${fiveCount} 位五星 ✨`);
-            showResultDialog(pullResults);
-            await saveAfterDraw(pullResults);
-            updateStatsModalContent();
-            return pullResults;
-        });
-        isDrawing = false;
-    } finally {
-        singleBtn.disabled = false;
-        tenBtn.disabled = false;
-    }
-}
-async function loadUserData() {
-    if (!currentUser) return;
-    if (isLoadingData) return;
-    isLoadingData = true;
-    try {
-        let { data: resData, error: resErr } = await supabaseClient
-            .from('user_resources')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .maybeSingle();
-        if (resErr) throw resErr;
-        if (!resData) {
-            const { data: newRes, error: insertErr } = await supabaseClient
-                .from('user_resources')
-                .insert({ user_id: currentUser.id, star_jade: 1599840, tickets: 100 })
-                .select()
-                .single();
-            if (insertErr) throw insertErr;
-            resData = newRes;
-        }
-        starJade = resData.star_jade;
-        tickets = resData.tickets;
-
-        let { data: stateData, error: stateErr } = await supabaseClient
-            .from('user_gacha_state')
-            .select('five_star_pity, four_star_pity, guaranteed_up')
-            .eq('user_id', currentUser.id)
-            .maybeSingle();
-        if (stateErr) throw stateErr;
-        if (!stateData) {
-            const { data: newState, error: insertStateErr } = await supabaseClient
-                .from('user_gacha_state')
-                .insert({ user_id: currentUser.id, five_star_pity: 0, four_star_pity: 0, guaranteed_up: false })
-                .select()
-                .single();
-            if (insertStateErr) throw insertStateErr;
-            stateData = newState;
-        }
-        fiveStarPity = stateData.five_star_pity;
-        fourStarPity = stateData.four_star_pity;
-        guaranteedUp = stateData.guaranteed_up;
-
+    async function singlePull() {
+        if (state.isDrawing) return showTip('跃迁进行中...');
+        state.isDrawing = true;
+        dom.singleBtn.disabled = true;
+        dom.tenBtn.disabled = true;
         try {
-            let { data: historyData, error: histErr } = await supabaseClient
-                .from('gacha_history')
-                .select('item_name, star_level, created_at')
-                .eq('user_id', currentUser.id)
-                .order('created_at', { ascending: false })
-                .limit(2000);
-            if (!histErr) {
-                gachaHistory = (historyData || []).map(h => ({ name: h.item_name, star: h.star_level, time: h.created_at }));
-            } else {
-                gachaHistory = [];
-            }
-        } catch (e) { gachaHistory = []; }
-
+            let result = await attemptDraw(1, state.exchangeRate, async () => {
+                let res = await drawOne();
+                if (res) showResultDialog([res]);
+                return res;
+            });
+            await saveAfterDraw(result ? [result] : []);
+        } catch(e) { console.error(e); showTip('抽卡出错'); }
+        finally {
+            state.isDrawing = false;
+            dom.singleBtn.disabled = false;
+            dom.tenBtn.disabled = false;
+        }
+    }
+    async function tenPull() {
+        if (state.isDrawing) return showTip('跃迁中...');
+        state.isDrawing = true;
+        dom.singleBtn.disabled = true;
+        dom.tenBtn.disabled = true;
         try {
-            let { data: profileData, error: profErr } = await supabaseClient
-                .from('user_profiles')
-                .select('user_number')
-                .eq('id', currentUser.id)
-                .maybeSingle();
-            if (!profErr && profileData && profileData.user_number) {
-                userNumber = profileData.user_number;
-                uidBadge.innerText = `UID: ${userNumber}`;
-            } else {
-                uidBadge.innerText = `UID: --`;
-            }
-        } catch (e) { uidBadge.innerText = `UID: --`; }
+            let results = await attemptDraw(10, state.exchangeRate * 10, async () => {
+                let resList = [];
+                for (let i=0; i<10; i++) {
+                    await new Promise(r => setTimeout(r, 50));
+                    if (state.tickets < 1) break;
+                    let res = await drawOne();
+                    if (res) resList.push(res);
+                }
+                showResultDialog(resList);
+                return resList;
+            });
+            await saveAfterDraw(results || []);
+        } catch(e) { console.error(e); showTip('十连抽卡出错'); }
+        finally {
+            state.isDrawing = false;
+            dom.singleBtn.disabled = false;
+            dom.tenBtn.disabled = false;
+        }
+    }
 
+    // 加载用户数据、卡池等（与原版一致，但使用 state）
+    async function fetchCurrentBanner() {
+        const now = new Date().toISOString();
+        const { data, error } = await supabase.from('gacha_banners').select('*').lte('start_time', now).gte('end_time', now).maybeSingle();
+        if (!error && data) {
+            state.currentBanner = data;
+            state.bannerStart = new Date(data.start_time);
+            state.bannerEnd = new Date(data.end_time);
+            state.upFiveStar = data.up_five_star;
+            dom.poolName.innerText = data.name;
+            dom.poolSub.innerText = data.sub_name || '';
+            dom.upCharName.innerHTML = `🌟 ${data.up_five_star} 🌟`;
+            dom.splashImg.src = data.splash_url;
+            dom.splashImg.onerror = () => dom.splashImg.src = "https://xiaochen1235789.github.io/images/changjinglu.webp";
+            dom.splashCaption.innerText = data.caption || '';
+            dom.disabledNotice.style.display = 'none';
+        } else {
+            dom.poolName.innerText = '暂无卡池';
+            dom.poolSub.innerText = '敬请期待';
+            dom.disabledNotice.style.display = 'block';
+            dom.disabledNotice.innerText = '⏳ 当前没有开放卡池';
+        }
+        updateCountdown();
+        updateButtonsState();
+    }
+    async function fetchGachaPools() {
+        let { data: perm } = await supabase.from('gacha_permanent_five').select('character_name').order('sort_order');
+        state.permanentFiveStar = perm.map(p => p.character_name);
+        let { data: four } = await supabase.from('gacha_four_star').select('character_name').order('sort_order');
+        state.fourStarChars = four.map(f => f.character_name);
+        let { data: three } = await supabase.from('gacha_three_star').select('item_name').order('sort_order');
+        state.threeStarItems = three.map(t => t.item_name);
+    }
+    async function fetchGachaConfig() {
+        let { data } = await supabase.from('gacha_config').select('*').single();
+        if (data) {
+            state.baseRate4 = data.base_rate_4;
+            state.pity5Max = data.pity_5_max;
+            state.pity4Max = data.pity_4_max;
+            state.softPityStart = data.soft_pity_start;
+            state.overflowComp5 = data.compensation_5_overflow;
+            state.overflowComp4 = data.compensation_4_overflow;
+            state.exchangeRate = data.exchange_rate;
+        }
+    }
+    async function loadUserData() {
+        if (!state.user) return;
+        let { data: res } = await supabase.from('user_resources').select('*').eq('user_id', state.user.id).maybeSingle();
+        if (!res) {
+            let { data: newRes } = await supabase.from('user_resources').insert({ user_id: state.user.id, star_jade: 1599840, tickets: 100 }).select().single();
+            res = newRes;
+        }
+        state.starJade = res.star_jade;
+        state.tickets = res.tickets;
+        let { data: gs } = await supabase.from('user_gacha_state').select('*').eq('user_id', state.user.id).maybeSingle();
+        if (!gs) {
+            let { data: newGs } = await supabase.from('user_gacha_state').insert({ user_id: state.user.id, five_star_pity: 0, four_star_pity: 0, guaranteed_up: false }).select().single();
+            gs = newGs;
+        }
+        state.fiveStarPity = gs.five_star_pity;
+        state.fourStarPity = gs.four_star_pity;
+        state.guaranteedUp = gs.guaranteed_up;
+        let { data: hist } = await supabase.from('gacha_history').select('item_name, star_level').eq('user_id', state.user.id).order('created_at', { ascending: false }).limit(2000);
+        state.gachaHistory = hist ? hist.map(h => ({ name: h.item_name, star: h.star_level })) : [];
+        let { data: prof } = await supabase.from('user_profiles').select('user_number').eq('id', state.user.id).maybeSingle();
+        state.userNumber = prof?.user_number || null;
+        dom.uidBadge.innerText = state.userNumber ? `UID: ${state.userNumber}` : 'UID: --';
         await loadConstellations();
         updateUI();
         renderHistoryModal();
-        rebuildStatsFromHistory();
-        
-        // 权限移除：所有用户均可使用重置功能，不再检查 isAdmin
-        resetHistoryBtn.disabled = false;
-        resetHistoryBtn.style.opacity = '1';
-        resetHistoryBtn.style.cursor = 'pointer';
-        resetHistoryBtn.removeAttribute('title');
-        resetConstellationsBtn.disabled = false;
-        resetConstellationsBtn.style.opacity = '1';
-        resetConstellationsBtn.style.cursor = 'pointer';
-        resetConstellationsBtn.removeAttribute('title');
-    } catch (err) {
-        console.error('加载用户数据失败:', err);
-        showTip('加载数据失败，将使用本地默认值');
-        starJade = 1599840;
-        tickets = 100;
-        fiveStarPity = 0;
-        fourStarPity = 0;
-        guaranteedUp = false;
-        gachaHistory = [];
-        constellationsMap.clear();
-        updateUI();
-        renderHistoryModal();
-        resetStatistics();
-    } finally {
-        isLoadingData = false;
+        // 重建统计
+        state.totalPulls = 0; state.fiveStarCount = 0; state.fourStarCount = 0; state.threeStarCount = 0; state.upFiveStarCount = 0; state.fiveStarDistances = []; state.lastFiveStarPullIndex = 0;
+        for (let rec of [...state.gachaHistory].reverse()) {
+            state.totalPulls++;
+            if (rec.star === 5) {
+                state.fiveStarCount++;
+                if (state.lastFiveStarPullIndex !== 0) {
+                    let dist = state.totalPulls - state.lastFiveStarPullIndex;
+                    state.fiveStarDistances.push(Math.min(dist, state.pity5Max));
+                }
+                state.lastFiveStarPullIndex = state.totalPulls;
+                if (rec.name === state.upFiveStar) state.upFiveStarCount++;
+            } else if (rec.star === 4) state.fourStarCount++;
+            else state.threeStarCount++;
+        }
+        updateStatsModalContent();
     }
-}
 
-// ======================= 弹窗事件绑定 =======================
-function openExchangeModal() { exchangeModal.classList.add('active'); }
-function closeExchangeModal() { exchangeModal.classList.remove('active'); }
-function updateExchangePreview() {
-    let amount = parseInt(exchangeAmountInput.value) || 0;
-    if (amount < 1) amount = 1;
-    if (amount > 1000) amount = 1000;
-    exchangeAmountInput.value = amount;
-    const cost = amount * EXCHANGE_RATE;
-    exchangePreview.innerText = `需要消耗 ${cost} 星琼，获得 ${amount} 张星轨专票`;
-}
-async function performExchange() {
-    let amount = parseInt(exchangeAmountInput.value) || 0;
-    if (amount < 1) { showTip('兑换数量至少为1'); return; }
-    if (amount > 1000) { showTip('单次兑换不能超过1000张'); return; }
-    const cost = amount * EXCHANGE_RATE;
-    if (starJade >= cost) {
-        starJade -= cost;
-        tickets += amount;
-        updateUI();
-        showTip(`成功兑换 ${amount} 张星轨专票！`);
-        closeExchangeModal();
-        if (currentUser) {
-            await supabaseClient.from('user_resources').update({ star_jade: starJade, tickets: tickets }).eq('user_id', currentUser.id);
-        }
-    } else {
-        showTip(`星琼不足！需要 ${cost} 星琼`);
+    // 事件绑定
+    function bindEvents() {
+        dom.singleBtn.addEventListener('click', singlePull);
+        dom.tenBtn.addEventListener('click', tenPull);
+        document.getElementById('exchangeBtn').onclick = () => document.getElementById('exchangeModal').classList.add('active');
+        document.getElementById('closeExchangeBtn').onclick = () => document.getElementById('exchangeModal').classList.remove('active');
+        document.getElementById('cancelExchangeBtn').onclick = () => document.getElementById('exchangeModal').classList.remove('active');
+        document.getElementById('confirmExchangeBtn').onclick = async () => {
+            let amount = parseInt(document.getElementById('exchangeAmount').value);
+            if (isNaN(amount) || amount < 1) amount = 1;
+            let cost = amount * state.exchangeRate;
+            if (state.starJade >= cost) {
+                state.starJade -= cost;
+                state.tickets += amount;
+                updateUI();
+                await supabase.from('user_resources').update({ star_jade: state.starJade, tickets: state.tickets }).eq('user_id', state.user.id);
+                showTip(`成功兑换 ${amount} 张星轨专票`);
+                document.getElementById('exchangeModal').classList.remove('active');
+            } else {
+                showTip(`星琼不足，需要 ${cost} 星琼`);
+            }
+        };
+        document.getElementById('exchangeAmount').addEventListener('input', function() {
+            let a = parseInt(this.value) || 0;
+            if (a < 1) a = 1;
+            if (a > 1000) a = 1000;
+            this.value = a;
+            document.getElementById('exchangePreview').innerText = `需要消耗 ${a * state.exchangeRate} 星琼`;
+        });
+        document.getElementById('openRecordBtn').onclick = () => { renderHistoryModal(); document.getElementById('recordModal').classList.add('active'); };
+        document.getElementById('closeModalBtn').onclick = () => document.getElementById('recordModal').classList.remove('active');
+        document.getElementById('statsBtn').onclick = () => { updateStatsModalContent(); document.getElementById('statsModal').classList.add('active'); };
+        document.getElementById('closeStatsBtn').onclick = () => document.getElementById('statsModal').classList.remove('active');
+        document.getElementById('infoBtn').onclick = () => document.getElementById('infoModal').classList.add('active');
+        document.getElementById('closeInfoBtn').onclick = () => document.getElementById('infoModal').classList.remove('active');
+        document.getElementById('settingsBtn').onclick = () => document.getElementById('settingsModal').classList.add('active');
+        document.getElementById('closeSettingsBtn').onclick = () => document.getElementById('settingsModal').classList.remove('active');
+        document.getElementById('confirmAddJadeBtn').onclick = async () => {
+            let add = parseInt(document.getElementById('addJadeAmount').value);
+            if (add > 0) {
+                state.starJade += add;
+                updateUI();
+                await supabase.from('user_resources').update({ star_jade: state.starJade }).eq('user_id', state.user.id);
+                showTip(`增加了 ${add} 星琼`);
+            }
+        };
+        document.getElementById('confirmAddTicketBtn').onclick = async () => {
+            let add = parseInt(document.getElementById('addTicketAmount').value);
+            if (add > 0) {
+                state.tickets += add;
+                updateUI();
+                await supabase.from('user_resources').update({ tickets: state.tickets }).eq('user_id', state.user.id);
+                showTip(`增加了 ${add} 张星轨专票`);
+            }
+        };
+        document.getElementById('resetConstellationsBtn').onclick = async () => {
+            if (confirm('确定清空所有命座吗？')) {
+                await supabase.from('user_constellations').delete().eq('user_id', state.user.id);
+                state.constellations.clear();
+                updateStatsModalContent();
+                showTip('命座已重置');
+            }
+        };
+        document.getElementById('resetHistoryBtn').onclick = async () => {
+            if (confirm('确定清空抽卡记录和统计吗？')) {
+                await supabase.from('gacha_history').delete().eq('user_id', state.user.id);
+                state.gachaHistory = [];
+                renderHistoryModal();
+                // 重置统计
+                state.totalPulls = 0; state.fiveStarCount = 0; state.fourStarCount = 0; state.threeStarCount = 0; state.upFiveStarCount = 0; state.fiveStarDistances = []; state.lastFiveStarPullIndex = 0;
+                updateStatsModalContent();
+                showTip('历史记录已清空');
+            }
+        };
+        // 模态框背景关闭
+        document.querySelectorAll('.modal-mask').forEach(m => {
+            m.addEventListener('click', (e) => { if (e.target === m) m.classList.remove('active'); });
+        });
     }
-}
-function openRecordModal() { renderHistoryModal(); recordModal.classList.add('active'); }
-function closeRecordModal() { recordModal.classList.remove('active'); }
-function openStatsModal() { updateStatsModalContent(); statsModal.classList.add('active'); }
-function closeStatsModal() { statsModal.classList.remove('active'); }
-function openInfoModal() { infoModal.classList.add('active'); }
-function closeInfoModal() { infoModal.classList.remove('active'); }
-function openSettingsModal() { settingsModal.classList.add('active'); }
-function closeSettingsModal() { settingsModal.classList.remove('active'); }
-async function addStarJade() {
-    let amount = parseInt(addJadeAmountInput.value);
-    if (isNaN(amount) || amount <= 0) { showTip('请输入有效的星琼数量'); return; }
-    starJade += amount;
-    updateUI();
-    if (currentUser) {
-        await supabaseClient.from('user_resources').update({ star_jade: starJade }).eq('user_id', currentUser.id);
-    }
-    showTip(`成功添加 ${amount} 星琼`);
-}
-async function addTickets() {
-    let amount = parseInt(addTicketAmountInput.value);
-    if (isNaN(amount) || amount <= 0) { showTip('请输入有效的专票数量'); return; }
-    tickets += amount;
-    updateUI();
-    if (currentUser) {
-        await supabaseClient.from('user_resources').update({ tickets: tickets }).eq('user_id', currentUser.id);
-    }
-    showTip(`成功添加 ${amount} 张星轨专票`);
-}
-async function resetConstellations() {
-    if (!confirm('⚠️ 确定要清空所有角色命座数据吗？此操作不可恢复！')) return;
-    if (!currentUser) return;
-    await supabaseClient.from('user_constellations').delete().eq('user_id', currentUser.id);
-    constellationsMap.clear();
-    updateStatsModalContent();
-    showTip('所有命座已重置');
-}
-async function resetHistory() {
-    if (!confirm('⚠️ 确定要清空所有抽卡记录和统计吗？此操作不可恢复！')) return;
-    if (!currentUser) return;
-    const { error } = await supabaseClient.from('gacha_history').delete().eq('user_id', currentUser.id);
-    if (error) { showTip('删除失败：' + error.message); return; }
-    gachaHistory = [];
-    renderHistoryModal();
-    resetStatistics();
-    showTip('抽卡记录已清空');
-    await loadUserData();
-}
-function preventScrollRefresh() {
-    document.body.addEventListener('touchmove', function(e) {
-        const target = e.target;
-        const isScrollable = target.closest('.record-list') || target.closest('.dialog-content') || target.closest('.left-panel-scroll') || target.closest('#statsModal .modal-body') || target.closest('#settingsModal .modal-body') || target.closest('#infoModal .modal-body');
-        if (!isScrollable) e.preventDefault();
-    }, { passive: false });
-}
-function bindEvents() {
-    singleBtn.addEventListener('click', singlePull);
-    tenBtn.addEventListener('click', tenPull);
-    document.getElementById('exchangeBtn').addEventListener('click', openExchangeModal);
-    document.getElementById('openRecordBtn').addEventListener('click', openRecordModal);
-    statsBtn.addEventListener('click', openStatsModal);
-    closeStatsBtn.addEventListener('click', closeStatsModal);
-    statsModal.addEventListener('click', (e) => { if(e.target === statsModal) closeStatsModal(); });
-    document.getElementById('closeModalBtn').addEventListener('click', closeRecordModal);
-    recordModal.addEventListener('click', (e) => { if(e.target === recordModal) closeRecordModal(); });
-    resultDialog.addEventListener('click', (e) => { if (e.target === resultDialog) closeResultDialogGlobal(); });
-    closeExchangeBtn.addEventListener('click', closeExchangeModal);
-    cancelExchangeBtn.addEventListener('click', closeExchangeModal);
-    confirmExchangeBtn.addEventListener('click', performExchange);
-    exchangeAmountInput.addEventListener('input', updateExchangePreview);
-    infoBtn.addEventListener('click', openInfoModal);
-    closeInfoBtn.addEventListener('click', closeInfoModal);
-    infoModal.addEventListener('click', (e) => { if(e.target === infoModal) closeInfoModal(); });
-    const settingsBtn = document.getElementById('settingsBtn');
-    if (settingsBtn) settingsBtn.addEventListener('click', openSettingsModal);
-    closeSettingsBtn.addEventListener('click', closeSettingsModal);
-    settingsModal.addEventListener('click', (e) => { if(e.target === settingsModal) closeSettingsModal(); });
-    confirmAddJadeBtn.addEventListener('click', addStarJade);
-    confirmAddTicketBtn.addEventListener('click', addTickets);
-    resetConstellationsBtn.addEventListener('click', resetConstellations);
-    resetHistoryBtn.addEventListener('click', resetHistory);
-}
-async function initAuth() {
-    try {
-        const { data: { user }, error } = await supabaseClient.auth.getUser();
+
+    // 初始化
+    async function init() {
+        initStars();
+        const ignoreBtn = document.getElementById('ignoreOrientationBtn');
+        if (ignoreBtn) ignoreBtn.onclick = () => document.getElementById('orientationTip').style.display = 'none';
+        const { data: { user }, error } = await supabase.auth.getUser();
         if (error || !user) {
-            showTip('请先登录，即将跳转到登录页...');
-            setTimeout(() => { window.location.href = 'login-real.html'; }, 1500);
-            return false;
+            showTip('请先登录');
+            setTimeout(() => window.location.href = 'login-real.html', 1500);
+            return;
         }
-        currentUser = user;
+        state.user = user;
         await loadUserData();
         await fetchCurrentBanner();
         await fetchGachaPools();
         await fetchGachaConfig();
-    } catch (err) {
-        console.error('初始化失败:', err);
-        showTip('初始化失败，将使用本地数据');
-    } finally {
-        loginLoadingDiv.style.display = 'none';
-        mainContentDiv.style.display = 'flex';
+        bindEvents();
+        dom.loginLoading.style.display = 'none';
+        dom.mainContent.style.display = 'flex';
+        setInterval(() => { updateCountdown(); updateButtonsState(); }, 1000);
     }
-    return true;
-}
-async function init() {
-    initStars();
-    await initAuth();
-    bindEvents();
-    preventScrollRefresh();
-    updateButtonsState();
-    updateCountdown();
-    setInterval(updateCountdown, 1000);
-}
-init();
+    init();
+})();
 </script>
 </body>
 </html>
