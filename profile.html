@@ -10,6 +10,26 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
+    <style>
+        /* 确保商店内容可滚动 */
+        #shopModal .modal #shopContentContainer {
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: 4px;
+            scrollbar-width: thin;
+        }
+        #shopModal .modal #shopContentContainer::-webkit-scrollbar {
+            width: 6px;
+        }
+        #shopModal .modal #shopContentContainer::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+            border-radius: 3px;
+        }
+        #shopModal .modal #shopContentContainer::-webkit-scrollbar-thumb {
+            background: var(--text-highlight);
+            border-radius: 3px;
+        }
+    </style>
 </head>
 <body>
     <nav class="top-nav">
@@ -27,8 +47,8 @@
                 <div class="banner-content">
                     <div class="avatar-section">
                         <div class="avatar-container" id="avatarContainer" style="position: relative;">
-                            <div class="avatar" id="userAvatar" data-frame=""><div class="avatar-placeholder" id="avatarPlaceholder">U</div></div>
-                            <!-- 相机按钮已删除，改用长按 -->
+                            <div class="avatar" id="userAvatar"><div class="avatar-placeholder" id="avatarPlaceholder">U</div></div>
+                            <!-- 相机按钮已移除，改用长按 -->
                         </div>
                     </div>
                     <div class="user-info">
@@ -95,19 +115,18 @@
             localStorage.setItem('profileLastUpdated', Date.now());
         }
 
-        // 获取本地日期 YYYY-MM-DD
         function getLocalDateString(date = new Date()) {
             return date.toLocaleDateString('sv-SE');
         }
 
-        // ========== 头像框系统 ==========
+        // ========== 头像框系统（使用类名，更稳定） ==========
         window.FrameSystem = (function() {
             const FRAMES = [
                 { id: 'frame_default', name: '默认头像框', description: '初始边框', price_candy: 0, price_rainbow: 0, cssClass: '' },
-                { id: 'frame_gold', name: '黄金边框', description: '闪耀质感', price_candy: 50, price_rainbow: 0, cssClass: 'frame_gold' },
-                { id: 'frame_rainbow', name: '彩虹炫光', description: '七彩流光', price_candy: 30, price_rainbow: 3, cssClass: 'frame_rainbow' },
-                { id: 'frame_diamond', name: '钻石星辰', description: '璀璨光环', price_candy: 100, price_rainbow: 5, cssClass: 'frame_diamond' },
-                { id: 'frame_legend', name: '传奇霸主', description: '至尊传说', price_candy: 200, price_rainbow: 10, cssClass: 'frame_legend' }
+                { id: 'frame_gold', name: '黄金边框', description: '闪耀质感', price_candy: 50, price_rainbow: 0, cssClass: 'frame-gold' },
+                { id: 'frame_rainbow', name: '彩虹炫光', description: '七彩流光', price_candy: 30, price_rainbow: 3, cssClass: 'frame-rainbow' },
+                { id: 'frame_diamond', name: '钻石星辰', description: '璀璨光环', price_candy: 100, price_rainbow: 5, cssClass: 'frame-diamond' },
+                { id: 'frame_legend', name: '传奇霸主', description: '至尊传说', price_candy: 200, price_rainbow: 10, cssClass: 'frame-legend' }
             ];
             function getFrameById(id) { return FRAMES.find(f => f.id === id); }
             async function loadUserFrames(userId) {
@@ -144,23 +163,31 @@
                 if (!owned.includes(frameId)) throw new Error('未拥有');
                 await supabaseClient.from('user_frames').update({ equipped: false }).eq('user_id', currentUser.id).eq('equipped', true);
                 await supabaseClient.from('user_frames').update({ equipped: true }).eq('user_id', currentUser.id).eq('frame_id', frameId);
-                applyFrameAttribute(frameId);
+                await applyFrameClassByFrameId(frameId);
             }
-            function applyFrameAttribute(frameId) {
+            // 核心：根据 frameId 给 avatar 添加对应的类名
+            async function applyFrameClassByFrameId(frameId) {
                 const avatarDiv = document.getElementById('userAvatar');
                 if (!avatarDiv) return;
-                if (frameId === 'frame_default') {
-                    avatarDiv.removeAttribute('data-frame');
-                } else {
-                    avatarDiv.setAttribute('data-frame', frameId);
+                // 移除所有 frame- 开头的类名
+                const classes = avatarDiv.className.split(' ');
+                const newClasses = classes.filter(c => !c.startsWith('frame-'));
+                if (frameId && frameId !== 'frame_default') {
+                    const frame = getFrameById(frameId);
+                    if (frame && frame.cssClass) {
+                        newClasses.push(frame.cssClass);
+                    }
                 }
+                avatarDiv.className = newClasses.join(' ').trim();
+                // 确保至少有 'avatar' 类
+                if (!avatarDiv.classList.contains('avatar')) avatarDiv.classList.add('avatar');
             }
             async function initFrameForUser(userId) {
                 await ensureUserFrameFields(userId);
                 let { equipped } = await loadUserFrames(userId);
-                applyFrameAttribute(equipped);
+                await applyFrameClassByFrameId(equipped);
             }
-            return { FRAMES, getFrameById, loadUserFrames, purchaseFrame, equipFrame, initFrameForUser, applyFrameAttribute };
+            return { FRAMES, getFrameById, loadUserFrames, purchaseFrame, equipFrame, initFrameForUser, applyFrameClassByFrameId };
         })();
 
         // ========== 通用辅助 ==========
@@ -185,12 +212,12 @@
             showSyncNotice();
         }
 
-        // 修复：更新头像时保留 data-frame 属性，避免头像框丢失
+        // 更新头像显示（保留头像框类名）
         function updateAvatarDisplay(imageUrl) {
             const avatarDiv = document.getElementById('userAvatar');
             if(!avatarDiv) return;
-            // 保存当前头像框
-            const currentFrame = avatarDiv.getAttribute('data-frame');
+            // 保存当前头像框类名
+            const currentFrameClass = Array.from(avatarDiv.classList).find(c => c.startsWith('frame-')) || '';
             if(imageUrl) {
                 avatarDiv.innerHTML = `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">`;
                 let placeholder = document.createElement('div');
@@ -202,19 +229,17 @@
                 let letter = (userProfile?.username || currentUser?.email?.charAt(0) || 'U').charAt(0).toUpperCase();
                 avatarDiv.innerHTML = `<div class="avatar-placeholder">${letter}</div>`;
             }
-            // 恢复头像框属性
-            if (currentFrame && currentFrame !== '') {
-                avatarDiv.setAttribute('data-frame', currentFrame);
+            // 恢复头像框类名
+            avatarDiv.classList.add('avatar');
+            if (currentFrameClass) {
+                avatarDiv.classList.add(currentFrameClass);
             } else {
-                avatarDiv.removeAttribute('data-frame');
-            }
-            // 确保异步也应用（若当前frame系统有变化）
-            if(window.FrameSystem && currentUser) {
-                window.FrameSystem.loadUserFrames(currentUser.id).then(({ equipped }) => {
-                    if(equipped && equipped !== currentFrame) {
-                        window.FrameSystem.applyFrameAttribute(equipped);
-                    }
-                });
+                // 如果之前没有，从数据库重新获取并应用
+                if (window.FrameSystem && currentUser) {
+                    window.FrameSystem.loadUserFrames(currentUser.id).then(({ equipped }) => {
+                        window.FrameSystem.applyFrameClassByFrameId(equipped);
+                    });
+                }
             }
         }
 
@@ -237,12 +262,11 @@
         window.openPasswordModal = () => openModal('passwordModal');
         window.openDeleteAccountModal = () => { document.getElementById('confirmEmail').value = currentUser?.email || ''; openModal('deleteAccountModal'); };
 
-        // ========== 长按更换头像（替代相机按钮） ==========
+        // ========== 长按更换头像 ==========
         let longPressTimer = null;
         function onAvatarLongPressStart(e) {
             e.preventDefault();
             longPressTimer = setTimeout(() => {
-                // 长按触发，弹出确认框
                 if (confirm('更换头像？')) {
                     openAvatarUpload();
                 }
@@ -258,17 +282,14 @@
         function attachLongPressToAvatar() {
             const avatarContainer = document.getElementById('avatarContainer');
             if (!avatarContainer) return;
-            // 支持触摸事件和鼠标事件（方便调试）
             avatarContainer.addEventListener('touchstart', onAvatarLongPressStart, { passive: false });
             avatarContainer.addEventListener('touchend', onAvatarLongPressEnd);
             avatarContainer.addEventListener('touchcancel', onAvatarLongPressEnd);
-            // 鼠标事件（非移动端也可用）
             avatarContainer.addEventListener('mousedown', onAvatarLongPressStart);
             avatarContainer.addEventListener('mouseup', onAvatarLongPressEnd);
             avatarContainer.addEventListener('mouseleave', onAvatarLongPressEnd);
         }
 
-        // 原有的打开文件选择函数（保留）
         window.openAvatarUpload = function() {
             let input = document.createElement('input');
             input.type='file'; input.accept='image/jpeg,image/png';
@@ -626,8 +647,6 @@
             document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.addEventListener('click', function(e) { if(e.target === this) closeModal(this.id); }));
             document.getElementById('checkinBtn')?.addEventListener('click', performCheckin);
             window.addEventListener('scroll', () => { let btn = document.querySelector('.back-to-top'); if(btn) btn.style.display = window.scrollY>300?'flex':'none'; });
-            
-            // 添加长按监听
             attachLongPressToAvatar();
         }
 
