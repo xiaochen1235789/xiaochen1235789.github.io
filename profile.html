@@ -10,26 +10,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
-    <style>
-        /* 确保商店内容可滚动（备用） */
-        #shopModal .modal #shopContentContainer {
-            max-height: 60vh;
-            overflow-y: auto;
-            padding-right: 4px;
-            scrollbar-width: thin;
-        }
-        #shopModal .modal #shopContentContainer::-webkit-scrollbar {
-            width: 6px;
-        }
-        #shopModal .modal #shopContentContainer::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.2);
-            border-radius: 3px;
-        }
-        #shopModal .modal #shopContentContainer::-webkit-scrollbar-thumb {
-            background: var(--text-highlight);
-            border-radius: 3px;
-        }
-    </style>
 </head>
 <body>
     <nav class="top-nav">
@@ -46,9 +26,9 @@
                 <div class="banner-overlay"></div>
                 <div class="banner-content">
                     <div class="avatar-section">
-                        <div class="avatar-container">
+                        <div class="avatar-container" id="avatarContainer" style="position: relative;">
                             <div class="avatar" id="userAvatar" data-frame=""><div class="avatar-placeholder" id="avatarPlaceholder">U</div></div>
-                            <div class="avatar-upload" onclick="openAvatarUpload()" title="上传头像"><i class="fas fa-camera"></i></div>
+                            <!-- 相机按钮已删除，改用长按 -->
                         </div>
                     </div>
                     <div class="user-info">
@@ -204,9 +184,13 @@
             localStorage.setItem('forceRefreshUserState', Date.now().toString());
             showSyncNotice();
         }
+
+        // 修复：更新头像时保留 data-frame 属性，避免头像框丢失
         function updateAvatarDisplay(imageUrl) {
             const avatarDiv = document.getElementById('userAvatar');
             if(!avatarDiv) return;
+            // 保存当前头像框
+            const currentFrame = avatarDiv.getAttribute('data-frame');
             if(imageUrl) {
                 avatarDiv.innerHTML = `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">`;
                 let placeholder = document.createElement('div');
@@ -218,12 +202,22 @@
                 let letter = (userProfile?.username || currentUser?.email?.charAt(0) || 'U').charAt(0).toUpperCase();
                 avatarDiv.innerHTML = `<div class="avatar-placeholder">${letter}</div>`;
             }
+            // 恢复头像框属性
+            if (currentFrame && currentFrame !== '') {
+                avatarDiv.setAttribute('data-frame', currentFrame);
+            } else {
+                avatarDiv.removeAttribute('data-frame');
+            }
+            // 确保异步也应用（若当前frame系统有变化）
             if(window.FrameSystem && currentUser) {
                 window.FrameSystem.loadUserFrames(currentUser.id).then(({ equipped }) => {
-                    if(equipped) window.FrameSystem.applyFrameAttribute(equipped);
+                    if(equipped && equipped !== currentFrame) {
+                        window.FrameSystem.applyFrameAttribute(equipped);
+                    }
                 });
             }
         }
+
         function updateNavbar() {
             let navDiv = document.getElementById('userNavSection');
             if(!navDiv) return;
@@ -242,6 +236,50 @@
         window.openBioModal = () => { document.getElementById('newBio').value = userProfile?.bio || ''; openModal('bioModal'); };
         window.openPasswordModal = () => openModal('passwordModal');
         window.openDeleteAccountModal = () => { document.getElementById('confirmEmail').value = currentUser?.email || ''; openModal('deleteAccountModal'); };
+
+        // ========== 长按更换头像（替代相机按钮） ==========
+        let longPressTimer = null;
+        function onAvatarLongPressStart(e) {
+            e.preventDefault();
+            longPressTimer = setTimeout(() => {
+                // 长按触发，弹出确认框
+                if (confirm('更换头像？')) {
+                    openAvatarUpload();
+                }
+                longPressTimer = null;
+            }, 500);
+        }
+        function onAvatarLongPressEnd(e) {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        }
+        function attachLongPressToAvatar() {
+            const avatarContainer = document.getElementById('avatarContainer');
+            if (!avatarContainer) return;
+            // 支持触摸事件和鼠标事件（方便调试）
+            avatarContainer.addEventListener('touchstart', onAvatarLongPressStart, { passive: false });
+            avatarContainer.addEventListener('touchend', onAvatarLongPressEnd);
+            avatarContainer.addEventListener('touchcancel', onAvatarLongPressEnd);
+            // 鼠标事件（非移动端也可用）
+            avatarContainer.addEventListener('mousedown', onAvatarLongPressStart);
+            avatarContainer.addEventListener('mouseup', onAvatarLongPressEnd);
+            avatarContainer.addEventListener('mouseleave', onAvatarLongPressEnd);
+        }
+
+        // 原有的打开文件选择函数（保留）
+        window.openAvatarUpload = function() {
+            let input = document.createElement('input');
+            input.type='file'; input.accept='image/jpeg,image/png';
+            input.onchange=(e)=>{
+                let file=e.target.files[0];
+                if(file && file.size<=5*1024*1024) initCropperModal(file);
+                else showNotification('文件过大或格式错误','error');
+                input.remove();
+            };
+            document.body.appendChild(input); input.click();
+        };
 
         // ========== 用户操作 ==========
         async function updateUsername() {
@@ -406,7 +444,6 @@
                     await window.FrameSystem.purchaseFrame(fid, userStats, (c, r) => { userStats.candy_crumbles = c; userStats.rainbow_lollipops = r; updateShopBalanceDisplay(); showNotification('购买成功','success'); loadFramesList(); refreshLocalCache(); });
                 } catch(err) { showNotification(err.message,'error'); }
             }));
-            // 修改：去掉装备成功提示
             document.querySelectorAll('.btn-equip').forEach(btn => btn.addEventListener('click', async (e) => {
                 let fid = btn.dataset.id;
                 try { await window.FrameSystem.equipFrame(fid); loadFramesList(); } catch(err) { showNotification(err.message,'error'); }
@@ -455,17 +492,6 @@
             };
             reader.readAsDataURL(file);
         }
-        window.openAvatarUpload = function() {
-            let input = document.createElement('input');
-            input.type='file'; input.accept='image/jpeg,image/png';
-            input.onchange=(e)=>{
-                let file=e.target.files[0];
-                if(file && file.size<=5*1024*1024) initCropperModal(file);
-                else showNotification('文件过大或格式错误','error');
-                input.remove();
-            };
-            document.body.appendChild(input); input.click();
-        };
         async function confirmCropAndUpload() {
             if(!cropper) return;
             let canvas = cropper.getCroppedCanvas({ width:500, height:500 });
@@ -600,6 +626,9 @@
             document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.addEventListener('click', function(e) { if(e.target === this) closeModal(this.id); }));
             document.getElementById('checkinBtn')?.addEventListener('click', performCheckin);
             window.addEventListener('scroll', () => { let btn = document.querySelector('.back-to-top'); if(btn) btn.style.display = window.scrollY>300?'flex':'none'; });
+            
+            // 添加长按监听
+            attachLongPressToAvatar();
         }
 
         async function initializeProfile() {
@@ -611,11 +640,6 @@
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('profileContent').style.display = 'block';
                 bindEventListeners();
-                document.addEventListener('visibilitychange', () => {
-                    if(!document.hidden) {
-                        // 可选：静默刷新状态
-                    }
-                });
             } catch(err) {
                 showNotification('请先登录','error');
                 setTimeout(()=>window.location.href='login-real.html',1500);
