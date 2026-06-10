@@ -88,16 +88,16 @@
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
-        // ========== 本地缓存同步（修复点1） ==========
+        // ========== 本地缓存同步 ==========
         function refreshLocalCache() {
             if (userProfile) localStorage.setItem('cachedUserProfile', JSON.stringify(userProfile));
             if (userStats) localStorage.setItem('cachedUserStats', JSON.stringify(userStats));
             localStorage.setItem('profileLastUpdated', Date.now());
         }
 
-        // 获取本地日期 YYYY-MM-DD（修复点2：时区问题）
+        // 获取本地日期 YYYY-MM-DD
         function getLocalDateString(date = new Date()) {
-            return date.toLocaleDateString('sv-SE'); // 返回 YYYY-MM-DD
+            return date.toLocaleDateString('sv-SE');
         }
 
         // ========== 头像框系统 ==========
@@ -135,8 +135,7 @@
                 await supabaseClient.from('user_stats').update({ candy_crumbles: newCandy, rainbow_lollipops: newRainbow }).eq('user_id', currentUser.id);
                 await supabaseClient.from('user_frames').upsert({ user_id: currentUser.id, frame_id: frameId, equipped: false, purchased_at: new Date().toISOString() }, { onConflict: 'user_id, frame_id', ignoreDuplicates: true });
                 if (window.userStats) { window.userStats.candy_crumbles = newCandy; window.userStats.rainbow_lollipops = newRainbow; }
-                // 同步本地缓存（修复点7）
-                if (window.refreshLocalCache) window.refreshLocalCache();
+                refreshLocalCache();
                 if (onSuccess) onSuccess(newCandy, newRainbow);
                 if (window.updateShopBalanceDisplay) window.updateShopBalanceDisplay();
             }
@@ -146,7 +145,6 @@
                 await supabaseClient.from('user_frames').update({ equipped: false }).eq('user_id', currentUser.id).eq('equipped', true);
                 await supabaseClient.from('user_frames').update({ equipped: true }).eq('user_id', currentUser.id).eq('frame_id', frameId);
                 applyFrameAttribute(frameId);
-                // 装备不会改变stats，无需同步缓存，但可以刷新页面显示
             }
             function applyFrameAttribute(frameId) {
                 const avatarDiv = document.getElementById('userAvatar');
@@ -200,7 +198,6 @@
                 let letter = (userProfile?.username || currentUser?.email?.charAt(0) || 'U').charAt(0).toUpperCase();
                 avatarDiv.innerHTML = `<div class="avatar-placeholder">${letter}</div>`;
             }
-            // 重新应用头像框（修复点14）
             if(window.FrameSystem && currentUser) {
                 window.FrameSystem.loadUserFrames(currentUser.id).then(({ equipped }) => {
                     if(equipped) window.FrameSystem.applyFrameAttribute(equipped);
@@ -237,21 +234,21 @@
             let usernameSpan = document.getElementById('displayUsername');
             if(usernameSpan) usernameSpan.innerHTML = `${newName} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
             cacheUserProfile(newName, userProfile.avatar_url);
-            refreshLocalCache();          // 修复点1
+            refreshLocalCache();
             updateNavbar();
             closeModal('usernameModal');
             showNotification('用户名已更新','success');
-            showSyncNotice();             // 修复点12
+            showSyncNotice();
         }
         async function updateBio() {
             let newBio = document.getElementById('newBio').value.trim() || '';
             await supabaseClient.from('user_profiles').update({ bio: newBio }).eq('id', currentUser.id);
             userProfile.bio = newBio;
             safeSetText('userBio', newBio);
-            refreshLocalCache();          // 修复点1
+            refreshLocalCache();
             closeModal('bioModal');
             showNotification('简介已更新','success');
-            showSyncNotice();             // 修复点12
+            showSyncNotice();
         }
         async function updatePassword() {
             let cur = document.getElementById('currentPassword').value;
@@ -266,7 +263,6 @@
             if(error) showNotification('修改失败','error');
             else {
                 showNotification('密码已更新，请重新登录','success');
-                // 修复点4：修改密码后自动退出
                 setTimeout(() => {
                     supabaseClient.auth.signOut();
                     localStorage.clear();
@@ -319,7 +315,7 @@
         async function performCheckin() {
             let btn = document.getElementById('checkinBtn');
             if(btn.disabled) return showNotification('今日已签到','warning');
-            let today = getLocalDateString();          // 修复点2
+            let today = getLocalDateString();
             let last = userStats.last_checkin_date;
             let newStreak = 1;
             if(last) {
@@ -339,7 +335,7 @@
             }).eq('user_id', currentUser.id);
             if(error) return showNotification('签到失败','error');
             userStats = {...userStats, candy_crumbles:newCandy, rainbow_lollipops:newRainbow, active_points:newActive, last_checkin_date:today, checkin_streak:newStreak};
-            refreshLocalCache();          // 修复点1
+            refreshLocalCache();
             updateActivePointsDisplay();
             updateShopBalanceDisplay();
             document.getElementById('streakDays').innerText = newStreak;
@@ -355,8 +351,8 @@
             if(!container) return;
             container.innerHTML = `<div class="shop-panel">
                 <div class="balance-row">
-                    <div class="balance-item" data-currency="candy"><img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp">糖果碎: <span id="shopCandyBalance">0</span></div>
-                    <div class="balance-item" data-currency="rainbow"><img src="https://xiaochen1235789.github.io/images/Super_Sweet.webp">棒糖: <span id="shopRainbowBalance">0</span></div>
+                    <div class="balance-item" data-currency="candy"><img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp" style="width:20px;height:20px;object-fit:contain;">糖果碎: <span id="shopCandyBalance">0</span></div>
+                    <div class="balance-item" data-currency="rainbow"><img src="https://xiaochen1235789.github.io/images/Super_Sweet.webp" style="width:20px;height:20px;object-fit:contain;">棒糖: <span id="shopRainbowBalance">0</span></div>
                 </div>
                 <div class="shop-section"><h3>头像框</h3><div id="framesList">⏳ 加载中...</div></div>
             </div>`;
@@ -374,7 +370,7 @@
             for(let frame of frames) {
                 let isOwned = owned.includes(frame.id);
                 let isEquipped = (equipped === frame.id);
-                let priceHtml = (frame.price_candy>0 || frame.price_rainbow>0) ? `<span><img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp" width="14"> ${frame.price_candy} ${frame.price_rainbow>0?`<img src="https://xiaochen1235789.github.io/images/Super_Sweet.webp" width="14"> ${frame.price_rainbow}`:''}</span>` : '免费';
+                let priceHtml = (frame.price_candy>0 || frame.price_rainbow>0) ? `<span><img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp" width="14" height="14" style="object-fit:contain;"> ${frame.price_candy} ${frame.price_rainbow>0?`<img src="https://xiaochen1235789.github.io/images/Super_Sweet.webp" width="14" height="14" style="object-fit:contain;"> ${frame.price_rainbow}`:''}</span>` : '免费';
                 let action = '';
                 if(isOwned) {
                     action = isEquipped ? '<button class="btn-owned" disabled>已装备</button>' : `<button class="btn-equip" data-id="${frame.id}">装备</button>`;
@@ -400,7 +396,7 @@
         async function deleteOldAvatarFiles(userId) {
             try {
                 const { data: files, error: listErr } = await supabaseClient.storage.from('avatars').list(userId);
-                if (listErr && listErr.statusCode === 404) return; // 修复点5：文件夹不存在忽略
+                if (listErr && listErr.statusCode === 404) return;
                 if(files && files.length) {
                     let paths = files.map(f => `${userId}/${f.name}`);
                     await supabaseClient.storage.from('avatars').remove(paths);
@@ -421,7 +417,7 @@
                 localStorage.setItem('userAvatar', publicUrl);
                 updateAvatarDisplay(publicUrl);
                 cacheUserProfile(userProfile?.username, publicUrl);
-                refreshLocalCache();          // 修复点1
+                refreshLocalCache();
                 updateNavbar();
                 showNotification('头像已更新','success');
                 return true;
@@ -456,7 +452,6 @@
                 if(blob) await uploadCroppedImage(blob);
                 closeModal('cropModal');
                 if(cropper){ cropper.destroy(); cropper=null; }
-                // 修复点10：清空图片src
                 document.getElementById('cropImage').removeAttribute('src');
             },'image/png');
         }
@@ -553,16 +548,14 @@
                     let btn = document.getElementById('checkinBtn');
                     if(btn) { btn.disabled = (userStats.last_checkin_date === today); btn.innerHTML = btn.disabled ? '<i class="fas fa-check-circle"></i> 已签到' : '<i class="fas fa-calendar-check"></i> 签到'; }
                     updateNavbar();
-                    // 修复点3 & 修复点6：缓存分支也要初始化头像框 + 后台更新最后登录时间
                     if(window.FrameSystem) await window.FrameSystem.initFrameForUser(currentUser.id);
-                    updateLastLogin();  // 静默更新最后登录时间
+                    updateLastLogin();
                     return true;
                 }
             }
             await loadUserProfile();
             await loadUserStats();
             await updateLastLogin();
-            // 修复点3：新用户必需初始化头像框
             if(window.FrameSystem) await window.FrameSystem.initFrameForUser(currentUser.id);
             setTodayCachedLogin(currentUser.id);
             return false;
