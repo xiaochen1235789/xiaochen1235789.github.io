@@ -192,11 +192,10 @@
                 width: 85%;
             }
         }
-        /* 修复下拉菜单定位：确保父容器相对定位 */
+        /* 修复下拉菜单定位与图层问题（新增） */
         .user-nav-section {
             position: relative;
         }
-        /* 修复图层被遮挡：提高下拉菜单的层级 */
         .user-dropdown {
             z-index: 10010 !important;
         }
@@ -222,7 +221,7 @@
         </div>
     </nav>
 
-    <!-- 下拉菜单（原有，不改动） -->
+    <!-- 下拉菜单（原有） -->
     <div class="user-dropdown" id="userDropdown">
         <a href="profile.html" class="user-dropdown-item" target="_blank"><i class="fas fa-user"></i> 个人主页</a>
         <div class="user-dropdown-item" id="dailySigninItem"><i class="fas fa-calendar-check"></i> 每日签到</div>
@@ -495,7 +494,6 @@
                 clearTimeout(searchTimeout);
                 searchTimeout = setTimeout(() => {
                     const keyword = this.value.trim().toLowerCase();
-                    // 只搜索当前激活区域的卡片
                     const activeSection = document.querySelector('.content-section.active');
                     if (!activeSection) return;
                     const cards = activeSection.querySelectorAll('.content-card');
@@ -518,7 +516,6 @@
             window.addEventListener('scroll', function() {
                 backToTopBtn.classList.toggle('show', window.scrollY > 300);
             });
-            // 平滑滚动到目标区域（如果需要）
         }
 
         // ==================== 更新日志弹窗 ====================
@@ -635,12 +632,14 @@
             return true;
         }
 
-        // ==================== 用户认证和下拉菜单 ====================
+        // ==================== 用户认证和下拉菜单（修复版） ====================
         async function refreshUserState() {
             if (!supabaseClient) return;
             try {
                 const { data: { user }, error } = await supabaseClient.auth.getUser();
                 if (error || !user) {
+                    currentUser = null;
+                    userStats = null;
                     updateNavbar(null);
                     updateMenuUserInfo(null);
                     return;
@@ -664,6 +663,8 @@
                 }
             } catch (err) {
                 console.warn('refreshUserState error:', err);
+                currentUser = null;
+                userStats = null;
                 updateNavbar(null);
                 updateMenuUserInfo(null);
             }
@@ -675,6 +676,8 @@
                 await refreshUserState();
             } catch (error) {
                 console.error('用户初始化失败:', error);
+                currentUser = null;
+                userStats = null;
                 updateNavbar(null);
                 updateMenuUserInfo(null);
             }
@@ -683,6 +686,8 @@
         function updateNavbar(username, avatarUrl) {
             const userNavSection = document.getElementById('userNavSection');
             if (!userNavSection) return;
+            const dropdown = document.getElementById('userDropdown');
+            
             if (username) {
                 const safeUsername = escapeHtml(username);
                 const avatarLetter = safeUsername.charAt(0).toUpperCase();
@@ -699,11 +704,19 @@
                         <i class="fas fa-chevron-down" style="font-size: 0.8rem;"></i>
                     </div>
                 `;
+                
+                // 登录时：将下拉菜单移动到 userNavSection 内部，并确保显示
+                if (dropdown) {
+                    if (dropdown.parentNode !== userNavSection) {
+                        userNavSection.appendChild(dropdown);
+                    }
+                    dropdown.style.display = ''; // 恢复显示（由 CSS 控制）
+                }
+                
                 const trigger = document.getElementById('userMenuTrigger');
                 if (trigger && !trigger._listenerAdded) {
                     trigger.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        const dropdown = document.getElementById('userDropdown');
                         if (dropdown) dropdown.classList.toggle('show');
                     });
                     trigger._listenerAdded = true;
@@ -711,7 +724,6 @@
                 if (!window._closeMenuBound) {
                     document.addEventListener('click', function closeMenu(e) {
                         const trigger = document.getElementById('userMenuTrigger');
-                        const dropdown = document.getElementById('userDropdown');
                         if (dropdown && trigger && !trigger.contains(e.target) && !dropdown.contains(e.target)) {
                             dropdown.classList.remove('show');
                         }
@@ -720,8 +732,14 @@
                 }
             } else {
                 userNavSection.innerHTML = `<a href="login-real.html" class="nav-link" id="loginLink">登录/注册</a>`;
-                const dropdown = document.getElementById('userDropdown');
-                if (dropdown) dropdown.classList.remove('show');
+                if (dropdown) {
+                    dropdown.classList.remove('show');
+                    // 未登录时：移回 body 末尾并彻底隐藏
+                    if (dropdown.parentNode !== document.body) {
+                        document.body.appendChild(dropdown);
+                    }
+                    dropdown.style.display = 'none';
+                }
             }
         }
 
@@ -739,7 +757,6 @@
                 }
                 menuUsername.textContent = username;
                 menuEmail.textContent = email || '';
-                // 绑定点击头像跳转个人主页
                 menuAvatar.style.cursor = 'pointer';
                 menuAvatar.onclick = () => window.open('profile.html', '_blank');
             } else {
@@ -909,12 +926,10 @@
         }
 
         function switchContent(sectionId) {
-            // 隐藏所有内容区域
             document.querySelectorAll('.content-section').forEach(section => {
                 section.classList.remove('active');
             });
             document.getElementById(sectionId + 'Section').classList.add('active');
-            // 可选：更新菜单项激活样式
             document.querySelectorAll('.menu-item[data-section]').forEach(item => {
                 if (item.dataset.section === sectionId) {
                     item.classList.add('active');
@@ -922,9 +937,7 @@
                     item.classList.remove('active');
                 }
             });
-            // 关闭菜单
             closeMenu();
-            // 重置搜索框和空结果
             const searchInput = document.getElementById('search-input');
             if (searchInput) {
                 searchInput.value = '';
@@ -964,19 +977,16 @@
             setupLoginMessageListener();
             bindUserMenuActions();
 
-            // 侧滑菜单事件绑定
             const menuToggle = document.getElementById('menuToggleBtn');
             const menuOverlay = document.getElementById('menuOverlay');
             menuToggle.addEventListener('click', openMenu);
             menuOverlay.addEventListener('click', closeMenu);
-            // 菜单项点击
             document.querySelectorAll('.menu-item[data-section]').forEach(item => {
                 item.addEventListener('click', () => {
                     const section = item.dataset.section;
                     if (section) switchContent(section);
                 });
             });
-            // 抽卡模拟器菜单项
             const gachaItem = document.getElementById('menuGacha');
             if (gachaItem) {
                 gachaItem.addEventListener('click', () => {
@@ -984,7 +994,6 @@
                     window.open('chouka.html', '_blank');
                 });
             }
-            // 更新日志菜单项
             const changelogItem = document.getElementById('menuChangelog');
             if (changelogItem) {
                 changelogItem.addEventListener('click', () => {
@@ -992,7 +1001,6 @@
                     openChangelogModal();
                 });
             }
-            // 默认激活角色菜单样式
             const defaultMenuItem = document.querySelector('.menu-item[data-section="character"]');
             if (defaultMenuItem) defaultMenuItem.classList.add('active');
 
