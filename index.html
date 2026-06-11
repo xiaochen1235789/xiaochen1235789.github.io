@@ -50,14 +50,14 @@
         </div>
     </nav>
 
-    <!-- 下拉菜单（始终在 body 下，不移动） -->
+    <!-- 下拉菜单（fixed定位，初始隐藏） -->
     <div class="user-dropdown" id="userDropdown">
         <a href="profile.html" class="user-dropdown-item" target="_blank"><i class="fas fa-user"></i> 个人主页</a>
         <div class="user-dropdown-item" id="dailySigninItem"><i class="fas fa-calendar-check"></i> 每日签到</div>
         <div class="user-dropdown-item" id="logoutItem"><i class="fas fa-sign-out-alt"></i> 退出登录</div>
     </div>
 
-    <!-- 侧滑菜单（保持不变） -->
+    <!-- 侧滑菜单 -->
     <div class="menu-overlay" id="menuOverlay"></div>
     <div class="side-menu" id="sideMenu">
         <div class="menu-header">
@@ -445,7 +445,7 @@
             return true;
         }
 
-        // ==================== 用户认证和下拉菜单（固定定位版） ====================
+        // ==================== 用户认证和下拉菜单（固定定位 + 动态位置） ====================
         async function refreshUserState() {
             if (!supabaseClient) return;
             try {
@@ -496,6 +496,23 @@
             }
         }
 
+        // 核心修复：动态计算下拉菜单位置并显示
+        function showDropdownMenu(triggerElement, dropdown) {
+            if (!triggerElement || !dropdown) return;
+            const rect = triggerElement.getBoundingClientRect();
+            const menuHeight = dropdown.offsetHeight;
+            const viewportHeight = window.innerHeight;
+            let top = rect.bottom + 8;  // 默认在触发器下方8px
+            // 如果下方空间不足，则显示在上方
+            if (top + menuHeight > viewportHeight && rect.top > menuHeight + 8) {
+                top = rect.top - menuHeight - 8;
+            }
+            dropdown.style.top = top + 'px';
+            dropdown.style.right = (window.innerWidth - rect.right) + 'px';
+            dropdown.style.left = 'auto';
+            dropdown.classList.add('show');
+        }
+
         function updateNavbar(username, avatarUrl) {
             const userNavSection = document.getElementById('userNavSection');
             if (!userNavSection) return;
@@ -518,7 +535,6 @@
                     </div>
                 `;
                 
-                // 登录时：确保下拉菜单可见（但隐藏），且不移动它的位置
                 if (dropdown) {
                     dropdown.style.display = '';
                     dropdown.classList.remove('show');
@@ -528,19 +544,19 @@
                 if (trigger && !trigger._listenerAdded) {
                     trigger.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        if (dropdown) {
-                            // 获取触发器的位置
-                            const rect = this.getBoundingClientRect();
-                            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-                            // 设置菜单位置：top = 触发器底部 + 8px，right = 视口宽度 - 触发器右侧
-                            dropdown.style.top = (rect.bottom + scrollTop + 8) + 'px';
-                            dropdown.style.right = (window.innerWidth - rect.right + scrollLeft) + 'px';
-                            dropdown.classList.toggle('show');
+                        if (!dropdown) return;
+                        if (dropdown.classList.contains('show')) {
+                            dropdown.classList.remove('show');
+                        } else {
+                            // 关闭其他可能打开的菜单
+                            document.querySelectorAll('.user-dropdown.show').forEach(d => d.classList.remove('show'));
+                            showDropdownMenu(trigger, dropdown);
                         }
                     });
                     trigger._listenerAdded = true;
                 }
+                
+                // 全局关闭菜单（点击其他地方、滚动、窗口调整）
                 if (!window._closeMenuBound) {
                     const closeMenuHandler = function(e) {
                         const trigger = document.getElementById('userMenuTrigger');
@@ -549,16 +565,19 @@
                         }
                     };
                     document.addEventListener('click', closeMenuHandler);
-                    // 滚动时关闭菜单
-                    window.addEventListener('scroll', closeMenuHandler);
-                    window.addEventListener('resize', closeMenuHandler);
+                    window.addEventListener('scroll', () => {
+                        if (dropdown) dropdown.classList.remove('show');
+                    });
+                    window.addEventListener('resize', () => {
+                        if (dropdown) dropdown.classList.remove('show');
+                    });
                     window._closeMenuBound = true;
                 }
             } else {
                 userNavSection.innerHTML = `<a href="login-real.html" class="nav-link" id="loginLink">登录/注册</a>`;
                 if (dropdown) {
                     dropdown.classList.remove('show');
-                    dropdown.style.display = 'none';   // 未登录时彻底隐藏
+                    dropdown.style.display = 'none';
                 }
             }
         }
