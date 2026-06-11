@@ -14,6 +14,10 @@
         .star-gold { color: #ffd966; font-weight: bold; letter-spacing: 2px; }
         .star-purple { color: #c084fc; font-weight: bold; letter-spacing: 2px; }
         .record-star3 .star-gray { color: #bbccdd; font-weight: bold; letter-spacing: 2px; }
+        /* 隐藏加载遮罩 */
+        .login-loading {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -22,12 +26,8 @@
     <span>🔄</span> 请将设备旋转至横屏模式<br><small>获得最佳抽卡体验</small><br>
     <button id="ignoreOrientationBtn" style="margin-top: 20px; padding: 8px 16px; background: #ffbc6e; color: #1a132e; border: none; border-radius: 30px; cursor: pointer;">继续竖屏使用</button>
 </div>
-<div id="loginLoading" class="login-loading">
-    <div class="spinner"></div>
-    <div>正在验证登录状态...</div>
-</div>
-
-<div class="landscape-wrapper" id="mainContent" style="display: none;">
+<!-- 不再显示登录加载遮罩，直接显示主内容 -->
+<div class="landscape-wrapper" id="mainContent" style="display: flex;">
     <div class="left-panel">
         <div class="left-panel-scroll">
             <div class="card-pool">
@@ -219,7 +219,7 @@
 <div id="toastNotice" class="toast-notice"></div>
 
 <script>
-// ======================= 优化后的抽卡模拟器 =======================
+// ======================= 优化后的抽卡模拟器（移除登录加载遮罩） =======================
 (function(){
     // --- 配置 ---
     const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
@@ -252,7 +252,6 @@
         statsGrid: document.getElementById('statsGrid'),
         constellationList: document.getElementById('constellationList'),
         toast: document.getElementById('toastNotice'),
-        loginLoading: document.getElementById('loginLoading'),
         mainContent: document.getElementById('mainContent')
     };
 
@@ -473,7 +472,7 @@
         }
     }
 
-    // 数据库相关函数（与原版一致，但引用 state）
+    // 数据库相关函数
     async function loadConstellations() {
         if (!state.user) return;
         const { data, error } = await supabase.from('user_constellations').select('character_name, constellation_level').eq('user_id', state.user.id);
@@ -704,7 +703,7 @@
         }
     }
 
-    // 加载用户数据、卡池等（与原版一致，但使用 state）
+    // 加载公共数据（不依赖用户）
     async function fetchCurrentBanner() {
         const now = new Date().toISOString();
         const { data, error } = await supabase.from('gacha_banners').select('*').lte('start_time', now).gte('end_time', now).maybeSingle();
@@ -749,6 +748,7 @@
             state.exchangeRate = data.exchange_rate;
         }
     }
+    // 加载用户数据（依赖登录）
     async function loadUserData() {
         if (!state.user) return;
         let { data: res } = await supabase.from('user_resources').select('*').eq('user_id', state.user.id).maybeSingle();
@@ -792,14 +792,24 @@
         updateStatsModalContent();
     }
 
-    // 事件绑定
+    // 事件绑定（部分操作需要 user 存在，若未登录则禁用或提示）
     function bindEvents() {
-        dom.singleBtn.addEventListener('click', singlePull);
-        dom.tenBtn.addEventListener('click', tenPull);
-        document.getElementById('exchangeBtn').onclick = () => document.getElementById('exchangeModal').classList.add('active');
+        dom.singleBtn.addEventListener('click', () => {
+            if (!state.user) { showTip('请先登录'); setTimeout(() => window.location.href = 'login-real.html', 1500); return; }
+            singlePull();
+        });
+        dom.tenBtn.addEventListener('click', () => {
+            if (!state.user) { showTip('请先登录'); setTimeout(() => window.location.href = 'login-real.html', 1500); return; }
+            tenPull();
+        });
+        document.getElementById('exchangeBtn').onclick = () => {
+            if (!state.user) { showTip('请先登录'); setTimeout(() => window.location.href = 'login-real.html', 1500); return; }
+            document.getElementById('exchangeModal').classList.add('active');
+        };
         document.getElementById('closeExchangeBtn').onclick = () => document.getElementById('exchangeModal').classList.remove('active');
         document.getElementById('cancelExchangeBtn').onclick = () => document.getElementById('exchangeModal').classList.remove('active');
         document.getElementById('confirmExchangeBtn').onclick = async () => {
+            if (!state.user) return;
             let amount = parseInt(document.getElementById('exchangeAmount').value);
             if (isNaN(amount) || amount < 1) amount = 1;
             let cost = amount * state.exchangeRate;
@@ -827,9 +837,13 @@
         document.getElementById('closeStatsBtn').onclick = () => document.getElementById('statsModal').classList.remove('active');
         document.getElementById('infoBtn').onclick = () => document.getElementById('infoModal').classList.add('active');
         document.getElementById('closeInfoBtn').onclick = () => document.getElementById('infoModal').classList.remove('active');
-        document.getElementById('settingsBtn').onclick = () => document.getElementById('settingsModal').classList.add('active');
+        document.getElementById('settingsBtn').onclick = () => {
+            if (!state.user) { showTip('请先登录'); setTimeout(() => window.location.href = 'login-real.html', 1500); return; }
+            document.getElementById('settingsModal').classList.add('active');
+        };
         document.getElementById('closeSettingsBtn').onclick = () => document.getElementById('settingsModal').classList.remove('active');
         document.getElementById('confirmAddJadeBtn').onclick = async () => {
+            if (!state.user) return;
             let add = parseInt(document.getElementById('addJadeAmount').value);
             if (add > 0) {
                 state.starJade += add;
@@ -839,6 +853,7 @@
             }
         };
         document.getElementById('confirmAddTicketBtn').onclick = async () => {
+            if (!state.user) return;
             let add = parseInt(document.getElementById('addTicketAmount').value);
             if (add > 0) {
                 state.tickets += add;
@@ -848,6 +863,7 @@
             }
         };
         document.getElementById('resetConstellationsBtn').onclick = async () => {
+            if (!state.user) return;
             if (confirm('确定清空所有命座吗？')) {
                 await supabase.from('user_constellations').delete().eq('user_id', state.user.id);
                 state.constellations.clear();
@@ -856,11 +872,11 @@
             }
         };
         document.getElementById('resetHistoryBtn').onclick = async () => {
+            if (!state.user) return;
             if (confirm('确定清空抽卡记录和统计吗？')) {
                 await supabase.from('gacha_history').delete().eq('user_id', state.user.id);
                 state.gachaHistory = [];
                 renderHistoryModal();
-                // 重置统计
                 state.totalPulls = 0; state.fiveStarCount = 0; state.fourStarCount = 0; state.threeStarCount = 0; state.upFiveStarCount = 0; state.fiveStarDistances = []; state.lastFiveStarPullIndex = 0;
                 updateStatsModalContent();
                 showTip('历史记录已清空');
@@ -872,25 +888,30 @@
         });
     }
 
-    // 初始化
+    // 初始化（先展示界面，再静默验证登录）
     async function init() {
         initStars();
         const ignoreBtn = document.getElementById('ignoreOrientationBtn');
         if (ignoreBtn) ignoreBtn.onclick = () => document.getElementById('orientationTip').style.display = 'none';
+        // 立即显示主界面（不需要等待登录）
+        dom.mainContent.style.display = 'flex';
+        // 先加载公共数据（卡池、四星池、配置等）
+        await Promise.all([fetchCurrentBanner(), fetchGachaPools(), fetchGachaConfig()]);
+        // 静默检查登录状态
         const { data: { user }, error } = await supabase.auth.getUser();
         if (error || !user) {
-            showTip('请先登录');
-            setTimeout(() => window.location.href = 'login-real.html', 1500);
+            showTip('未登录，请先登录以使用抽卡和保存数据');
+            // 未登录时禁用抽卡按钮（已在事件中处理提示）
+            // 但仍可查看卡池和规则
             return;
         }
         state.user = user;
         await loadUserData();
-        await fetchCurrentBanner();
-        await fetchGachaPools();
-        await fetchGachaConfig();
+        // 绑定事件（必须在 user 加载后绑定，因为有些操作需要 user）
         bindEvents();
-        dom.loginLoading.style.display = 'none';
-        dom.mainContent.style.display = 'flex';
+        // 额外更新一下按钮状态（卡池开关可能已变）
+        updateButtonsState();
+        // 启动倒计时更新
         setInterval(() => { updateCountdown(); updateButtonsState(); }, 1000);
     }
     init();
