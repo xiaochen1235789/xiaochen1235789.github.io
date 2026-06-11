@@ -50,14 +50,14 @@
         </div>
     </nav>
 
-    <!-- 下拉菜单 -->
+    <!-- 下拉菜单（始终在 body 下，不移动） -->
     <div class="user-dropdown" id="userDropdown">
         <a href="profile.html" class="user-dropdown-item" target="_blank"><i class="fas fa-user"></i> 个人主页</a>
         <div class="user-dropdown-item" id="dailySigninItem"><i class="fas fa-calendar-check"></i> 每日签到</div>
         <div class="user-dropdown-item" id="logoutItem"><i class="fas fa-sign-out-alt"></i> 退出登录</div>
     </div>
 
-    <!-- 侧滑菜单 -->
+    <!-- 侧滑菜单（保持不变） -->
     <div class="menu-overlay" id="menuOverlay"></div>
     <div class="side-menu" id="sideMenu">
         <div class="menu-header">
@@ -118,7 +118,7 @@
         <p>试试更换关键词或检查拼写~</p>
     </div>
 
-    <!-- 内容区域：角色区 -->
+    <!-- 内容区域 -->
     <div class="content-section active" id="characterSection">
         <h2 class="section-header" id="character">角色列表</h2>
         <div class="grid-container" id="character-container"></div>
@@ -445,7 +445,7 @@
             return true;
         }
 
-        // ==================== 用户认证和下拉菜单（最终修复版） ====================
+        // ==================== 用户认证和下拉菜单（固定定位版） ====================
         async function refreshUserState() {
             if (!supabaseClient) return;
             try {
@@ -518,42 +518,46 @@
                     </div>
                 `;
                 
-                // 登录时：移动下拉菜单到正确位置，并重置显示状态
+                // 登录时：确保下拉菜单可见（但隐藏），且不移动它的位置
                 if (dropdown) {
-                    if (dropdown.parentNode !== userNavSection) {
-                        userNavSection.appendChild(dropdown);
-                    }
-                    // 移除内联样式干扰
                     dropdown.style.display = '';
-                    dropdown.style.opacity = '';
-                    dropdown.style.visibility = '';
-                    dropdown.classList.remove('show');   // 初始隐藏
+                    dropdown.classList.remove('show');
                 }
                 
                 const trigger = document.getElementById('userMenuTrigger');
                 if (trigger && !trigger._listenerAdded) {
                     trigger.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        if (dropdown) dropdown.classList.toggle('show');
+                        if (dropdown) {
+                            // 获取触发器的位置
+                            const rect = this.getBoundingClientRect();
+                            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+                            // 设置菜单位置：top = 触发器底部 + 8px，right = 视口宽度 - 触发器右侧
+                            dropdown.style.top = (rect.bottom + scrollTop + 8) + 'px';
+                            dropdown.style.right = (window.innerWidth - rect.right + scrollLeft) + 'px';
+                            dropdown.classList.toggle('show');
+                        }
                     });
                     trigger._listenerAdded = true;
                 }
                 if (!window._closeMenuBound) {
-                    document.addEventListener('click', function closeMenu(e) {
+                    const closeMenuHandler = function(e) {
                         const trigger = document.getElementById('userMenuTrigger');
                         if (dropdown && trigger && !trigger.contains(e.target) && !dropdown.contains(e.target)) {
                             dropdown.classList.remove('show');
                         }
-                    });
+                    };
+                    document.addEventListener('click', closeMenuHandler);
+                    // 滚动时关闭菜单
+                    window.addEventListener('scroll', closeMenuHandler);
+                    window.addEventListener('resize', closeMenuHandler);
                     window._closeMenuBound = true;
                 }
             } else {
                 userNavSection.innerHTML = `<a href="login-real.html" class="nav-link" id="loginLink">登录/注册</a>`;
                 if (dropdown) {
                     dropdown.classList.remove('show');
-                    if (dropdown.parentNode !== document.body) {
-                        document.body.appendChild(dropdown);
-                    }
                     dropdown.style.display = 'none';   // 未登录时彻底隐藏
                 }
             }
