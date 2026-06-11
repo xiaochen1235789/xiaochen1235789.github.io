@@ -29,6 +29,18 @@
     <link rel="stylesheet" href="./css/zhuye0.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* 侧栏内新增的文本样式（保持与菜单风格一致） */
+        .menu-side-text {
+            padding: 12px 24px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            margin-top: 10px;
+            background: rgba(0,0,0,0.2);
+        }
+    </style>
 </head>
 <body>
     <div id="global-loading">
@@ -50,7 +62,7 @@
         </div>
     </nav>
 
-    <!-- 下拉菜单（fixed定位，初始隐藏） -->
+    <!-- 下拉菜单 -->
     <div class="user-dropdown" id="userDropdown">
         <a href="profile.html" class="user-dropdown-item" target="_blank"><i class="fas fa-user"></i> 个人主页</a>
         <div class="user-dropdown-item" id="dailySigninItem"><i class="fas fa-calendar-check"></i> 每日签到</div>
@@ -73,9 +85,13 @@
             <div class="menu-item" data-section="character"><i class="fas fa-users"></i> 角色区</div>
             <div class="menu-item" data-section="lightcone"><i class="fas fa-sun"></i> 光锥区</div>
             <div class="menu-item" data-section="material"><i class="fas fa-cube"></i> 材料区</div>
+            <!-- 新增：好友系统菜单项 -->
+            <div class="menu-item" id="menuFriend"><i class="fas fa-user-friends"></i> 好友系统</div>
             <div class="menu-item" id="menuGacha"><i class="fas fa-dice-d6"></i> 抽卡模拟器</div>
             <div class="menu-item" id="menuChangelog"><i class="fas fa-history"></i> 更新日志</div>
         </div>
+        <!-- 新增：侧栏装饰文本 -->
+        <div class="menu-side-text">🎁 每日签到领好礼 🎁</div>
         <div class="menu-footer"><span>© 六哥荣耀WIKI</span></div>
     </div>
 
@@ -411,7 +427,8 @@
                 if (last === yesterdayStr) newStreak = (stats.checkin_streak || 0) + 1;
                 else if (last !== today) newStreak = 1;
                 else {
-                    showNotification('今日已签到', 'warning');
+                    // 今天已经签到过 → 自定义温暖提示
+                    showNotification('您今天已经签到过了亲，请明天再来吧ღ( ´･ᴗ･ )比心。', 'warning');
                     return false;
                 }
             }
@@ -445,7 +462,7 @@
             return true;
         }
 
-        // ==================== 用户认证和下拉菜单（固定定位 + 动态位置） ====================
+        // ==================== 用户认证和下拉菜单 ====================
         async function refreshUserState() {
             if (!supabaseClient) return;
             try {
@@ -496,23 +513,6 @@
             }
         }
 
-        // 核心修复：动态计算下拉菜单位置并显示
-        function showDropdownMenu(triggerElement, dropdown) {
-            if (!triggerElement || !dropdown) return;
-            const rect = triggerElement.getBoundingClientRect();
-            const menuHeight = dropdown.offsetHeight;
-            const viewportHeight = window.innerHeight;
-            let top = rect.bottom + 8;  // 默认在触发器下方8px
-            // 如果下方空间不足，则显示在上方
-            if (top + menuHeight > viewportHeight && rect.top > menuHeight + 8) {
-                top = rect.top - menuHeight - 8;
-            }
-            dropdown.style.top = top + 'px';
-            dropdown.style.right = (window.innerWidth - rect.right) + 'px';
-            dropdown.style.left = 'auto';
-            dropdown.classList.add('show');
-        }
-
         function updateNavbar(username, avatarUrl) {
             const userNavSection = document.getElementById('userNavSection');
             if (!userNavSection) return;
@@ -544,19 +544,17 @@
                 if (trigger && !trigger._listenerAdded) {
                     trigger.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        if (!dropdown) return;
-                        if (dropdown.classList.contains('show')) {
-                            dropdown.classList.remove('show');
-                        } else {
-                            // 关闭其他可能打开的菜单
-                            document.querySelectorAll('.user-dropdown.show').forEach(d => d.classList.remove('show'));
-                            showDropdownMenu(trigger, dropdown);
+                        if (dropdown) {
+                            const rect = this.getBoundingClientRect();
+                            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+                            dropdown.style.top = (rect.bottom + scrollTop + 8) + 'px';
+                            dropdown.style.right = (window.innerWidth - rect.right + scrollLeft) + 'px';
+                            dropdown.classList.toggle('show');
                         }
                     });
                     trigger._listenerAdded = true;
                 }
-                
-                // 全局关闭菜单（点击其他地方、滚动、窗口调整）
                 if (!window._closeMenuBound) {
                     const closeMenuHandler = function(e) {
                         const trigger = document.getElementById('userMenuTrigger');
@@ -565,12 +563,8 @@
                         }
                     };
                     document.addEventListener('click', closeMenuHandler);
-                    window.addEventListener('scroll', () => {
-                        if (dropdown) dropdown.classList.remove('show');
-                    });
-                    window.addEventListener('resize', () => {
-                        if (dropdown) dropdown.classList.remove('show');
-                    });
+                    window.addEventListener('scroll', closeMenuHandler);
+                    window.addEventListener('resize', closeMenuHandler);
                     window._closeMenuBound = true;
                 }
             } else {
@@ -840,6 +834,14 @@
                 changelogItem.addEventListener('click', () => {
                     closeMenu();
                     openChangelogModal();
+                });
+            }
+            // 新增：好友系统菜单项点击事件
+            const friendItem = document.getElementById('menuFriend');
+            if (friendItem) {
+                friendItem.addEventListener('click', () => {
+                    closeMenu();
+                    window.open('friend.html', '_blank');
                 });
             }
             const defaultMenuItem = document.querySelector('.menu-item[data-section="character"]');
