@@ -26,7 +26,6 @@
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <title>六哥荣耀WIKI</title>
-    <!-- 所有样式均从外部 CSS 加载 -->
     <link rel="stylesheet" href="./css/zhuye0.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -71,25 +70,13 @@
             </div>
         </div>
         <div class="menu-items">
-            <div class="menu-item" data-section="character">
-                <i class="fas fa-users"></i> 角色区
-            </div>
-            <div class="menu-item" data-section="lightcone">
-                <i class="fas fa-sun"></i> 光锥区
-            </div>
-            <div class="menu-item" data-section="material">
-                <i class="fas fa-cube"></i> 材料区
-            </div>
-            <div class="menu-item" id="menuGacha">
-                <i class="fas fa-dice-d6"></i> 抽卡模拟器
-            </div>
-            <div class="menu-item" id="menuChangelog">
-                <i class="fas fa-history"></i> 更新日志
-            </div>
+            <div class="menu-item" data-section="character"><i class="fas fa-users"></i> 角色区</div>
+            <div class="menu-item" data-section="lightcone"><i class="fas fa-sun"></i> 光锥区</div>
+            <div class="menu-item" data-section="material"><i class="fas fa-cube"></i> 材料区</div>
+            <div class="menu-item" id="menuGacha"><i class="fas fa-dice-d6"></i> 抽卡模拟器</div>
+            <div class="menu-item" id="menuChangelog"><i class="fas fa-history"></i> 更新日志</div>
         </div>
-        <div class="menu-footer">
-            <span>© 六哥荣耀WIKI</span>
-        </div>
+        <div class="menu-footer"><span>© 六哥荣耀WIKI</span></div>
     </div>
 
     <!-- 签到确认模态框 -->
@@ -131,19 +118,15 @@
         <p>试试更换关键词或检查拼写~</p>
     </div>
 
-    <!-- 内容区域：角色区（默认激活） -->
+    <!-- 内容区域：角色区 -->
     <div class="content-section active" id="characterSection">
         <h2 class="section-header" id="character">角色列表</h2>
         <div class="grid-container" id="character-container"></div>
     </div>
-
-    <!-- 内容区域：光锥区 -->
     <div class="content-section" id="lightconeSection">
         <h2 class="section-header" id="lightcone">光锥列表</h2>
         <div class="grid-container" id="lightcone-container"></div>
     </div>
-
-    <!-- 内容区域：材料区 -->
     <div class="content-section" id="materialSection">
         <h2 class="section-header" id="material">养成材料</h2>
         <div class="grid-container" id="material-container"></div>
@@ -165,7 +148,7 @@
                 <button class="modal-close" onclick="closeChangelogModal()" aria-label="关闭弹窗"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body">
-                <iframe id="changelog-iframe" src="changelog.html" frameborder="0" allow="fullscreen" loading="lazy" title="六哥荣耀WIKI更新日志" style="width: 100%; height: 100%;"></iframe>
+                <iframe id="changelog-iframe" src="changelog.html" frameborder="0" allow="fullscreen" loading="lazy" title="更新日志" style="width:100%;height:100%;"></iframe>
             </div>
         </div>
     </div>
@@ -462,7 +445,7 @@
             return true;
         }
 
-        // ==================== 用户认证和下拉菜单（修复版） ====================
+        // ==================== 用户认证和下拉菜单（最终修复版） ====================
         async function refreshUserState() {
             if (!supabaseClient) return;
             try {
@@ -535,16 +518,16 @@
                     </div>
                 `;
                 
-                // 登录时：将下拉菜单移动到 userNavSection 内部，并确保隐藏（移除 show 类）
+                // 登录时：移动下拉菜单到正确位置，并重置显示状态
                 if (dropdown) {
                     if (dropdown.parentNode !== userNavSection) {
                         userNavSection.appendChild(dropdown);
                     }
-                    dropdown.classList.remove('show');   // 初始不显示，等待点击
-                    // 清除任何可能的内联样式干扰
+                    // 移除内联样式干扰
                     dropdown.style.display = '';
                     dropdown.style.opacity = '';
                     dropdown.style.visibility = '';
+                    dropdown.classList.remove('show');   // 初始隐藏
                 }
                 
                 const trigger = document.getElementById('userMenuTrigger');
@@ -568,11 +551,10 @@
                 userNavSection.innerHTML = `<a href="login-real.html" class="nav-link" id="loginLink">登录/注册</a>`;
                 if (dropdown) {
                     dropdown.classList.remove('show');
-                    // 未登录时：移回 body 末尾并强制隐藏（确保看不到）
                     if (dropdown.parentNode !== document.body) {
                         document.body.appendChild(dropdown);
                     }
-                    dropdown.style.display = 'none';
+                    dropdown.style.display = 'none';   // 未登录时彻底隐藏
                 }
             }
         }
@@ -612,7 +594,8 @@
             const cancelLogout = document.getElementById('cancelLogoutBtn');
 
             if (signinItem) {
-                signinItem.onclick = () => {
+                signinItem.onclick = (e) => {
+                    e.stopPropagation();
                     document.getElementById('userDropdown').classList.remove('show');
                     if (!currentUser) {
                         showNotification('请先登录', 'error');
@@ -634,7 +617,8 @@
                 cancelSignin.onclick = () => signinModal.classList.remove('active');
             }
             if (logoutItem) {
-                logoutItem.onclick = () => {
+                logoutItem.onclick = (e) => {
+                    e.stopPropagation();
                     document.getElementById('userDropdown').classList.remove('show');
                     if (!currentUser) {
                         showNotification('未登录', 'error');
