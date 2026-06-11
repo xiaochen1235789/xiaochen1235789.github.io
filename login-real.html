@@ -8,51 +8,314 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; }
-        body { background: linear-gradient(145deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
-        .card { background: rgba(255, 255, 255, 0.98); border-radius: 2rem; box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.35); width: 100%; max-width: 440px; transition: all 0.2s ease; }
-        .card-inner { padding: 2rem 1.8rem 2rem 1.8rem; }
-        h1 { font-size: 1.8rem; font-weight: 700; background: linear-gradient(135deg, #667eea, #764ba2); background-clip: text; -webkit-background-clip: text; color: transparent; text-align: center; margin-bottom: 1.5rem; }
-        .status-chip { background: #f1f5f9; border-radius: 40px; padding: 0.6rem 1rem; margin-bottom: 1.5rem; font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #667eea; }
-        .status-chip i { margin-right: 6px; }
-        #status-text { font-weight: 600; }
-        .alert { padding: 0.9rem 1rem; border-radius: 1rem; margin-bottom: 1.25rem; display: none; font-size: 0.85rem; font-weight: 500; animation: fadeSlide 0.2s ease; }
-        .alert.success { background: #e0f2e9; color: #0b5e2e; border-left: 4px solid #10b981; }
-        .alert.error { background: #fee9e6; color: #b91c1c; border-left: 4px solid #ef4444; }
-        .alert.info { background: #e6f0ff; color: #1e40af; border-left: 4px solid #3b82f6; }
-        @keyframes fadeSlide { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-        .tabs { display: flex; gap: 0.5rem; background: #f1f5f9; padding: 0.4rem; border-radius: 3rem; margin-bottom: 2rem; }
-        .tab { flex: 1; text-align: center; padding: 0.7rem 0; border-radius: 2rem; font-weight: 600; cursor: pointer; transition: all 0.2s; background: transparent; color: #5b6e8c; }
-        .tab.active { background: white; color: #667eea; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); }
-        .form-panel { display: none; animation: fadeIn 0.25s ease; }
-        .form-panel.active-panel { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-        input, button { width: 100%; padding: 0.9rem 1rem; margin: 0.5rem 0; border-radius: 1rem; font-size: 0.95rem; transition: all 0.2s; }
-        input { border: 1.5px solid #e2e8f0; background: white; }
-        input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2); }
-        button { background: linear-gradient(100deg, #667eea, #764ba2); color: white; font-weight: 600; border: none; cursor: pointer; margin-top: 1rem; }
-        button:active { transform: scale(0.97); }
-        button:disabled { opacity: 0.6; transform: none; cursor: not-allowed; }
-        .password-wrapper { position: relative; }
-        .toggle-pwd { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; z-index: 2; }
-        .toggle-pwd:hover { color: #667eea; }
-        .strength-meter { display: flex; gap: 5px; margin: 8px 0 4px; }
-        .strength-bar { flex: 1; height: 4px; background: #e2e8f0; border-radius: 4px; transition: background 0.2s; }
-        .strength-hint { font-size: 0.7rem; color: #5b6e8c; margin-bottom: 0.5rem; }
-        .remember { display: flex; align-items: center; gap: 0.5rem; margin: 0.7rem 0; }
-        .remember input { width: 1.1rem; margin: 0; }
-        .extra-link { text-align: center; margin-top: 1rem; font-size: 0.8rem; }
-        .extra-link a { color: #667eea; text-decoration: none; font-weight: 500; }
-        .loading-overlay { display: none; text-align: center; margin: 1.5rem 0; }
-        .spinner { width: 36px; height: 36px; border: 3px solid #e2e8f0; border-top-color: #667eea; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 0.5rem; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .retry-btn { background: #334155; margin-top: 0.5rem; }
-        @media (max-width: 480px) { .card-inner { padding: 1.5rem; } h1 { font-size: 1.5rem; } }
-        .close-hint {
-            margin-top: 1rem;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        /* 卡片更宽，内边距更大 */
+        .card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            width: 100%;
+            max-width: 520px;
+            transition: all 0.2s ease;
+        }
+
+        .card-inner {
+            padding: 2.5rem 2.2rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        /* 状态栏更宽松 */
+        .status-chip {
+            background: #f1f5f9;
+            border-radius: 60px;
+            padding: 0.8rem 1.2rem;
+            margin-bottom: 1.8rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-left: 5px solid #667eea;
+        }
+
+        .status-chip i {
+            margin-right: 8px;
+        }
+
+        #status-text {
+            font-weight: 600;
+        }
+
+        /* 提示框更宽松 */
+        .alert {
+            padding: 1rem 1.2rem;
+            border-radius: 1rem;
+            margin-bottom: 1.5rem;
+            display: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            animation: fadeSlide 0.2s ease;
+        }
+
+        .alert.success {
+            background: #e0f2e9;
+            color: #0b5e2e;
+            border-left: 5px solid #10b981;
+        }
+
+        .alert.error {
+            background: #fee9e6;
+            color: #b91c1c;
+            border-left: 5px solid #ef4444;
+        }
+
+        .alert.info {
+            background: #e6f0ff;
+            color: #1e40af;
+            border-left: 5px solid #3b82f6;
+        }
+
+        @keyframes fadeSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 选项卡间距加大 */
+        .tabs {
+            display: flex;
+            gap: 0.8rem;
+            background: #f1f5f9;
+            padding: 0.5rem;
+            border-radius: 4rem;
+            margin-bottom: 2rem;
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 0.8rem 0;
+            border-radius: 3rem;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: transparent;
+            color: #5b6e8c;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.05);
+        }
+
+        .form-panel {
+            display: none;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .form-panel.active-panel {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 输入框和按钮样式更加舒展 */
+        input,
+        button {
+            width: 100%;
+            padding: 1rem 1.2rem;
+            margin: 0.6rem 0;
+            border-radius: 1.2rem;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        input {
+            border: 1.5px solid #e2e8f0;
+            background: white;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+        }
+
+        button {
+            background: linear-gradient(100deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            margin-top: 1.2rem;
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        .password-wrapper {
+            position: relative;
+        }
+
+        .toggle-pwd {
+            position: absolute;
+            right: 1.2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #94a3b8;
+            z-index: 2;
+        }
+
+        .toggle-pwd:hover {
+            color: #667eea;
+        }
+
+        /* 密码强度条 */
+        .strength-meter {
+            display: flex;
+            gap: 6px;
+            margin: 10px 0 8px;
+        }
+
+        .strength-bar {
+            flex: 1;
+            height: 5px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .strength-hint {
             font-size: 0.75rem;
+            color: #5b6e8c;
+            margin-bottom: 0.5rem;
+        }
+
+        /* 复选框区域 */
+        .remember {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin: 0.8rem 0;
+        }
+
+        .remember input {
+            width: 1.2rem;
+            margin: 0;
+        }
+
+        .remember label {
+            font-size: 0.9rem;
+        }
+
+        .extra-link {
+            text-align: center;
+            margin-top: 1.2rem;
+            font-size: 0.85rem;
+        }
+
+        .extra-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .loading-overlay {
+            display: none;
+            text-align: center;
+            margin: 1.5rem 0;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin: 0 auto 0.8rem;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .retry-btn {
+            background: #334155;
+            margin-top: 0.8rem;
+        }
+
+        .close-hint {
+            margin-top: 1.2rem;
+            font-size: 0.8rem;
             color: #6c757d;
             text-align: center;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 1rem;
+            }
+            .card-inner {
+                padding: 1.8rem;
+            }
+            h1 {
+                font-size: 1.6rem;
+            }
+            input, button {
+                padding: 0.9rem 1rem;
+            }
         }
     </style>
 </head>
@@ -93,8 +356,10 @@
                     <span class="toggle-pwd" data-target="regPassword"><i class="far fa-eye"></i></span>
                 </div>
                 <div class="strength-meter" id="strengthMeter">
-                    <div class="strength-bar"></div><div class="strength-bar"></div>
-                    <div class="strength-bar"></div><div class="strength-bar"></div>
+                    <div class="strength-bar"></div>
+                    <div class="strength-bar"></div>
+                    <div class="strength-bar"></div>
+                    <div class="strength-bar"></div>
                 </div>
                 <div class="strength-hint" id="strengthHint"></div>
                 <input type="text" id="regUsername" placeholder="用户名 (可选)" autocomplete="off">
@@ -106,9 +371,9 @@
 
         <div id="globalLoader" class="loading-overlay">
             <div class="spinner"></div>
-            <p style="font-size: 0.8rem;">处理中...</p>
+            <p style="font-size: 0.9rem;">处理中...</p>
         </div>
-        <div class="close-hint" id="closeHint" style="display: none;">✅ 登录成功！本窗口将自动关闭...</div>
+        <div class="close-hint" id="closeHint" style="display: none;">✅ 登录成功！正在跳转...</div>
     </div>
 </div>
 
@@ -212,21 +477,9 @@
         }
     }
 
-    // 关闭当前窗口并通知父页面
-    function closeWindowAndNotify() {
-        try {
-            if (window.opener && !window.opener.closed) {
-                window.opener.postMessage('login_success', '*');
-            }
-        } catch(e) { console.warn(e); }
-        // 尝试关闭窗口
-        window.close();
-        // 如果无法关闭（浏览器安全策略），显示提示
-        const hint = document.getElementById('closeHint');
-        if (hint) {
-            hint.style.display = 'block';
-            hint.innerText = '✅ 登录成功！请手动关闭此标签页。';
-        }
+    // 登录成功后跳转到首页
+    function redirectToHome() {
+        window.location.href = 'index.html';
     }
 
     async function handleLogin() {
@@ -246,10 +499,10 @@
                 options: { persistSession: persist }
             });
             if (error) throw error;
-            showMessage(`登录成功！`, 'success');
+            showMessage(`登录成功！正在跳转...`, 'success');
             updateStatus('登录成功 ✓', true);
-            // 延迟关闭窗口，确保消息发送
-            setTimeout(() => closeWindowAndNotify(), 500);
+            // 延迟一秒后跳转，让用户看到成功提示
+            setTimeout(() => redirectToHome(), 1000);
         } catch (err) {
             let friendlyMsg = err.message;
             if (err.message.includes('Invalid login')) friendlyMsg = '邮箱或密码错误';
@@ -289,7 +542,6 @@
                 dom.loginEmail.value = email;
             } else {
                 showMessage('注册成功！请查收验证邮件 (若未收到请检查垃圾箱)', 'success');
-                // 注册成功后也可以自动登录，但为了安全，让用户手动登录
                 switchTab('login');
                 dom.loginEmail.value = email;
             }
