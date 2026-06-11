@@ -30,165 +30,166 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 确保下拉菜单相对于用户区域定位 */
-        .user-nav-section {
-            position: relative;
-        }
-        .user-menu-trigger {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            padding: 4px 12px;
-            border-radius: 40px;
-            background: rgba(0,0,0,0.2);
-            transition: background 0.2s;
-        }
-        .user-menu-trigger:hover {
-            background: rgba(0,0,0,0.4);
-        }
-        .user-dropdown {
-            position: absolute;
-            top: calc(100% + 5px);
-            right: 0;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            min-width: 160px;
-            overflow: hidden;
-            z-index: 1001;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-10px);
-            transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-        }
-        .user-dropdown.show {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-        .user-dropdown-item {
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            transition: background 0.2s;
-            color: var(--text-main);
-            text-decoration: none;
-        }
-        .user-dropdown-item:hover {
-            background: var(--card-bg-hover);
-        }
-        .user-dropdown-item i {
-            width: 20px;
-            color: var(--text-highlight);
-        }
-        .modal-mask {
+        /* ========== 侧滑菜单样式 ========== */
+        .menu-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.85);
+            background: rgba(0,0,0,0.6);
             backdrop-filter: blur(4px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
+            z-index: 10002;
             opacity: 0;
             visibility: hidden;
-            transition: 0.2s;
+            transition: opacity 0.3s ease, visibility 0.3s;
         }
-        .modal-mask.active {
+        .menu-overlay.active {
             opacity: 1;
             visibility: visible;
         }
-        .modal-container {
-            background: var(--card-bg);
-            border-radius: 12px;
-            max-width: 320px;
-            width: 90%;
-            padding: 20px;
-            border: 1px solid var(--border-color);
-            text-align: center;
-        }
-        .modal-buttons {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            margin-top: 20px;
-        }
-        .modal-btn {
-            padding: 6px 20px;
-            border-radius: 30px;
-            cursor: pointer;
-            border: none;
-            font-weight: bold;
-        }
-        .modal-btn-cancel {
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-        }
-        .modal-btn-confirm {
-            background: var(--text-highlight);
-            color: var(--bg);
-        }
-        .modal-btn-danger {
-            background: #f87171;
-            color: white;
-        }
-        .site-age-container {
-            margin-bottom: 20px;
-        }
-        .notification {
+        .side-menu {
             position: fixed;
-            top: 70px;
-            right: 20px;
-            transform: translateX(calc(100% + 20px));
-            background: #3b82f6;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 40px;
-            z-index: 10001;
-            transition: transform 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            max-width: 80%;
-            text-align: center;
-            pointer-events: none;
-            font-size: 0.9rem;
-            white-space: nowrap;
+            top: 0;
+            left: 0;
+            width: 75%;
+            max-width: 320px;
+            height: 100%;
+            background: var(--card-bg);
+            border-right: 2px solid var(--border-color);
+            z-index: 10003;
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.5);
         }
-        .notification.show {
+        .side-menu.open {
             transform: translateX(0);
         }
-        @media (max-width: 640px) {
-            .notification {
-                top: 60px;
-                right: 12px;
-                white-space: normal;
-                font-size: 0.8rem;
-                padding: 6px 12px;
-                max-width: calc(100% - 24px);
-            }
+        .menu-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(0,0,0,0.2);
         }
-        .back-to-top {
-            width: 48px;
-            height: 48px;
+        .menu-avatar {
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
-            background: var(--special-color, #ffd700);
-            color: #1e3a2f;
-            bottom: 20px;
-            right: 20px;
+            background: linear-gradient(135deg, var(--supabase-blue), var(--supabase-purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s;
+            overflow: hidden;
         }
-        @media (max-width: 768px) {
-            .back-to-top {
-                width: 44px;
-                height: 44px;
-                bottom: 16px;
-                right: 16px;
+        .menu-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .menu-avatar:hover {
+            transform: scale(1.05);
+        }
+        .menu-userinfo {
+            flex: 1;
+        }
+        .menu-username {
+            font-weight: bold;
+            color: var(--text-highlight);
+        }
+        .menu-email {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        .menu-items {
+            flex: 1;
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+        .menu-item {
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+            color: var(--text-main);
+            font-size: 1rem;
+        }
+        .menu-item i {
+            width: 24px;
+            color: var(--text-highlight);
+        }
+        .menu-item:hover {
+            background: var(--card-bg-hover);
+        }
+        .menu-item.active {
+            background: var(--card-bg-hover);
+            border-left: 3px solid var(--text-highlight);
+        }
+        .menu-footer {
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+        .menu-close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: none;
+        }
+        /* 顶部导航栏改造 */
+        .top-nav {
+            justify-content: space-between;
+        }
+        .menu-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-highlight);
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            transition: transform 0.2s;
+        }
+        .menu-btn:hover {
+            transform: scale(1.1);
+        }
+        .nav-title {
+            margin-right: 0;
+            flex: 1;
+            text-align: center;
+        }
+        /* 内容区域切换 */
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        /* 确保网格容器在切换时正常显示 */
+        .grid-container {
+            transition: none;
+        }
+        @media (max-width: 640px) {
+            .side-menu {
+                width: 85%;
             }
         }
     </style>
@@ -201,25 +202,57 @@
         </div>
     </div>
     <div class="notification" id="notification"></div>
+
+    <!-- 顶部导航栏（改造后） -->
     <nav class="top-nav" aria-label="主要导航">
+        <button class="menu-btn" id="menuToggleBtn">
+            <i class="fas fa-bars"></i>
+        </button>
         <div class="nav-title"><span>六哥荣耀WIKI</span></div>
-        <a href="profile.html" class="nav-link" target="_blank">个人主页</a>
-        <a href="chouka.html" class="nav-link" target="_blank">抽卡模拟器</a>
-        <a href="#lightcone" class="nav-link" data-target="lightcone">光锥</a>
-        <a href="#material" class="nav-link" data-target="material">养成材料</a>
-        <a href="javascript:void(0)" class="nav-link" onclick="openChangelogModal()" id="changelog-link" title="查看更新日志">
-            <i class="fas fa-history" style="margin-right: 6px;"></i>更新日志
-        </a>
         <div class="user-nav-section" id="userNavSection">
             <a href="login-real.html" class="nav-link" id="loginLink">登录/注册</a>
         </div>
     </nav>
 
-    <!-- 下拉菜单 -->
+    <!-- 下拉菜单（原有，不改动） -->
     <div class="user-dropdown" id="userDropdown">
         <a href="profile.html" class="user-dropdown-item" target="_blank"><i class="fas fa-user"></i> 个人主页</a>
         <div class="user-dropdown-item" id="dailySigninItem"><i class="fas fa-calendar-check"></i> 每日签到</div>
         <div class="user-dropdown-item" id="logoutItem"><i class="fas fa-sign-out-alt"></i> 退出登录</div>
+    </div>
+
+    <!-- 侧滑菜单 -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+    <div class="side-menu" id="sideMenu">
+        <div class="menu-header">
+            <div class="menu-avatar" id="menuAvatar">
+                <div class="avatar-placeholder" style="width:100%; height:100%;">U</div>
+            </div>
+            <div class="menu-userinfo">
+                <div class="menu-username" id="menuUsername">未登录</div>
+                <div class="menu-email" id="menuEmail">点击头像登录</div>
+            </div>
+        </div>
+        <div class="menu-items">
+            <div class="menu-item" data-section="character">
+                <i class="fas fa-users"></i> 角色区
+            </div>
+            <div class="menu-item" data-section="lightcone">
+                <i class="fas fa-sun"></i> 光锥区
+            </div>
+            <div class="menu-item" data-section="material">
+                <i class="fas fa-cube"></i> 材料区
+            </div>
+            <div class="menu-item" id="menuGacha">
+                <i class="fas fa-dice-d6"></i> 抽卡模拟器
+            </div>
+            <div class="menu-item" id="menuChangelog">
+                <i class="fas fa-history"></i> 更新日志
+            </div>
+        </div>
+        <div class="menu-footer">
+            <span>© 六哥荣耀WIKI</span>
+        </div>
     </div>
 
     <!-- 签到确认模态框 -->
@@ -247,6 +280,7 @@
         </div>
     </div>
 
+    <!-- 搜索框 + 网站天数 + 空结果（保持在顶部） -->
     <div class="search-container">
         <input type="text" id="search-input" placeholder="搜索角色/光锥/材料（支持关键词模糊匹配）" aria-label="搜索内容">
         <div class="search-icon">🔍</div>
@@ -259,18 +293,33 @@
         <h3>未找到匹配结果</h3>
         <p>试试更换关键词或检查拼写~</p>
     </div>
-    <h2 class="section-header" id="character">角色列表</h2>
-    <div class="grid-container" id="character-container"></div>
-    <h2 class="section-header" id="lightcone">光锥列表</h2>
-    <div class="grid-container" id="lightcone-container"></div>
-    <h2 class="section-header" id="material">养成材料</h2>
-    <div class="grid-container" id="material-container"></div>
+
+    <!-- 内容区域：角色区（默认激活） -->
+    <div class="content-section active" id="characterSection">
+        <h2 class="section-header" id="character">角色列表</h2>
+        <div class="grid-container" id="character-container"></div>
+    </div>
+
+    <!-- 内容区域：光锥区 -->
+    <div class="content-section" id="lightconeSection">
+        <h2 class="section-header" id="lightcone">光锥列表</h2>
+        <div class="grid-container" id="lightcone-container"></div>
+    </div>
+
+    <!-- 内容区域：材料区 -->
+    <div class="content-section" id="materialSection">
+        <h2 class="section-header" id="material">养成材料</h2>
+        <div class="grid-container" id="material-container"></div>
+    </div>
+
     <footer>
         © <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.<br>
         本WIKI所有图片均由人工智能（AI）生成，仅供学习、交流与个人欣赏使用。
         如涉及任何版权问题，请与站长联系。联系站长：<a href="mailto:1714400176@qq.com">站长QQ邮箱</a>
     </footer>
     <button class="back-to-top" onclick="scrollToTop()" aria-label="回到顶部">↑</button>
+
+    <!-- 更新日志模态框 -->
     <div id="changelog-modal" class="modal" style="display: none;">
         <div class="modal-overlay" onclick="closeChangelogModal()"></div>
         <div class="modal-content">
@@ -412,10 +461,9 @@
             setInterval(updateSiteAge, 86400000);
         }
 
-        // ==================== 搜索功能 ====================
+        // ==================== 搜索功能（需要适配切换后的卡片） ====================
         function initializeSearch() {
             const searchInput = document.getElementById('search-input');
-            const allCards = () => document.querySelectorAll('.content-card');
             const emptyResult = document.querySelector('.empty-result');
             const searchContainer = document.querySelector('.search-container');
             if (searchContainer && !document.querySelector('.search-clear')) {
@@ -439,8 +487,12 @@
                 clearTimeout(searchTimeout);
                 searchTimeout = setTimeout(() => {
                     const keyword = this.value.trim().toLowerCase();
+                    // 只搜索当前激活区域的卡片
+                    const activeSection = document.querySelector('.content-section.active');
+                    if (!activeSection) return;
+                    const cards = activeSection.querySelectorAll('.content-card');
                     let matchCount = 0;
-                    allCards().forEach(card => {
+                    cards.forEach(card => {
                         const name = card.dataset.name?.toLowerCase() || '';
                         const desc = card.dataset.desc?.toLowerCase() || '';
                         const isMatch = !keyword || name.includes(keyword) || desc.includes(keyword);
@@ -455,33 +507,10 @@
         // ==================== 导航 ====================
         function initializeNavigation() {
             const backToTopBtn = document.querySelector('.back-to-top');
-            const navLinks = document.querySelectorAll('.nav-link');
             window.addEventListener('scroll', function() {
                 backToTopBtn.classList.toggle('show', window.scrollY > 300);
-                let currentSection = '';
-                document.querySelectorAll('.section-header').forEach(section => {
-                    if (window.scrollY >= section.offsetTop - 150) currentSection = section.id;
-                });
-                navLinks.forEach(link => link.classList.toggle('active', link.dataset.target === currentSection));
             });
-            navLinks.forEach(link => {
-                if (link.getAttribute('href').startsWith('#')) {
-                    link.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        const targetId = this.getAttribute('href').substring(1);
-                        const target = document.getElementById(targetId);
-                        if (target) window.scrollTo({ top: target.offsetTop - 80, behavior: 'smooth' });
-                        history.pushState(null, null, `#${targetId}`);
-                    });
-                }
-            });
-            if (window.location.hash) {
-                setTimeout(() => {
-                    const targetId = window.location.hash.substring(1);
-                    const target = document.getElementById(targetId);
-                    if (target) window.scrollTo({ top: target.offsetTop - 80, behavior: 'smooth' });
-                }, 500);
-            }
+            // 平滑滚动到目标区域（如果需要）
         }
 
         // ==================== 更新日志弹窗 ====================
@@ -605,6 +634,7 @@
                 const { data: { user }, error } = await supabaseClient.auth.getUser();
                 if (error || !user) {
                     updateNavbar(null);
+                    updateMenuUserInfo(null);
                     return;
                 }
                 currentUser = user;
@@ -614,6 +644,7 @@
                     localStorage.setItem('cachedUsername', username);
                     if (profile.avatar_url) localStorage.setItem('cachedAvatar', profile.avatar_url);
                     updateNavbar(username, profile.avatar_url);
+                    updateMenuUserInfo(username, profile.avatar_url, user.email);
                     const { data: stats } = await supabaseClient.from('user_stats').select('*').eq('user_id', user.id).single();
                     if (stats) {
                         userStats = stats;
@@ -621,10 +652,12 @@
                     }
                 } else {
                     updateNavbar(user.email.split('@')[0], null);
+                    updateMenuUserInfo(user.email.split('@')[0], null, user.email);
                 }
             } catch (err) {
                 console.warn('refreshUserState error:', err);
                 updateNavbar(null);
+                updateMenuUserInfo(null);
             }
         }
 
@@ -635,6 +668,7 @@
             } catch (error) {
                 console.error('用户初始化失败:', error);
                 updateNavbar(null);
+                updateMenuUserInfo(null);
             }
         }
 
@@ -657,7 +691,6 @@
                         <i class="fas fa-chevron-down" style="font-size: 0.8rem;"></i>
                     </div>
                 `;
-                // 绑定点击事件（确保只绑定一次）
                 const trigger = document.getElementById('userMenuTrigger');
                 if (trigger && !trigger._listenerAdded) {
                     trigger.addEventListener('click', function(e) {
@@ -667,7 +700,6 @@
                     });
                     trigger._listenerAdded = true;
                 }
-                // 全局点击关闭（只绑定一次）
                 if (!window._closeMenuBound) {
                     document.addEventListener('click', function closeMenu(e) {
                         const trigger = document.getElementById('userMenuTrigger');
@@ -682,6 +714,31 @@
                 userNavSection.innerHTML = `<a href="login-real.html" class="nav-link" id="loginLink">登录/注册</a>`;
                 const dropdown = document.getElementById('userDropdown');
                 if (dropdown) dropdown.classList.remove('show');
+            }
+        }
+
+        function updateMenuUserInfo(username, avatarUrl, email) {
+            const menuAvatar = document.getElementById('menuAvatar');
+            const menuUsername = document.getElementById('menuUsername');
+            const menuEmail = document.getElementById('menuEmail');
+            if (!menuAvatar || !menuUsername || !menuEmail) return;
+            if (username) {
+                const avatarLetter = username.charAt(0).toUpperCase();
+                if (avatarUrl) {
+                    menuAvatar.innerHTML = `<img src="${escapeHtml(avatarUrl)}" alt="avatar" style="width:100%;height:100%;object-fit:cover;">`;
+                } else {
+                    menuAvatar.innerHTML = `<div class="avatar-placeholder" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">${avatarLetter}</div>`;
+                }
+                menuUsername.textContent = username;
+                menuEmail.textContent = email || '';
+                // 绑定点击头像跳转个人主页
+                menuAvatar.style.cursor = 'pointer';
+                menuAvatar.onclick = () => window.open('profile.html', '_blank');
+            } else {
+                menuAvatar.innerHTML = `<div class="avatar-placeholder" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">U</div>`;
+                menuUsername.textContent = '未登录';
+                menuEmail.textContent = '点击登录';
+                menuAvatar.onclick = () => window.location.href = 'login-real.html';
             }
         }
 
@@ -738,6 +795,7 @@
                     currentUser = null;
                     userStats = null;
                     updateNavbar(null);
+                    updateMenuUserInfo(null);
                     showNotification('已退出登录', 'success');
                     setTimeout(() => window.location.reload(), 500);
                 };
@@ -823,6 +881,51 @@
             });
         }
 
+        // ==================== 侧滑菜单控制 ====================
+        let isMenuOpen = false;
+        function openMenu() {
+            const sideMenu = document.getElementById('sideMenu');
+            const overlay = document.getElementById('menuOverlay');
+            sideMenu.classList.add('open');
+            overlay.classList.add('active');
+            isMenuOpen = true;
+            document.body.style.overflow = 'hidden';
+        }
+        function closeMenu() {
+            const sideMenu = document.getElementById('sideMenu');
+            const overlay = document.getElementById('menuOverlay');
+            sideMenu.classList.remove('open');
+            overlay.classList.remove('active');
+            isMenuOpen = false;
+            document.body.style.overflow = '';
+        }
+
+        function switchContent(sectionId) {
+            // 隐藏所有内容区域
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(sectionId + 'Section').classList.add('active');
+            // 可选：更新菜单项激活样式
+            document.querySelectorAll('.menu-item[data-section]').forEach(item => {
+                if (item.dataset.section === sectionId) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+            // 关闭菜单
+            closeMenu();
+            // 重置搜索框和空结果
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+            }
+            const emptyResult = document.querySelector('.empty-result');
+            if (emptyResult) emptyResult.style.display = 'none';
+        }
+
         // ==================== 跨页签同步 ====================
         function setupCrossTabSync() {
             window.addEventListener('storage', (e) => {
@@ -852,6 +955,39 @@
             setupCrossTabSync();
             setupLoginMessageListener();
             bindUserMenuActions();
+
+            // 侧滑菜单事件绑定
+            const menuToggle = document.getElementById('menuToggleBtn');
+            const menuOverlay = document.getElementById('menuOverlay');
+            menuToggle.addEventListener('click', openMenu);
+            menuOverlay.addEventListener('click', closeMenu);
+            // 菜单项点击
+            document.querySelectorAll('.menu-item[data-section]').forEach(item => {
+                item.addEventListener('click', () => {
+                    const section = item.dataset.section;
+                    if (section) switchContent(section);
+                });
+            });
+            // 抽卡模拟器菜单项
+            const gachaItem = document.getElementById('menuGacha');
+            if (gachaItem) {
+                gachaItem.addEventListener('click', () => {
+                    closeMenu();
+                    window.open('chouka.html', '_blank');
+                });
+            }
+            // 更新日志菜单项
+            const changelogItem = document.getElementById('menuChangelog');
+            if (changelogItem) {
+                changelogItem.addEventListener('click', () => {
+                    closeMenu();
+                    openChangelogModal();
+                });
+            }
+            // 默认激活角色菜单样式
+            const defaultMenuItem = document.querySelector('.menu-item[data-section="character"]');
+            if (defaultMenuItem) defaultMenuItem.classList.add('active');
+
             setTimeout(() => { document.getElementById('global-loading').style.display = 'none'; }, 800);
         }
         document.addEventListener('DOMContentLoaded', function() {
