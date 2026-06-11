@@ -11,22 +11,17 @@
 </head>
 <body>
 
-<!-- 顶部导航栏（简洁版） -->
 <nav class="top-nav">
     <div class="nav-title">六哥荣耀WIKI</div>
-    <div class="user-nav-section" id="userNavSection">
-        <a href="login-real.html" class="nav-link" id="loginLink">登录/注册</a>
-    </div>
+    <div class="user-nav-section" id="userNavSection"></div>
 </nav>
 
-<!-- 下拉菜单 -->
 <div class="user-dropdown" id="userDropdown">
     <a href="profile.html" class="user-dropdown-item" target="_blank"><i class="fas fa-user"></i> 个人主页</a>
     <div class="user-dropdown-item" id="dailySigninItem"><i class="fas fa-calendar-check"></i> 每日签到</div>
     <div class="user-dropdown-item" id="logoutItem"><i class="fas fa-sign-out-alt"></i> 退出登录</div>
 </div>
 
-<!-- 签到确认模态框 -->
 <div class="modal-mask" id="signinModal">
     <div class="modal-container">
         <i class="fas fa-calendar-check" style="font-size:2rem;color:var(--text-highlight);"></i>
@@ -39,7 +34,6 @@
     </div>
 </div>
 
-<!-- 退出登录确认模态框 -->
 <div class="modal-mask" id="logoutModal">
     <div class="modal-container">
         <i class="fas fa-question-circle" style="font-size:2rem;color:#f87171;"></i>
@@ -53,7 +47,6 @@
 
 <div id="notification" class="notification"></div>
 
-<!-- 四个卡片区块（初始隐藏，登录后才显示） -->
 <div class="friends-dashboard" id="dashboard" style="display: none;">
     <div class="friends-card">
         <div class="card-header"><i class="fas fa-users"></i> 我的好友 <span id="friendCountBadge" class="badge">0</span></div>
@@ -80,15 +73,7 @@
 </div>
 
 <script>
-// ==================== 配置 ====================
-const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-let supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let currentUser = null;
-let userStats = null;
-let currentUserId = null;
-
-// ==================== 辅助 ====================
+// ==================== 辅助函数 ====================
 function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
 function showNotification(msg, type='info') {
     let n = document.getElementById('notification');
@@ -100,6 +85,12 @@ function showNotification(msg, type='info') {
 }
 function openModal(id) { let m = document.getElementById(id); if(m) m.classList.add('active'); }
 function closeModal(id) { let m = document.getElementById(id); if(m) m.classList.remove('active'); }
+
+// ==================== Supabase 客户端 ====================
+const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
+let supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentUser = null, userStats = null, currentUserId = null;
 
 // ==================== 在线状态 ====================
 async function updateLastSeen() {
@@ -120,14 +111,14 @@ function formatLastSeen(lastSeen) {
     return `<span class="offline">${diffDay}天前在线</span>`;
 }
 
-// ==================== 获取用户信息 ====================
+// ==================== 获取用户资料 ====================
 async function getUserProfile(userId) {
     let { data, error } = await supabase.from('user_profiles').select('username, avatar_url, last_seen_at').eq('id', userId).single();
     if(error) return { username: '未知用户', avatar_url: null, last_seen_at: null };
     return { username: data.username || '用户', avatar_url: data.avatar_url, last_seen_at: data.last_seen_at };
 }
 
-// ==================== 加载好友数据 ====================
+// ==================== 好友数据加载 ====================
 async function loadFriendsData() {
     if(!currentUserId) return;
     try {
@@ -137,7 +128,6 @@ async function loadFriendsData() {
             .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
         if(error) throw error;
 
-        // 好友列表
         let accepted = relations.filter(r => r.status === 'accepted');
         let friendIds = accepted.map(r => r.requester_id === currentUserId ? r.addressee_id : r.requester_id);
         let friendsData = await Promise.all(friendIds.map(async id => {
@@ -168,7 +158,6 @@ async function loadFriendsData() {
         document.getElementById('friendsList').innerHTML = friendsHtml;
         document.getElementById('friendCountBadge').innerText = friendsData.length;
 
-        // 待接收请求
         let incoming = relations.filter(r => r.addressee_id === currentUserId && r.status === 'pending');
         let incomingWithUser = await Promise.all(incoming.map(async r => {
             let profile = await getUserProfile(r.requester_id);
@@ -189,7 +178,6 @@ async function loadFriendsData() {
         document.getElementById('pendingRequests').innerHTML = pendingHtml;
         document.getElementById('requestBadge').innerText = incomingWithUser.length;
 
-        // 我发出的请求
         let sent = relations.filter(r => r.requester_id === currentUserId && r.status === 'pending');
         let sentWithUser = await Promise.all(sent.map(async r => {
             let profile = await getUserProfile(r.addressee_id);
@@ -244,7 +232,7 @@ window.cancelSentRequest = async (reqId) => {
     } catch(err) { showNotification('撤销失败', 'error'); }
 };
 
-// ==================== 搜索添加好友 ====================
+// ==================== 搜索好友 ====================
 let searchTimeout;
 document.getElementById('searchBtn').onclick = () => performSearch();
 document.getElementById('searchInput').addEventListener('input', () => {
@@ -343,26 +331,59 @@ async function performCheckin() {
     return true;
 }
 
-// ==================== 用户认证与下拉菜单 ====================
-async function refreshUserState() {
-    let { data: { user }, error } = await supabase.auth.getUser();
-    if(error || !user) {
-        document.getElementById('userNavSection').innerHTML = `<a href="login-real.html" class="nav-link">登录/注册</a>`;
-        document.getElementById('dashboard').style.display = 'none';
+// ==================== 初始化认证 ====================
+async function getCurrentUser() {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) {
+        // 尝试刷新会话
+        const { data: sessionData, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || !sessionData.user) return null;
+        return sessionData.user;
+    }
+    return user;
+}
+
+async function init() {
+    const dashboard = document.getElementById('dashboard');
+    const userNav = document.getElementById('userNavSection');
+    dashboard.style.display = 'none';
+    userNav.innerHTML = '<div style="color:var(--text-secondary);">检查登录状态...</div>';
+
+    const user = await getCurrentUser();
+    if (!user) {
+        userNav.innerHTML = '<a href="login-real.html" class="nav-link">登录/注册</a>';
         return;
     }
+
     currentUser = user;
     currentUserId = user.id;
     await updateLastSeen();
     await loadUserStats();
-    let { data: profile } = await supabase.from('user_profiles').select('username, avatar_url').eq('id', user.id).single();
-    let username = profile?.username || user.email.split('@')[0];
-    let avatarUrl = profile?.avatar_url;
-    let avatarLetter = username.charAt(0).toUpperCase();
-    let avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" onerror="this.onerror=null;this.parentNode.innerHTML='<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${avatarLetter}</div>';">` : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${avatarLetter}</div>`;
-    document.getElementById('userNavSection').innerHTML = `<div class="user-menu-trigger" id="userMenuTrigger">${avatarHtml}<span>${escapeHtml(username)}</span><i class="fas fa-chevron-down"></i></div>`;
-    let dropdown = document.getElementById('userDropdown');
-    let trigger = document.getElementById('userMenuTrigger');
+
+    let { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('username, avatar_url')
+        .eq('id', currentUserId)
+        .single();
+    if (profileError && profileError.code === 'PGRST116') {
+        await supabase.from('user_profiles').insert({
+            id: currentUserId,
+            username: currentUser.email.split('@')[0],
+            bio: '',
+            role: 'user'
+        });
+        profile = { username: currentUser.email.split('@')[0], avatar_url: null };
+    }
+
+    const username = profile.username || currentUser.email.split('@')[0];
+    const avatarUrl = profile.avatar_url;
+    const avatarLetter = username.charAt(0).toUpperCase();
+    const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" onerror="this.onerror=null;this.parentNode.innerHTML='<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${avatarLetter}</div>';">` : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${avatarLetter}</div>`;
+    userNav.innerHTML = `<div class="user-menu-trigger" id="userMenuTrigger">${avatarHtml}<span>${escapeHtml(username)}</span><i class="fas fa-chevron-down"></i></div>`;
+
+    // 绑定下拉菜单事件
+    const dropdown = document.getElementById('userDropdown');
+    const trigger = document.getElementById('userMenuTrigger');
     if(trigger) {
         trigger.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('show'); };
         if(!window._closeMenuBound) {
@@ -374,7 +395,6 @@ async function refreshUserState() {
             window._closeMenuBound = true;
         }
     }
-    // 绑定签到和退出事件
     document.getElementById('dailySigninItem').onclick = () => {
         dropdown.classList.remove('show');
         openModal('signinModal');
@@ -393,11 +413,11 @@ async function refreshUserState() {
         window.location.href = 'index.html';
     };
     document.getElementById('cancelLogoutBtn').onclick = () => closeModal('logoutModal');
-    // 加载好友数据
+
     await loadFriendsData();
-    document.getElementById('dashboard').style.display = 'grid';
+    dashboard.style.display = 'grid';
 }
-refreshUserState();
+init();
 </script>
 <style>
 @keyframes spin { to { transform: rotate(360deg); } }
