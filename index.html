@@ -30,25 +30,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 额外样式优化 */
-        .back-to-top {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: var(--special-color, #ffd700);
-            color: #1e3a2f;
-            bottom: 20px;
-            right: 20px;
+        /* 确保下拉菜单相对于用户区域定位 */
+        .user-nav-section {
+            position: relative;
         }
-        @media (max-width: 768px) {
-            .back-to-top {
-                width: 44px;
-                height: 44px;
-                bottom: 16px;
-                right: 16px;
-            }
-        }
-        /* 用户菜单触发器 */
         .user-menu-trigger {
             display: flex;
             align-items: center;
@@ -62,10 +47,9 @@
         .user-menu-trigger:hover {
             background: rgba(0,0,0,0.4);
         }
-        /* 下滑菜单 */
         .user-dropdown {
             position: absolute;
-            top: 100%;
+            top: calc(100% + 5px);
             right: 0;
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -101,7 +85,6 @@
             width: 20px;
             color: var(--text-highlight);
         }
-        /* 签到模态框 */
         .modal-mask {
             position: fixed;
             top: 0;
@@ -191,9 +174,22 @@
                 max-width: calc(100% - 24px);
             }
         }
-        /* 用户区域相对定位 */
-        .user-nav-section {
-            position: relative;
+        .back-to-top {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--special-color, #ffd700);
+            color: #1e3a2f;
+            bottom: 20px;
+            right: 20px;
+        }
+        @media (max-width: 768px) {
+            .back-to-top {
+                width: 44px;
+                height: 44px;
+                bottom: 16px;
+                right: 16px;
+            }
         }
     </style>
 </head>
@@ -219,7 +215,7 @@
         </div>
     </nav>
 
-    <!-- 用户下滑菜单 -->
+    <!-- 下拉菜单 -->
     <div class="user-dropdown" id="userDropdown">
         <a href="profile.html" class="user-dropdown-item" target="_blank"><i class="fas fa-user"></i> 个人主页</a>
         <div class="user-dropdown-item" id="dailySigninItem"><i class="fas fa-calendar-check"></i> 每日签到</div>
@@ -292,7 +288,6 @@
         // ==================== 全局变量 ====================
         let supabaseClient = null;
         let currentUser = null;
-        let userProfile = null;
         let userStats = null;
         let searchTimeout;
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
@@ -544,14 +539,12 @@
                 showNotification('请先登录', 'error');
                 return false;
             }
-            // 获取当前用户统计数据
             let { data: stats, error: statsErr } = await supabaseClient
                 .from('user_stats')
                 .select('candy_crumbles, rainbow_lollipops, active_points, last_checkin_date, checkin_streak')
                 .eq('user_id', currentUser.id)
                 .single();
             if (statsErr && statsErr.code === 'PGRST116') {
-                // 未创建记录，初始化
                 const { data: newStats } = await supabaseClient
                     .from('user_stats')
                     .insert({ user_id: currentUser.id, candy_crumbles: 100, rainbow_lollipops: 5, active_points: 0, last_checkin_date: null, checkin_streak: 0 })
@@ -593,7 +586,6 @@
                 showNotification('签到失败', 'error');
                 return false;
             }
-            // 更新本地缓存
             if (userStats) {
                 userStats.candy_crumbles = newCandy;
                 userStats.rainbow_lollipops = newRainbow;
@@ -622,7 +614,6 @@
                     localStorage.setItem('cachedUsername', username);
                     if (profile.avatar_url) localStorage.setItem('cachedAvatar', profile.avatar_url);
                     updateNavbar(username, profile.avatar_url);
-                    // 加载用户统计用于缓存
                     const { data: stats } = await supabaseClient.from('user_stats').select('*').eq('user_id', user.id).single();
                     if (stats) {
                         userStats = stats;
@@ -666,20 +657,26 @@
                         <i class="fas fa-chevron-down" style="font-size: 0.8rem;"></i>
                     </div>
                 `;
-                // 绑定点击事件显示下拉菜单
+                // 绑定点击事件（确保只绑定一次）
                 const trigger = document.getElementById('userMenuTrigger');
-                const dropdown = document.getElementById('userDropdown');
-                if (trigger && dropdown) {
-                    trigger.onclick = (e) => {
+                if (trigger && !trigger._listenerAdded) {
+                    trigger.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        dropdown.classList.toggle('show');
-                    };
-                    // 点击其他地方关闭
+                        const dropdown = document.getElementById('userDropdown');
+                        if (dropdown) dropdown.classList.toggle('show');
+                    });
+                    trigger._listenerAdded = true;
+                }
+                // 全局点击关闭（只绑定一次）
+                if (!window._closeMenuBound) {
                     document.addEventListener('click', function closeMenu(e) {
-                        if (!trigger.contains(e.target) && !dropdown.contains(e.target)) {
+                        const trigger = document.getElementById('userMenuTrigger');
+                        const dropdown = document.getElementById('userDropdown');
+                        if (dropdown && trigger && !trigger.contains(e.target) && !dropdown.contains(e.target)) {
                             dropdown.classList.remove('show');
                         }
                     });
+                    window._closeMenuBound = true;
                 }
             } else {
                 userNavSection.innerHTML = `<a href="login-real.html" class="nav-link" id="loginLink">登录/注册</a>`;
@@ -688,7 +685,6 @@
             }
         }
 
-        // 签到按钮处理
         function bindUserMenuActions() {
             const signinItem = document.getElementById('dailySigninItem');
             const logoutItem = document.getElementById('logoutItem');
@@ -706,7 +702,6 @@
                         showNotification('请先登录', 'error');
                         return;
                     }
-                    // 显示签到确认框，并可显示今日奖励预览
                     const rewardPreview = getCheckinRewards((userStats?.checkin_streak || 0) + 1);
                     const previewText = `签到可获得 🍬${rewardPreview.candy} ${rewardPreview.rainbow>0?`🌈+${rewardPreview.rainbow} `:''}⚡+${rewardPreview.active}`;
                     document.getElementById('signinRewardPreview').innerHTML = previewText;
@@ -750,7 +745,6 @@
             if (cancelLogout) {
                 cancelLogout.onclick = () => logoutModal.classList.remove('active');
             }
-            // 点击模态框背景关闭
             document.querySelectorAll('.modal-mask').forEach(mask => {
                 mask.addEventListener('click', (e) => {
                     if (e.target === mask) mask.classList.remove('active');
@@ -758,7 +752,6 @@
             });
         }
 
-        // 监听登录窗口消息
         function setupLoginMessageListener() {
             window.addEventListener('message', (event) => {
                 if (event.data === 'login_success') {
