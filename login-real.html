@@ -48,6 +48,12 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         .retry-btn { background: #334155; margin-top: 0.5rem; }
         @media (max-width: 480px) { .card-inner { padding: 1.5rem; } h1 { font-size: 1.5rem; } }
+        .close-hint {
+            margin-top: 1rem;
+            font-size: 0.75rem;
+            color: #6c757d;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -102,6 +108,7 @@
             <div class="spinner"></div>
             <p style="font-size: 0.8rem;">处理中...</p>
         </div>
+        <div class="close-hint" id="closeHint" style="display: none;">✅ 登录成功！本窗口将自动关闭...</div>
     </div>
 </div>
 
@@ -113,6 +120,7 @@
     let supabaseClient = null;
     let currentLoading = false;
     let initSuccess = false;
+
     let dom = {};
 
     function showMessage(text, type = 'info') {
@@ -204,10 +212,21 @@
         }
     }
 
-    function redirectToMainAfterLogin() {
-        // 设置登录标记，防止主页缓存
-        localStorage.setItem('login_timestamp', Date.now().toString());
-        window.location.href = 'index.html?login=success';
+    // 关闭当前窗口并通知父页面
+    function closeWindowAndNotify() {
+        try {
+            if (window.opener && !window.opener.closed) {
+                window.opener.postMessage('login_success', '*');
+            }
+        } catch(e) { console.warn(e); }
+        // 尝试关闭窗口
+        window.close();
+        // 如果无法关闭（浏览器安全策略），显示提示
+        const hint = document.getElementById('closeHint');
+        if (hint) {
+            hint.style.display = 'block';
+            hint.innerText = '✅ 登录成功！请手动关闭此标签页。';
+        }
     }
 
     async function handleLogin() {
@@ -227,9 +246,10 @@
                 options: { persistSession: persist }
             });
             if (error) throw error;
-            showMessage(`登录成功！正在跳转...`, 'success');
+            showMessage(`登录成功！`, 'success');
             updateStatus('登录成功 ✓', true);
-            setTimeout(() => redirectToMainAfterLogin(), 500);
+            // 延迟关闭窗口，确保消息发送
+            setTimeout(() => closeWindowAndNotify(), 500);
         } catch (err) {
             let friendlyMsg = err.message;
             if (err.message.includes('Invalid login')) friendlyMsg = '邮箱或密码错误';
@@ -269,7 +289,9 @@
                 dom.loginEmail.value = email;
             } else {
                 showMessage('注册成功！请查收验证邮件 (若未收到请检查垃圾箱)', 'success');
-                window.location.href = 'login-real.html?registered=success&email=' + encodeURIComponent(email);
+                // 注册成功后也可以自动登录，但为了安全，让用户手动登录
+                switchTab('login');
+                dom.loginEmail.value = email;
             }
         } catch (err) {
             let errMsg = err.message;
