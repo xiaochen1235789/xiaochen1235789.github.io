@@ -30,9 +30,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 额外样式优化，已移除面包屑样式 */
+        /* 额外样式优化 */
         .back-to-top {
-            /* 确保按钮可点击区域合适 */
             width: 48px;
             height: 48px;
             border-radius: 50%;
@@ -48,6 +47,153 @@
                 bottom: 16px;
                 right: 16px;
             }
+        }
+        /* 用户菜单触发器 */
+        .user-menu-trigger {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 4px 12px;
+            border-radius: 40px;
+            background: rgba(0,0,0,0.2);
+            transition: background 0.2s;
+        }
+        .user-menu-trigger:hover {
+            background: rgba(0,0,0,0.4);
+        }
+        /* 下滑菜单 */
+        .user-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            min-width: 160px;
+            overflow: hidden;
+            z-index: 1001;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .user-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .user-dropdown-item {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+            color: var(--text-main);
+            text-decoration: none;
+        }
+        .user-dropdown-item:hover {
+            background: var(--card-bg-hover);
+        }
+        .user-dropdown-item i {
+            width: 20px;
+            color: var(--text-highlight);
+        }
+        /* 签到模态框 */
+        .modal-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.2s;
+        }
+        .modal-mask.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            max-width: 320px;
+            width: 90%;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .modal-btn {
+            padding: 6px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+        }
+        .modal-btn-cancel {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+        .modal-btn-confirm {
+            background: var(--text-highlight);
+            color: var(--bg);
+        }
+        .modal-btn-danger {
+            background: #f87171;
+            color: white;
+        }
+        .site-age-container {
+            margin-bottom: 20px;
+        }
+        .notification {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            transform: translateX(calc(100% + 20px));
+            background: #3b82f6;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 40px;
+            z-index: 10001;
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            max-width: 80%;
+            text-align: center;
+            pointer-events: none;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        .notification.show {
+            transform: translateX(0);
+        }
+        @media (max-width: 640px) {
+            .notification {
+                top: 60px;
+                right: 12px;
+                white-space: normal;
+                font-size: 0.8rem;
+                padding: 6px 12px;
+                max-width: calc(100% - 24px);
+            }
+        }
+        /* 用户区域相对定位 */
+        .user-nav-section {
+            position: relative;
         }
     </style>
 </head>
@@ -69,9 +215,41 @@
             <i class="fas fa-history" style="margin-right: 6px;"></i>更新日志
         </a>
         <div class="user-nav-section" id="userNavSection">
-            <a href="login-real.html" class="nav-link">登录/注册</a>
+            <a href="login-real.html" class="nav-link" id="loginLink">登录/注册</a>
         </div>
     </nav>
+
+    <!-- 用户下滑菜单 -->
+    <div class="user-dropdown" id="userDropdown">
+        <a href="profile.html" class="user-dropdown-item" target="_blank"><i class="fas fa-user"></i> 个人主页</a>
+        <div class="user-dropdown-item" id="dailySigninItem"><i class="fas fa-calendar-check"></i> 每日签到</div>
+        <div class="user-dropdown-item" id="logoutItem"><i class="fas fa-sign-out-alt"></i> 退出登录</div>
+    </div>
+
+    <!-- 签到确认模态框 -->
+    <div class="modal-mask" id="signinModal">
+        <div class="modal-container">
+            <i class="fas fa-calendar-check" style="font-size: 2rem; color: var(--text-highlight);"></i>
+            <h3 style="margin: 12px 0;">每日签到</h3>
+            <p id="signinRewardPreview">确定要签到吗？</p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" id="cancelSigninBtn">取消</button>
+                <button class="modal-btn modal-btn-confirm" id="confirmSigninBtn">签到</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 退出登录确认模态框 -->
+    <div class="modal-mask" id="logoutModal">
+        <div class="modal-container">
+            <i class="fas fa-question-circle" style="font-size: 2rem; color: #f87171;"></i>
+            <h3 style="margin: 12px 0;">确定退出登录吗？</h3>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" id="cancelLogoutBtn">取消</button>
+                <button class="modal-btn modal-btn-danger" id="confirmLogoutBtn">退出</button>
+            </div>
+        </div>
+    </div>
 
     <div class="search-container">
         <input type="text" id="search-input" placeholder="搜索角色/光锥/材料（支持关键词模糊匹配）" aria-label="搜索内容">
@@ -114,6 +292,8 @@
         // ==================== 全局变量 ====================
         let supabaseClient = null;
         let currentUser = null;
+        let userProfile = null;
+        let userStats = null;
         let searchTimeout;
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
@@ -144,7 +324,6 @@
             if (parent) parent.classList.remove('skeleton');
         }
         function imageError(img) {
-            // 显示占位符
             const parent = img.closest('.card-img');
             if (parent) {
                 const placeholder = document.createElement('div');
@@ -171,37 +350,37 @@
             const launchDate = new Date(2025, 10, 1);
             const siteAgeElem = document.getElementById('site-age');
             const specialDays = {
-    30: '🎉 六哥荣耀WIKI上线30天啦！感恩陪伴 🎉',
-    50: '⛄冬至快乐，记得吃饺子🥟⛄',
-    58: '🍰 恭喜言哥哥18岁，生日快乐🍰',
-    59: '🧨跨年倒计时2天🧨',
-    60: '🎉跨年倒计时1天🎉',
-    61: '🎉欢迎来到2026年🎉',
-    78: '_(:з」∠)_话说78这个数字很好看吗或者说很有意思吗？(*´I`*)',
-    100: '🎊 百日庆典！六哥荣耀WIKI与你同行100天 🎊',
-    107: '🧨 除夕快乐！🧨',                // 除夕 2026-02-16
-    108: '🎆 新年快乐！ 🎆',               // 春节 2026-02-17
-    124: '✌🏻元宵节快乐，记得吃汤圆哦！✌🏻', // 元宵 2026-03-05
-    151: '👿六哥荣耀是什么几把👿……愚人节快乐(ᵕ—ᴗ—)', // 愚人节 2026-04-01
-    181: '劳动光荣，奋斗幸福，劳动节快乐，致每一个努力生活的你 ⌯ᵔᗜᵔ⌯', // 劳动节 2026-05-01
-    218: '高考加油！祝莘莘学子全部上岸！',
-    219: '高考加油！祝莘莘学子全部上岸！',
-    220: '高考加油！祝莘莘学子全部上岸！',
-    231: '🐲 端午安康！愿岁岁平安，万事顺遂 🐲', // 端午节 2026-06-19
-    242: '🇨🇳 七一建党节，愿山河无恙，国泰民安 🇨🇳', // 建党节 2026-07-01
-    273: '💪 八一建军节，致敬最可爱的人 💪', // 建军节 2026-08-01
-    313: '👩‍🏫 教师节快乐！感恩遇见，不负教诲 👩‍🏫', // 教师节 2026-09-10
-    324: '🌕 中秋月圆，阖家团圆，佳节安康 🌕', // 中秋节 2026-09-21
-    334: '🇨🇳 国庆快乐！盛世华诞，举国同庆 🇨🇳',//国庆节 2026-10
-    335: '🎉 举国欢腾，红旗飘扬，祝祖国生日快乐 🎉',
-    336: '🏮 万家灯火，共庆华诞，愿山河锦绣，国泰民安 🏮',
-    337: '🌸 金秋十月，丹桂飘香，祝福祖国繁花似锦 🌸',
-    338: '✨ 五星闪耀，皆为信仰；盛世如愿，中华自强 ✨',
-    339: '🎈 国庆佳节，普天同庆，愿你好运连连，喜气洋洋 🎈',
-    340: '💐 生在红旗下，长在春风里，祝祖国繁荣昌盛，万岁无疆 💐',
-    355: '🍁 重阳佳节，敬老安康，岁岁长乐 🍁',   // 重阳节 2026-10-22
-    365: '🎂六哥荣耀WIKI一周年纪念🎂'         // 一周年 2026-11-01
-};
+                30: '🎉 六哥荣耀WIKI上线30天啦！感恩陪伴 🎉',
+                50: '⛄冬至快乐，记得吃饺子🥟⛄',
+                58: '🍰 恭喜言哥哥18岁，生日快乐🍰',
+                59: '🧨跨年倒计时2天🧨',
+                60: '🎉跨年倒计时1天🎉',
+                61: '🎉欢迎来到2026年🎉',
+                78: '_(:з」∠)_话说78这个数字很好看吗或者说很有意思吗？(*´I`*)',
+                100: '🎊 百日庆典！六哥荣耀WIKI与你同行100天 🎊',
+                107: '🧨 除夕快乐！🧨',
+                108: '🎆 新年快乐！ 🎆',
+                124: '✌🏻元宵节快乐，记得吃汤圆哦！✌🏻',
+                151: '👿六哥荣耀是什么几把👿……愚人节快乐(ᵕ—ᴗ—)',
+                181: '劳动光荣，奋斗幸福，劳动节快乐，致每一个努力生活的你 ⌯ᵔᗜᵔ⌯',
+                218: '高考加油！祝莘莘学子全部上岸！',
+                219: '高考加油！祝莘莘学子全部上岸！',
+                220: '高考加油！祝莘莘学子全部上岸！',
+                231: '🐲 端午安康！愿岁岁平安，万事顺遂 🐲',
+                242: '🇨🇳 七一建党节，愿山河无恙，国泰民安 🇨🇳',
+                273: '💪 八一建军节，致敬最可爱的人 💪',
+                313: '👩‍🏫 教师节快乐！感恩遇见，不负教诲 👩‍🏫',
+                324: '🌕 中秋月圆，阖家团圆，佳节安康 🌕',
+                334: '🇨🇳 国庆快乐！盛世华诞，举国同庆 🇨🇳',
+                335: '🎉 举国欢腾，红旗飘扬，祝祖国生日快乐 🎉',
+                336: '🏮 万家灯火，共庆华诞，愿山河锦绣，国泰民安 🏮',
+                337: '🌸 金秋十月，丹桂飘香，祝福祖国繁花似锦 🌸',
+                338: '✨ 五星闪耀，皆为信仰；盛世如愿，中华自强 ✨',
+                339: '🎈 国庆佳节，普天同庆，愿你好运连连，喜气洋洋 🎈',
+                340: '💐 生在红旗下，长在春风里，祝祖国繁荣昌盛，万岁无疆 💐',
+                355: '🍁 重阳佳节，敬老安康，岁岁长乐 🍁',
+                365: '🎂六哥荣耀WIKI一周年纪念🎂'
+            };
             function getChinaHour() { return (new Date().getUTCHours() + 8) % 24; }
             function getGreetingByHour(hour) {
                 const midnightGreetings = ['♪凌晨星星不睡你在熬，月亮都困了你还在嗨？快睡吧，别让黑眼圈“熊”霸你的脸♪','♪夜深人静，正是修仙好时节——但小心肝儿会抗议哦，早点休息吧～♪','♪这个点还在逛WIKI，是真爱没错了！但别忘了给手机也“充个电”，明天见♪','♪夜猫子专属福利：嘘～小声告诉你，熬夜的你已经偷偷赚到一天的“先机”啦♪','♪凌晨的世界很安静，适合思考人生，也适合——睡觉！快闭眼，梦里啥都有♪'];
@@ -243,7 +422,6 @@
             const searchInput = document.getElementById('search-input');
             const allCards = () => document.querySelectorAll('.content-card');
             const emptyResult = document.querySelector('.empty-result');
-            // 添加清空按钮
             const searchContainer = document.querySelector('.search-container');
             if (searchContainer && !document.querySelector('.search-clear')) {
                 const clearBtn = document.createElement('span');
@@ -302,7 +480,6 @@
                     });
                 }
             });
-            // 页面加载时处理hash
             if (window.location.hash) {
                 setTimeout(() => {
                     const targetId = window.location.hash.substring(1);
@@ -343,98 +520,252 @@
             if (event.data && event.data.type === 'closeModal') closeChangelogModal();
         });
 
-        // ==================== 用户认证和头像 ====================
+        // ==================== 每日签到逻辑 ====================
+        function getLocalDateString(date = new Date()) {
+            return date.toLocaleDateString('sv-SE');
+        }
+        function getCheckinRewards(streak) {
+            if(streak === 1) return { candy:3, rainbow:0, active:2 };
+            if(streak === 2) return { candy:5, rainbow:0, active:2 };
+            if(streak === 3) return { candy:7, rainbow:0, active:2 };
+            if(streak === 4) return { candy:9, rainbow:0, active:2 };
+            if(streak === 5) return { candy:10, rainbow:0, active:2 };
+            if(streak === 6) return { candy:12, rainbow:0, active:2 };
+            if(streak === 7) return { candy:15, rainbow:1, active:5 };
+            if(streak >=8 && streak <=14) return { candy:10+Math.floor((streak-8)*2), rainbow:2, active:8 };
+            if(streak === 15) return { candy:30, rainbow:5, active:15 };
+            if(streak >=16 && streak <=29) return { candy:50, rainbow:10, active:10 };
+            if(streak === 30) return { candy:100, rainbow:20, active:50 };
+            return { candy:80, rainbow:15, active:20 };
+        }
+
+        async function performCheckin() {
+            if (!currentUser) {
+                showNotification('请先登录', 'error');
+                return false;
+            }
+            // 获取当前用户统计数据
+            let { data: stats, error: statsErr } = await supabaseClient
+                .from('user_stats')
+                .select('candy_crumbles, rainbow_lollipops, active_points, last_checkin_date, checkin_streak')
+                .eq('user_id', currentUser.id)
+                .single();
+            if (statsErr && statsErr.code === 'PGRST116') {
+                // 未创建记录，初始化
+                const { data: newStats } = await supabaseClient
+                    .from('user_stats')
+                    .insert({ user_id: currentUser.id, candy_crumbles: 100, rainbow_lollipops: 5, active_points: 0, last_checkin_date: null, checkin_streak: 0 })
+                    .select()
+                    .single();
+                stats = newStats;
+            } else if (statsErr) {
+                showNotification('签到失败', 'error');
+                return false;
+            }
+            let today = getLocalDateString();
+            let last = stats.last_checkin_date;
+            let newStreak = 1;
+            if (last) {
+                let yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+                let yesterdayStr = getLocalDateString(yesterday);
+                if (last === yesterdayStr) newStreak = (stats.checkin_streak || 0) + 1;
+                else if (last !== today) newStreak = 1;
+                else {
+                    showNotification('今日已签到', 'warning');
+                    return false;
+                }
+            }
+            let rewards = getCheckinRewards(newStreak);
+            let newCandy = (stats.candy_crumbles || 0) + rewards.candy;
+            let newRainbow = (stats.rainbow_lollipops || 0) + rewards.rainbow;
+            let newActive = (stats.active_points || 0) + rewards.active;
+            let { error: updateErr } = await supabaseClient
+                .from('user_stats')
+                .update({
+                    candy_crumbles: newCandy,
+                    rainbow_lollipops: newRainbow,
+                    active_points: newActive,
+                    last_checkin_date: today,
+                    checkin_streak: newStreak
+                })
+                .eq('user_id', currentUser.id);
+            if (updateErr) {
+                showNotification('签到失败', 'error');
+                return false;
+            }
+            // 更新本地缓存
+            if (userStats) {
+                userStats.candy_crumbles = newCandy;
+                userStats.rainbow_lollipops = newRainbow;
+                userStats.active_points = newActive;
+                userStats.last_checkin_date = today;
+                userStats.checkin_streak = newStreak;
+                localStorage.setItem('cachedUserStats', JSON.stringify(userStats));
+            }
+            showNotification(`签到成功！获得 ${rewards.candy}🍬 ${rewards.rainbow>0?`+${rewards.rainbow}🌈 `:''}+${rewards.active}⚡`, 'success');
+            return true;
+        }
+
+        // ==================== 用户认证和下拉菜单 ====================
         async function refreshUserState() {
             if (!supabaseClient) return;
             try {
                 const { data: { user }, error } = await supabaseClient.auth.getUser();
                 if (error || !user) {
-                    const cachedName = localStorage.getItem('cachedUsername');
-                    if (!cachedName) updateNavbar(null, null);
+                    updateNavbar(null);
                     return;
                 }
                 currentUser = user;
-                const { data: profile } = await supabaseClient.from('user_profiles').select('username, avatar_url, avatar_frame').eq('id', user.id).single();
+                const { data: profile } = await supabaseClient.from('user_profiles').select('username, avatar_url').eq('id', user.id).single();
                 if (profile) {
                     const username = profile.username || user.email.split('@')[0];
                     localStorage.setItem('cachedUsername', username);
                     if (profile.avatar_url) localStorage.setItem('cachedAvatar', profile.avatar_url);
-                    if (profile.avatar_frame) localStorage.setItem('avatarFrame', profile.avatar_frame);
-                    updateNavbar(username, profile.avatar_url, profile.avatar_frame);
+                    updateNavbar(username, profile.avatar_url);
+                    // 加载用户统计用于缓存
+                    const { data: stats } = await supabaseClient.from('user_stats').select('*').eq('user_id', user.id).single();
+                    if (stats) {
+                        userStats = stats;
+                        localStorage.setItem('cachedUserStats', JSON.stringify(stats));
+                    }
                 } else {
-                    updateNavbarFromCache();
+                    updateNavbar(user.email.split('@')[0], null);
                 }
             } catch (err) {
                 console.warn('refreshUserState error:', err);
-                updateNavbarFromCache();
+                updateNavbar(null);
             }
         }
 
         async function initializeUserProfile() {
             try {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                const { data: { user }, error } = await supabaseClient.auth.getUser();
-                if (error || !user) {
-                    updateNavbarFromCache();
-                    return;
-                }
-                currentUser = user;
-                const { data: profile } = await supabaseClient.from('user_profiles').select('username, avatar_url, avatar_frame').eq('id', user.id).single();
-                if (profile) {
-                    const username = profile.username || user.email.split('@')[0];
-                    localStorage.setItem('cachedUsername', username);
-                    if (profile.avatar_url) localStorage.setItem('cachedAvatar', profile.avatar_url);
-                    if (profile.avatar_frame) localStorage.setItem('avatarFrame', profile.avatar_frame);
-                    updateNavbar(username, profile.avatar_url, profile.avatar_frame);
-                } else {
-                    updateNavbarFromCache();
-                }
+                await refreshUserState();
             } catch (error) {
                 console.error('用户初始化失败:', error);
-                updateNavbarFromCache();
+                updateNavbar(null);
             }
         }
-        function updateNavbarFromCache() {
-            const cachedUsername = localStorage.getItem('cachedUsername');
-            const cachedAvatar = localStorage.getItem('cachedAvatar');
-            const avatarFrame = localStorage.getItem('avatarFrame') || 'default';
-            if (cachedUsername) updateNavbar(cachedUsername, cachedAvatar, avatarFrame);
-            else {
-                const userNavSection = document.getElementById('userNavSection');
-                if(userNavSection) userNavSection.innerHTML = `<a href="login-real.html" class="nav-link">登录/注册</a>`;
-            }
-        }
-        function updateNavbar(username, avatarUrl, avatarFrame = 'default') {
+
+        function updateNavbar(username, avatarUrl) {
             const userNavSection = document.getElementById('userNavSection');
             if (!userNavSection) return;
             if (username) {
                 const safeUsername = escapeHtml(username);
                 const avatarLetter = safeUsername.charAt(0).toUpperCase();
-                let avatarHtml = `<div class="user-avatar-with-frame" onclick="window.location.href='profile.html'" title="前往个人主页">
-                    <div class="user-avatar-frame ${avatarFrame === 'horse' ? 'horse-frame' : 'default-frame'}"></div>
-                    <div class="user-avatar-img">`;
+                let avatarHtml = '';
                 if (avatarUrl) {
-                    avatarHtml += `<img src="${escapeHtml(avatarUrl)}" alt="${safeUsername}" onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML='<div class=\\'avatar-placeholder\\'>${avatarLetter}</div>';">`;
+                    avatarHtml = `<img src="${escapeHtml(avatarUrl)}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" onerror="this.onerror=null; this.parentNode.innerHTML='<div style=\\'width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;\\'>${avatarLetter}</div>';">`;
                 } else {
-                    avatarHtml += `<div class="avatar-placeholder">${avatarLetter}</div>`;
+                    avatarHtml = `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${avatarLetter}</div>`;
                 }
-                avatarHtml += `</div></div>`;
-                userNavSection.innerHTML = `<div class="user-info-container">${avatarHtml}<span class="username">${safeUsername}</span><button class="logout-btn" onclick="logout()" title="退出登录"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
+                userNavSection.innerHTML = `
+                    <div class="user-menu-trigger" id="userMenuTrigger">
+                        ${avatarHtml}
+                        <span>${safeUsername}</span>
+                        <i class="fas fa-chevron-down" style="font-size: 0.8rem;"></i>
+                    </div>
+                `;
+                // 绑定点击事件显示下拉菜单
+                const trigger = document.getElementById('userMenuTrigger');
+                const dropdown = document.getElementById('userDropdown');
+                if (trigger && dropdown) {
+                    trigger.onclick = (e) => {
+                        e.stopPropagation();
+                        dropdown.classList.toggle('show');
+                    };
+                    // 点击其他地方关闭
+                    document.addEventListener('click', function closeMenu(e) {
+                        if (!trigger.contains(e.target) && !dropdown.contains(e.target)) {
+                            dropdown.classList.remove('show');
+                        }
+                    });
+                }
             } else {
-                userNavSection.innerHTML = `<a href="login-real.html" class="nav-link">登录/注册</a>`;
+                userNavSection.innerHTML = `<a href="login-real.html" class="nav-link" id="loginLink">登录/注册</a>`;
+                const dropdown = document.getElementById('userDropdown');
+                if (dropdown) dropdown.classList.remove('show');
             }
         }
-        async function logout() {
-            if (!confirm('确定要退出登录吗？')) return;
-            if (supabaseClient) await supabaseClient.auth.signOut();
-            localStorage.removeItem('cachedUsername');
-            localStorage.removeItem('cachedAvatar');
-            localStorage.removeItem('avatarFrame');
-            localStorage.removeItem('cachedUserProfile');
-            localStorage.removeItem('cachedUserStats');
-            updateNavbar(null, null);
-            showNotification('已退出登录', 'success');
-            setTimeout(() => { window.location.href = 'index.html'; }, 500);
+
+        // 签到按钮处理
+        function bindUserMenuActions() {
+            const signinItem = document.getElementById('dailySigninItem');
+            const logoutItem = document.getElementById('logoutItem');
+            const signinModal = document.getElementById('signinModal');
+            const logoutModal = document.getElementById('logoutModal');
+            const confirmSignin = document.getElementById('confirmSigninBtn');
+            const cancelSignin = document.getElementById('cancelSigninBtn');
+            const confirmLogout = document.getElementById('confirmLogoutBtn');
+            const cancelLogout = document.getElementById('cancelLogoutBtn');
+
+            if (signinItem) {
+                signinItem.onclick = () => {
+                    document.getElementById('userDropdown').classList.remove('show');
+                    if (!currentUser) {
+                        showNotification('请先登录', 'error');
+                        return;
+                    }
+                    // 显示签到确认框，并可显示今日奖励预览
+                    const rewardPreview = getCheckinRewards((userStats?.checkin_streak || 0) + 1);
+                    const previewText = `签到可获得 🍬${rewardPreview.candy} ${rewardPreview.rainbow>0?`🌈+${rewardPreview.rainbow} `:''}⚡+${rewardPreview.active}`;
+                    document.getElementById('signinRewardPreview').innerHTML = previewText;
+                    signinModal.classList.add('active');
+                };
+            }
+            if (confirmSignin) {
+                confirmSignin.onclick = async () => {
+                    signinModal.classList.remove('active');
+                    await performCheckin();
+                };
+            }
+            if (cancelSignin) {
+                cancelSignin.onclick = () => signinModal.classList.remove('active');
+            }
+            if (logoutItem) {
+                logoutItem.onclick = () => {
+                    document.getElementById('userDropdown').classList.remove('show');
+                    if (!currentUser) {
+                        showNotification('未登录', 'error');
+                        return;
+                    }
+                    logoutModal.classList.add('active');
+                };
+            }
+            if (confirmLogout) {
+                confirmLogout.onclick = async () => {
+                    logoutModal.classList.remove('active');
+                    if (supabaseClient) await supabaseClient.auth.signOut();
+                    localStorage.removeItem('cachedUsername');
+                    localStorage.removeItem('cachedAvatar');
+                    localStorage.removeItem('cachedUserProfile');
+                    localStorage.removeItem('cachedUserStats');
+                    currentUser = null;
+                    userStats = null;
+                    updateNavbar(null);
+                    showNotification('已退出登录', 'success');
+                    setTimeout(() => window.location.reload(), 500);
+                };
+            }
+            if (cancelLogout) {
+                cancelLogout.onclick = () => logoutModal.classList.remove('active');
+            }
+            // 点击模态框背景关闭
+            document.querySelectorAll('.modal-mask').forEach(mask => {
+                mask.addEventListener('click', (e) => {
+                    if (e.target === mask) mask.classList.remove('active');
+                });
+            });
+        }
+
+        // 监听登录窗口消息
+        function setupLoginMessageListener() {
+            window.addEventListener('message', (event) => {
+                if (event.data === 'login_success') {
+                    refreshUserState();
+                    showNotification('登录成功', 'success');
+                }
+            });
         }
 
         // ==================== 动态渲染函数 ====================
@@ -480,7 +811,6 @@
                 card.setAttribute('data-type', typeLabel);
                 card.setAttribute('data-name', item.name);
                 card.setAttribute('data-desc', item.description || '');
-                // 键盘访问支持
                 card.setAttribute('role', 'button');
                 card.setAttribute('tabindex', '0');
                 card.addEventListener('keydown', (e) => {
@@ -503,8 +833,8 @@
         // ==================== 跨页签同步 ====================
         function setupCrossTabSync() {
             window.addEventListener('storage', (e) => {
-                if (e.key === 'cachedUsername' || e.key === 'cachedAvatar' || e.key === 'avatarFrame') {
-                    updateNavbarFromCache();
+                if (e.key === 'cachedUsername' || e.key === 'cachedAvatar') {
+                    refreshUserState();
                 }
                 if (e.key === 'forceRefreshUserState') {
                     refreshUserState();
@@ -520,36 +850,18 @@
 
         // ==================== 页面初始化 ====================
         async function initializePage() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('login') === 'success') {
-                const cleanUrl = window.location.href.split('?')[0];
-                history.replaceState(null, '', cleanUrl);
-                setTimeout(async () => {
-                    if (supabaseClient) {
-                        await initializeUserProfile();
-                        showNotification('登录成功！', 'success');
-                    } else {
-                        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                        await initializeUserProfile();
-                        showNotification('登录成功！', 'success');
-                    }
-                }, 200);
-            }
             document.getElementById('year').textContent = new Date().getFullYear();
             initializeSiteAge();
             initializeSearch();
             initializeNavigation();
-            updateNavbarFromCache();
-            if (!supabaseClient) {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            }
+            await initializeUserProfile();
             await loadAndRenderAll();
             setupCrossTabSync();
-            await refreshUserState();
+            setupLoginMessageListener();
+            bindUserMenuActions();
             setTimeout(() => { document.getElementById('global-loading').style.display = 'none'; }, 800);
         }
         document.addEventListener('DOMContentLoaded', function() {
-            updateNavbarFromCache();
             initializePage();
         });
     </script>
