@@ -146,16 +146,17 @@ body.modal-open {
     border: 1px solid var(--special-color);
 }
 
-/* ========== 用户区域与下拉菜单（修正定位） ========== */
+/* ========== 用户区域与下拉菜单 - 修复图层遮挡 ========== */
 .user-nav-section {
     position: relative !important;
+    z-index: 10020 !important;      /* 远高于遮罩层 10002 */
     margin-left: auto;
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-/* 下拉菜单容器（修复层级和显隐） */
+/* 下拉菜单容器 */
 .user-dropdown {
     position: absolute !important;
     top: calc(100% + 8px) !important;
@@ -166,13 +167,13 @@ body.modal-open {
     border-radius: 12px;
     min-width: 160px;
     overflow: hidden;
-    z-index: 10010 !important;       /* 确保在最上层 */
+    z-index: 10030 !important;      /* 确保比父容器更高 */
     opacity: 0;
     visibility: hidden;
     transform: translateY(-10px);
     transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
     box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-    display: block;                  /* 保证块级，由 opacity/visibility 控制显隐 */
+    display: block;
 }
 
 .user-dropdown.show {
@@ -229,7 +230,6 @@ body.modal-open {
     transition: all var(--transition-normal);
     flex-shrink: 0;
 }
-/* ... 其余原有头像相关样式不变 ... */
 .user-avatar-frame {
     position: absolute;
     top: -4px;
@@ -573,6 +573,64 @@ footer {
 }
 
 /* ========== 模态框样式 ========== */
+.modal-mask {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.2s;
+}
+.modal-mask.active {
+    opacity: 1;
+    visibility: visible;
+}
+.modal-container {
+    background: var(--card-bg);
+    border-radius: 12px;
+    max-width: 320px;
+    width: 90%;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    text-align: center;
+    box-shadow: 0 20px 30px rgba(0,0,0,0.5);
+}
+.modal-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 20px;
+}
+.modal-btn {
+    padding: 6px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    border: none;
+    font-weight: bold;
+}
+.modal-btn-cancel {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+}
+.modal-btn-confirm {
+    background: var(--text-highlight);
+    color: var(--bg);
+}
+.modal-btn-danger {
+    background: #f87171;
+    color: white;
+}
+
+/* ========== 更新日志模态框（特殊） ========== */
 .modal {
     position: fixed;
     top: 0;
@@ -681,6 +739,8 @@ footer {
     30% { transform: translateY(10px) scale(1.02); opacity: 0.8; }
     100% { transform: translateY(-100px) scale(0.9); opacity: 0; }
 }
+
+/* ========== 通知横幅 ========== */
 .notification {
     position: fixed;
     top: 70px;
@@ -713,7 +773,7 @@ footer {
     }
 }
 
-/* ========== 侧滑菜单样式（从原 index.html 迁移） ========== */
+/* ========== 侧滑菜单样式 ========== */
 .menu-overlay {
     position: fixed;
     top: 0;
@@ -825,18 +885,6 @@ footer {
     color: var(--text-secondary);
     text-align: center;
 }
-.menu-close-btn {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 1.5rem;
-    cursor: pointer;
-    display: none;
-}
-/* 顶部导航栏改造（菜单按钮） */
 .top-nav {
     justify-content: space-between;
 }
@@ -859,7 +907,6 @@ footer {
     flex: 1;
     text-align: center;
 }
-/* 内容区域切换 */
 .content-section {
     display: none;
 }
