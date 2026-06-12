@@ -7,13 +7,16 @@
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 外链 CSS -->
     <link rel="stylesheet" href="./css/friend.css">
 </head>
 <body>
 
 <nav class="top-nav">
     <div class="nav-title">六哥荣耀WIKI</div>
-    <div class="user-nav-section" id="userNavSection"></div>
+    <div class="user-nav-section" id="userNavSection">
+        <a href="login-real.html" class="nav-link" style="color:var(--text-highlight);text-decoration:none;">登录/注册</a>
+    </div>
 </nav>
 
 <div class="user-dropdown" id="userDropdown">
@@ -47,7 +50,7 @@
 
 <div id="notification" class="notification"></div>
 
-<div class="friends-dashboard" id="dashboard" style="display: none;">
+<div class="friends-dashboard" id="dashboard">
     <div class="friends-card">
         <div class="card-header"><i class="fas fa-users"></i> 我的好友 <span id="friendCountBadge" class="badge">0</span></div>
         <div class="card-content" id="friendsList">加载中...</div>
@@ -73,354 +76,348 @@
 </div>
 
 <script>
-// ==================== 辅助函数 ====================
-function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
-function showNotification(msg, type='info') {
-    let n = document.getElementById('notification');
-    if(!n) return;
-    n.textContent = msg;
-    n.style.background = type==='error'?'#f87171':type==='success'?'#10b981':'#3b82f6';
-    n.classList.add('show');
-    setTimeout(()=>n.classList.remove('show'), 3000);
-}
-function openModal(id) { let m = document.getElementById(id); if(m) m.classList.add('active'); }
-function closeModal(id) { let m = document.getElementById(id); if(m) m.classList.remove('active'); }
+// 所有代码使用 IIFE 避免全局污染，但需要将函数挂载到 window 供 onclick 调用
+(function() {
+    const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    let currentUser = null;
+    let currentUserId = null;
+    let userStats = null;
 
-// ==================== Supabase 客户端 ====================
-const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-let supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let currentUser = null, userStats = null, currentUserId = null;
-
-// ==================== 在线状态 ====================
-async function updateLastSeen() {
-    if(!currentUserId) return;
-    await supabase.from('user_profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', currentUserId);
-}
-function formatLastSeen(lastSeen) {
-    if(!lastSeen) return '<span class="offline">从未上线</span>';
-    let last = new Date(lastSeen);
-    let now = new Date();
-    let diffSec = Math.floor((now - last) / 1000);
-    if(diffSec < 300) return '<span class="online">在线</span>';
-    let diffMin = Math.floor(diffSec / 60);
-    if(diffMin < 60) return `<span class="offline">${diffMin}分钟前在线</span>`;
-    let diffHour = Math.floor(diffMin / 60);
-    if(diffHour < 24) return `<span class="offline">${diffHour}小时前在线</span>`;
-    let diffDay = Math.floor(diffHour / 24);
-    return `<span class="offline">${diffDay}天前在线</span>`;
-}
-
-// ==================== 获取用户资料 ====================
-async function getUserProfile(userId) {
-    let { data, error } = await supabase.from('user_profiles').select('username, avatar_url, last_seen_at').eq('id', userId).single();
-    if(error) return { username: '未知用户', avatar_url: null, last_seen_at: null };
-    return { username: data.username || '用户', avatar_url: data.avatar_url, last_seen_at: data.last_seen_at };
-}
-
-// ==================== 好友数据加载 ====================
-async function loadFriendsData() {
-    if(!currentUserId) return;
-    try {
-        let { data: relations, error } = await supabase
-            .from('friends')
-            .select('*')
-            .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
-        if(error) throw error;
-
-        let accepted = relations.filter(r => r.status === 'accepted');
-        let friendIds = accepted.map(r => r.requester_id === currentUserId ? r.addressee_id : r.requester_id);
-        let friendsData = await Promise.all(friendIds.map(async id => {
-            let profile = await getUserProfile(id);
-            return { id, username: profile.username, avatar_url: profile.avatar_url, last_seen_at: profile.last_seen_at };
-        }));
-        friendsData.sort((a,b) => {
-            let aOnline = a.last_seen_at && (new Date() - new Date(a.last_seen_at) < 300000);
-            let bOnline = b.last_seen_at && (new Date() - new Date(b.last_seen_at) < 300000);
-            if(aOnline && !bOnline) return -1;
-            if(!aOnline && bOnline) return 1;
-            return 0;
-        });
-        let friendsHtml = friendsData.length ? friendsData.map(f => `
-            <div class="friend-item">
-                <div class="friend-info">
-                    <div class="friend-avatar">${f.avatar_url ? `<img src="${f.avatar_url}">` : f.username.charAt(0).toUpperCase()}</div>
-                    <div class="friend-details">
-                        <div class="friend-name">${escapeHtml(f.username)}</div>
-                        <div class="online-status">${formatLastSeen(f.last_seen_at)}</div>
-                    </div>
-                </div>
-                <div class="card-actions">
-                    <button onclick="removeFriend('${f.id}')"><i class="fas fa-user-minus"></i> 删除</button>
-                </div>
-            </div>
-        `).join('') : '<div class="empty-tip">暂无好友，去添加吧~</div>';
-        document.getElementById('friendsList').innerHTML = friendsHtml;
-        document.getElementById('friendCountBadge').innerText = friendsData.length;
-
-        let incoming = relations.filter(r => r.addressee_id === currentUserId && r.status === 'pending');
-        let incomingWithUser = await Promise.all(incoming.map(async r => {
-            let profile = await getUserProfile(r.requester_id);
-            return { id: r.id, username: profile.username, avatar_url: profile.avatar_url };
-        }));
-        let pendingHtml = incomingWithUser.length ? incomingWithUser.map(req => `
-            <div class="friend-item">
-                <div class="friend-info">
-                    <div class="friend-avatar">${req.avatar_url ? `<img src="${req.avatar_url}">` : req.username.charAt(0).toUpperCase()}</div>
-                    <div class="friend-name">${escapeHtml(req.username)}</div>
-                </div>
-                <div class="card-actions">
-                    <button class="btn-success" onclick="respondRequest('${req.id}', 'accept')"><i class="fas fa-check"></i> 接受</button>
-                    <button class="btn-outline" onclick="respondRequest('${req.id}', 'reject')"><i class="fas fa-times"></i> 拒绝</button>
-                </div>
-            </div>
-        `).join('') : '<div class="empty-tip">暂无好友请求</div>';
-        document.getElementById('pendingRequests').innerHTML = pendingHtml;
-        document.getElementById('requestBadge').innerText = incomingWithUser.length;
-
-        let sent = relations.filter(r => r.requester_id === currentUserId && r.status === 'pending');
-        let sentWithUser = await Promise.all(sent.map(async r => {
-            let profile = await getUserProfile(r.addressee_id);
-            return { id: r.id, username: profile.username, avatar_url: profile.avatar_url };
-        }));
-        let sentHtml = sentWithUser.length ? sentWithUser.map(req => `
-            <div class="friend-item">
-                <div class="friend-info">
-                    <div class="friend-avatar">${req.avatar_url ? `<img src="${req.avatar_url}">` : req.username.charAt(0).toUpperCase()}</div>
-                    <div class="friend-name">${escapeHtml(req.username)}</div>
-                </div>
-                <div class="card-actions">
-                    <button onclick="cancelSentRequest('${req.id}')"><i class="fas fa-trash-alt"></i> 撤销</button>
-                </div>
-            </div>
-        `).join('') : '<div class="empty-tip">未发出任何请求</div>';
-        document.getElementById('sentRequests').innerHTML = sentHtml;
-    } catch(err) {
-        console.error(err);
-        showNotification(err.message, 'error');
+    // 辅助函数
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+    function showNotification(msg, type='info') {
+        const n = document.getElementById('notification');
+        if(!n) return;
+        n.textContent = msg;
+        n.style.background = type==='error'?'#f87171':type==='success'?'#10b981':'#3b82f6';
+        n.classList.add('show');
+        setTimeout(()=>n.classList.remove('show'), 3000);
     }
-}
+    function openModal(id) { const m = document.getElementById(id); if(m) m.classList.add('active'); }
+    function closeModal(id) { const m = document.getElementById(id); if(m) m.classList.remove('active'); }
 
-// ==================== 好友操作 ====================
-window.removeFriend = async (friendId) => {
-    if(!confirm('确定删除这位好友吗？')) return;
-    try {
-        await supabase.from('friends').delete()
-            .or(`(requester_id.eq.${currentUserId} AND addressee_id.eq.${friendId}),(requester_id.eq.${friendId} AND addressee_id.eq.${currentUserId})`)
-            .eq('status', 'accepted');
-        showNotification('已删除好友', 'success');
-        loadFriendsData();
-    } catch(err) { showNotification('删除失败', 'error'); }
-};
-window.respondRequest = async (reqId, action) => {
-    try {
-        if(action === 'accept') {
-            await supabase.from('friends').update({ status: 'accepted', updated_at: new Date() }).eq('id', reqId);
-            showNotification('已添加好友', 'success');
-        } else {
-            await supabase.from('friends').delete().eq('id', reqId);
-            showNotification('已拒绝请求', 'success');
+    // 格式化在线时间
+    function formatLastSeen(lastSeen) {
+        if(!lastSeen) return '<span class="offline">从未上线</span>';
+        const last = new Date(lastSeen);
+        const now = new Date();
+        const diffSec = Math.floor((now - last) / 1000);
+        if(diffSec < 300) return '<span class="online">在线</span>';
+        const diffMin = Math.floor(diffSec / 60);
+        if(diffMin < 60) return `<span class="offline">${diffMin}分钟前在线</span>`;
+        const diffHour = Math.floor(diffMin / 60);
+        if(diffHour < 24) return `<span class="offline">${diffHour}小时前在线</span>`;
+        const diffDay = Math.floor(diffHour / 24);
+        return `<span class="offline">${diffDay}天前在线</span>`;
+    }
+
+    // 获取用户资料（带缓存优化可选）
+    async function getUserProfile(userId) {
+        try {
+            const { data, error } = await supabase.from('user_profiles').select('username, avatar_url, last_seen_at').eq('id', userId).single();
+            if(error) throw error;
+            return { username: data.username || '用户', avatar_url: data.avatar_url, last_seen_at: data.last_seen_at };
+        } catch(e) {
+            return { username: '未知用户', avatar_url: null, last_seen_at: null };
         }
-        loadFriendsData();
-    } catch(err) { showNotification('操作失败', 'error'); }
-};
-window.cancelSentRequest = async (reqId) => {
-    try {
-        await supabase.from('friends').delete().eq('id', reqId);
-        showNotification('已撤销请求', 'success');
-        loadFriendsData();
-    } catch(err) { showNotification('撤销失败', 'error'); }
-};
+    }
 
-// ==================== 搜索好友 ====================
-let searchTimeout;
-document.getElementById('searchBtn').onclick = () => performSearch();
-document.getElementById('searchInput').addEventListener('input', () => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(performSearch, 400);
-});
-async function performSearch() {
-    let keyword = document.getElementById('searchInput').value.trim();
-    let resultsDiv = document.getElementById('searchResults');
-    if(!keyword) { resultsDiv.innerHTML = ''; return; }
-    try {
-        let { data: users, error } = await supabase
-            .from('user_profiles')
-            .select('id, username, avatar_url')
-            .ilike('username', `%${keyword}%`)
-            .limit(10);
-        if(error) throw error;
-        let filtered = users.filter(u => u.id !== currentUserId);
-        if(filtered.length===0) { resultsDiv.innerHTML = '<div class="empty-tip">未找到其他用户</div>'; return; }
-        let { data: existing } = await supabase.from('friends').select('requester_id, addressee_id, status')
-            .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
-        let existingMap = new Map();
-        existing?.forEach(rel => {
-            let otherId = rel.requester_id === currentUserId ? rel.addressee_id : rel.requester_id;
-            existingMap.set(otherId, rel.status);
-        });
-        resultsDiv.innerHTML = filtered.map(u => {
-            let actionHtml = '';
-            let status = existingMap.get(u.id);
-            if(!status) actionHtml = `<button class="btn-success" onclick="sendFriendRequest('${u.id}')"><i class="fas fa-user-plus"></i> 添加</button>`;
-            else if(status === 'pending') {
-                let isSentByMe = existing?.find(r => r.requester_id === currentUserId && r.addressee_id === u.id);
-                actionHtml = isSentByMe ? '<span>等待验证</span>' : '<span>请求已发送给您</span>';
-            } else actionHtml = '<span>已是好友</span>';
-            return `
+    // 加载好友数据
+    async function loadFriendsData() {
+        if(!currentUserId) return;
+        try {
+            const { data: relations, error } = await supabase
+                .from('friends')
+                .select('*')
+                .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
+            if(error) throw error;
+
+            // 好友列表
+            const accepted = relations.filter(r => r.status === 'accepted');
+            const friendIds = accepted.map(r => r.requester_id === currentUserId ? r.addressee_id : r.requester_id);
+            const friendsData = await Promise.all(friendIds.map(async id => {
+                const profile = await getUserProfile(id);
+                return { id, username: profile.username, avatar_url: profile.avatar_url, last_seen_at: profile.last_seen_at };
+            }));
+            friendsData.sort((a,b) => {
+                const aOnline = a.last_seen_at && (Date.now() - new Date(a.last_seen_at) < 300000);
+                const bOnline = b.last_seen_at && (Date.now() - new Date(b.last_seen_at) < 300000);
+                if(aOnline && !bOnline) return -1;
+                if(!aOnline && bOnline) return 1;
+                return 0;
+            });
+            const friendsHtml = friendsData.length ? friendsData.map(f => `
                 <div class="friend-item">
                     <div class="friend-info">
-                        <div class="friend-avatar">${u.avatar_url ? `<img src="${u.avatar_url}">` : u.username.charAt(0).toUpperCase()}</div>
-                        <div class="friend-name">${escapeHtml(u.username)}</div>
+                        <div class="friend-avatar">${f.avatar_url ? `<img src="${f.avatar_url}">` : f.username.charAt(0).toUpperCase()}</div>
+                        <div class="friend-details">
+                            <div class="friend-name">${escapeHtml(f.username)}</div>
+                            <div class="online-status">${formatLastSeen(f.last_seen_at)}</div>
+                        </div>
                     </div>
-                    <div>${actionHtml}</div>
+                    <div class="card-actions">
+                        <button onclick="window.removeFriend('${f.id}')"><i class="fas fa-user-minus"></i> 删除</button>
+                    </div>
                 </div>
-            `;
-        }).join('');
-    } catch(err) { showNotification('搜索失败', 'error'); }
-}
-window.sendFriendRequest = async (targetId) => {
-    try {
-        await supabase.from('friends').insert({ requester_id: currentUserId, addressee_id: targetId, status: 'pending' });
-        showNotification('好友请求已发送', 'success');
-        performSearch();
-        loadFriendsData();
-    } catch(err) { showNotification('发送失败', 'error'); }
-};
+            `).join('') : '<div class="empty-tip">暂无好友，去添加吧~</div>';
+            document.getElementById('friendsList').innerHTML = friendsHtml;
+            document.getElementById('friendCountBadge').innerText = friendsData.length;
 
-// ==================== 签到逻辑 ====================
-async function loadUserStats() {
-    let { data, error } = await supabase.from('user_stats').select('*').eq('user_id', currentUserId).single();
-    if(error && error.code === 'PGRST116') {
-        await supabase.from('user_stats').insert({ user_id: currentUserId, candy_crumbles:100, rainbow_lollipops:5, active_points:0 });
-        return loadUserStats();
-    }
-    userStats = data;
-}
-function getCheckinRewards(streak) {
-    if(streak===1) return { candy:3, rainbow:0, active:2 };
-    if(streak===2) return { candy:5, rainbow:0, active:2 };
-    if(streak===3) return { candy:7, rainbow:0, active:2 };
-    if(streak===4) return { candy:9, rainbow:0, active:2 };
-    if(streak===5) return { candy:10, rainbow:0, active:2 };
-    if(streak===6) return { candy:12, rainbow:0, active:2 };
-    if(streak===7) return { candy:15, rainbow:1, active:5 };
-    if(streak>=8 && streak<=14) return { candy:10+Math.floor((streak-8)*2), rainbow:2, active:8 };
-    if(streak===15) return { candy:30, rainbow:5, active:15 };
-    if(streak>=16 && streak<=29) return { candy:50, rainbow:10, active:10 };
-    if(streak===30) return { candy:100, rainbow:20, active:50 };
-    return { candy:80, rainbow:15, active:20 };
-}
-async function performCheckin() {
-    if(!currentUser) { showNotification('请先登录', 'error'); return false; }
-    let today = new Date().toLocaleDateString('sv-SE');
-    let last = userStats.last_checkin_date;
-    if(last === today) { showNotification('您今天已经签到过了，明天再来吧ღ( ´･ᴗ･ )比心', 'warning'); return false; }
-    let newStreak = (last && new Date(last).getDate() === new Date(Date.now()-86400000).getDate()) ? (userStats.checkin_streak||0)+1 : 1;
-    let rewards = getCheckinRewards(newStreak);
-    let newCandy = (userStats.candy_crumbles||0) + rewards.candy;
-    let newRainbow = (userStats.rainbow_lollipops||0) + rewards.rainbow;
-    let newActive = (userStats.active_points||0) + rewards.active;
-    let { error } = await supabase.from('user_stats').update({
-        candy_crumbles: newCandy, rainbow_lollipops: newRainbow, active_points: newActive,
-        last_checkin_date: today, checkin_streak: newStreak
-    }).eq('user_id', currentUserId);
-    if(error) { showNotification('签到失败', 'error'); return false; }
-    userStats = {...userStats, candy_crumbles:newCandy, rainbow_lollipops:newRainbow, active_points:newActive, last_checkin_date:today, checkin_streak:newStreak};
-    showNotification(`签到成功！获得 ${rewards.candy}🍬 ${rewards.rainbow>0?`🌈+${rewards.rainbow} `:''}+${rewards.active}⚡`, 'success');
-    return true;
-}
+            // 待接收请求
+            const incoming = relations.filter(r => r.addressee_id === currentUserId && r.status === 'pending');
+            const incomingWithUser = await Promise.all(incoming.map(async r => {
+                const profile = await getUserProfile(r.requester_id);
+                return { id: r.id, username: profile.username, avatar_url: profile.avatar_url };
+            }));
+            const pendingHtml = incomingWithUser.length ? incomingWithUser.map(req => `
+                <div class="friend-item">
+                    <div class="friend-info">
+                        <div class="friend-avatar">${req.avatar_url ? `<img src="${req.avatar_url}">` : req.username.charAt(0).toUpperCase()}</div>
+                        <div class="friend-name">${escapeHtml(req.username)}</div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-success" onclick="window.respondRequest('${req.id}', 'accept')"><i class="fas fa-check"></i> 接受</button>
+                        <button class="btn-outline" onclick="window.respondRequest('${req.id}', 'reject')"><i class="fas fa-times"></i> 拒绝</button>
+                    </div>
+                </div>
+            `).join('') : '<div class="empty-tip">暂无好友请求</div>';
+            document.getElementById('pendingRequests').innerHTML = pendingHtml;
+            document.getElementById('requestBadge').innerText = incomingWithUser.length;
 
-// ==================== 初始化认证 ====================
-async function getCurrentUser() {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error || !user) {
-        // 尝试刷新会话
-        const { data: sessionData, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError || !sessionData.user) return null;
-        return sessionData.user;
-    }
-    return user;
-}
+            // 我发出的请求
+            const sent = relations.filter(r => r.requester_id === currentUserId && r.status === 'pending');
+            const sentWithUser = await Promise.all(sent.map(async r => {
+                const profile = await getUserProfile(r.addressee_id);
+                return { id: r.id, username: profile.username, avatar_url: profile.avatar_url };
+            }));
+            const sentHtml = sentWithUser.length ? sentWithUser.map(req => `
+                <div class="friend-item">
+                    <div class="friend-info">
+                        <div class="friend-avatar">${req.avatar_url ? `<img src="${req.avatar_url}">` : req.username.charAt(0).toUpperCase()}</div>
+                        <div class="friend-name">${escapeHtml(req.username)}</div>
+                    </div>
+                    <div class="card-actions">
+                        <button onclick="window.cancelSentRequest('${req.id}')"><i class="fas fa-trash-alt"></i> 撤销</button>
+                    </div>
+                </div>
+            `).join('') : '<div class="empty-tip">未发出任何请求</div>';
+            document.getElementById('sentRequests').innerHTML = sentHtml;
 
-async function init() {
-    const dashboard = document.getElementById('dashboard');
-    const userNav = document.getElementById('userNavSection');
-    dashboard.style.display = 'none';
-    userNav.innerHTML = '<div style="color:var(--text-secondary);">检查登录状态...</div>';
-
-    const user = await getCurrentUser();
-    if (!user) {
-        userNav.innerHTML = '<a href="login-real.html" class="nav-link">登录/注册</a>';
-        return;
-    }
-
-    currentUser = user;
-    currentUserId = user.id;
-    await updateLastSeen();
-    await loadUserStats();
-
-    let { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('username, avatar_url')
-        .eq('id', currentUserId)
-        .single();
-    if (profileError && profileError.code === 'PGRST116') {
-        await supabase.from('user_profiles').insert({
-            id: currentUserId,
-            username: currentUser.email.split('@')[0],
-            bio: '',
-            role: 'user'
-        });
-        profile = { username: currentUser.email.split('@')[0], avatar_url: null };
-    }
-
-    const username = profile.username || currentUser.email.split('@')[0];
-    const avatarUrl = profile.avatar_url;
-    const avatarLetter = username.charAt(0).toUpperCase();
-    const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" onerror="this.onerror=null;this.parentNode.innerHTML='<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${avatarLetter}</div>';">` : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${avatarLetter}</div>`;
-    userNav.innerHTML = `<div class="user-menu-trigger" id="userMenuTrigger">${avatarHtml}<span>${escapeHtml(username)}</span><i class="fas fa-chevron-down"></i></div>`;
-
-    // 绑定下拉菜单事件
-    const dropdown = document.getElementById('userDropdown');
-    const trigger = document.getElementById('userMenuTrigger');
-    if(trigger) {
-        trigger.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('show'); };
-        if(!window._closeMenuBound) {
-            document.addEventListener('click', (e) => {
-                if(!trigger.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.remove('show');
-            });
-            window.addEventListener('scroll', () => dropdown.classList.remove('show'));
-            window.addEventListener('resize', () => dropdown.classList.remove('show'));
-            window._closeMenuBound = true;
+        } catch(err) {
+            console.error(err);
+            showNotification(err.message, 'error');
         }
     }
-    document.getElementById('dailySigninItem').onclick = () => {
-        dropdown.classList.remove('show');
-        openModal('signinModal');
-        let rewardPreview = getCheckinRewards((userStats?.checkin_streak||0)+1);
-        document.getElementById('signinRewardPreview').innerHTML = `签到可获得 🍬${rewardPreview.candy} ${rewardPreview.rainbow>0?`🌈+${rewardPreview.rainbow} `:''}⚡+${rewardPreview.active}`;
-    };
-    document.getElementById('logoutItem').onclick = () => {
-        dropdown.classList.remove('show');
-        openModal('logoutModal');
-    };
-    document.getElementById('confirmSigninBtn').onclick = async () => { closeModal('signinModal'); await performCheckin(); };
-    document.getElementById('cancelSigninBtn').onclick = () => closeModal('signinModal');
-    document.getElementById('confirmLogoutBtn').onclick = async () => {
-        closeModal('logoutModal');
-        await supabase.auth.signOut();
-        window.location.href = 'index.html';
-    };
-    document.getElementById('cancelLogoutBtn').onclick = () => closeModal('logoutModal');
 
-    await loadFriendsData();
-    dashboard.style.display = 'grid';
-}
-init();
+    // 好友操作（挂载到 window 供 onclick 调用）
+    window.removeFriend = async (friendId) => {
+        if(!confirm('确定删除这位好友吗？')) return;
+        try {
+            await supabase.from('friends').delete()
+                .or(`(requester_id.eq.${currentUserId} AND addressee_id.eq.${friendId}),(requester_id.eq.${friendId} AND addressee_id.eq.${currentUserId})`)
+                .eq('status', 'accepted');
+            showNotification('已删除好友', 'success');
+            loadFriendsData();
+        } catch(err) { showNotification('删除失败', 'error'); }
+    };
+    window.respondRequest = async (reqId, action) => {
+        try {
+            if(action === 'accept') {
+                await supabase.from('friends').update({ status: 'accepted', updated_at: new Date() }).eq('id', reqId);
+                showNotification('已添加好友', 'success');
+            } else {
+                await supabase.from('friends').delete().eq('id', reqId);
+                showNotification('已拒绝请求', 'success');
+            }
+            loadFriendsData();
+        } catch(err) { showNotification('操作失败', 'error'); }
+    };
+    window.cancelSentRequest = async (reqId) => {
+        try {
+            await supabase.from('friends').delete().eq('id', reqId);
+            showNotification('已撤销请求', 'success');
+            loadFriendsData();
+        } catch(err) { showNotification('撤销失败', 'error'); }
+    };
+
+    // 搜索添加好友
+    let searchTimeout;
+    async function performSearch() {
+        const keyword = document.getElementById('searchInput').value.trim();
+        const resultsDiv = document.getElementById('searchResults');
+        if(!keyword) { resultsDiv.innerHTML = ''; return; }
+        try {
+            const { data: users, error } = await supabase
+                .from('user_profiles')
+                .select('id, username, avatar_url')
+                .ilike('username', `%${keyword}%`)
+                .limit(10);
+            if(error) throw error;
+            const filtered = users.filter(u => u.id !== currentUserId);
+            if(filtered.length === 0) { resultsDiv.innerHTML = '<div class="empty-tip">未找到其他用户</div>'; return; }
+            const { data: existing } = await supabase.from('friends').select('requester_id, addressee_id, status')
+                .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
+            const existingMap = new Map();
+            existing?.forEach(rel => {
+                const otherId = rel.requester_id === currentUserId ? rel.addressee_id : rel.requester_id;
+                existingMap.set(otherId, rel.status);
+            });
+            resultsDiv.innerHTML = filtered.map(u => {
+                let actionHtml = '';
+                const status = existingMap.get(u.id);
+                if(!status) actionHtml = `<button class="btn-success" onclick="sendFriendRequest('${u.id}')"><i class="fas fa-user-plus"></i> 添加</button>`;
+                else if(status === 'pending') {
+                    const isSentByMe = existing?.find(r => r.requester_id === currentUserId && r.addressee_id === u.id);
+                    actionHtml = isSentByMe ? '<span>等待验证</span>' : '<span>请求已发送给您</span>';
+                } else actionHtml = '<span>已是好友</span>';
+                return `
+                    <div class="friend-item">
+                        <div class="friend-info">
+                            <div class="friend-avatar">${u.avatar_url ? `<img src="${u.avatar_url}">` : u.username.charAt(0).toUpperCase()}</div>
+                            <div class="friend-name">${escapeHtml(u.username)}</div>
+                        </div>
+                        <div>${actionHtml}</div>
+                    </div>
+                `;
+            }).join('');
+        } catch(err) { showNotification('搜索失败', 'error'); }
+    }
+    window.sendFriendRequest = async (targetId) => {
+        try {
+            await supabase.from('friends').insert({ requester_id: currentUserId, addressee_id: targetId, status: 'pending' });
+            showNotification('好友请求已发送', 'success');
+            performSearch();
+            loadFriendsData();
+        } catch(err) { showNotification('发送失败', 'error'); }
+    };
+    document.getElementById('searchBtn').onclick = performSearch;
+    document.getElementById('searchInput').addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(performSearch, 400);
+    });
+
+    // 签到逻辑
+    async function loadUserStats() {
+        const { data, error } = await supabase.from('user_stats').select('*').eq('user_id', currentUserId).single();
+        if(error && error.code === 'PGRST116') {
+            await supabase.from('user_stats').insert({ user_id: currentUserId, candy_crumbles:100, rainbow_lollipops:5, active_points:0 });
+            return loadUserStats();
+        }
+        userStats = data;
+    }
+    function getCheckinRewards(streak) {
+        if(streak===1) return { candy:3, rainbow:0, active:2 };
+        if(streak===2) return { candy:5, rainbow:0, active:2 };
+        if(streak===3) return { candy:7, rainbow:0, active:2 };
+        if(streak===4) return { candy:9, rainbow:0, active:2 };
+        if(streak===5) return { candy:10, rainbow:0, active:2 };
+        if(streak===6) return { candy:12, rainbow:0, active:2 };
+        if(streak===7) return { candy:15, rainbow:1, active:5 };
+        if(streak>=8 && streak<=14) return { candy:10+Math.floor((streak-8)*2), rainbow:2, active:8 };
+        if(streak===15) return { candy:30, rainbow:5, active:15 };
+        if(streak>=16 && streak<=29) return { candy:50, rainbow:10, active:10 };
+        if(streak===30) return { candy:100, rainbow:20, active:50 };
+        return { candy:80, rainbow:15, active:20 };
+    }
+    async function performCheckin() {
+        if(!currentUser) { showNotification('请先登录', 'error'); return; }
+        const today = new Date().toLocaleDateString('sv-SE');
+        const last = userStats.last_checkin_date;
+        if(last === today) { showNotification('您今天已经签到过了，明天再来吧ღ( ´･ᴗ･ )比心', 'warning'); return; }
+        const newStreak = (last && new Date(last).getDate() === new Date(Date.now()-86400000).getDate()) ? (userStats.checkin_streak||0)+1 : 1;
+        const rewards = getCheckinRewards(newStreak);
+        const newCandy = (userStats.candy_crumbles||0) + rewards.candy;
+        const newRainbow = (userStats.rainbow_lollipops||0) + rewards.rainbow;
+        const newActive = (userStats.active_points||0) + rewards.active;
+        const { error } = await supabase.from('user_stats').update({
+            candy_crumbles: newCandy, rainbow_lollipops: newRainbow, active_points: newActive,
+            last_checkin_date: today, checkin_streak: newStreak
+        }).eq('user_id', currentUserId);
+        if(error) { showNotification('签到失败', 'error'); return; }
+        userStats = {...userStats, candy_crumbles:newCandy, rainbow_lollipops:newRainbow, active_points:newActive, last_checkin_date:today, checkin_streak:newStreak};
+        showNotification(`签到成功！获得 ${rewards.candy}🍬 ${rewards.rainbow>0?`🌈+${rewards.rainbow} `:''}+${rewards.active}⚡`, 'success');
+    }
+
+    // 更新最后在线时间
+    async function updateLastSeen() {
+        if(!currentUserId) return;
+        await supabase.from('user_profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', currentUserId);
+    }
+
+    // 主初始化
+    async function init() {
+        try {
+            // 获取当前用户
+            const { data: { user }, error } = await supabase.auth.getUser();
+            if(error || !user) {
+                // 未登录，显示登录链接
+                document.getElementById('userNavSection').innerHTML = '<a href="login-real.html" style="color:var(--text-highlight);text-decoration:none;">登录/注册</a>';
+                return;
+            }
+            currentUser = user;
+            currentUserId = user.id;
+            await updateLastSeen();
+            await loadUserStats();
+            
+            // 确保 user_profiles 存在
+            let { data: profile, error: profileError } = await supabase.from('user_profiles').select('username, avatar_url').eq('id', currentUserId).single();
+            if(profileError && profileError.code === 'PGRST116') {
+                await supabase.from('user_profiles').insert({ id: currentUserId, username: currentUser.email.split('@')[0], bio: '', role: 'user' });
+                profile = { username: currentUser.email.split('@')[0], avatar_url: null };
+            }
+            const username = profile.username || currentUser.email.split('@')[0];
+            const avatarUrl = profile.avatar_url;
+            const avatarLetter = username.charAt(0).toUpperCase();
+            const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" onerror="this.onerror=null;this.parentNode.innerHTML='<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${avatarLetter}</div>';">` : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${avatarLetter}</div>`;
+            document.getElementById('userNavSection').innerHTML = `<div class="user-menu-trigger" id="userMenuTrigger">${avatarHtml}<span>${escapeHtml(username)}</span><i class="fas fa-chevron-down"></i></div>`;
+            
+            // 绑定下拉菜单
+            const dropdown = document.getElementById('userDropdown');
+            const trigger = document.getElementById('userMenuTrigger');
+            if(trigger) {
+                trigger.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('show'); };
+                if(!window._closeMenuBound) {
+                    document.addEventListener('click', (e) => {
+                        if(!trigger.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.remove('show');
+                    });
+                    window.addEventListener('scroll', () => dropdown.classList.remove('show'));
+                    window.addEventListener('resize', () => dropdown.classList.remove('show'));
+                    window._closeMenuBound = true;
+                }
+            }
+            document.getElementById('dailySigninItem').onclick = () => {
+                dropdown.classList.remove('show');
+                openModal('signinModal');
+                const rewardPreview = getCheckinRewards((userStats?.checkin_streak||0)+1);
+                document.getElementById('signinRewardPreview').innerHTML = `签到可获得 🍬${rewardPreview.candy} ${rewardPreview.rainbow>0?`🌈+${rewardPreview.rainbow} `:''}⚡+${rewardPreview.active}`;
+            };
+            document.getElementById('logoutItem').onclick = () => {
+                dropdown.classList.remove('show');
+                openModal('logoutModal');
+            };
+            document.getElementById('confirmSigninBtn').onclick = async () => { closeModal('signinModal'); await performCheckin(); };
+            document.getElementById('cancelSigninBtn').onclick = () => closeModal('signinModal');
+            document.getElementById('confirmLogoutBtn').onclick = async () => {
+                closeModal('logoutModal');
+                await supabase.auth.signOut();
+                window.location.href = 'index.html';
+            };
+            document.getElementById('cancelLogoutBtn').onclick = () => closeModal('logoutModal');
+            
+            // 加载好友数据
+            await loadFriendsData();
+        } catch(err) {
+            console.error('初始化失败:', err);
+            document.getElementById('userNavSection').innerHTML = '<a href="login-real.html" style="color:var(--text-highlight);text-decoration:none;">登录/注册</a>';
+            showNotification('页面初始化失败: '+err.message, 'error');
+        }
+    }
+    
+    init();
+})();
 </script>
-<style>
-@keyframes spin { to { transform: rotate(360deg); } }
-</style>
 </body>
 </html>
