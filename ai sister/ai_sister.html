@@ -4,18 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <link rel="icon" href="/images/wangzhantupian.png" type="image/png">
-    <title>问答妹妹（bate） · 六哥荣耀WIKI</title>
+    <title>问答妹妹（beta） · 六哥荣耀WIKI</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
             background: #0c0c0c;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
             height: 100dvh;
             display: flex;
             flex-direction: column;
@@ -39,26 +34,13 @@
             justify-content: center;
             font-size: 24px;
         }
-        .title h2 {
-            font-size: 18px;
-            font-weight: 600;
-            color: #ffffff;
-        }
-        .title p {
-            font-size: 12px;
-            color: #8e8e93;
-            margin-top: 2px;
-        }
+        .title h2 { font-size: 18px; font-weight: 600; color: #ffffff; }
+        .title p { font-size: 12px; color: #8e8e93; margin-top: 2px; }
         .settings-btn {
-            background: none;
-            border: none;
-            font-size: 22px;
-            cursor: pointer;
-            color: #0a84ff;
-            padding: 6px;
-            margin-left: auto;
+            background: none; border: none; font-size: 22px;
+            color: #0a84ff; padding: 6px; margin-left: auto;
+            opacity: 0.5; pointer-events: none;
         }
-        /* 配置面板默认显示，不再隐藏 */
         .config-panel {
             background: #1c1c1e;
             padding: 12px 16px;
@@ -82,10 +64,7 @@
             color: #ffffff;
             min-width: 200px;
         }
-        .api-input:focus {
-            outline: none;
-            border-color: #0a84ff;
-        }
+        .api-input:focus { outline: none; border-color: #0a84ff; }
         .btn-sm {
             background: #0a84ff;
             border: none;
@@ -151,9 +130,7 @@
             margin-top: 4px;
             padding: 0 6px;
         }
-        .message.user .time {
-            text-align: right;
-        }
+        .message.user .time { text-align: right; }
         .input-area {
             background: #0c0c0c;
             border-top: 0.5px solid #2c2c2e;
@@ -176,10 +153,7 @@
             max-height: 100px;
             font-family: inherit;
         }
-        #messageInput:focus {
-            outline: none;
-            border-color: #0a84ff;
-        }
+        #messageInput:focus { outline: none; border-color: #0a84ff; }
         .send-btn {
             background: #0a84ff;
             border: none;
@@ -216,12 +190,10 @@
         <h2>AI妹妹</h2>
         <p>WIKI专家 · 温柔陪伴</p>
     </div>
-    <button class="settings-btn" id="settingsBtn" style="opacity:0.5; pointer-events:none;">⚙️</button>
-    <!-- 齿轮按钮禁用，因为面板已经默认显示 -->
+    <button class="settings-btn">⚙️</button>
 </div>
 
-<!-- 配置面板始终可见 -->
-<div class="config-panel" id="configPanel">
+<div class="config-panel">
     <div class="api-row">
         <input type="password" id="apiKeyInput" class="api-input" placeholder="DeepSeek API Key (sk-...)" autocomplete="off">
         <button id="saveKeyBtn" class="btn-sm">保存密钥</button>
@@ -248,241 +220,83 @@
 </div>
 
 <script>
-    // ================== 配置区 ==================
-    const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
-    const SUPABASE_ANON_KEY = '你的anon密钥';  // ⚠️ 请替换为你的 Supabase anon 密钥
-    const SYSTEM_PROMPT = `你是一个温柔可爱的邻家妹妹，同时也是「六哥荣耀WIKI」的智能助手。你擅长回答关于游戏角色、光锥、材料等 WIKI 内容。如果用户提问与你知识库相关，你会优先利用提供的WIKI资料给出准确答案。如果资料不足，你会诚实地说“妹妹暂时没查到，要不要去WIKI主页看看呀～”。继续保持自然、真诚的语气。`;
+    (function() {
+        // ---------- 配置（请修改为你的真实 anon key）----------
+        const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';  // ⚠️ 请替换为你的 Supabase anon 密钥（否则无法查WIKI，但不影响按钮）
 
-    // ================== 全局变量 ==================
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    let conversationHistory = [];
-    let currentApiKey = '';
-    let isConnected = false;
+        // 妹妹人设
+        const SYSTEM_PROMPT = `你是一个温柔可爱的邻家妹妹，同时也是「六哥荣耀WIKI」的智能助手。你擅长回答关于游戏角色、光锥、材料等 WIKI 内容。如果用户提问与你知识库相关，你会优先利用提供的WIKI资料给出准确答案。如果资料不足，你会诚实地说“妹妹暂时没查到，要不要去WIKI主页看看呀～”。继续保持自然、真诚的语气。`;
 
-    // DOM 元素
-    const messagesArea = document.getElementById('messagesArea');
-    const messageInput = document.getElementById('messageInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const apiKeyInput = document.getElementById('apiKeyInput');
-    const saveKeyBtn = document.getElementById('saveKeyBtn');
-    const testConnBtn = document.getElementById('testConnBtn');
-    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-    const apiStatusSpan = document.getElementById('apiStatus');
+        // ---------- DOM ----------
+        const messagesArea = document.getElementById('messagesArea');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const saveKeyBtn = document.getElementById('saveKeyBtn');
+        const testConnBtn = document.getElementById('testConnBtn');
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        const apiStatusSpan = document.getElementById('apiStatus');
 
-    // ================== 本地知识库检索（优先使用）==================
-    async function searchLocalWiki(query) {
-        const keywords = query.replace(/[?？什么哪个怎么如何告诉我解释一下]/g, '').trim();
-        if (!keywords) return null;
-        const [charRes, coneRes, matRes] = await Promise.all([
-            supabase.from('characters').select('name, description, detail_url').ilike('name', `%${keywords}%`),
-            supabase.from('light_cones').select('name, description, detail_url').ilike('name', `%${keywords}%`),
-            supabase.from('materials').select('name, description, detail_url').ilike('name', `%${keywords}%`)
-        ]);
-        const results = [];
-        if (charRes.data && charRes.data.length) results.push(...charRes.data.map(r => `角色「${r.name}」：${r.description || '暂无介绍'}`));
-        if (coneRes.data && coneRes.data.length) results.push(...coneRes.data.map(r => `光锥「${r.name}」：${r.description || '暂无效果'}`));
-        if (matRes.data && matRes.data.length) results.push(...matRes.data.map(r => `材料「${r.name}」：${r.description || '获取方式待补充'}`));
-        return results.length ? results.slice(0, 3) : null;
-    }
+        // ---------- 状态 ----------
+        let conversationHistory = [];
+        let currentApiKey = '';
+        let isConnected = false;
 
-    function buildLocalReply(results, userQuery) {
-        if (!results) return null;
-        const info = results.join('\n');
-        return `嗯～ 我查了一下WIKI，关于「${userQuery}」的信息如下：\n${info}\n\n需要更详细的内容可以去WIKI主页看看哦～(｡･ω･｡)`;
-    }
-
-    // ================== 远程API调用 ==================
-    async function callDeepSeek(userMessage) {
-        const recentHistory = conversationHistory.slice(-10).map(msg => ({ role: msg.role, content: msg.content }));
-        const messages = [
-            { role: 'system', content: SYSTEM_PROMPT },
-            ...recentHistory,
-            { role: 'user', content: userMessage }
-        ];
-        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${currentApiKey}`
-            },
-            body: JSON.stringify({
-                model: 'deepseek-chat',
-                messages: messages,
-                temperature: 0.7,
-                max_tokens: 500
-            })
-        });
-        if (!response.ok) {
-            let errMsg = `HTTP ${response.status}`;
-            try { const errData = await response.json(); errMsg += `: ${errData.error?.message || ''}`; } catch(e) {}
-            throw new Error(errMsg);
-        }
-        const data = await response.json();
-        return data.choices[0].message.content;
-    }
-
-    // ================== 核心发送逻辑 ==================
-    async function sendMessage() {
-        const text = messageInput.value.trim();
-        if (!text) return;
-        if (!currentApiKey || !isConnected) {
-            addSystemMessage('⚠️ 请先保存密钥并测试连接成功后再聊天～');
-            return;
-        }
-        messageInput.value = '';
-        autoResize();
-        addMessage('user', text, true);
-        const loader = document.createElement('div');
-        loader.className = 'loading-tip';
-        loader.id = 'aiLoader';
-        loader.innerHTML = '🔍 妹妹正在查WIKI...';
-        messagesArea.appendChild(loader);
-        messagesArea.scrollTop = messagesArea.scrollHeight;
-        try {
-            const localResult = await searchLocalWiki(text);
-            let reply = null;
-            if (localResult && localResult.length > 0) {
-                reply = buildLocalReply(localResult, text);
+        // ---------- 懒加载 Supabase 客户端（避免启动时报错）----------
+        let supabaseClient = null;
+        function getSupabase() {
+            if (supabaseClient) return supabaseClient;
+            if (!window.supabase) {
+                console.warn('Supabase JS 未加载');
+                return null;
             }
-            if (!reply) {
-                loader.innerHTML = '💬 妹妹思考中...';
-                reply = await callDeepSeek(text);
-            }
-            document.getElementById('aiLoader')?.remove();
-            addMessage('assistant', reply, false);
-            conversationHistory.push({ role: 'assistant', content: reply });
-        } catch (error) {
-            document.getElementById('aiLoader')?.remove();
-            console.error(error);
-            addSystemMessage(`😥 妹妹出错了: ${error.message}`);
-            if (error.message.includes('401') || error.message.includes('Incorrect API key')) {
-                apiStatusSpan.innerHTML = '❌ 密钥无效，请重新保存';
-                apiStatusSpan.className = 'status-text error';
-                isConnected = false;
-                messageInput.disabled = true;
-                sendBtn.disabled = true;
-            }
-        }
-    }
-
-    // ================== UI辅助 ==================
-    function addMessage(role, content, isUser) {
-        const div = document.createElement('div');
-        div.className = `message ${isUser ? 'user' : 'ai'}`;
-        const bubble = document.createElement('div');
-        bubble.className = 'bubble';
-        bubble.innerHTML = escapeHtml(content).replace(/\n/g, '<br>');
-        const timeDiv = document.createElement('div');
-        timeDiv.className = 'time';
-        timeDiv.textContent = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-        div.appendChild(bubble);
-        div.appendChild(timeDiv);
-        messagesArea.appendChild(div);
-        messagesArea.scrollTop = messagesArea.scrollHeight;
-        if (!isUser) conversationHistory.push({ role, content });
-        saveHistory();
-    }
-
-    function addSystemMessage(content) {
-        const div = document.createElement('div');
-        div.className = 'message ai';
-        const bubble = document.createElement('div');
-        bubble.className = 'bubble';
-        bubble.innerHTML = escapeHtml(content).replace(/\n/g, '<br>');
-        const timeDiv = document.createElement('div');
-        timeDiv.className = 'time';
-        timeDiv.textContent = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-        div.appendChild(bubble);
-        div.appendChild(timeDiv);
-        messagesArea.appendChild(div);
-        messagesArea.scrollTop = messagesArea.scrollHeight;
-    }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
-    }
-
-    function autoResize() {
-        const ta = messageInput;
-        ta.style.height = 'auto';
-        ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
-    }
-
-    function saveHistory() {
-        localStorage.setItem('ai_sister_history', JSON.stringify(conversationHistory));
-    }
-
-    function loadStorage() {
-        const savedKey = localStorage.getItem('ai_sister_key');
-        if (savedKey) {
-            currentApiKey = savedKey;
-            apiKeyInput.value = savedKey;
-            checkApiKeyValid();
-        }
-        const savedHistory = localStorage.getItem('ai_sister_history');
-        if (savedHistory) {
             try {
-                conversationHistory = JSON.parse(savedHistory);
-                renderMessagesFromHistory();
-            } catch(e) {}
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            } catch(e) {
+                console.error('创建 Supabase 客户端失败', e);
+                return null;
+            }
+            return supabaseClient;
         }
-        if (!conversationHistory.length) {
-            addSystemMessage('🌸 妹妹准备好啦～ 输入DeepSeek密钥就可以聊天咯！\n📚 我会先查WIKI数据库，找不到再问AI～');
-        }
-    }
 
-    function renderMessagesFromHistory() {
-        messagesArea.innerHTML = '';
-        for (const msg of conversationHistory) {
-            const div = document.createElement('div');
-            div.className = `message ${msg.role === 'user' ? 'user' : 'ai'}`;
-            const bubble = document.createElement('div');
-            bubble.className = 'bubble';
-            bubble.innerHTML = escapeHtml(msg.content).replace(/\n/g, '<br>');
-            const timeDiv = document.createElement('div');
-            timeDiv.className = 'time';
-            timeDiv.textContent = '·';
-            div.appendChild(bubble);
-            div.appendChild(timeDiv);
-            messagesArea.appendChild(div);
+        // ---------- 本地知识库检索 ----------
+        async function searchLocalWiki(query) {
+            const client = getSupabase();
+            if (!client) return null;
+            const keywords = query.replace(/[?？什么哪个怎么如何告诉我解释一下]/g, '').trim();
+            if (!keywords) return null;
+            try {
+                const [charRes, coneRes, matRes] = await Promise.all([
+                    client.from('characters').select('name, description').ilike('name', `%${keywords}%`),
+                    client.from('light_cones').select('name, description').ilike('name', `%${keywords}%`),
+                    client.from('materials').select('name, description').ilike('name', `%${keywords}%`)
+                ]);
+                const results = [];
+                if (charRes.data && charRes.data.length) results.push(...charRes.data.map(r => `角色「${r.name}」：${r.description || '暂无介绍'}`));
+                if (coneRes.data && coneRes.data.length) results.push(...coneRes.data.map(r => `光锥「${r.name}」：${r.description || '暂无效果'}`));
+                if (matRes.data && matRes.data.length) results.push(...matRes.data.map(r => `材料「${r.name}」：${r.description || '获取方式待补充'}`));
+                return results.length ? results.slice(0, 3) : null;
+            } catch (err) {
+                console.error('检索WIKI失败', err);
+                return null;
+            }
         }
-        messagesArea.scrollTop = messagesArea.scrollHeight;
-        if (conversationHistory.length === 0) addSystemMessage('🌸 妹妹准备好啦～');
-    }
 
-    function clearHistory() {
-        if (confirm('清空所有聊天记录？')) {
-            conversationHistory = [];
-            localStorage.removeItem('ai_sister_history');
-            messagesArea.innerHTML = '';
-            addSystemMessage('✨ 聊天记录已清空，重新开始吧～');
+        function buildLocalReply(results, userQuery) {
+            if (!results) return null;
+            const info = results.join('\n');
+            return `嗯～ 我查了一下WIKI，关于「${userQuery}」的信息如下：\n${info}\n\n需要更详细的内容可以去WIKI主页看看哦～(｡･ω･｡)`;
         }
-    }
 
-    function saveApiKey() {
-        const key = apiKeyInput.value.trim();
-        if (!key || !key.startsWith('sk-')) {
-            apiStatusSpan.innerHTML = '❌ 密钥格式错误，应以 sk- 开头';
-            apiStatusSpan.className = 'status-text error';
-            return;
-        }
-        currentApiKey = key;
-        localStorage.setItem('ai_sister_key', key);
-        checkApiKeyValid();
-        apiStatusSpan.innerHTML = '✅ 密钥已保存！请点击「测试连接」';
-        apiStatusSpan.className = 'status-text success';
-    }
-
-    async function testConnection() {
-        if (!currentApiKey) {
-            apiStatusSpan.innerHTML = '请先保存密钥';
-            apiStatusSpan.className = 'status-text error';
-            return;
-        }
-        apiStatusSpan.innerHTML = '⏳ 测试中...';
-        apiStatusSpan.className = 'status-text';
-        try {
+        // ---------- DeepSeek API ----------
+        async function callDeepSeek(userMessage) {
+            const recent = conversationHistory.slice(-10).map(m => ({ role: m.role, content: m.content }));
+            const messages = [
+                { role: 'system', content: SYSTEM_PROMPT },
+                ...recent,
+                { role: 'user', content: userMessage }
+            ];
             const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -491,72 +305,265 @@
                 },
                 body: JSON.stringify({
                     model: 'deepseek-chat',
-                    messages: [{ role: 'user', content: 'ping' }],
-                    max_tokens: 5
+                    messages,
+                    temperature: 0.7,
+                    max_tokens: 500
                 })
             });
-            if (res.ok) {
-                apiStatusSpan.innerHTML = '✅ 连接成功！现在可以聊天啦。';
-                apiStatusSpan.className = 'status-text success';
-                isConnected = true;
-                messageInput.disabled = false;
-                sendBtn.disabled = false;
-            } else {
+            if (!res.ok) {
                 let err = `HTTP ${res.status}`;
                 try { const data = await res.json(); err += `: ${data.error?.message || ''}`; } catch(e) {}
-                apiStatusSpan.innerHTML = `❌ 连接失败: ${err}`;
+                throw new Error(err);
+            }
+            const data = await res.json();
+            return data.choices[0].message.content;
+        }
+
+        // ---------- 发送消息 ----------
+        async function sendMessage() {
+            const text = messageInput.value.trim();
+            if (!text) return;
+            if (!currentApiKey || !isConnected) {
+                addSystemMessage('⚠️ 请先保存密钥并测试连接成功后再聊天～');
+                return;
+            }
+            messageInput.value = '';
+            autoResize();
+            addMessage('user', text, true);
+            const loader = document.createElement('div');
+            loader.className = 'loading-tip';
+            loader.id = 'aiLoader';
+            loader.innerHTML = '🔍 妹妹正在查WIKI...';
+            messagesArea.appendChild(loader);
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+            try {
+                let reply = null;
+                const localResult = await searchLocalWiki(text);
+                if (localResult && localResult.length) {
+                    reply = buildLocalReply(localResult, text);
+                }
+                if (!reply) {
+                    loader.innerHTML = '💬 妹妹思考中...';
+                    reply = await callDeepSeek(text);
+                }
+                document.getElementById('aiLoader')?.remove();
+                addMessage('assistant', reply, false);
+                conversationHistory.push({ role: 'assistant', content: reply });
+            } catch (error) {
+                document.getElementById('aiLoader')?.remove();
+                console.error(error);
+                addSystemMessage(`😥 妹妹出错了: ${error.message}`);
+                if (error.message.includes('401') || error.message.includes('Incorrect API key')) {
+                    apiStatusSpan.innerHTML = '❌ 密钥无效，请重新保存';
+                    apiStatusSpan.className = 'status-text error';
+                    isConnected = false;
+                    messageInput.disabled = true;
+                    sendBtn.disabled = true;
+                }
+            }
+        }
+
+        // ---------- UI 辅助 ----------
+        function addMessage(role, content, isUser) {
+            const div = document.createElement('div');
+            div.className = `message ${isUser ? 'user' : 'ai'}`;
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.innerHTML = escapeHtml(content).replace(/\n/g, '<br>');
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'time';
+            timeDiv.textContent = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+            div.appendChild(bubble);
+            div.appendChild(timeDiv);
+            messagesArea.appendChild(div);
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+            if (!isUser) conversationHistory.push({ role, content });
+            saveHistory();
+        }
+
+        function addSystemMessage(content) {
+            const div = document.createElement('div');
+            div.className = 'message ai';
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.innerHTML = escapeHtml(content).replace(/\n/g, '<br>');
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'time';
+            timeDiv.textContent = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+            div.appendChild(bubble);
+            div.appendChild(timeDiv);
+            messagesArea.appendChild(div);
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+        }
+
+        function autoResize() {
+            const ta = messageInput;
+            ta.style.height = 'auto';
+            ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
+        }
+
+        function saveHistory() {
+            localStorage.setItem('ai_sister_history', JSON.stringify(conversationHistory));
+        }
+
+        function loadStorage() {
+            const savedKey = localStorage.getItem('ai_sister_key');
+            if (savedKey) {
+                currentApiKey = savedKey;
+                apiKeyInput.value = savedKey;
+                checkApiKeyValid();
+            }
+            const savedHistory = localStorage.getItem('ai_sister_history');
+            if (savedHistory) {
+                try {
+                    conversationHistory = JSON.parse(savedHistory);
+                    renderMessagesFromHistory();
+                } catch(e) {}
+            }
+            if (!conversationHistory.length) {
+                addSystemMessage('🌸 妹妹准备好啦～ 输入DeepSeek密钥就可以聊天咯！\n📚 我会先查WIKI数据库，找不到再问AI～');
+            }
+        }
+
+        function renderMessagesFromHistory() {
+            messagesArea.innerHTML = '';
+            for (const msg of conversationHistory) {
+                const div = document.createElement('div');
+                div.className = `message ${msg.role === 'user' ? 'user' : 'ai'}`;
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble';
+                bubble.innerHTML = escapeHtml(msg.content).replace(/\n/g, '<br>');
+                const timeDiv = document.createElement('div');
+                timeDiv.className = 'time';
+                timeDiv.textContent = '·';
+                div.appendChild(bubble);
+                div.appendChild(timeDiv);
+                messagesArea.appendChild(div);
+            }
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+            if (conversationHistory.length === 0) addSystemMessage('🌸 妹妹准备好啦～');
+        }
+
+        function clearHistory() {
+            if (confirm('清空所有聊天记录？')) {
+                conversationHistory = [];
+                localStorage.removeItem('ai_sister_history');
+                messagesArea.innerHTML = '';
+                addSystemMessage('✨ 聊天记录已清空，重新开始吧～');
+            }
+        }
+
+        // ---------- 密钥操作 ----------
+        function saveApiKey() {
+            const key = apiKeyInput.value.trim();
+            if (!key || !key.startsWith('sk-')) {
+                apiStatusSpan.innerHTML = '❌ 密钥格式错误，应以 sk- 开头';
+                apiStatusSpan.className = 'status-text error';
+                return;
+            }
+            currentApiKey = key;
+            localStorage.setItem('ai_sister_key', key);
+            checkApiKeyValid();
+            apiStatusSpan.innerHTML = '✅ 密钥已保存！请点击「测试连接」';
+            apiStatusSpan.className = 'status-text success';
+        }
+
+        async function testConnection() {
+            if (!currentApiKey) {
+                apiStatusSpan.innerHTML = '请先保存密钥';
+                apiStatusSpan.className = 'status-text error';
+                return;
+            }
+            apiStatusSpan.innerHTML = '⏳ 测试中...';
+            apiStatusSpan.className = 'status-text';
+            try {
+                const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentApiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [{ role: 'user', content: 'ping' }],
+                        max_tokens: 5
+                    })
+                });
+                if (res.ok) {
+                    apiStatusSpan.innerHTML = '✅ 连接成功！现在可以聊天啦。';
+                    apiStatusSpan.className = 'status-text success';
+                    isConnected = true;
+                    messageInput.disabled = false;
+                    sendBtn.disabled = false;
+                } else {
+                    let err = `HTTP ${res.status}`;
+                    try { const data = await res.json(); err += `: ${data.error?.message || ''}`; } catch(e) {}
+                    apiStatusSpan.innerHTML = `❌ 连接失败: ${err}`;
+                    apiStatusSpan.className = 'status-text error';
+                    isConnected = false;
+                    messageInput.disabled = true;
+                    sendBtn.disabled = true;
+                }
+            } catch (err) {
+                apiStatusSpan.innerHTML = `❌ 网络错误: ${err.message}`;
                 apiStatusSpan.className = 'status-text error';
                 isConnected = false;
                 messageInput.disabled = true;
                 sendBtn.disabled = true;
             }
-        } catch (err) {
-            apiStatusSpan.innerHTML = `❌ 网络错误: ${err.message}`;
-            apiStatusSpan.className = 'status-text error';
-            isConnected = false;
-            messageInput.disabled = true;
-            sendBtn.disabled = true;
         }
-    }
 
-    function checkApiKeyValid() {
-        if (currentApiKey && currentApiKey.startsWith('sk-')) {
-            isConnected = false; // 需要手动测试连接
-            messageInput.disabled = true;
-            sendBtn.disabled = true;
-            messageInput.placeholder = '请先测试连接';
-            apiStatusSpan.innerHTML = '🔑 密钥已保存，点击「测试连接」验证';
-            apiStatusSpan.className = 'status-text';
-        } else {
-            isConnected = false;
-            messageInput.disabled = true;
-            sendBtn.disabled = true;
-            messageInput.placeholder = '请先配置API密钥';
-            apiStatusSpan.innerHTML = '⚠️ 未检测到有效的密钥';
-            apiStatusSpan.className = 'status-text error';
-        }
-    }
-
-    function bindEvents() {
-        sendBtn.onclick = sendMessage;
-        messageInput.addEventListener('keypress', e => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
+        function checkApiKeyValid() {
+            if (currentApiKey && currentApiKey.startsWith('sk-')) {
+                isConnected = false;
+                messageInput.disabled = true;
+                sendBtn.disabled = true;
+                messageInput.placeholder = '请先测试连接';
+                apiStatusSpan.innerHTML = '🔑 密钥已保存，点击「测试连接」验证';
+                apiStatusSpan.className = 'status-text';
+            } else {
+                isConnected = false;
+                messageInput.disabled = true;
+                sendBtn.disabled = true;
+                messageInput.placeholder = '请先配置API密钥';
+                apiStatusSpan.innerHTML = '⚠️ 未检测到有效的密钥';
+                apiStatusSpan.className = 'status-text error';
             }
-        });
-        messageInput.addEventListener('input', autoResize);
-        saveKeyBtn.onclick = () => { saveApiKey(); };
-        testConnBtn.onclick = testConnection;
-        clearHistoryBtn.onclick = clearHistory;
-    }
+        }
 
-    function init() {
-        loadStorage();
-        bindEvents();
-    }
+        // ---------- 事件绑定（确保按钮可点）----------
+        function bindEvents() {
+            sendBtn.onclick = () => { console.log('发送按钮被点击'); sendMessage(); };
+            messageInput.addEventListener('keypress', e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            messageInput.addEventListener('input', autoResize);
+            saveKeyBtn.onclick = () => { console.log('保存密钥被点击'); saveApiKey(); };
+            testConnBtn.onclick = () => { console.log('测试连接被点击'); testConnection(); };
+            clearHistoryBtn.onclick = () => { console.log('清空对话被点击'); clearHistory(); };
+        }
 
-    init();
+        // 启动
+        function init() {
+            loadStorage();
+            bindEvents();
+            // 如果 Supabase 未加载，提示但不影响按钮
+            if (!window.supabase) {
+                console.warn('Supabase JS 加载失败，WIKI 查询功能不可用');
+                addSystemMessage('⚠️ Supabase SDK 加载失败，WIKI 知识库暂不可用。您仍可使用 AI 聊天功能。');
+            }
+        }
+
+        init();
+    })();
 </script>
 </body>
 </html>
