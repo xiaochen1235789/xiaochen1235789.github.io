@@ -39,6 +39,27 @@
         .friends-card.hide-card {
             display: none;
         }
+        /* AI妹妹专属置顶样式 */
+        .friend-item.system-friend {
+            border: 2px solid #81c784;
+            background: linear-gradient(135deg, #1e3a2f, #2a4a3c);
+            box-shadow: 0 0 10px rgba(129, 199, 132, 0.3);
+        }
+        .friend-item.system-friend .friend-name {
+            color: #81c784;
+            font-weight: 600;
+        }
+        .friend-item.system-friend .online-status {
+            color: #81c784;
+        }
+        .friend-item.system-friend .card-actions button {
+            background: #81c784;
+            color: #1a1a2e;
+            border: none;
+        }
+        .friend-item.system-friend .friend-avatar {
+            background: linear-gradient(135deg, #81c784, #4caf50);
+        }
     </style>
 </head>
 <body>
@@ -123,6 +144,15 @@
     let currentUserId = null;
     let userStats = null;
 
+    // AI妹妹固定数据 - 置顶专用
+    const AI_SISTER_DATA = {
+        id: 'ai_sister_system',
+        username: 'AI妹妹',
+        avatar_url: 'https://xiaochen1235789.github.io/images/wangzhantupian.png',
+        last_seen_at: new Date().toISOString(),
+        is_system: true
+    };
+
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, function(m) {
@@ -169,7 +199,7 @@
     }
 
     // 纯 DOM 构建函数
-    function createAvatarElement(avatarUrl, username) {
+    function createAvatarElement(avatarUrl, username, isSystem = false) {
         const div = document.createElement('div');
         div.className = 'friend-avatar';
         if (avatarUrl) {
@@ -185,19 +215,26 @@
         } else {
             const firstChar = username.charAt(0).toUpperCase();
             div.textContent = firstChar;
+            div.style.background = isSystem ? 'linear-gradient(135deg, #81c784, #4caf50)' : 'linear-gradient(135deg,#3ecf8e,#8a4baf)';
+            div.style.color = 'white';
+            div.style.fontWeight = '600';
         }
         return div;
     }
 
-    // 创建好友/请求条目（好友类型增加聊天按钮）
+    // 创建好友/请求条目（增加系统好友支持）
     function createFriendItem(friend, type = 'friend') {
         const div = document.createElement('div');
         div.className = 'friend-item';
+        // 如果是 AI 妹妹，添加特殊样式类
+        if (friend.is_system) {
+            div.classList.add('system-friend');
+        }
         
         const infoDiv = document.createElement('div');
         infoDiv.className = 'friend-info';
         
-        const avatarDiv = createAvatarElement(friend.avatar_url, friend.username);
+        const avatarDiv = createAvatarElement(friend.avatar_url, friend.username, friend.is_system);
         infoDiv.appendChild(avatarDiv);
         
         const detailsDiv = document.createElement('div');
@@ -210,7 +247,11 @@
         if (type === 'friend') {
             const statusSpan = document.createElement('div');
             statusSpan.className = 'online-status';
-            statusSpan.innerHTML = formatLastSeen(friend.last_seen_at);
+            if (friend.is_system) {
+                statusSpan.innerHTML = '<span class="online">智能助手</span>';
+            } else {
+                statusSpan.innerHTML = formatLastSeen(friend.last_seen_at);
+            }
             detailsDiv.appendChild(statusSpan);
         }
         infoDiv.appendChild(detailsDiv);
@@ -220,21 +261,29 @@
         actionsDiv.className = 'card-actions';
         
         if (type === 'friend') {
-            // 聊天按钮
+            // 聊天按钮 - 系统好友跳转 ai_sister.html
             const chatBtn = document.createElement('button');
             chatBtn.innerHTML = '<i class="fas fa-comment"></i> 聊天';
             chatBtn.style.marginRight = '8px';
-            chatBtn.addEventListener('click', () => {
-                const encodedName = encodeURIComponent(friend.username);
-                window.open(`chat.html?friend_id=${friend.id}&friend_name=${encodedName}`, '_blank');
-            });
+            if (friend.is_system) {
+                chatBtn.addEventListener('click', () => {
+                    window.open('ai%20sister/ai_sister.html', '_blank');
+                });
+            } else {
+                chatBtn.addEventListener('click', () => {
+                    const encodedName = encodeURIComponent(friend.username);
+                    window.open(`chat.html?friend_id=${friend.id}&friend_name=${encodedName}`, '_blank');
+                });
+            }
             actionsDiv.appendChild(chatBtn);
             
-            // 删除按钮
-            const delBtn = document.createElement('button');
-            delBtn.innerHTML = '<i class="fas fa-user-minus"></i> 删除';
-            delBtn.addEventListener('click', () => removeFriend(friend.id));
-            actionsDiv.appendChild(delBtn);
+            // 删除按钮（系统好友不显示删除）
+            if (!friend.is_system) {
+                const delBtn = document.createElement('button');
+                delBtn.innerHTML = '<i class="fas fa-user-minus"></i> 删除';
+                delBtn.addEventListener('click', () => removeFriend(friend.id));
+                actionsDiv.appendChild(delBtn);
+            }
         } else if (type === 'request') {
             const acceptBtn = document.createElement('button');
             acceptBtn.className = 'btn-success';
@@ -278,6 +327,10 @@
                 if(!aOnline && bOnline) return 1;
                 return 0;
             });
+            
+            // 将 AI 妹妹固定置顶（插入到数组最前面）
+            friendsData.unshift(AI_SISTER_DATA);
+            
             const friendsContainer = document.getElementById('friendsList');
             friendsContainer.innerHTML = '';
             if (friendsData.length === 0) {
