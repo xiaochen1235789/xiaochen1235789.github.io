@@ -7,10 +7,9 @@
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 外链 CSS（需包含好友卡片、模态框等基础样式） -->
     <link rel="stylesheet" href="./css/friend.css">
     <style>
-        /* 补充选项卡按钮样式（如果外链 CSS 中没有，确保显示正常） */
+        /* 补充选项卡样式（确保外链 CSS 未定义时可用） */
         .tab-buttons {
             display: flex;
             gap: 12px;
@@ -38,7 +37,6 @@
         .tab-btn:hover:not(.active) {
             background: var(--card-bg-hover, #284a3c);
         }
-        /* 卡片隐藏类 */
         .friends-card.hide-card {
             display: none;
         }
@@ -84,7 +82,7 @@
 
 <div id="notification" class="notification"></div>
 
-<!-- 四个选项卡按钮 -->
+<!-- 选项卡按钮 -->
 <div class="tab-buttons">
     <button class="tab-btn active" data-tab="friends">我的好友</button>
     <button class="tab-btn" data-tab="requests">好友请求</button>
@@ -92,7 +90,7 @@
     <button class="tab-btn" data-tab="search">添加好友</button>
 </div>
 
-<!-- 四个卡片容器，每个卡片对应一个选项卡 -->
+<!-- 四个卡片 -->
 <div class="friends-dashboard" id="dashboard">
     <div class="friends-card" data-card="friends">
         <div class="card-header"><i class="fas fa-users"></i> 我的好友 <span id="friendCountBadge" class="badge">0</span></div>
@@ -119,7 +117,6 @@
 </div>
 
 <script>
-// 立即执行函数，避免全局污染
 (function() {
     const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
@@ -129,7 +126,13 @@
     let currentUserId = null;
     let userStats = null;
 
-    // 辅助函数
+    // ★★★ 新增：清理用户名中的特殊字符（移除 ; > < & 等） ★★★
+    function cleanUsername(name) {
+        if (!name) return '用户';
+        // 移除 ; > < & 以及常见的控制字符，保留中文、字母、数字、下划线、点、空格
+        return name.replace(/[;><&\\/#%$@*+?]/g, '').trim();
+    }
+
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
     function showNotification(msg, type='info') {
         const n = document.getElementById('notification');
@@ -142,7 +145,6 @@
     function openModal(id) { const m = document.getElementById(id); if(m) m.classList.add('active'); }
     function closeModal(id) { const m = document.getElementById(id); if(m) m.classList.remove('active'); }
 
-    // 格式化在线时间
     function formatLastSeen(lastSeen) {
         if(!lastSeen) return '<span class="offline">从未上线</span>';
         const last = new Date(lastSeen);
@@ -157,18 +159,18 @@
         return `<span class="offline">${diffDay}天前在线</span>`;
     }
 
-    // 获取用户资料
     async function getUserProfile(userId) {
         try {
             const { data, error } = await supabase.from('user_profiles').select('username, avatar_url, last_seen_at').eq('id', userId).single();
             if(error) throw error;
-            return { username: data.username || '用户', avatar_url: data.avatar_url, last_seen_at: data.last_seen_at };
+            // ★ 清理用户名
+            const cleanName = cleanUsername(data.username || '用户');
+            return { username: cleanName, avatar_url: data.avatar_url, last_seen_at: data.last_seen_at };
         } catch(e) {
             return { username: '未知用户', avatar_url: null, last_seen_at: null };
         }
     }
 
-    // 加载好友数据（四个卡片的内容）
     async function loadFriendsData() {
         if(!currentUserId) return;
         try {
@@ -178,12 +180,12 @@
                 .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
             if(error) throw error;
 
-            // 1. 我的好友
+            // 好友列表
             const accepted = relations.filter(r => r.status === 'accepted');
             const friendIds = accepted.map(r => r.requester_id === currentUserId ? r.addressee_id : r.requester_id);
             const friendsData = await Promise.all(friendIds.map(async id => {
                 const profile = await getUserProfile(id);
-                return { id, username: profile.username, avatar_url: profile.avatar_url, last_seen_at: profile.last_seen_at };
+                return { id, ...profile };
             }));
             friendsData.sort((a,b) => {
                 const aOnline = a.last_seen_at && (Date.now() - new Date(a.last_seen_at) < 300000);
@@ -209,7 +211,7 @@
             document.getElementById('friendsList').innerHTML = friendsHtml;
             document.getElementById('friendCountBadge').innerText = friendsData.length;
 
-            // 2. 待接收请求
+            // 待接收请求
             const incoming = relations.filter(r => r.addressee_id === currentUserId && r.status === 'pending');
             const incomingWithUser = await Promise.all(incoming.map(async r => {
                 const profile = await getUserProfile(r.requester_id);
@@ -230,7 +232,7 @@
             document.getElementById('pendingRequests').innerHTML = pendingHtml;
             document.getElementById('requestBadge').innerText = incomingWithUser.length;
 
-            // 3. 我发出的请求
+            // 我发出的请求
             const sent = relations.filter(r => r.requester_id === currentUserId && r.status === 'pending');
             const sentWithUser = await Promise.all(sent.map(async r => {
                 const profile = await getUserProfile(r.addressee_id);
@@ -286,7 +288,7 @@
         } catch(err) { showNotification('撤销失败', 'error'); }
     };
 
-    // 搜索添加好友
+    // 搜索好友
     let searchTimeout;
     async function performSearch() {
         const keyword = document.getElementById('searchInput').value.trim();
@@ -309,6 +311,8 @@
                 existingMap.set(otherId, rel.status);
             });
             resultsDiv.innerHTML = filtered.map(u => {
+                // ★ 清理搜索到的用户名
+                const cleanUname = cleanUsername(u.username);
                 let actionHtml = '';
                 const status = existingMap.get(u.id);
                 if(!status) actionHtml = `<button class="btn-success" onclick="sendFriendRequest('${u.id}')"><i class="fas fa-user-plus"></i> 添加</button>`;
@@ -319,8 +323,8 @@
                 return `
                     <div class="friend-item">
                         <div class="friend-info">
-                            <div class="friend-avatar">${u.avatar_url ? `<img src="${u.avatar_url}">` : u.username.charAt(0).toUpperCase()}</div>
-                            <div class="friend-name">${escapeHtml(u.username)}</div>
+                            <div class="friend-avatar">${u.avatar_url ? `<img src="${u.avatar_url}">` : cleanUname.charAt(0).toUpperCase()}</div>
+                            <div class="friend-name">${escapeHtml(cleanUname)}</div>
                         </div>
                         <div>${actionHtml}</div>
                     </div>
@@ -384,13 +388,11 @@
         showNotification(`签到成功！获得 ${rewards.candy}🍬 ${rewards.rainbow>0?`🌈+${rewards.rainbow} `:''}+${rewards.active}⚡`, 'success');
     }
 
-    // 更新最后在线时间
     async function updateLastSeen() {
         if(!currentUserId) return;
         await supabase.from('user_profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', currentUserId);
     }
 
-    // 选项卡切换功能
     function initTabs() {
         const btns = document.querySelectorAll('.tab-btn');
         const cards = document.querySelectorAll('.friends-card');
@@ -416,11 +418,9 @@
                 showTab(tabId);
             });
         });
-        // 默认显示好友
         showTab('friends');
     }
 
-    // 主初始化
     async function init() {
         try {
             const { data: { user }, error } = await supabase.auth.getUser();
@@ -433,21 +433,19 @@
             await updateLastSeen();
             await loadUserStats();
             
-            // 确保 user_profiles 存在
             let { data: profile, error: profileError } = await supabase.from('user_profiles').select('username, avatar_url').eq('id', currentUserId).single();
             if(profileError && profileError.code === 'PGRST116') {
                 await supabase.from('user_profiles').insert({ id: currentUserId, username: currentUser.email.split('@')[0], bio: '', role: 'user' });
                 profile = { username: currentUser.email.split('@')[0], avatar_url: null };
             }
-            let username = profile.username || currentUser.email.split('@')[0];
-            // ★★★ 修复分号：去除末尾可能存在的分号 ★★★
-            username = username.replace(/;$/, '');
+            let rawUsername = profile.username || currentUser.email.split('@')[0];
+            // ★ 彻底清理用户名中的 ; > 等字符
+            let cleanUserName = cleanUsername(rawUsername);
             const avatarUrl = profile.avatar_url;
-            const avatarLetter = username.charAt(0).toUpperCase();
+            const avatarLetter = cleanUserName.charAt(0).toUpperCase();
             const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" onerror="this.onerror=null;this.parentNode.innerHTML='<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${avatarLetter}</div>';">` : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${avatarLetter}</div>`;
-            document.getElementById('userNavSection').innerHTML = `<div class="user-menu-trigger" id="userMenuTrigger">${avatarHtml}<span>${escapeHtml(username)}</span><i class="fas fa-chevron-down"></i></div>`;
+            document.getElementById('userNavSection').innerHTML = `<div class="user-menu-trigger" id="userMenuTrigger">${avatarHtml}<span>${escapeHtml(cleanUserName)}</span><i class="fas fa-chevron-down"></i></div>`;
             
-            // 绑定下拉菜单
             const dropdown = document.getElementById('userDropdown');
             const trigger = document.getElementById('userMenuTrigger');
             if(trigger) {
@@ -480,7 +478,6 @@
             };
             document.getElementById('cancelLogoutBtn').onclick = () => closeModal('logoutModal');
             
-            // 加载好友数据并初始化选项卡
             await loadFriendsData();
             initTabs();
         } catch(err) {
