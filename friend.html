@@ -123,7 +123,6 @@
     let currentUserId = null;
     let userStats = null;
 
-    // 仅用于非文本节点（如图片 url 的属性），不会用于拼接用户内容到 HTML 属性中
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, function(m) {
@@ -169,7 +168,7 @@
         }
     }
 
-    // ------------------- 纯 DOM 构建函数 -------------------
+    // 纯 DOM 构建函数
     function createAvatarElement(avatarUrl, username) {
         const div = document.createElement('div');
         div.className = 'friend-avatar';
@@ -190,6 +189,7 @@
         return div;
     }
 
+    // 创建好友/请求条目（好友类型增加聊天按钮）
     function createFriendItem(friend, type = 'friend') {
         const div = document.createElement('div');
         div.className = 'friend-item';
@@ -220,6 +220,17 @@
         actionsDiv.className = 'card-actions';
         
         if (type === 'friend') {
+            // 聊天按钮
+            const chatBtn = document.createElement('button');
+            chatBtn.innerHTML = '<i class="fas fa-comment"></i> 聊天';
+            chatBtn.style.marginRight = '8px';
+            chatBtn.addEventListener('click', () => {
+                const encodedName = encodeURIComponent(friend.username);
+                window.open(`chat.html?friend_id=${friend.id}&friend_name=${encodedName}`, '_blank');
+            });
+            actionsDiv.appendChild(chatBtn);
+            
+            // 删除按钮
             const delBtn = document.createElement('button');
             delBtn.innerHTML = '<i class="fas fa-user-minus"></i> 删除';
             delBtn.addEventListener('click', () => removeFriend(friend.id));
@@ -480,16 +491,13 @@
         showTab('friends');
     }
 
-    // 纯 DOM 构建顶部用户区域（彻底避免字符串拼接）
+    // 纯 DOM 构建顶部用户区域
     function buildUserMenu(username, avatarUrl) {
         const container = document.getElementById('userNavSection');
-        container.innerHTML = ''; // 清空
-
+        container.innerHTML = '';
         const trigger = document.createElement('div');
         trigger.className = 'user-menu-trigger';
         trigger.id = 'userMenuTrigger';
-
-        // 头像部分
         const avatarDiv = document.createElement('div');
         avatarDiv.style.cssText = 'width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;';
         if (avatarUrl) {
@@ -513,21 +521,14 @@
             avatarDiv.style.fontWeight = '600';
         }
         trigger.appendChild(avatarDiv);
-
-        // 用户名文本
         const nameSpan = document.createElement('span');
-        nameSpan.textContent = username;  // 安全！
+        nameSpan.textContent = username;
         trigger.appendChild(nameSpan);
-
-        // 下拉箭头
         const arrow = document.createElement('i');
         arrow.className = 'fas fa-chevron-down';
         arrow.style.fontSize = '0.8rem';
         trigger.appendChild(arrow);
-
         container.appendChild(trigger);
-
-        // 绑定下拉菜单事件
         const dropdown = document.getElementById('userDropdown');
         if (dropdown) {
             trigger.onclick = (e) => {
@@ -569,11 +570,8 @@
             }
             const rawUsername = profile.username || currentUser.email.split('@')[0];
             const avatarUrl = profile.avatar_url;
-
-            // 使用纯 DOM 构建顶部用户菜单
             buildUserMenu(rawUsername, avatarUrl);
 
-            // 绑定签到和退出事件
             document.getElementById('dailySigninItem').onclick = () => {
                 document.getElementById('userDropdown').classList.remove('show');
                 openModal('signinModal');
