@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="./css/friend.css">
     <style>
-        /* 补充选项卡样式 */
         .tab-buttons {
             display: flex;
             gap: 12px;
@@ -82,7 +81,6 @@
 
 <div id="notification" class="notification"></div>
 
-<!-- 选项卡按钮 -->
 <div class="tab-buttons">
     <button class="tab-btn active" data-tab="friends">我的好友</button>
     <button class="tab-btn" data-tab="requests">好友请求</button>
@@ -90,7 +88,6 @@
     <button class="tab-btn" data-tab="search">添加好友</button>
 </div>
 
-<!-- 四个卡片 -->
 <div class="friends-dashboard" id="dashboard">
     <div class="friends-card" data-card="friends">
         <div class="card-header"><i class="fas fa-users"></i> 我的好友 <span id="friendCountBadge" class="badge">0</span></div>
@@ -126,7 +123,7 @@
     let currentUserId = null;
     let userStats = null;
 
-    // 纯转义函数（用于属性值或简单文本，但我们会尽量用 textContent）
+    // 仅用于非文本节点（如图片 url 的属性），不会用于拼接用户内容到 HTML 属性中
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, function(m) {
@@ -181,7 +178,6 @@
             img.src = avatarUrl;
             img.alt = '';
             img.onerror = function() {
-                // 图片加载失败时降级为首字母
                 div.innerHTML = '';
                 const firstChar = username.charAt(0).toUpperCase();
                 div.textContent = firstChar;
@@ -201,7 +197,6 @@
         const infoDiv = document.createElement('div');
         infoDiv.className = 'friend-info';
         
-        // 头像
         const avatarDiv = createAvatarElement(friend.avatar_url, friend.username);
         infoDiv.appendChild(avatarDiv);
         
@@ -209,7 +204,7 @@
         detailsDiv.className = 'friend-details';
         const nameSpan = document.createElement('div');
         nameSpan.className = 'friend-name';
-        nameSpan.textContent = friend.username;  // 关键：textContent 自动转义，绝对安全
+        nameSpan.textContent = friend.username;
         detailsDiv.appendChild(nameSpan);
         
         if (type === 'friend') {
@@ -259,7 +254,6 @@
                 .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
             if(error) throw error;
 
-            // 好友列表
             const accepted = relations.filter(r => r.status === 'accepted');
             const friendIds = accepted.map(r => r.requester_id === currentUserId ? r.addressee_id : r.requester_id);
             const friendsData = await Promise.all(friendIds.map(async id => {
@@ -282,7 +276,6 @@
             }
             document.getElementById('friendCountBadge').innerText = friendsData.length;
 
-            // 待接收请求
             const incoming = relations.filter(r => r.addressee_id === currentUserId && r.status === 'pending');
             const incomingWithUser = await Promise.all(incoming.map(async r => {
                 const profile = await getUserProfile(r.requester_id);
@@ -297,7 +290,6 @@
             }
             document.getElementById('requestBadge').innerText = incomingWithUser.length;
 
-            // 我发出的请求
             const sent = relations.filter(r => r.requester_id === currentUserId && r.status === 'pending');
             const sentWithUser = await Promise.all(sent.map(async r => {
                 const profile = await getUserProfile(r.addressee_id);
@@ -346,7 +338,6 @@
         } catch(err) { showNotification('撤销失败', 'error'); }
     }
 
-    // 搜索好友（纯 DOM 构建）
     let searchTimeout;
     async function performSearch() {
         const keyword = document.getElementById('searchInput').value.trim();
@@ -374,12 +365,11 @@
                 itemDiv.className = 'friend-item';
                 const infoDiv = document.createElement('div');
                 infoDiv.className = 'friend-info';
-                // 头像
                 const avatarDiv = createAvatarElement(u.avatar_url, u.username);
                 infoDiv.appendChild(avatarDiv);
                 const nameDiv = document.createElement('div');
                 nameDiv.className = 'friend-name';
-                nameDiv.textContent = u.username;  // 安全
+                nameDiv.textContent = u.username;
                 infoDiv.appendChild(nameDiv);
                 itemDiv.appendChild(infoDiv);
                 const actionDiv = document.createElement('div');
@@ -420,7 +410,7 @@
         searchTimeout = setTimeout(performSearch, 400);
     });
 
-    // 签到相关（与主页一致，略作调整）
+    // 签到
     async function loadUserStats() {
         const { data, error } = await supabase.from('user_stats').select('*').eq('user_id', currentUserId).single();
         if(error && error.code === 'PGRST116') {
@@ -490,6 +480,76 @@
         showTab('friends');
     }
 
+    // 纯 DOM 构建顶部用户区域（彻底避免字符串拼接）
+    function buildUserMenu(username, avatarUrl) {
+        const container = document.getElementById('userNavSection');
+        container.innerHTML = ''; // 清空
+
+        const trigger = document.createElement('div');
+        trigger.className = 'user-menu-trigger';
+        trigger.id = 'userMenuTrigger';
+
+        // 头像部分
+        const avatarDiv = document.createElement('div');
+        avatarDiv.style.cssText = 'width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;';
+        if (avatarUrl) {
+            const img = document.createElement('img');
+            img.src = avatarUrl;
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            img.onerror = () => {
+                avatarDiv.innerHTML = '';
+                const firstChar = username.charAt(0).toUpperCase();
+                avatarDiv.textContent = firstChar;
+                avatarDiv.style.background = 'linear-gradient(135deg,#3ecf8e,#8a4baf)';
+                avatarDiv.style.color = 'white';
+                avatarDiv.style.fontWeight = '600';
+            };
+            avatarDiv.appendChild(img);
+        } else {
+            const firstChar = username.charAt(0).toUpperCase();
+            avatarDiv.textContent = firstChar;
+            avatarDiv.style.background = 'linear-gradient(135deg,#3ecf8e,#8a4baf)';
+            avatarDiv.style.color = 'white';
+            avatarDiv.style.fontWeight = '600';
+        }
+        trigger.appendChild(avatarDiv);
+
+        // 用户名文本
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = username;  // 安全！
+        trigger.appendChild(nameSpan);
+
+        // 下拉箭头
+        const arrow = document.createElement('i');
+        arrow.className = 'fas fa-chevron-down';
+        arrow.style.fontSize = '0.8rem';
+        trigger.appendChild(arrow);
+
+        container.appendChild(trigger);
+
+        // 绑定下拉菜单事件
+        const dropdown = document.getElementById('userDropdown');
+        if (dropdown) {
+            trigger.onclick = (e) => {
+                e.stopPropagation();
+                const rect = trigger.getBoundingClientRect();
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+                dropdown.style.top = (rect.bottom + scrollTop + 8) + 'px';
+                dropdown.style.right = (window.innerWidth - rect.right + scrollLeft) + 'px';
+                dropdown.classList.toggle('show');
+            };
+            if (!window._closeMenuBound) {
+                document.addEventListener('click', (e) => {
+                    if (!trigger.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.remove('show');
+                });
+                window.addEventListener('scroll', () => dropdown.classList.remove('show'));
+                window.addEventListener('resize', () => dropdown.classList.remove('show'));
+                window._closeMenuBound = true;
+            }
+        }
+    }
+
     async function init() {
         try {
             const { data: { user }, error } = await supabase.auth.getUser();
@@ -509,32 +569,19 @@
             }
             const rawUsername = profile.username || currentUser.email.split('@')[0];
             const avatarUrl = profile.avatar_url;
-            const avatarLetter = rawUsername.charAt(0).toUpperCase();
-            // 顶部导航栏使用转义，但也是安全的
-            const avatarHtml = avatarUrl ? `<img src="${escapeHtml(avatarUrl)}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" onerror="this.onerror=null;this.parentNode.innerHTML='<div style=\"width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;\">${escapeHtml(avatarLetter)}</div>';">` : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${escapeHtml(avatarLetter)}</div>`;
-            document.getElementById('userNavSection').innerHTML = `<div class="user-menu-trigger" id="userMenuTrigger">${avatarHtml}<span>${escapeHtml(rawUsername)}</span><i class="fas fa-chevron-down"></i></div>`;
-            
-            const dropdown = document.getElementById('userDropdown');
-            const trigger = document.getElementById('userMenuTrigger');
-            if(trigger) {
-                trigger.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('show'); };
-                if(!window._closeMenuBound) {
-                    document.addEventListener('click', (e) => {
-                        if(!trigger.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.remove('show');
-                    });
-                    window.addEventListener('scroll', () => dropdown.classList.remove('show'));
-                    window.addEventListener('resize', () => dropdown.classList.remove('show'));
-                    window._closeMenuBound = true;
-                }
-            }
+
+            // 使用纯 DOM 构建顶部用户菜单
+            buildUserMenu(rawUsername, avatarUrl);
+
+            // 绑定签到和退出事件
             document.getElementById('dailySigninItem').onclick = () => {
-                dropdown.classList.remove('show');
+                document.getElementById('userDropdown').classList.remove('show');
                 openModal('signinModal');
                 const rewardPreview = getCheckinRewards((userStats?.checkin_streak||0)+1);
                 document.getElementById('signinRewardPreview').innerHTML = `签到可获得 🍬${rewardPreview.candy} ${rewardPreview.rainbow>0?`🌈+${rewardPreview.rainbow} `:''}⚡+${rewardPreview.active}`;
             };
             document.getElementById('logoutItem').onclick = () => {
-                dropdown.classList.remove('show');
+                document.getElementById('userDropdown').classList.remove('show');
                 openModal('logoutModal');
             };
             document.getElementById('confirmSigninBtn').onclick = async () => { closeModal('signinModal'); await performCheckin(); };
