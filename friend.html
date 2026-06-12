@@ -7,8 +7,42 @@
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- 外链 CSS -->
+    <!-- 外链 CSS（需包含好友卡片、模态框等基础样式） -->
     <link rel="stylesheet" href="./css/friend.css">
+    <style>
+        /* 补充选项卡按钮样式（如果外链 CSS 中没有，确保显示正常） */
+        .tab-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 20px auto 0;
+            max-width: 1000px;
+            padding: 0 20px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            background: var(--card-bg, #1e3a2f);
+            border: 1px solid var(--border-color, #3d725f);
+            color: var(--text-main, #e0e0e0);
+            padding: 8px 24px;
+            border-radius: 40px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .tab-btn.active {
+            background: var(--text-highlight, #81c784);
+            color: var(--bg, #121212);
+            border-color: var(--text-highlight, #81c784);
+        }
+        .tab-btn:hover:not(.active) {
+            background: var(--card-bg-hover, #284a3c);
+        }
+        /* 卡片隐藏类 */
+        .friends-card.hide-card {
+            display: none;
+        }
+    </style>
 </head>
 <body>
 
@@ -50,20 +84,29 @@
 
 <div id="notification" class="notification"></div>
 
+<!-- 四个选项卡按钮 -->
+<div class="tab-buttons">
+    <button class="tab-btn active" data-tab="friends">我的好友</button>
+    <button class="tab-btn" data-tab="requests">好友请求</button>
+    <button class="tab-btn" data-tab="sent">我发出的请求</button>
+    <button class="tab-btn" data-tab="search">添加好友</button>
+</div>
+
+<!-- 四个卡片容器，每个卡片对应一个选项卡 -->
 <div class="friends-dashboard" id="dashboard">
-    <div class="friends-card">
+    <div class="friends-card" data-card="friends">
         <div class="card-header"><i class="fas fa-users"></i> 我的好友 <span id="friendCountBadge" class="badge">0</span></div>
         <div class="card-content" id="friendsList">加载中...</div>
     </div>
-    <div class="friends-card">
+    <div class="friends-card" data-card="requests">
         <div class="card-header"><i class="fas fa-user-plus"></i> 好友请求 <span id="requestBadge" class="badge">0</span></div>
         <div class="card-content" id="pendingRequests">加载中...</div>
     </div>
-    <div class="friends-card">
+    <div class="friends-card" data-card="sent">
         <div class="card-header"><i class="fas fa-paper-plane"></i> 我发出的请求</div>
         <div class="card-content" id="sentRequests">加载中...</div>
     </div>
-    <div class="friends-card">
+    <div class="friends-card" data-card="search">
         <div class="card-header"><i class="fas fa-search"></i> 添加好友</div>
         <div class="card-content">
             <div class="search-box">
@@ -76,7 +119,7 @@
 </div>
 
 <script>
-// 所有代码使用 IIFE 避免全局污染，但需要将函数挂载到 window 供 onclick 调用
+// 立即执行函数，避免全局污染
 (function() {
     const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
@@ -114,7 +157,7 @@
         return `<span class="offline">${diffDay}天前在线</span>`;
     }
 
-    // 获取用户资料（带缓存优化可选）
+    // 获取用户资料
     async function getUserProfile(userId) {
         try {
             const { data, error } = await supabase.from('user_profiles').select('username, avatar_url, last_seen_at').eq('id', userId).single();
@@ -125,7 +168,7 @@
         }
     }
 
-    // 加载好友数据
+    // 加载好友数据（四个卡片的内容）
     async function loadFriendsData() {
         if(!currentUserId) return;
         try {
@@ -135,7 +178,7 @@
                 .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`);
             if(error) throw error;
 
-            // 好友列表
+            // 1. 我的好友
             const accepted = relations.filter(r => r.status === 'accepted');
             const friendIds = accepted.map(r => r.requester_id === currentUserId ? r.addressee_id : r.requester_id);
             const friendsData = await Promise.all(friendIds.map(async id => {
@@ -166,7 +209,7 @@
             document.getElementById('friendsList').innerHTML = friendsHtml;
             document.getElementById('friendCountBadge').innerText = friendsData.length;
 
-            // 待接收请求
+            // 2. 待接收请求
             const incoming = relations.filter(r => r.addressee_id === currentUserId && r.status === 'pending');
             const incomingWithUser = await Promise.all(incoming.map(async r => {
                 const profile = await getUserProfile(r.requester_id);
@@ -187,7 +230,7 @@
             document.getElementById('pendingRequests').innerHTML = pendingHtml;
             document.getElementById('requestBadge').innerText = incomingWithUser.length;
 
-            // 我发出的请求
+            // 3. 我发出的请求
             const sent = relations.filter(r => r.requester_id === currentUserId && r.status === 'pending');
             const sentWithUser = await Promise.all(sent.map(async r => {
                 const profile = await getUserProfile(r.addressee_id);
@@ -212,7 +255,7 @@
         }
     }
 
-    // 好友操作（挂载到 window 供 onclick 调用）
+    // 好友操作挂载到 window
     window.removeFriend = async (friendId) => {
         if(!confirm('确定删除这位好友吗？')) return;
         try {
@@ -347,13 +390,41 @@
         await supabase.from('user_profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', currentUserId);
     }
 
+    // 选项卡切换功能
+    function initTabs() {
+        const btns = document.querySelectorAll('.tab-btn');
+        const cards = document.querySelectorAll('.friends-card');
+        function showTab(tabId) {
+            cards.forEach(card => {
+                if (card.getAttribute('data-card') === tabId) {
+                    card.classList.remove('hide-card');
+                } else {
+                    card.classList.add('hide-card');
+                }
+            });
+            btns.forEach(btn => {
+                if (btn.getAttribute('data-tab') === tabId) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+        btns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.getAttribute('data-tab');
+                showTab(tabId);
+            });
+        });
+        // 默认显示好友
+        showTab('friends');
+    }
+
     // 主初始化
     async function init() {
         try {
-            // 获取当前用户
             const { data: { user }, error } = await supabase.auth.getUser();
             if(error || !user) {
-                // 未登录，显示登录链接
                 document.getElementById('userNavSection').innerHTML = '<a href="login-real.html" style="color:var(--text-highlight);text-decoration:none;">登录/注册</a>';
                 return;
             }
@@ -368,7 +439,9 @@
                 await supabase.from('user_profiles').insert({ id: currentUserId, username: currentUser.email.split('@')[0], bio: '', role: 'user' });
                 profile = { username: currentUser.email.split('@')[0], avatar_url: null };
             }
-            const username = profile.username || currentUser.email.split('@')[0];
+            let username = profile.username || currentUser.email.split('@')[0];
+            // ★★★ 修复分号：去除末尾可能存在的分号 ★★★
+            username = username.replace(/;$/, '');
             const avatarUrl = profile.avatar_url;
             const avatarLetter = username.charAt(0).toUpperCase();
             const avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" onerror="this.onerror=null;this.parentNode.innerHTML='<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${avatarLetter}</div>';">` : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${avatarLetter}</div>`;
@@ -407,8 +480,9 @@
             };
             document.getElementById('cancelLogoutBtn').onclick = () => closeModal('logoutModal');
             
-            // 加载好友数据
+            // 加载好友数据并初始化选项卡
             await loadFriendsData();
+            initTabs();
         } catch(err) {
             console.error('初始化失败:', err);
             document.getElementById('userNavSection').innerHTML = '<a href="login-real.html" style="color:var(--text-highlight);text-decoration:none;">登录/注册</a>';
