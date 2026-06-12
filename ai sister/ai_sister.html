@@ -41,46 +41,11 @@
             padding: 12px 16px;
             border-bottom: 0.5px solid #2c2c2e;
         }
-        .api-row {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .api-input {
-            flex: 1;
-            padding: 10px 12px;
-            border: 1px solid #3a3a3c;
-            border-radius: 24px;
-            font-size: 14px;
-            background: #2c2c2e;
-            color: #ffffff;
-            min-width: 200px;
-        }
-        .api-input:focus { outline: none; border-color: #0a84ff; }
-        .btn-sm {
-            background: #0a84ff;
-            border: none;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 24px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        .btn-outline {
-            background: #2c2c2e;
-            border: 1px solid #3a3a3c;
-            color: #ffffff;
-        }
         .status-text {
             font-size: 12px;
-            color: #ff9f0a;
+            color: #30d158;
             margin-top: 6px;
         }
-        .status-text.success { color: #30d158; }
-        .status-text.error { color: #ff453a; }
         .messages-area {
             flex: 1;
             overflow-y: auto;
@@ -187,142 +152,108 @@
 </div>
 
 <div class="config-panel">
-    <div class="api-row">
-        <input type="password" id="apiKeyInput" class="api-input" placeholder="DeepSeek API Key (sk-...)" autocomplete="off">
-        <button id="saveKeyBtn" class="btn-sm">保存密钥</button>
-    </div>
-    <div class="api-row">
-        <button id="testConnBtn" class="btn-sm btn-outline">测试连接</button>
-        <button id="clearHistoryBtn" class="btn-sm btn-outline" style="color:#ff453a;">清空对话</button>
-    </div>
-    <div id="apiStatus" class="status-text"></div>
+    <div id="apiStatus" class="status-text">✅ 已连接 DeepSeek，直接聊天吧～</div>
     <div style="font-size: 11px; color: #8e8e93; margin-top: 8px;">
-        🔑 密钥本地保存 | 📚 我会查角色/光锥/材料/版本活动，用自然语言回答你～
+        📚 我会查角色/光锥/材料/版本活动，用自然语言回答你～
     </div>
 </div>
 
-<div class="messages-area" id="messagesArea">
-    <div class="loading-tip">✨ 输入DeepSeek密钥后点击「保存密钥」再「测试连接」～</div>
-</div>
+<div class="messages-area" id="messagesArea"></div>
 
 <div class="input-area">
-    <textarea id="messageInput" rows="1" placeholder="对妹妹说点什么..." disabled></textarea>
-    <button class="send-btn" id="sendBtn" disabled>➤</button>
+    <textarea id="messageInput" rows="1" placeholder="对妹妹说点什么..."></textarea>
+    <button class="send-btn" id="sendBtn">➤</button>
 </div>
 
 <script>
     (function() {
-        // ========== 配置（请替换为你的真实 anon key）==========
+        // ========== 固定密钥 ==========
+        const DEEPSEEK_API_KEY = 'sk-231a300ad8034180b287dc1e174b72f9';
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
-        // 妹妹人设（稍作调整，强调会利用已有信息）
         const SYSTEM_PROMPT = `你是一个温柔可爱的邻家妹妹，同时也是「六哥荣耀WIKI」的智能助手。你擅长回答关于游戏角色、光锥、材料以及版本活动的问题。
 如果用户提问与你知识库相关，你会优先利用提供的WIKI资料给出准确、自然的答案。
 如果资料不够详细（比如只知道角色的版本、属性），你可以结合游戏通用知识适当补充，但必须明确区分“WIKI资料”和“我的推测”。
 如果完全查不到，你会诚实地说“妹妹暂时没查到，要不要去WIKI主页看看呀～”。
 回答要亲切、自然，可以使用“～”、“呀”等语气词，但不要过度卖萌。`;
 
-        // ========== DOM ==========
+        // DOM 元素
         const messagesArea = document.getElementById('messagesArea');
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
-        const apiKeyInput = document.getElementById('apiKeyInput');
-        const saveKeyBtn = document.getElementById('saveKeyBtn');
-        const testConnBtn = document.getElementById('testConnBtn');
-        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
         const apiStatusSpan = document.getElementById('apiStatus');
 
         let conversationHistory = [];
-        let currentApiKey = '';
-        let isConnected = false;
-
-        // ========== Supabase 客户端 ==========
         let supabaseClient = null;
+
+        // ========== Supabase ==========
         function getSupabase() {
             if (supabaseClient) return supabaseClient;
-            if (!window.supabase) {
-                console.warn('Supabase JS 未加载');
-                return null;
-            }
+            if (!window.supabase) return null;
             try {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            } catch(e) {
-                console.error('创建 Supabase 客户端失败', e);
-                return null;
-            }
+            } catch(e) { return null; }
             return supabaseClient;
         }
 
-        // ========== 智能检索（适配角色仅有 name, element, version）==========
+        // ========== 本地 WIKI 检索 ==========
         async function searchLocalWiki(query) {
             const client = getSupabase();
             if (!client) return null;
-
-            // 提取关键词
             let keywords = query.replace(/[?？、，。！？什么哪个怎么如何告诉我解释一下帮忙]/g, ' ').trim();
             if (!keywords) keywords = query;
-            console.log('[检索] 原始提问:', query);
-            console.log('[检索] 关键词:', keywords);
-
             const results = [];
 
-            // 1. 查询角色表（只有 name, element, version）
             const { data: characters } = await client
                 .from('characters')
                 .select('name, element, version')
                 .or(`name.ilike.%${keywords}%,element.ilike.%${keywords}%,version.ilike.%${keywords}%`)
                 .limit(5);
-            if (characters && characters.length) {
-                characters.forEach(c => {
-                    results.push(`角色「${c.name}」｜属性：${c.element || '未知'}｜登场版本：${c.version || '未知'}`);
-                });
+            if (characters?.length) {
+                characters.forEach(c => results.push(`角色「${c.name}」｜属性：${c.element || '未知'}｜登场版本：${c.version || '未知'}`));
             }
 
-            // 2. 查询光锥表（假设有 name, description）
             try {
                 const { data: lightCones } = await client
                     .from('light_cones')
                     .select('name, description')
                     .or(`name.ilike.%${keywords}%,description.ilike.%${keywords}%`)
                     .limit(3);
-                if (lightCones && lightCones.length) {
+                if (lightCones?.length) {
                     lightCones.forEach(l => results.push(`光锥「${l.name}」：${l.description || '暂无效果'}`));
                 }
-            } catch(e) { console.warn('light_cones 表查询失败', e); }
+            } catch(e) {}
 
-            // 3. 查询材料表（假设有 name, description）
             try {
                 const { data: materials } = await client
                     .from('materials')
                     .select('name, description')
                     .or(`name.ilike.%${keywords}%,description.ilike.%${keywords}%`)
                     .limit(3);
-                if (materials && materials.length) {
+                if (materials?.length) {
                     materials.forEach(m => results.push(`材料「${m.name}」：${m.description || '暂无获取方式'}`));
                 }
-            } catch(e) { console.warn('materials 表查询失败', e); }
+            } catch(e) {}
 
-            // 4. 查询版本活动表（如果存在）
             try {
                 const { data: versions } = await client
                     .from('game_versions')
                     .select('version, phase, name, description')
                     .or(`version.ilike.%${keywords}%,phase.ilike.%${keywords}%,name.ilike.%${keywords}%,description.ilike.%${keywords}%`)
                     .limit(3);
-                if (versions && versions.length) {
+                if (versions?.length) {
                     versions.forEach(v => results.push(`版本活动「${v.version} ${v.phase} - ${v.name}」：${v.description || ''}`));
                 }
-            } catch(e) { console.warn('game_versions 表可能未创建', e); }
+            } catch(e) {}
 
-            console.log('[检索] 总结果数:', results.length);
             return results.length ? results.slice(0, 5) : null;
         }
 
-        // ========== 调用 DeepSeek 并附带上下文 ==========
+        // ========== DeepSeek 调用（无上限） ==========
         async function callDeepSeekWithContext(userMessage, wikiContext) {
             let contextMessage = '';
-            if (wikiContext && wikiContext.length) {
+            if (wikiContext?.length) {
                 contextMessage = `以下是六哥荣耀WIKI中与用户问题相关的资料（请优先使用这些信息回答，用自然的妹妹口吻）：\n${wikiContext.join('\n')}\n\n如果资料只有角色的版本和属性，没有详细描述，你可以根据游戏常识适当补充推测，但要说明“WIKI里只记录了这些”。`;
             } else {
                 contextMessage = '（当前没有找到与用户问题直接相关的WIKI资料，请根据你的通用知识回答，但如果用户问的是WIKI专属内容，请诚实说“妹妹暂时没查到，可以去WIKI主页看看哦～”。）';
@@ -339,13 +270,13 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentApiKey}`
+                    'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
                 },
                 body: JSON.stringify({
                     model: 'deepseek-chat',
                     messages: messages,
                     temperature: 0.7,
-                    max_tokens: 600
+                    max_tokens: 2048  // 较长的回复上限，但不限制总对话轮数
                 })
             });
             if (!response.ok) {
@@ -361,12 +292,10 @@
         async function sendMessage() {
             const text = messageInput.value.trim();
             if (!text) return;
-            if (!currentApiKey || !isConnected) {
-                addSystemMessage('⚠️ 请先保存密钥并测试连接成功后再聊天～');
-                return;
-            }
             messageInput.value = '';
             autoResize();
+
+            // 添加用户消息并保存历史
             addMessage('user', text, true);
 
             const loader = document.createElement('div');
@@ -378,7 +307,7 @@
 
             try {
                 const wikiResults = await searchLocalWiki(text);
-                if (wikiResults && wikiResults.length) {
+                if (wikiResults?.length) {
                     loader.innerHTML = '📚 找到资料，妹妹正在组织答案...';
                 } else {
                     loader.innerHTML = '💭 没找到WIKI资料，妹妹凭印象回答...';
@@ -386,22 +315,20 @@
                 const reply = await callDeepSeekWithContext(text, wikiResults);
                 document.getElementById('aiLoader')?.remove();
                 addMessage('assistant', reply, false);
-                conversationHistory.push({ role: 'assistant', content: reply });
             } catch (error) {
                 document.getElementById('aiLoader')?.remove();
                 console.error(error);
                 addSystemMessage(`😥 妹妹出错了: ${error.message}`);
                 if (error.message.includes('401') || error.message.includes('Incorrect API key')) {
-                    apiStatusSpan.innerHTML = '❌ 密钥无效，请重新保存';
-                    apiStatusSpan.className = 'status-text error';
-                    isConnected = false;
+                    apiStatusSpan.innerHTML = '❌ 密钥无效，请联系管理员';
+                    apiStatusSpan.style.color = '#ff453a';
                     messageInput.disabled = true;
                     sendBtn.disabled = true;
                 }
             }
         }
 
-        // ==================== UI 辅助函数（不变）====================
+        // 统一的消息添加与持久化（用户和AI都保存）
         function addMessage(role, content, isUser) {
             const div = document.createElement('div');
             div.className = `message ${isUser ? 'user' : 'ai'}`;
@@ -415,7 +342,8 @@
             div.appendChild(timeDiv);
             messagesArea.appendChild(div);
             messagesArea.scrollTop = messagesArea.scrollHeight;
-            if (!isUser) conversationHistory.push({ role, content });
+
+            conversationHistory.push({ role: role, content: content });
             saveHistory();
         }
 
@@ -450,12 +378,6 @@
         }
 
         function loadStorage() {
-            const savedKey = localStorage.getItem('ai_sister_key');
-            if (savedKey) {
-                currentApiKey = savedKey;
-                apiKeyInput.value = savedKey;
-                checkApiKeyValid();
-            }
             const savedHistory = localStorage.getItem('ai_sister_history');
             if (savedHistory) {
                 try {
@@ -464,15 +386,16 @@
                 } catch(e) {}
             }
             if (!conversationHistory.length) {
-                addSystemMessage('🌸 妹妹准备好啦～ 输入DeepSeek密钥就可以聊天咯！\n📚 我会查角色/光锥/材料/版本活动，用自然语言回答你～');
+                addSystemMessage('🌸 妹妹准备好啦～ 直接开始聊天吧！\n📚 我会查角色/光锥/材料/版本活动，用自然语言回答你～');
             }
         }
 
         function renderMessagesFromHistory() {
             messagesArea.innerHTML = '';
             for (const msg of conversationHistory) {
+                const isUser = (msg.role === 'user');
                 const div = document.createElement('div');
-                div.className = `message ${msg.role === 'user' ? 'user' : 'ai'}`;
+                div.className = `message ${isUser ? 'user' : 'ai'}`;
                 const bubble = document.createElement('div');
                 bubble.className = 'bubble';
                 bubble.innerHTML = escapeHtml(msg.content).replace(/\n/g, '<br>');
@@ -483,8 +406,10 @@
                 div.appendChild(timeDiv);
                 messagesArea.appendChild(div);
             }
+            if (conversationHistory.length === 0) {
+                addSystemMessage('🌸 妹妹准备好啦～');
+            }
             messagesArea.scrollTop = messagesArea.scrollHeight;
-            if (conversationHistory.length === 0) addSystemMessage('🌸 妹妹准备好啦～');
         }
 
         function clearHistory() {
@@ -493,76 +418,6 @@
                 localStorage.removeItem('ai_sister_history');
                 messagesArea.innerHTML = '';
                 addSystemMessage('✨ 聊天记录已清空，重新开始吧～');
-            }
-        }
-
-        function saveApiKey() {
-            const key = apiKeyInput.value.trim();
-            if (!key || !key.startsWith('sk-')) {
-                apiStatusSpan.innerHTML = '❌ 密钥格式错误，应以 sk- 开头';
-                apiStatusSpan.className = 'status-text error';
-                return;
-            }
-            currentApiKey = key;
-            localStorage.setItem('ai_sister_key', key);
-            checkApiKeyValid();
-            apiStatusSpan.innerHTML = '✅ 密钥已保存！请点击「测试连接」';
-            apiStatusSpan.className = 'status-text success';
-        }
-
-        async function testConnection() {
-            if (!currentApiKey) {
-                apiStatusSpan.innerHTML = '请先保存密钥';
-                apiStatusSpan.className = 'status-text error';
-                return;
-            }
-            apiStatusSpan.innerHTML = '⏳ 测试中...';
-            apiStatusSpan.className = 'status-text';
-            try {
-                const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentApiKey}` },
-                    body: JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'user', content: 'ping' }], max_tokens: 5 })
-                });
-                if (res.ok) {
-                    apiStatusSpan.innerHTML = '✅ 连接成功！现在可以聊天啦。';
-                    apiStatusSpan.className = 'status-text success';
-                    isConnected = true;
-                    messageInput.disabled = false;
-                    sendBtn.disabled = false;
-                } else {
-                    let err = `HTTP ${res.status}`;
-                    try { const data = await res.json(); err += `: ${data.error?.message || ''}`; } catch(e) {}
-                    apiStatusSpan.innerHTML = `❌ 连接失败: ${err}`;
-                    apiStatusSpan.className = 'status-text error';
-                    isConnected = false;
-                    messageInput.disabled = true;
-                    sendBtn.disabled = true;
-                }
-            } catch (err) {
-                apiStatusSpan.innerHTML = `❌ 网络错误: ${err.message}`;
-                apiStatusSpan.className = 'status-text error';
-                isConnected = false;
-                messageInput.disabled = true;
-                sendBtn.disabled = true;
-            }
-        }
-
-        function checkApiKeyValid() {
-            if (currentApiKey && currentApiKey.startsWith('sk-')) {
-                isConnected = false;
-                messageInput.disabled = true;
-                sendBtn.disabled = true;
-                messageInput.placeholder = '请先测试连接';
-                apiStatusSpan.innerHTML = '🔑 密钥已保存，点击「测试连接」验证';
-                apiStatusSpan.className = 'status-text';
-            } else {
-                isConnected = false;
-                messageInput.disabled = true;
-                sendBtn.disabled = true;
-                messageInput.placeholder = '请先配置API密钥';
-                apiStatusSpan.innerHTML = '⚠️ 未检测到有效的密钥';
-                apiStatusSpan.className = 'status-text error';
             }
         }
 
@@ -575,14 +430,47 @@
                 }
             });
             messageInput.addEventListener('input', autoResize);
-            saveKeyBtn.onclick = saveApiKey;
-            testConnBtn.onclick = testConnection;
-            clearHistoryBtn.onclick = clearHistory;
+            // 长按清空（可选）
+            const headerTitle = document.querySelector('.title h2');
+            if (headerTitle) {
+                headerTitle.addEventListener('dblclick', clearHistory);
+            }
+        }
+
+        async function autoTestConnection() {
+            // 静默测试连接
+            try {
+                const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+                    },
+                    body: JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'user', content: 'ping' }], max_tokens: 5 })
+                });
+                if (res.ok) {
+                    apiStatusSpan.innerHTML = '✅ 已连接 DeepSeek，直接聊天吧～';
+                    apiStatusSpan.style.color = '#30d158';
+                    messageInput.disabled = false;
+                    sendBtn.disabled = false;
+                } else {
+                    apiStatusSpan.innerHTML = '⚠️ API 连接失败，请检查网络或密钥';
+                    apiStatusSpan.style.color = '#ff9f0a';
+                    messageInput.disabled = true;
+                    sendBtn.disabled = true;
+                }
+            } catch (err) {
+                apiStatusSpan.innerHTML = '⚠️ 网络异常，无法连接 DeepSeek';
+                apiStatusSpan.style.color = '#ff9f0a';
+                messageInput.disabled = true;
+                sendBtn.disabled = true;
+            }
         }
 
         function init() {
             loadStorage();
             bindEvents();
+            autoTestConnection();
             if (!window.supabase) {
                 console.warn('Supabase JS 加载失败，WIKI 查询功能不可用');
                 addSystemMessage('⚠️ Supabase SDK 加载失败，部分WIKI查询功能暂不可用。');
