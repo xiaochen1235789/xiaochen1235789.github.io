@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <link rel="icon" href="/images/wangzhantupian.png" type="image/png">
-    <title>AI妹妹 · 六哥荣耀WIKI</title>
+    <title>妹妹小兹 · 六哥荣耀WIKI</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -27,12 +27,12 @@
         .avatar {
             width: 44px;
             height: 44px;
-            background: linear-gradient(135deg, #4a3b2c, #6b4e3a);
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
+            background-image: url('./images/wangzhantupian.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #4a3b2c;
         }
         .title h2 { font-size: 18px; font-weight: 600; color: #ffffff; }
         .title p { font-size: 12px; color: #8e8e93; margin-top: 2px; }
@@ -40,11 +40,29 @@
             background: #1c1c1e;
             padding: 12px 16px;
             border-bottom: 0.5px solid #2c2c2e;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
         }
         .status-text {
             font-size: 12px;
             color: #30d158;
-            margin-top: 6px;
+            margin-top: 0;
+        }
+        .clear-btn {
+            background: #c41e3a;
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .clear-btn:hover {
+            background: #a01830;
         }
         .messages-area {
             flex: 1;
@@ -137,31 +155,37 @@
             font-size: 13px;
         }
         @media (max-width: 560px) {
-            .api-row { flex-direction: column; align-items: stretch; }
-            .btn-sm { justify-content: center; }
+            .config-panel {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .clear-btn {
+                align-self: flex-start;
+            }
         }
     </style>
 </head>
 <body>
 <div class="chat-header">
-    <div class="avatar">🌸</div>
+    <div class="avatar"></div>
     <div class="title">
-        <h2>AI妹妹</h2>
-        <p>WIKI专家 · 智能检索</p>
+        <h2>小兹</h2>
+        <p>WIKI小助手 · 随时帮忙</p>
     </div>
 </div>
 
 <div class="config-panel">
-    <div id="apiStatus" class="status-text">✅ 已连接 DeepSeek，直接聊天吧～</div>
-    <div style="font-size: 11px; color: #8e8e93; margin-top: 8px;">
-        📚 我会查角色/光锥/材料/版本活动，用自然语言回答你～
+    <div id="apiStatus" class="status-text">✅ 已连接，小兹随时在线～</div>
+    <button id="clearHistoryBtn" class="clear-btn"><i class="fas fa-trash-alt"></i> 清空聊天记录</button>
+    <div style="font-size: 11px; color: #8e8e93; margin-top: 4px; width: 100%;">
+        📚 小兹会查角色/光锥/材料/版本活动，用自然语言回答你～
     </div>
 </div>
 
 <div class="messages-area" id="messagesArea"></div>
 
 <div class="input-area">
-    <textarea id="messageInput" rows="1" placeholder="对妹妹说点什么..."></textarea>
+    <textarea id="messageInput" rows="1" placeholder="对小兹说点什么..."></textarea>
     <button class="send-btn" id="sendBtn">➤</button>
 </div>
 
@@ -172,17 +196,20 @@
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
-        const SYSTEM_PROMPT = `你是一个温柔可爱的邻家妹妹，同时也是「六哥荣耀WIKI」的智能助手。你擅长回答关于游戏角色、光锥、材料以及版本活动的问题。
+        // 小兹的专属系统提示（补充性格设定）
+        const SYSTEM_PROMPT = `你的名字叫小兹，是一个温柔可爱的邻家妹妹，同时也是「六哥荣耀WIKI」的智能助手。你喜欢聊天，乐于助人，语气亲切自然，偶尔会用“～”、“呀”、“哦”等语气词，但不会过度卖萌或做作。
+你擅长回答关于游戏角色、光锥、材料以及版本活动的问题。
 如果用户提问与你知识库相关，你会优先利用提供的WIKI资料给出准确、自然的答案。
 如果资料不够详细（比如只知道角色的版本、属性），你可以结合游戏通用知识适当补充，但必须明确区分“WIKI资料”和“我的推测”。
-如果完全查不到，你会诚实地说“妹妹暂时没查到，要不要去WIKI主页看看呀～”。
-回答要亲切、自然，可以使用“～”、“呀”等语气词，但不要过度卖萌。`;
+如果完全查不到，你会诚实地说“小兹暂时没查到，要不要去WIKI主页看看呀～”。
+回答要简洁清晰，尽量让用户感受到被关心和帮助。`;
 
         // DOM 元素
         const messagesArea = document.getElementById('messagesArea');
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
         const apiStatusSpan = document.getElementById('apiStatus');
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 
         let conversationHistory = [];
         let supabaseClient = null;
@@ -250,13 +277,13 @@
             return results.length ? results.slice(0, 5) : null;
         }
 
-        // ========== DeepSeek 调用（无上限） ==========
+        // ========== DeepSeek 调用 ==========
         async function callDeepSeekWithContext(userMessage, wikiContext) {
             let contextMessage = '';
             if (wikiContext?.length) {
-                contextMessage = `以下是六哥荣耀WIKI中与用户问题相关的资料（请优先使用这些信息回答，用自然的妹妹口吻）：\n${wikiContext.join('\n')}\n\n如果资料只有角色的版本和属性，没有详细描述，你可以根据游戏常识适当补充推测，但要说明“WIKI里只记录了这些”。`;
+                contextMessage = `以下是六哥荣耀WIKI中与用户问题相关的资料（请优先使用这些信息回答，用小兹的语气）：\n${wikiContext.join('\n')}\n\n如果资料只有角色的版本和属性，没有详细描述，你可以根据游戏常识适当补充推测，但要说明“WIKI里只记录了这些”。`;
             } else {
-                contextMessage = '（当前没有找到与用户问题直接相关的WIKI资料，请根据你的通用知识回答，但如果用户问的是WIKI专属内容，请诚实说“妹妹暂时没查到，可以去WIKI主页看看哦～”。）';
+                contextMessage = '（当前没有找到与用户问题直接相关的WIKI资料，请根据你的通用知识回答，但如果用户问的是WIKI专属内容，请诚实说“小兹暂时没查到，可以去WIKI主页看看哦～”。）';
             }
 
             const recent = conversationHistory.slice(-8).map(m => ({ role: m.role, content: m.content }));
@@ -276,7 +303,7 @@
                     model: 'deepseek-chat',
                     messages: messages,
                     temperature: 0.7,
-                    max_tokens: 2048  // 较长的回复上限，但不限制总对话轮数
+                    max_tokens: 2048
                 })
             });
             if (!response.ok) {
@@ -295,22 +322,21 @@
             messageInput.value = '';
             autoResize();
 
-            // 添加用户消息并保存历史
             addMessage('user', text, true);
 
             const loader = document.createElement('div');
             loader.className = 'loading-tip';
             loader.id = 'aiLoader';
-            loader.innerHTML = '🔍 妹妹正在查WIKI...';
+            loader.innerHTML = '🔍 小兹正在查WIKI...';
             messagesArea.appendChild(loader);
             messagesArea.scrollTop = messagesArea.scrollHeight;
 
             try {
                 const wikiResults = await searchLocalWiki(text);
                 if (wikiResults?.length) {
-                    loader.innerHTML = '📚 找到资料，妹妹正在组织答案...';
+                    loader.innerHTML = '📚 找到资料，小兹正在组织答案...';
                 } else {
-                    loader.innerHTML = '💭 没找到WIKI资料，妹妹凭印象回答...';
+                    loader.innerHTML = '💭 没找到WIKI资料，小兹凭印象回答...';
                 }
                 const reply = await callDeepSeekWithContext(text, wikiResults);
                 document.getElementById('aiLoader')?.remove();
@@ -318,7 +344,7 @@
             } catch (error) {
                 document.getElementById('aiLoader')?.remove();
                 console.error(error);
-                addSystemMessage(`😥 妹妹出错了: ${error.message}`);
+                addSystemMessage(`😥 小兹出错了: ${error.message}`);
                 if (error.message.includes('401') || error.message.includes('Incorrect API key')) {
                     apiStatusSpan.innerHTML = '❌ 密钥无效，请联系管理员';
                     apiStatusSpan.style.color = '#ff453a';
@@ -328,7 +354,6 @@
             }
         }
 
-        // 统一的消息添加与持久化（用户和AI都保存）
         function addMessage(role, content, isUser) {
             const div = document.createElement('div');
             div.className = `message ${isUser ? 'user' : 'ai'}`;
@@ -386,7 +411,7 @@
                 } catch(e) {}
             }
             if (!conversationHistory.length) {
-                addSystemMessage('🌸 妹妹准备好啦～ 直接开始聊天吧！\n📚 我会查角色/光锥/材料/版本活动，用自然语言回答你～');
+                addSystemMessage('🌸 小兹准备好啦～ 直接开始聊天吧！\n📚 我会查角色/光锥/材料/版本活动，用自然语言回答你～');
             }
         }
 
@@ -407,13 +432,13 @@
                 messagesArea.appendChild(div);
             }
             if (conversationHistory.length === 0) {
-                addSystemMessage('🌸 妹妹准备好啦～');
+                addSystemMessage('🌸 小兹准备好啦～');
             }
             messagesArea.scrollTop = messagesArea.scrollHeight;
         }
 
         function clearHistory() {
-            if (confirm('清空所有聊天记录？')) {
+            if (confirm('确定清空所有聊天记录吗？此操作不可恢复。')) {
                 conversationHistory = [];
                 localStorage.removeItem('ai_sister_history');
                 messagesArea.innerHTML = '';
@@ -430,7 +455,9 @@
                 }
             });
             messageInput.addEventListener('input', autoResize);
-            // 长按清空（可选）
+            if (clearHistoryBtn) {
+                clearHistoryBtn.onclick = clearHistory;
+            }
             const headerTitle = document.querySelector('.title h2');
             if (headerTitle) {
                 headerTitle.addEventListener('dblclick', clearHistory);
@@ -438,7 +465,6 @@
         }
 
         async function autoTestConnection() {
-            // 静默测试连接
             try {
                 const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
                     method: 'POST',
@@ -449,18 +475,18 @@
                     body: JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'user', content: 'ping' }], max_tokens: 5 })
                 });
                 if (res.ok) {
-                    apiStatusSpan.innerHTML = '✅ 已连接 DeepSeek，直接聊天吧～';
+                    apiStatusSpan.innerHTML = '✅ 小兹已就绪，直接聊天吧～';
                     apiStatusSpan.style.color = '#30d158';
                     messageInput.disabled = false;
                     sendBtn.disabled = false;
                 } else {
-                    apiStatusSpan.innerHTML = '⚠️ API 连接失败，请检查网络或密钥';
+                    apiStatusSpan.innerHTML = '⚠️ 连接失败，稍后再试试？';
                     apiStatusSpan.style.color = '#ff9f0a';
                     messageInput.disabled = true;
                     sendBtn.disabled = true;
                 }
             } catch (err) {
-                apiStatusSpan.innerHTML = '⚠️ 网络异常，无法连接 DeepSeek';
+                apiStatusSpan.innerHTML = '⚠️ 网络异常，小兹暂时无法响应';
                 apiStatusSpan.style.color = '#ff9f0a';
                 messageInput.disabled = true;
                 sendBtn.disabled = true;
