@@ -238,6 +238,39 @@
         .custom-emoji-item img { width: 36px; height: 36px; }
         .loading-msg { text-align: center; padding: 20px; color: var(--text-secondary); }
         .error-box { background: rgba(248,113,113,0.1); border: 1px solid #f87171; border-radius: 10px; padding: 16px; text-align: center; margin: 16px; }
+
+        /* 自定义上下文菜单 */
+        .custom-context-menu {
+            position: fixed;
+            background: #2c2c2e;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            padding: 8px 0;
+            min-width: 120px;
+            z-index: 10000;
+            animation: fadeIn 0.1s ease;
+        }
+        .custom-context-menu .menu-item {
+            padding: 10px 16px;
+            font-size: 14px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .custom-context-menu .menu-item:active {
+            background: #3a3a3c;
+        }
+        .custom-context-menu .menu-item.danger {
+            color: #ff453a;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
         @media (max-width: 480px) {
             .friend-avatar { width: 34px; height: 34px; }
             .message-content { max-width: 80%; }
@@ -325,40 +358,81 @@
         ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
     };
 
-    // 跳转到个人主页
-    function gotoProfile(userId) {
-        if (!userId) return;
-        window.open(`profile.html?uid=${userId}`, '_blank');
-    }
-
-    // 生成头像DOM（增加点击跳转）
-    function createAvatarElement(avatarUrl, name, userId, size = '36px') {
-        const div = document.createElement('div');
-        div.className = 'msg-avatar';
-        div.style.width = size;
-        div.style.height = size;
-        if (avatarUrl) {
-            const img = document.createElement('img');
-            img.src = avatarUrl;
-            img.onerror = () => { div.innerHTML = (name?.charAt(0) || '?').toUpperCase(); div.style.background = 'linear-gradient(135deg, #3ecf8e, #8a4baf)'; };
-            div.appendChild(img);
-        } else {
-            div.textContent = (name?.charAt(0) || '?').toUpperCase();
-            div.style.background = 'linear-gradient(135deg, #3ecf8e, #8a4baf)';
-            div.style.color = 'white';
-            div.style.fontWeight = '600';
+    // ========== 自定义上下文菜单 ==========
+    let currentMenu = null;
+    function hideContextMenu() {
+        if (currentMenu) {
+            currentMenu.remove();
+            currentMenu = null;
         }
-        if (userId) {
-            div.style.cursor = 'pointer';
-            div.addEventListener('click', (e) => {
+    }
+    function showContextMenu(x, y, items) {
+        hideContextMenu();
+        const menu = document.createElement('div');
+        menu.className = 'custom-context-menu';
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+        items.forEach(item => {
+            const menuitem = document.createElement('div');
+            menuitem.className = 'menu-item' + (item.danger ? ' danger' : '');
+            if (item.icon) menuitem.innerHTML = `<i class="fas ${item.icon}"></i> ${item.label}`;
+            else menuitem.innerHTML = item.label;
+            menuitem.onclick = (e) => {
                 e.stopPropagation();
-                gotoProfile(userId);
-            });
-        }
-        return div;
+                item.action();
+                hideContextMenu();
+            };
+            menu.appendChild(menuitem);
+        });
+        document.body.appendChild(menu);
+        currentMenu = menu;
+        // 点击其他地方关闭
+        const closeHandler = (e) => {
+            if (!menu.contains(e.target)) hideContextMenu();
+            document.removeEventListener('click', closeHandler);
+            document.removeEventListener('touchstart', closeHandler);
+        };
+        setTimeout(() => {
+            document.addEventListener('click', closeHandler);
+            document.addEventListener('touchstart', closeHandler);
+        }, 0);
     }
 
-    // 渲染消息内容（表情/图片）
+    // 复制文本到剪贴板
+    async function copyToClipboard(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            showNotification('已复制');
+        } catch(e) { showNotification('复制失败', true); }
+    }
+
+    // 保存图片到相册（通过创建a标签下载）
+    function saveImage(url) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'image.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showNotification('图片已保存');
+    }
+
+    // 删除消息（仅自己发送的）
+    async function deleteMessage(msgId) {
+        if(!confirm('删除这条消息？')) return;
+        const { error } = await supabase.from('messages').delete().eq('id', msgId).eq('sender_id', currentUser.id);
+        if(error) showNotification('删除失败', true);
+        else showNotification('已删除');
+    }
+
+    // 撤回消息（仅自己且2分钟内）
+    async function recallMessage(msgId) {
+        const { error } = await supabase.from('messages').update({ is_recalled: true }).eq('id', msgId).eq('sender_id', currentUser.id);
+        if(error) showNotification('撤回失败', true);
+        else showNotification('已撤回');
+    }
+
+    // ========== 消息渲染（增加长按事件） ==========
     function renderMessageContent(msg) {
         if (msg.is_recalled) return `<span style="font-style:italic;">${msg.sender_id === currentUser?.id ? '你撤回了' : '对方撤回了'}</span>`;
         let text = msg.content || '';
@@ -377,17 +451,131 @@
             const cls = (key === '动态星星' || key === '动态猫猫') ? ' animated-emoji-large' : '';
             return `<img src="${url}" class="chat-emoji-img${cls}" alt="${key}" loading="lazy">`;
         });
-        escaped = escaped.replace(/\[custom:([^\]]+)\]/g, (_, url) => `<img src="${escapeHtml(url)}" class="chat-emoji-img custom-emoji" alt="表情" loading="lazy" onclick="event.stopPropagation(); window.showImagePreview('${escapeHtml(url)}')">`);
+        escaped = escaped.replace(/\[custom:([^\]]+)\]/g, (_, url) => `<img src="${escapeHtml(url)}" class="chat-emoji-img custom-emoji" alt="表情" loading="lazy">`);
         return escaped.replace(/\n/g, '<br>');
     }
 
-    async function recallMessage(msgId) {
-        const { error } = await supabase.from('messages').update({ is_recalled: true }).eq('id', msgId).eq('sender_id', currentUser.id);
-        if(error) showNotification('撤回失败', true);
-        else showNotification('已撤回');
+    function createAvatarElement(avatarUrl, name, userId, size = '36px') {
+        const div = document.createElement('div');
+        div.className = 'msg-avatar';
+        div.style.width = size;
+        div.style.height = size;
+        if (avatarUrl) {
+            const img = document.createElement('img');
+            img.src = avatarUrl;
+            img.onerror = () => { div.innerHTML = (name?.charAt(0) || '?').toUpperCase(); div.style.background = 'linear-gradient(135deg, #3ecf8e, #8a4baf)'; };
+            div.appendChild(img);
+        } else {
+            div.textContent = (name?.charAt(0) || '?').toUpperCase();
+            div.style.background = 'linear-gradient(135deg, #3ecf8e, #8a4baf)';
+            div.style.color = 'white';
+            div.style.fontWeight = '600';
+        }
+        if (userId) {
+            div.style.cursor = 'pointer';
+            div.addEventListener('click', (e) => { e.stopPropagation(); gotoProfile(userId); });
+        }
+        return div;
     }
 
-    // 创建单条消息行（带头像，点击跳转）
+    function gotoProfile(userId) {
+        if (!userId) return;
+        window.open(`profile.html?uid=${userId}`, '_blank');
+    }
+
+    // 为消息气泡添加长按菜单
+    function attachLongPressToBubble(bubbleElement, msg, isOwn) {
+        let timer = null;
+        const start = (e) => {
+            e.preventDefault();
+            timer = setTimeout(() => {
+                const rect = bubbleElement.getBoundingClientRect();
+                let x = rect.left + window.scrollX;
+                let y = rect.top + window.scrollY;
+                // 获取触摸点坐标（如果是触摸事件）
+                if (e.touches) {
+                    x = e.touches[0].clientX;
+                    y = e.touches[0].clientY;
+                } else if (e.clientX) {
+                    x = e.clientX;
+                    y = e.clientY;
+                }
+                const items = [];
+                // 复制文字（如果是文本消息，且未撤回）
+                if (!msg.is_recalled) {
+                    items.push({
+                        label: '复制文字',
+                        icon: 'fa-copy',
+                        action: () => copyToClipboard(msg.content)
+                    });
+                }
+                if (isOwn && !msg.is_recalled) {
+                    if (canRecall(msg.created_at)) {
+                        items.push({
+                            label: '撤回',
+                            icon: 'fa-undo-alt',
+                            action: () => recallMessage(msg.id)
+                        });
+                    }
+                    items.push({
+                        label: '删除',
+                        icon: 'fa-trash-alt',
+                        danger: true,
+                        action: () => deleteMessage(msg.id)
+                    });
+                }
+                if (items.length > 0) showContextMenu(x, y, items);
+            }, 500);
+        };
+        const end = () => { if(timer) clearTimeout(timer); };
+        bubbleElement.addEventListener('touchstart', start, { passive: false });
+        bubbleElement.addEventListener('touchend', end);
+        bubbleElement.addEventListener('touchcancel', end);
+        bubbleElement.addEventListener('mousedown', start);
+        bubbleElement.addEventListener('mouseup', end);
+        bubbleElement.addEventListener('mouseleave', end);
+        // 禁止浏览器默认右键菜单
+        bubbleElement.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+
+    // 为图片添加长按保存功能
+    function attachLongPressToImages(container) {
+        const images = container.querySelectorAll('.custom-emoji, .chat-emoji-img');
+        images.forEach(img => {
+            if (img.dataset.longpress) return;
+            img.dataset.longpress = 'true';
+            let timer = null;
+            const start = (e) => {
+                e.preventDefault();
+                timer = setTimeout(() => {
+                    const url = img.src;
+                    const rect = img.getBoundingClientRect();
+                    let x = rect.left + window.scrollX;
+                    let y = rect.top + window.scrollY;
+                    if (e.touches) {
+                        x = e.touches[0].clientX;
+                        y = e.touches[0].clientY;
+                    } else if (e.clientX) {
+                        x = e.clientX;
+                        y = e.clientY;
+                    }
+                    showContextMenu(x, y, [{
+                        label: '保存图片',
+                        icon: 'fa-image',
+                        action: () => saveImage(url)
+                    }]);
+                }, 500);
+            };
+            const end = () => { if(timer) clearTimeout(timer); };
+            img.addEventListener('touchstart', start, { passive: false });
+            img.addEventListener('touchend', end);
+            img.addEventListener('touchcancel', end);
+            img.addEventListener('mousedown', start);
+            img.addEventListener('mouseup', end);
+            img.addEventListener('contextmenu', (e) => e.preventDefault());
+        });
+    }
+
     function createMessageRow(msg) {
         const isOwn = msg.sender_id === currentUser?.id;
         const row = document.createElement('div');
@@ -400,6 +588,7 @@
         const bubble = document.createElement('div');
         bubble.className = 'message-bubble';
         bubble.innerHTML = renderMessageContent(msg);
+        attachLongPressToBubble(bubble, msg, isOwn);
 
         const timeSpan = document.createElement('div');
         timeSpan.className = 'message-time';
@@ -408,7 +597,6 @@
         contentDiv.appendChild(bubble);
         contentDiv.appendChild(timeSpan);
 
-        // 头像：自己的头像传 currentUser.id，对方头像传 friendId
         let avatarDiv;
         if (isOwn) {
             avatarDiv = createAvatarElement(currentUserAvatar, currentUserName, currentUser.id, '32px');
@@ -420,16 +608,12 @@
             row.appendChild(contentDiv);
         }
 
-        // 撤回双击事件（仅自己消息且未撤回且在2分钟内）
-        if (isOwn && !msg.is_recalled && canRecall(msg.created_at)) {
-            row.addEventListener('dblclick', (e) => {
-                if(e.target.tagName === 'IMG' && e.target.classList.contains('custom-emoji')) return;
-                if(confirm('撤回这条消息？')) recallMessage(msg.id);
-            });
-        }
+        // 为气泡内的图片附加长按菜单
+        setTimeout(() => attachLongPressToImages(bubble), 10);
         return row;
     }
 
+    // 其余原有函数（加载消息、发送消息、订阅等保持不变，仅适当引用上面定义的新函数）
     async function loadMessages() {
         if(!currentUser || !friendId) return;
         const { data, error } = await supabase
@@ -484,7 +668,7 @@
         messagesSubscription = channel;
     }
 
-    // ========== 表情相关 ==========
+    // 表情相关函数（保持原样）
     function insertEmoji(code, isCustom = false) {
         const start = elements.messageInput.selectionStart;
         const val = elements.messageInput.value;
@@ -609,7 +793,6 @@
             friendName = data.username || '好友';
             friendAvatar = data.avatar_url;
             elements.friendNameSpan.textContent = friendName;
-            // 头部头像也可点击跳转
             const avatarDiv = elements.friendAvatarDiv;
             avatarDiv.innerHTML = '';
             if(friendAvatar) {
@@ -666,6 +849,9 @@
         elements.messageInput.addEventListener('focus', () => { if(emojiPanelOpen) toggleEmojiPanel(); setTimeout(scrollToBottom, 300); });
         window.addEventListener('resize', () => setTimeout(scrollToBottom, 100));
         window.addEventListener('beforeunload', () => { if(messagesSubscription) supabase.removeChannel(messagesSubscription); });
+        // 全局关闭菜单
+        document.addEventListener('click', hideContextMenu);
+        document.addEventListener('touchstart', hideContextMenu);
     }
     window.showImagePreview = url => {
         const overlay = document.createElement('div');
