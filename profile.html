@@ -11,7 +11,6 @@
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
     <style>
-        /* 商店滚动条样式 */
         #shopModal .modal #shopContentContainer {
             max-height: 60vh;
             overflow-y: auto;
@@ -29,14 +28,25 @@
             background: var(--text-highlight);
             border-radius: 3px;
         }
-        /* 自定义确认模态框用于头像更换 */
         #avatarConfirmModal .modal {
             max-width: 280px;
             text-align: center;
         }
-        #avatarConfirmModal .confirm-buttons {
+        .confirm-buttons {
             justify-content: center;
             margin-top: 20px;
+        }
+        /* 他人主页只读样式 */
+        .readonly-mode .username-edit,
+        .readonly-mode .edit-bio,
+        .readonly-mode .checkin-btn,
+        .readonly-mode .shop-button,
+        .readonly-mode .settings-item .btn,
+        .readonly-mode .danger-zone {
+            display: none !important;
+        }
+        .readonly-mode .avatar-container {
+            cursor: default;
         }
     </style>
 </head>
@@ -98,7 +108,6 @@
     <div class="modal-overlay" id="passwordModal"><div class="modal"><div class="modal-header"><div class="modal-title">修改密码</div><button class="modal-close close-modal-btn" data-modal="passwordModal">&times;</button></div><div class="form-group"><input type="password" class="form-input" id="currentPassword" placeholder="当前密码"></div><div class="form-group"><input type="password" class="form-input" id="newPassword" placeholder="新密码"></div><div class="form-group"><input type="password" class="form-input" id="confirmPassword" placeholder="确认新密码"></div><div class="form-actions"><button class="btn-cancel close-modal-btn" data-modal="passwordModal">取消</button><button class="btn-primary" id="savePassword">更新密码</button></div></div></div>
     <div class="modal-overlay" id="deleteAccountModal"><div class="modal"><div class="modal-header"><div class="modal-title" style="color:#f87171;">注销账号</div><button class="modal-close close-modal-btn" data-modal="deleteAccountModal">&times;</button></div><p>输入邮箱确认：</p><div class="form-group"><input type="email" class="form-input" id="confirmEmail" placeholder="邮箱地址"></div><div class="form-actions"><button class="btn-cancel close-modal-btn" data-modal="deleteAccountModal">取消</button><button class="danger-btn" id="confirmDeleteAccount">确认注销</button></div></div></div>
     <div class="modal-overlay" id="logoutConfirmModal"><div class="modal"><div class="modal-header"><div class="modal-title">退出登录</div><button class="modal-close" id="closeLogoutModalBtn">&times;</button></div><p>确定退出吗？</p><div class="confirm-buttons"><button class="btn-cancel-modal" id="cancelLogoutBtn">取消</button><button class="btn-confirm" id="confirmLogoutBtn">退出</button></div></div></div>
-    <!-- 新增头像更换确认模态框 -->
     <div class="modal-overlay" id="avatarConfirmModal"><div class="modal"><div class="modal-header"><div class="modal-title">更换头像</div><button class="modal-close" id="closeAvatarConfirmBtn">&times;</button></div><p>确定要更换头像吗？</p><div class="confirm-buttons"><button class="btn-cancel-modal" id="cancelAvatarBtn">取消</button><button class="btn-confirm" id="confirmAvatarBtn">确定</button></div></div></div>
 
     <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fas fa-chevron-up"></i></button>
@@ -112,14 +121,15 @@
         };
         function getRoleDisplay(role) { return ROLE_CONFIG[role] || ROLE_CONFIG.user; }
 
-        let supabaseClient = null, currentUser = null, userProfile = null;
-        let userStats = { candy_crumbles: 0, rainbow_lollipops: 0, active_points: 0, last_checkin_date: null, checkin_streak: 0 };
+        let supabaseClient = null, currentUser = null, targetUserId = null, userProfile = null, userStats = null;
+        let isViewingSelf = true; // 是否查看自己的主页
         let cropper = null, isUploading = false;
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
         // ========== 本地缓存同步 ==========
         function refreshLocalCache() {
+            if (!isViewingSelf) return;
             if (userProfile) localStorage.setItem('cachedUserProfile', JSON.stringify(userProfile));
             if (userStats) localStorage.setItem('cachedUserStats', JSON.stringify(userStats));
             localStorage.setItem('profileLastUpdated', Date.now());
@@ -129,7 +139,7 @@
             return date.toLocaleDateString('sv-SE');
         }
 
-        // ========== 头像框系统（使用类名） ==========
+        // ========== 头像框系统（仅对自己生效） ==========
         window.FrameSystem = (function() {
             const FRAMES = [
                 { id: 'frame_default', name: '默认头像框', description: '初始边框', price_candy: 0, price_rainbow: 0, cssClass: '' },
@@ -200,7 +210,6 @@
         // ========== 通用辅助 ==========
         function safeSetText(id, text) { let e = document.getElementById(id); if(e) e.textContent = text || '--'; }
         let notificationTimeout = null;
-        // 修复后的通知函数（使用类名控制，右上角滑入滑出）
         function showNotification(msg, type = 'info') {
             let n = document.getElementById('notification');
             if (!n) {
@@ -221,6 +230,7 @@
         }
         function showSyncNotice() { let sn = document.getElementById('syncNotice'); if(sn){ sn.classList.add('show'); setTimeout(()=>sn.classList.remove('show'),2000); } }
         function cacheUserProfile(username, avatarUrl) { 
+            if(!isViewingSelf) return;
             if(username) localStorage.setItem('cachedUsername', username);
             if(avatarUrl) localStorage.setItem('cachedAvatar', avatarUrl);
             localStorage.setItem('profileLastUpdated', Date.now());
@@ -237,17 +247,17 @@
                 let placeholder = document.createElement('div');
                 placeholder.className = 'avatar-placeholder';
                 placeholder.style.display = 'none';
-                placeholder.textContent = (userProfile?.username || currentUser?.email?.charAt(0) || 'U').charAt(0).toUpperCase();
+                placeholder.textContent = (userProfile?.username || (targetUserId === currentUser?.id ? currentUser?.email?.charAt(0) : 'U') || 'U').charAt(0).toUpperCase();
                 avatarDiv.appendChild(placeholder);
             } else {
-                let letter = (userProfile?.username || currentUser?.email?.charAt(0) || 'U').charAt(0).toUpperCase();
+                let letter = (userProfile?.username || (targetUserId === currentUser?.id ? currentUser?.email?.charAt(0) : 'U') || 'U').charAt(0).toUpperCase();
                 avatarDiv.innerHTML = `<div class="avatar-placeholder">${letter}</div>`;
             }
             avatarDiv.classList.add('avatar');
             if (currentFrameClass) {
                 avatarDiv.classList.add(currentFrameClass);
             } else {
-                if (window.FrameSystem && currentUser) {
+                if (isViewingSelf && window.FrameSystem && currentUser) {
                     window.FrameSystem.loadUserFrames(currentUser.id).then(({ equipped }) => {
                         window.FrameSystem.applyFrameClassByFrameId(equipped);
                     });
@@ -258,28 +268,35 @@
         function updateNavbar() {
             let navDiv = document.getElementById('userNavSection');
             if(!navDiv) return;
-            let username = userProfile?.username || currentUser?.email?.split('@')[0] || '用户';
-            let roleInfo = getRoleDisplay(userProfile?.role);
-            let avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
-            let avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;">` : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${username.charAt(0).toUpperCase()}</div>`;
-            navDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;">${avatarHtml}<span style="color:${roleInfo.color};">${username} (${roleInfo.name})</span><button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:20px;cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
-            document.getElementById('logoutBtn')?.addEventListener('click', () => openModal('logoutConfirmModal'));
+            // 如果查看他人主页，顶部栏仍显示当前登录用户的信息（方便退出）
+            if (currentUser) {
+                let username = userProfile?.username || currentUser?.email?.split('@')[0] || '用户';
+                let roleInfo = getRoleDisplay(userProfile?.role);
+                let avatarUrl = isViewingSelf ? (userProfile?.avatar_url || localStorage.getItem('userAvatar')) : (currentUser?.user_metadata?.avatar_url || null);
+                let avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;">` : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${username.charAt(0).toUpperCase()}</div>`;
+                navDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;">${avatarHtml}<span style="color:${roleInfo.color};">${username} (${roleInfo.name})</span><button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:20px;cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
+                document.getElementById('logoutBtn')?.addEventListener('click', () => openModal('logoutConfirmModal'));
+            } else {
+                navDiv.innerHTML = '<a href="login-real.html">登录</a>';
+            }
             let adminLink = document.getElementById('adminLink');
-            if(adminLink) adminLink.style.display = (userProfile?.role === 'owner' || userProfile?.role === 'admin') ? 'inline-block' : 'none';
+            if(adminLink && currentUser && (userProfile?.role === 'owner' || userProfile?.role === 'admin')) adminLink.style.display = 'inline-block';
+            else if(adminLink) adminLink.style.display = 'none';
         }
+
         function openModal(id) { let m = document.getElementById(id); if(m) m.classList.add('show'); document.body.style.overflow = 'hidden'; }
         function closeModal(id) { let m = document.getElementById(id); if(m) m.classList.remove('show'); document.body.style.overflow = ''; }
-        window.openUsernameModal = () => { document.getElementById('newUsername').value = userProfile?.username || ''; openModal('usernameModal'); };
-        window.openBioModal = () => { document.getElementById('newBio').value = userProfile?.bio || ''; openModal('bioModal'); };
-        window.openPasswordModal = () => openModal('passwordModal');
-        window.openDeleteAccountModal = () => { document.getElementById('confirmEmail').value = currentUser?.email || ''; openModal('deleteAccountModal'); };
+        window.openUsernameModal = () => { if(!isViewingSelf) return; document.getElementById('newUsername').value = userProfile?.username || ''; openModal('usernameModal'); };
+        window.openBioModal = () => { if(!isViewingSelf) return; document.getElementById('newBio').value = userProfile?.bio || ''; openModal('bioModal'); };
+        window.openPasswordModal = () => { if(!isViewingSelf) return; openModal('passwordModal'); };
+        window.openDeleteAccountModal = () => { if(!isViewingSelf) return; document.getElementById('confirmEmail').value = currentUser?.email || ''; openModal('deleteAccountModal'); };
 
-        // ========== 长按更换头像（使用自定义模态框） ==========
+        // 长按更换头像（仅自己）
         let longPressTimer = null;
         function onAvatarLongPressStart(e) {
+            if(!isViewingSelf) return;
             e.preventDefault();
             longPressTimer = setTimeout(() => {
-                // 显示自定义确认框
                 openModal('avatarConfirmModal');
                 longPressTimer = null;
             }, 500);
@@ -301,20 +318,15 @@
             avatarContainer.addEventListener('mouseleave', onAvatarLongPressEnd);
         }
 
-        // 修复：打开文件选择器，确保 input 不可见且不会残留
         window.openAvatarUpload = function() {
-            // 先移除可能残留的旧 input
+            if(!isViewingSelf) return;
             const oldInput = document.getElementById('tempFileInput');
             if (oldInput) oldInput.remove();
             const input = document.createElement('input');
             input.id = 'tempFileInput';
             input.type = 'file';
             input.accept = 'image/jpeg,image/png';
-            input.style.position = 'fixed';
-            input.style.top = '-100px';
-            input.style.left = '-100px';
-            input.style.opacity = '0';
-            input.style.pointerEvents = 'none';
+            input.style.cssText = 'position:fixed;top:-100px;left:-100px;opacity:0;pointer-events:none;';
             document.body.appendChild(input);
             input.onchange = (e) => {
                 const file = e.target.files[0];
@@ -323,14 +335,11 @@
                 } else if (file) {
                     showNotification('文件过大（最大5MB）', 'error');
                 }
-                // 移除 input 元素
                 input.remove();
             };
-            // 触发点击
             input.click();
         };
 
-        // 确认更换头像
         function confirmChangeAvatar() {
             closeModal('avatarConfirmModal');
             openAvatarUpload();
@@ -339,8 +348,9 @@
             closeModal('avatarConfirmModal');
         }
 
-        // ========== 用户操作 ==========
+        // ========== 用户操作（仅自己） ==========
         async function updateUsername() {
+            if(!isViewingSelf) return;
             let newName = document.getElementById('newUsername').value.trim();
             if(!newName || newName.length<2 || newName.length>20) return showNotification('用户名2-20字符','error');
             await supabaseClient.from('user_profiles').update({ username: newName }).eq('id', currentUser.id);
@@ -357,6 +367,7 @@
             showSyncNotice();
         }
         async function updateBio() {
+            if(!isViewingSelf) return;
             let newBio = document.getElementById('newBio').value.trim() || '';
             await supabaseClient.from('user_profiles').update({ bio: newBio }).eq('id', currentUser.id);
             userProfile.bio = newBio;
@@ -367,6 +378,7 @@
             showSyncNotice();
         }
         async function updatePassword() {
+            if(!isViewingSelf) return;
             let cur = document.getElementById('currentPassword').value;
             let np = document.getElementById('newPassword').value;
             let cp = document.getElementById('confirmPassword').value;
@@ -388,6 +400,7 @@
             closeModal('passwordModal');
         }
         async function deleteAccount() {
+            if(!isViewingSelf) return;
             let confirmEmail = document.getElementById('confirmEmail').value;
             if(confirmEmail !== currentUser.email) return showNotification('邮箱不匹配','error');
             showNotification('账号删除需联系管理员','warning');
@@ -400,7 +413,7 @@
             window.location.href = 'index.html';
         }
 
-        // ========== 签到及统计 ==========
+        // ========== 签到及统计（仅自己） ==========
         function getCheckinRewards(streak) {
             if(streak === 1) return { candy:3, rainbow:0, active:2 };
             if(streak === 2) return { candy:5, rainbow:0, active:2 };
@@ -416,19 +429,22 @@
             return { candy:80, rainbow:15, active:20 };
         }
         function updateRewardPreview() {
-            let streak = userStats.checkin_streak || 0;
+            if(!isViewingSelf) return;
+            let streak = userStats?.checkin_streak || 0;
             let rewards = getCheckinRewards(streak+1);
             let preview = document.getElementById('rewardPreview');
             if(preview) preview.innerHTML = `明日奖励: 🍬${rewards.candy} ${rewards.rainbow>0?`🌈+${rewards.rainbow} `:''}⚡+${rewards.active}`;
         }
-        function updateActivePointsDisplay() { let span = document.getElementById('activePointsValue'); if(span) span.innerText = userStats.active_points; }
+        function updateActivePointsDisplay() { let span = document.getElementById('activePointsValue'); if(span) span.innerText = userStats?.active_points || 0; }
         function updateShopBalanceDisplay() {
+            if(!isViewingSelf) return;
             let candySpan = document.getElementById('shopCandyBalance');
             let rainSpan = document.getElementById('shopRainbowBalance');
-            if(candySpan) candySpan.innerText = userStats.candy_crumbles;
-            if(rainSpan) rainSpan.innerText = userStats.rainbow_lollipops;
+            if(candySpan) candySpan.innerText = userStats?.candy_crumbles || 0;
+            if(rainSpan) rainSpan.innerText = userStats?.rainbow_lollipops || 0;
         }
         async function performCheckin() {
+            if(!isViewingSelf) return;
             let btn = document.getElementById('checkinBtn');
             if(btn.disabled) return showNotification('今日已签到','warning');
             let today = getLocalDateString();
@@ -461,8 +477,9 @@
             showNotification(`签到 +${rewards.candy}🍬 ${rewards.rainbow>0?`+${rewards.rainbow}🌈 `:''}+${rewards.active}⚡`,'success');
         }
 
-        // ========== 商店渲染 ==========
+        // ========== 商店渲染（仅自己） ==========
         async function renderShop() {
+            if(!isViewingSelf) return;
             let container = document.getElementById('shopContentContainer');
             if(!container) return;
             container.innerHTML = `<div class="shop-panel">
@@ -477,6 +494,7 @@
             updateShopBalanceDisplay();
         }
         async function loadFramesList() {
+            if(!isViewingSelf) return;
             let container = document.getElementById('framesList');
             if(!container) return;
             let userId = currentUser.id;
@@ -502,7 +520,6 @@
                     await window.FrameSystem.purchaseFrame(fid, userStats, (c, r) => { userStats.candy_crumbles = c; userStats.rainbow_lollipops = r; updateShopBalanceDisplay(); showNotification('购买成功','success'); loadFramesList(); refreshLocalCache(); });
                 } catch(err) { showNotification(err.message,'error'); }
             }));
-            // 恢复装备成功通知
             document.querySelectorAll('.btn-equip').forEach(btn => btn.addEventListener('click', async (e) => {
                 let fid = btn.dataset.id;
                 try {
@@ -513,8 +530,9 @@
             }));
         }
 
-        // ========== 头像上传裁剪 ==========
+        // ========== 头像上传裁剪（仅自己） ==========
         async function deleteOldAvatarFiles(userId) {
+            if(!isViewingSelf) return;
             try {
                 const { data: files, error: listErr } = await supabaseClient.storage.from('avatars').list(userId);
                 if (listErr && listErr.statusCode === 404) return;
@@ -525,7 +543,7 @@
             } catch(e) { console.warn('删除旧头像文件失败:', e); }
         }
         async function uploadCroppedImage(blob) {
-            if(!currentUser || isUploading) return false;
+            if(!isViewingSelf || !currentUser || isUploading) return false;
             isUploading = true;
             try {
                 await deleteOldAvatarFiles(currentUser.id);
@@ -571,104 +589,112 @@
             document.getElementById('cropImage').removeAttribute('src');
         }
 
-        // ========== 资料加载（含缓存） ==========
-        async function loadUserProfile() {
-            let { data: profile, error } = await supabaseClient.from('user_profiles').select('*').eq('id', currentUser.id).single();
+        // ========== 资料加载（支持查看他人） ==========
+        async function loadTargetProfile(targetId) {
+            let { data: profile, error } = await supabaseClient.from('user_profiles').select('*').eq('id', targetId).single();
+            if(error) throw error;
+            return profile;
+        }
+        async function loadTargetStats(targetId) {
+            let { data, error } = await supabaseClient.from('user_stats').select('*').eq('user_id', targetId).single();
             if(error && error.code === 'PGRST116') {
-                await supabaseClient.from('user_profiles').insert({ id: currentUser.id, username: currentUser.email.split('@')[0], bio: '', role: 'user' });
-                return loadUserProfile();
+                return { candy_crumbles:100, rainbow_lollipops:5, active_points:0, last_checkin_date:null, checkin_streak:0 };
             }
-            userProfile = profile;
-            let username = userProfile.username || currentUser.email.split('@')[0];
+            return { candy_crumbles: data?.candy_crumbles??100, rainbow_lollipops: data?.rainbow_lollipops??5, active_points: data?.active_points??0, last_checkin_date: data?.last_checkin_date, checkin_streak: data?.checkin_streak??0 };
+        }
+
+        async function renderProfile() {
+            // 根据是否查看自己调整UI模式
+            const profileContainer = document.getElementById('profileContent');
+            if (isViewingSelf) {
+                profileContainer.classList.remove('readonly-mode');
+            } else {
+                profileContainer.classList.add('readonly-mode');
+                // 隐藏签到卡和账号设置区块（可选，因为readonly-mode已经隐藏了按钮，但标题仍然显示，可以保留标题）
+                // 也可以保留基本信息展示
+            }
+            // 填充数据
             let roleInfo = getRoleDisplay(userProfile.role);
             let usernameSpan = document.getElementById('displayUsername');
-            if(usernameSpan) usernameSpan.innerHTML = `${username} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
-            safeSetText('userEmail', currentUser.email);
+            if(usernameSpan) usernameSpan.innerHTML = `${userProfile.username} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
+            safeSetText('userEmail', isViewingSelf ? currentUser.email : (userProfile.email || '未公开'));
             safeSetText('userBio', userProfile.bio || '');
-            safeSetText('createdAt', new Date(currentUser.created_at).toLocaleString());
-            let days = Math.floor((new Date() - new Date(currentUser.created_at)) / 86400000);
+            safeSetText('createdAt', new Date(userProfile.created_at || currentUser?.created_at).toLocaleString());
+            let days = Math.floor((new Date() - new Date(userProfile.created_at || currentUser?.created_at)) / 86400000);
             document.getElementById('userDaysText').innerText = `已来到 ${days} 天`;
             if(userProfile.avatar_url) updateAvatarDisplay(userProfile.avatar_url);
             else updateAvatarDisplay(null);
             let roleRow = document.getElementById('userRoleDisplay');
             if(roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
-            cacheUserProfile(username, userProfile.avatar_url);
-            refreshLocalCache();
-        }
-        async function loadUserStats() {
-            let { data, error } = await supabaseClient.from('user_stats').select('*').eq('user_id', currentUser.id).single();
-            if(error && error.code === 'PGRST116') {
-                await supabaseClient.from('user_stats').upsert({ user_id: currentUser.id, candy_crumbles:100, rainbow_lollipops:5, active_points:0, last_checkin_date:null, checkin_streak:0 });
-                return loadUserStats();
-            }
-            userStats = { candy_crumbles: data.candy_crumbles??100, rainbow_lollipops: data.rainbow_lollipops??5, active_points: data.active_points??0, last_checkin_date: data.last_checkin_date, checkin_streak: data.checkin_streak??0 };
-            updateActivePointsDisplay();
-            updateShopBalanceDisplay();
-            document.getElementById('streakDays').innerText = userStats.checkin_streak;
-            updateRewardPreview();
-            let today = getLocalDateString();
-            let btn = document.getElementById('checkinBtn');
-            if(btn) {
-                let checked = (userStats.last_checkin_date === today);
-                btn.disabled = checked;
-                btn.innerHTML = checked ? '<i class="fas fa-check-circle"></i> 已签到' : '<i class="fas fa-calendar-check"></i> 签到';
-            }
-            refreshLocalCache();
-        }
-        async function updateLastLogin() {
-            await supabaseClient.from('user_stats').upsert({ user_id: currentUser.id, last_login: new Date().toISOString() }, { onConflict: 'user_id' });
-            safeSetText('lastLogin', new Date().toLocaleString());
-        }
-        function hasTodayCachedLogin(userId) {
-            let today = getLocalDateString();
-            return localStorage.getItem('lastLoginDate') === today && localStorage.getItem('lastLoginUserId') === userId;
-        }
-        function setTodayCachedLogin(userId) {
-            let today = getLocalDateString();
-            localStorage.setItem('lastLoginDate', today);
-            localStorage.setItem('lastLoginUserId', userId);
-        }
-        async function loadUserProfileWithCache() {
-            let { data: { user }, error } = await supabaseClient.auth.getUser();
-            if(error || !user) throw new Error('未登录');
-            currentUser = user;
-            window.currentUser = currentUser;
-            if(hasTodayCachedLogin(currentUser.id)) {
-                let cachedProfile = localStorage.getItem('cachedUserProfile');
-                let cachedStats = localStorage.getItem('cachedUserStats');
-                if(cachedProfile && cachedStats) {
-                    userProfile = JSON.parse(cachedProfile);
-                    userStats = JSON.parse(cachedStats);
-                    let username = userProfile.username || currentUser.email.split('@')[0];
-                    let roleInfo = getRoleDisplay(userProfile.role);
-                    document.getElementById('displayUsername').innerHTML = `${username} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
-                    safeSetText('userEmail', currentUser.email);
-                    safeSetText('userBio', userProfile.bio || '');
-                    safeSetText('createdAt', new Date(currentUser.created_at).toLocaleString());
-                    let days = Math.floor((new Date() - new Date(currentUser.created_at)) / 86400000);
-                    document.getElementById('userDaysText').innerText = `已来到 ${days} 天`;
-                    if(userProfile.avatar_url) updateAvatarDisplay(userProfile.avatar_url);
-                    else updateAvatarDisplay(null);
-                    if(document.getElementById('userRoleDisplay')) document.getElementById('userRoleDisplay').innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
-                    updateActivePointsDisplay();
-                    updateShopBalanceDisplay();
-                    document.getElementById('streakDays').innerText = userStats.checkin_streak;
-                    updateRewardPreview();
-                    let today = getLocalDateString();
-                    let btn = document.getElementById('checkinBtn');
-                    if(btn) { btn.disabled = (userStats.last_checkin_date === today); btn.innerHTML = btn.disabled ? '<i class="fas fa-check-circle"></i> 已签到' : '<i class="fas fa-calendar-check"></i> 签到'; }
-                    updateNavbar();
-                    if(window.FrameSystem) await window.FrameSystem.initFrameForUser(currentUser.id);
-                    updateLastLogin();
-                    return true;
+            // 统计信息
+            if(userStats) {
+                updateActivePointsDisplay();
+                if(isViewingSelf) updateShopBalanceDisplay();
+                document.getElementById('streakDays').innerText = userStats.checkin_streak;
+                if(isViewingSelf) updateRewardPreview();
+                let today = getLocalDateString();
+                let btn = document.getElementById('checkinBtn');
+                if(btn && isViewingSelf) {
+                    let checked = (userStats.last_checkin_date === today);
+                    btn.disabled = checked;
+                    btn.innerHTML = checked ? '<i class="fas fa-check-circle"></i> 已签到' : '<i class="fas fa-calendar-check"></i> 签到';
+                } else if(btn) {
+                    btn.style.display = 'none';
                 }
             }
-            await loadUserProfile();
-            await loadUserStats();
-            await updateLastLogin();
-            if(window.FrameSystem) await window.FrameSystem.initFrameForUser(currentUser.id);
-            setTodayCachedLogin(currentUser.id);
-            return false;
+            // 缓存（仅自己）
+            if(isViewingSelf) {
+                cacheUserProfile(userProfile.username, userProfile.avatar_url);
+                refreshLocalCache();
+            }
+            // 更新导航栏（显示当前登录用户）
+            updateNavbar();
+        }
+
+        async function loadUserProfileWithCache() {
+            // 获取当前登录用户
+            const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
+            if(userErr || !user) {
+                // 未登录，跳转
+                window.location.href = 'login-real.html';
+                return;
+            }
+            currentUser = user;
+            // 获取URL参数uid
+            const urlParams = new URLSearchParams(window.location.search);
+            const uid = urlParams.get('uid');
+            if (uid && uid !== currentUser.id) {
+                isViewingSelf = false;
+                targetUserId = uid;
+                try {
+                    userProfile = await loadTargetProfile(targetUserId);
+                    userStats = await loadTargetStats(targetUserId);
+                } catch(e) {
+                    showNotification('用户不存在或已注销', 'error');
+                    setTimeout(() => window.location.href = 'index.html', 1500);
+                    return;
+                }
+            } else {
+                isViewingSelf = true;
+                targetUserId = currentUser.id;
+                // 尝试从缓存加载
+                let cachedProfile = localStorage.getItem('cachedUserProfile');
+                let cachedStats = localStorage.getItem('cachedUserStats');
+                let lastUpdated = localStorage.getItem('profileLastUpdated');
+                if (cachedProfile && cachedStats && lastUpdated && (Date.now() - parseInt(lastUpdated) < 86400000)) {
+                    userProfile = JSON.parse(cachedProfile);
+                    userStats = JSON.parse(cachedStats);
+                } else {
+                    userProfile = await loadTargetProfile(currentUser.id);
+                    userStats = await loadTargetStats(currentUser.id);
+                }
+            }
+            await renderProfile();
+            if (isViewingSelf && window.FrameSystem) {
+                await window.FrameSystem.initFrameForUser(currentUser.id);
+            }
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('profileContent').style.display = 'block';
         }
 
         // ========== 初始化与事件绑定 ==========
@@ -685,7 +711,6 @@
             document.getElementById('closeLogoutModalBtn')?.addEventListener('click', () => closeModal('logoutConfirmModal'));
             document.getElementById('cancelLogoutBtn')?.addEventListener('click', () => closeModal('logoutConfirmModal'));
             document.getElementById('confirmLogoutBtn')?.addEventListener('click', performLogout);
-            // 头像确认模态框按钮
             document.getElementById('closeAvatarConfirmBtn')?.addEventListener('click', cancelChangeAvatar);
             document.getElementById('cancelAvatarBtn')?.addEventListener('click', cancelChangeAvatar);
             document.getElementById('confirmAvatarBtn')?.addEventListener('click', confirmChangeAvatar);
@@ -701,9 +726,6 @@
             window.supabaseClient = supabaseClient;
             try {
                 await loadUserProfileWithCache();
-                updateNavbar();
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('profileContent').style.display = 'block';
                 bindEventListeners();
             } catch(err) {
                 showNotification('请先登录','error');
