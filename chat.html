@@ -8,7 +8,12 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
         :root {
             --bg: #121212;
             --card-bg: #1e3a2f;
@@ -37,19 +42,6 @@
             border-bottom: 1px solid var(--border-color);
             flex-shrink: 0;
         }
-        .back-btn {
-            background: rgba(129,199,132,0.2);
-            border: none;
-            color: var(--text-highlight);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 1.2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
         .friend-avatar {
             width: 40px;
             height: 40px;
@@ -72,15 +64,41 @@
             padding: 12px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 12px;
             scroll-behavior: smooth;
         }
-        .message {
+        /* 消息行：使用flex布局，头像和气囊在同一行 */
+        .message-row {
             display: flex;
-            max-width: 85%;
+            align-items: flex-start;
+            gap: 8px;
+            max-width: 100%;
         }
-        .message.own { align-self: flex-end; flex-direction: row-reverse; }
-        .message.friend { align-self: flex-start; }
+        .message-row.own {
+            justify-content: flex-end;
+        }
+        .message-row.friend {
+            justify-content: flex-start;
+        }
+        .msg-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3ecf8e, #8a4baf);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1rem;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .message-content {
+            max-width: 70%;
+            display: flex;
+            flex-direction: column;
+        }
         .message-bubble {
             background: var(--friend-msg);
             padding: 8px 12px;
@@ -89,17 +107,34 @@
             line-height: 1.4;
             font-size: 0.9rem;
         }
-        .message.own .message-bubble { background: var(--own-msg); border-bottom-right-radius: 4px; }
-        .message.friend .message-bubble { border-bottom-left-radius: 4px; }
+        .message-row.own .message-bubble {
+            background: var(--own-msg);
+            border-bottom-right-radius: 4px;
+        }
+        .message-row.friend .message-bubble {
+            border-bottom-left-radius: 4px;
+        }
         .message-time {
             font-size: 0.6rem;
             color: var(--text-secondary);
-            margin-top: 3px;
-            padding: 0 6px;
+            margin-top: 4px;
+            padding: 0 4px;
         }
-        .message.own .message-time { text-align: right; }
-        .chat-emoji-img { max-width: 28px; max-height: 28px; vertical-align: middle; margin: 0 2px; }
-        .custom-emoji { width: 32px !important; height: 32px !important; cursor: pointer; border-radius: 6px; }
+        .message-row.own .message-time {
+            text-align: right;
+        }
+        .chat-emoji-img {
+            max-width: 28px;
+            max-height: 28px;
+            vertical-align: middle;
+            margin: 0 2px;
+        }
+        .custom-emoji {
+            width: 32px !important;
+            height: 32px !important;
+            cursor: pointer;
+            border-radius: 6px;
+        }
         .input-bar {
             background: var(--card-bg);
             border-top: 1px solid var(--border-color);
@@ -126,7 +161,10 @@
             justify-content: center;
             flex-shrink: 0;
         }
-        .plus-btn.active { background: var(--text-highlight); color: var(--bg); }
+        .plus-btn.active {
+            background: var(--text-highlight);
+            color: var(--bg);
+        }
         #messageInput {
             flex: 1;
             background: #2d3748;
@@ -164,10 +202,25 @@
             margin-top: 8px;
             border-radius: 12px;
         }
-        .emoji-panel-container.open { max-height: 260px; overflow-y: auto; }
-        .emoji-section { padding: 8px 12px; border-bottom: 1px solid var(--border-color); }
-        .emoji-section-title { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 8px; }
-        .emoji-grid { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+        .emoji-panel-container.open {
+            max-height: 260px;
+            overflow-y: auto;
+        }
+        .emoji-section {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .emoji-section-title {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        .emoji-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
         .emoji-item {
             cursor: pointer;
             background: rgba(255,255,255,0.08);
@@ -177,21 +230,25 @@
             align-items: center;
             gap: 6px;
             font-size: 1.2rem;
+            transition: 0.1s;
         }
         .emoji-item:active { background: var(--text-highlight); color: #121212; }
         .emoji-item img { width: 28px; height: 28px; object-fit: contain; }
+        .custom-emoji-item img { width: 36px; height: 36px; }
         .loading-msg { text-align: center; padding: 20px; color: var(--text-secondary); }
         .error-box { background: rgba(248,113,113,0.1); border: 1px solid #f87171; border-radius: 10px; padding: 16px; text-align: center; margin: 16px; }
         @media (max-width: 480px) {
             .friend-avatar { width: 34px; height: 34px; }
-            .message { max-width: 90%; }
+            .message-content { max-width: 80%; }
+            .msg-avatar { width: 30px; height: 30px; }
             .plus-btn, .send-btn { width: 36px; height: 36px; font-size: 1.2rem; }
+            .emoji-item { padding: 4px 8px; font-size: 1rem; }
+            .emoji-item img { width: 24px; height: 24px; }
         }
     </style>
 </head>
 <body>
 <div class="chat-header">
-    <button class="back-btn" id="backBtn"><i class="fas fa-arrow-left"></i></button>
     <div class="friend-avatar" id="friendAvatar">👤</div>
     <div class="friend-info">
         <h2 id="friendName">加载中...</h2>
@@ -220,52 +277,77 @@
 </div>
 
 <script>
+(function(){
     const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    let currentUser = null, friendId = null, friendName = '好友', friendAvatarUrl = null, messagesSubscription = null;
-    const messagesArea = document.getElementById('messagesArea');
-    const messageInput = document.getElementById('messageInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const backBtn = document.getElementById('backBtn');
-    const plusBtn = document.getElementById('plusBtn');
-    const emojiPanel = document.getElementById('emojiPanelContainer');
-    const builtinGrid = document.getElementById('builtinEmojiGrid');
-    const customGrid = document.getElementById('customEmojiGrid');
-    const addCustomBtn = document.getElementById('addCustomEmojiBtn');
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    let currentUser = null;
+    let currentUserAvatar = null;   // 自己的头像 URL
+    let currentUserName = '';
+    let friendId = null;
+    let friendName = '好友';
+    let friendAvatar = null;        // 好友的头像 URL
+    let messagesSubscription = null;
+    let emojiPanelOpen = false;
 
-    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
-    function showNotification(msg, isError = false) {
-        let toast = document.createElement('div');
+    const elements = {
+        messagesArea: document.getElementById('messagesArea'),
+        messageInput: document.getElementById('messageInput'),
+        sendBtn: document.getElementById('sendBtn'),
+        plusBtn: document.getElementById('plusBtn'),
+        emojiPanel: document.getElementById('emojiPanelContainer'),
+        builtinGrid: document.getElementById('builtinEmojiGrid'),
+        customGrid: document.getElementById('customEmojiGrid'),
+        addCustomBtn: document.getElementById('addCustomEmojiBtn'),
+        friendNameSpan: document.getElementById('friendName'),
+        friendAvatarDiv: document.getElementById('friendAvatar')
+    };
+
+    // ========== 工具函数 ==========
+    const escapeHtml = str => (str || '').replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m]));
+    const showNotification = (msg, isError = false) => {
+        const toast = document.createElement('div');
         toast.textContent = msg;
-        toast.style.cssText = `position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background-color:${isError ? '#f87171' : '#10b981'}; color:#fff; padding:6px 16px; border-radius:40px; z-index:9999; font-size:0.8rem; box-shadow:0 2px 8px rgba(0,0,0,0.3); pointer-events:none;`;
+        toast.style.cssText = `position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background-color:${isError?'#f87171':'#10b981'}; color:#fff; padding:6px 16px; border-radius:40px; z-index:9999; font-size:0.8rem; box-shadow:0 2px 8px rgba(0,0,0,0.3); pointer-events:none;`;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 2000);
+    };
+    const formatTime = iso => {
+        const d = new Date(iso), now = new Date();
+        return d.toDateString() === now.toDateString() ? d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : `${d.getMonth()+1}/${d.getDate()} ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+    };
+    const canRecall = createdAt => (Date.now() - new Date(createdAt).getTime()) <= 120000;
+    const scrollToBottom = () => setTimeout(() => elements.messagesArea.scrollTop = elements.messagesArea.scrollHeight, 100);
+    const autoResize = () => {
+        const ta = elements.messageInput;
+        ta.style.height = 'auto';
+        ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
+    };
+
+    // 生成头像DOM（通用）
+    function createAvatarElement(avatarUrl, name, size = '36px') {
+        const div = document.createElement('div');
+        div.className = 'msg-avatar';
+        div.style.width = size;
+        div.style.height = size;
+        if (avatarUrl) {
+            const img = document.createElement('img');
+            img.src = avatarUrl;
+            img.onerror = () => { div.innerHTML = (name?.charAt(0) || '?').toUpperCase(); div.style.background = 'linear-gradient(135deg, #3ecf8e, #8a4baf)'; };
+            div.appendChild(img);
+        } else {
+            div.textContent = (name?.charAt(0) || '?').toUpperCase();
+            div.style.background = 'linear-gradient(135deg, #3ecf8e, #8a4baf)';
+            div.style.color = 'white';
+            div.style.fontWeight = '600';
+        }
+        return div;
     }
-    function showImagePreview(url) {
-        const overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:10000; display:flex; align-items:center; justify-content:center; cursor:pointer;';
-        const img = document.createElement('img');
-        img.src = url;
-        img.style.maxWidth = '90%';
-        img.style.maxHeight = '90%';
-        overlay.appendChild(img);
-        overlay.onclick = () => overlay.remove();
-        document.body.appendChild(overlay);
-    }
-    function formatMessageTime(isoString) {
-        const date = new Date(isoString);
-        const now = new Date();
-        if (date.toDateString() === now.toDateString()) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        return `${date.getMonth()+1}/${date.getDate()} ${date.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}`;
-    }
-    function canRecall(createdAt) { return (Date.now() - new Date(createdAt).getTime()) <= 120000; }
-    
+
+    // 渲染消息内容（表情/图片）
     function renderMessageContent(msg) {
         if (msg.is_recalled) return `<span style="font-style:italic;">${msg.sender_id === currentUser?.id ? '你撤回了' : '对方撤回了'}</span>`;
-        let rawText = msg.content;
-        if (!rawText) return '';
-        let escaped = escapeHtml(rawText);
+        let text = msg.content || '';
         const emojiMap = {
             '微笑': 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f642.png',
             '大笑': 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f606.png',
@@ -274,201 +356,205 @@
             '动态星星': 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXRmM2JxbzVkYnA5MTNheWZ6ZmQ0aWlxZjU0Y2NidTVneWVibzByOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26tP4Jq9z9nz0HPsA/giphy.gif',
             '狗头': 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f436.png',
         };
-        escaped = escaped.replace(/\[emoji:([^\]]+)\]/g, (match, key) => {
-            const imgUrl = emojiMap[key];
-            if (!imgUrl) return match;
-            return `<img src="${imgUrl}" class="chat-emoji-img" alt="${key}" loading="lazy">`;
+        let escaped = escapeHtml(text);
+        escaped = escaped.replace(/\[emoji:([^\]]+)\]/g, (_, key) => {
+            const url = emojiMap[key];
+            if(!url) return _;
+            const cls = (key === '动态星星' || key === '动态猫猫') ? ' animated-emoji-large' : '';
+            return `<img src="${url}" class="chat-emoji-img${cls}" alt="${key}" loading="lazy">`;
         });
-        escaped = escaped.replace(/\[custom:([^\]]+)\]/g, (match, url) => {
-            const safeUrl = url.replace(/['"]/g, '');
-            return `<img src="${escapeHtml(safeUrl)}" class="chat-emoji-img custom-emoji" alt="表情" loading="lazy" onclick="event.stopPropagation(); window.showImagePreview('${escapeHtml(safeUrl)}')">`;
-        });
+        escaped = escaped.replace(/\[custom:([^\]]+)\]/g, (_, url) => `<img src="${escapeHtml(url)}" class="chat-emoji-img custom-emoji" alt="表情" loading="lazy" onclick="event.stopPropagation(); window.showImagePreview('${escapeHtml(url)}')">`);
         return escaped.replace(/\n/g, '<br>');
     }
-    
+
     async function recallMessage(msgId) {
-        const { error } = await supabaseClient.from('messages').update({ is_recalled: true }).eq('id', msgId).eq('sender_id', currentUser.id);
-        if (error) showNotification('撤回失败', true);
+        const { error } = await supabase.from('messages').update({ is_recalled: true }).eq('id', msgId).eq('sender_id', currentUser.id);
+        if(error) showNotification('撤回失败', true);
         else showNotification('已撤回');
     }
-    
-    function createMessageElement(msg) {
+
+    // 创建单条消息行（带头像）
+    function createMessageRow(msg) {
         const isOwn = msg.sender_id === currentUser?.id;
-        const div = document.createElement('div');
-        div.className = `message ${isOwn ? 'own' : 'friend'}`;
-        div.setAttribute('data-msg-id', msg.id);
+        const row = document.createElement('div');
+        row.className = `message-row ${isOwn ? 'own' : 'friend'}`;
+        row.setAttribute('data-msg-id', msg.id);
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+
         const bubble = document.createElement('div');
         bubble.className = 'message-bubble';
         bubble.innerHTML = renderMessageContent(msg);
-        const timeDiv = document.createElement('div');
-        timeDiv.className = 'message-time';
-        timeDiv.textContent = formatMessageTime(msg.created_at);
-        div.appendChild(bubble);
-        div.appendChild(timeDiv);
+
+        const timeSpan = document.createElement('div');
+        timeSpan.className = 'message-time';
+        timeSpan.textContent = formatTime(msg.created_at);
+
+        contentDiv.appendChild(bubble);
+        contentDiv.appendChild(timeSpan);
+
+        // 头像
+        let avatarDiv;
+        if (isOwn) {
+            avatarDiv = createAvatarElement(currentUserAvatar, currentUserName, '32px');
+            row.appendChild(contentDiv);
+            row.appendChild(avatarDiv);
+        } else {
+            avatarDiv = createAvatarElement(friendAvatar, friendName, '32px');
+            row.appendChild(avatarDiv);
+            row.appendChild(contentDiv);
+        }
+
+        // 撤回双击事件（仅自己消息且未撤回且在2分钟内）
         if (isOwn && !msg.is_recalled && canRecall(msg.created_at)) {
-            div.addEventListener('dblclick', (e) => {
-                if (e.target.tagName === 'IMG' && e.target.classList.contains('custom-emoji')) return;
-                if (confirm('撤回这条消息？')) recallMessage(msg.id);
+            row.addEventListener('dblclick', (e) => {
+                if(e.target.tagName === 'IMG' && e.target.classList.contains('custom-emoji')) return;
+                if(confirm('撤回这条消息？')) recallMessage(msg.id);
             });
         }
-        return div;
+        return row;
     }
-    
+
     async function loadMessages() {
-        if (!currentUser || !friendId) return;
-        messagesArea.innerHTML = '<div class="loading-msg"><i class="fas fa-spinner fa-pulse"></i> 加载聊天记录...</div>';
-        const { data, error } = await supabaseClient
+        if(!currentUser || !friendId) return;
+        const { data, error } = await supabase
             .from('messages')
             .select('*')
             .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${currentUser.id})`)
             .order('created_at', { ascending: true })
             .limit(100);
-        if (error) {
-            messagesArea.innerHTML = `<div class="error-box">加载消息失败: ${escapeHtml(error.message)}</div>`;
-            return;
-        }
-        messagesArea.innerHTML = '';
-        if (!data || data.length === 0) {
-            messagesArea.innerHTML = '<div class="loading-msg"><i class="far fa-comment-dots"></i> 暂无消息～</div>';
-            return;
-        }
-        data.forEach(msg => messagesArea.appendChild(createMessageElement(msg)));
+        if(error) { elements.messagesArea.innerHTML = `<div class="error-box">加载失败: ${escapeHtml(error.message)}</div>`; return; }
+        elements.messagesArea.innerHTML = '';
+        if(!data?.length) { elements.messagesArea.innerHTML = '<div class="loading-msg"><i class="far fa-comment-dots"></i> 暂无消息～</div>'; return; }
+        data.forEach(msg => elements.messagesArea.appendChild(createMessageRow(msg)));
         scrollToBottom();
     }
-    
-    function scrollToBottom() { setTimeout(() => messagesArea.scrollTop = messagesArea.scrollHeight, 100); }
-    
+
     async function sendMessage() {
-        let text = messageInput.value.trim();
-        if (!text) return;
-        if (text.length > 1000) { showNotification('消息太长', true); return; }
+        const text = elements.messageInput.value.trim();
+        if(!text) return;
+        if(text.length>1000) { showNotification('消息太长', true); return; }
         const now = new Date().toISOString();
-        const tempMsg = { id: `temp_${Date.now()}`, sender_id: currentUser.id, receiver_id: friendId, content: text, created_at: now, is_recalled: false };
-        const tempElem = createMessageElement(tempMsg);
-        messagesArea.appendChild(tempElem);
+        const tempId = `temp_${Date.now()}`;
+        const tempMsg = { id: tempId, sender_id: currentUser.id, receiver_id: friendId, content: text, created_at: now, is_recalled: false };
+        const tempRow = createMessageRow(tempMsg);
+        elements.messagesArea.appendChild(tempRow);
         scrollToBottom();
-        messageInput.value = '';
-        autoResizeTextarea();
-        const { data, error } = await supabaseClient.from('messages').insert({
+        elements.messageInput.value = '';
+        autoResize();
+        const { data, error } = await supabase.from('messages').insert({
             sender_id: currentUser.id, receiver_id: friendId, content: text, created_at: now, is_recalled: false
         }).select().single();
-        if (error) {
-            tempElem.remove();
-            showNotification('发送失败', true);
-        } else {
-            const newElem = createMessageElement(data);
-            tempElem.replaceWith(newElem);
-            scrollToBottom();
-        }
+        if(error) { tempRow.remove(); showNotification('发送失败', true); }
+        else { const newRow = createMessageRow(data); tempRow.replaceWith(newRow); scrollToBottom(); }
     }
-    
+
     function subscribeMessages() {
-        if (messagesSubscription) supabaseClient.removeChannel(messagesSubscription);
-        const channel = supabaseClient.channel('chat-realtime')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${currentUser.id}` }, (payload) => {
+        if(messagesSubscription) supabase.removeChannel(messagesSubscription);
+        const channel = supabase.channel('chat-realtime')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${currentUser.id}` }, payload => {
                 const newMsg = payload.new;
-                if (newMsg.sender_id === currentUser.id) return;
-                if (!document.querySelector(`.message[data-msg-id="${newMsg.id}"]`)) {
-                    messagesArea.appendChild(createMessageElement(newMsg));
+                if(newMsg.sender_id === currentUser.id) return;
+                if(!document.querySelector(`.message-row[data-msg-id="${newMsg.id}"]`)) {
+                    elements.messagesArea.appendChild(createMessageRow(newMsg));
                     scrollToBottom();
                 }
             })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `receiver_id=eq.${currentUser.id}` }, (payload) => {
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `receiver_id=eq.${currentUser.id}` }, payload => {
                 const updated = payload.new;
-                const target = document.querySelector(`.message[data-msg-id="${updated.id}"]`);
-                if (target) target.replaceWith(createMessageElement(updated));
+                const target = document.querySelector(`.message-row[data-msg-id="${updated.id}"]`);
+                if(target) target.replaceWith(createMessageRow(updated));
             })
             .subscribe();
         messagesSubscription = channel;
     }
-    
-    function insertEmoji(emojiCode, isCustom = false) {
-        const start = messageInput.selectionStart;
-        const val = messageInput.value;
-        const insertText = isCustom ? `[custom:${emojiCode}]` : `[emoji:${emojiCode}]`;
-        messageInput.value = val.slice(0, start) + insertText + val.slice(start);
-        messageInput.focus();
-        messageInput.selectionStart = start + insertText.length;
-        autoResizeTextarea();
+
+    // ========== 表情相关 ==========
+    function insertEmoji(code, isCustom = false) {
+        const start = elements.messageInput.selectionStart;
+        const val = elements.messageInput.value;
+        const insert = isCustom ? `[custom:${code}]` : `[emoji:${code}]`;
+        elements.messageInput.value = val.slice(0, start) + insert + val.slice(start);
+        elements.messageInput.focus();
+        elements.messageInput.selectionStart = start + insert.length;
+        autoResize();
     }
-    
+
     const builtinEmojis = [
-        { name: '微笑', code: '微笑', img: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f642.png' },
-        { name: '大笑', code: '大笑', img: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f606.png' },
-        { name: '爱心', code: '爱心', img: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2764.png' },
-        { name: '动态猫猫', code: '动态猫猫', img: 'https://media1.tenor.com/m/-hxVXVN6bUMAAAAC/cat-cat-stare.gif' },
-        { name: '动态星星', code: '动态星星', img: 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXRmM2JxbzVkYnA5MTNheWZ6ZmQ0aWlxZjU0Y2NidTVneWVibzByOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26tP4Jq9z9nz0HPsA/giphy.gif' },
-        { name: '狗头', code: '狗头', img: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f436.png' },
-        { name: '😊', code: '😊', isUnicode: true },
-        { name: '😂', code: '😂', isUnicode: true },
-        { name: '❤️', code: '❤️', isUnicode: true },
-        { name: '🔥', code: '🔥', isUnicode: true },
-        { name: '🎉', code: '🎉', isUnicode: true },
+        { name:'微笑', code:'微笑', img:'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f642.png' },
+        { name:'大笑', code:'大笑', img:'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f606.png' },
+        { name:'爱心', code:'爱心', img:'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2764.png' },
+        { name:'动态猫猫', code:'动态猫猫', img:'https://media1.tenor.com/m/-hxVXVN6bUMAAAAC/cat-cat-stare.gif' },
+        { name:'动态星星', code:'动态星星', img:'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXRmM2JxbzVkYnA5MTNheWZ6ZmQ0aWlxZjU0Y2NidTVneWVibzByOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26tP4Jq9z9nz0HPsA/giphy.gif' },
+        { name:'狗头', code:'狗头', img:'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f436.png' },
+        { name:'😊', code:'😊', isUnicode:true },
+        { name:'😂', code:'😂', isUnicode:true },
+        { name:'❤️', code:'❤️', isUnicode:true },
+        { name:'🔥', code:'🔥', isUnicode:true },
+        { name:'🎉', code:'🎉', isUnicode:true },
     ];
-    
     function renderBuiltinEmojis() {
-        builtinGrid.innerHTML = '';
-        builtinEmojis.forEach(emoji => {
+        elements.builtinGrid.innerHTML = '';
+        builtinEmojis.forEach(e => {
             const span = document.createElement('span');
             span.className = 'emoji-item';
-            if (emoji.isUnicode) {
-                span.innerHTML = `<span style="font-size:1.4rem;">${emoji.code}</span><span>${emoji.name}</span>`;
-                span.onclick = () => insertEmoji(emoji.code, false);
+            if(e.isUnicode) {
+                span.innerHTML = `<span style="font-size:1.4rem;">${e.code}</span><span>${e.name}</span>`;
+                span.onclick = () => insertEmoji(e.code, false);
             } else {
                 const img = document.createElement('img');
-                img.src = emoji.img;
-                img.alt = emoji.name;
+                img.src = e.img; img.alt = e.name;
                 span.appendChild(img);
-                span.appendChild(document.createTextNode(' ' + emoji.name));
-                span.onclick = () => insertEmoji(emoji.code, false);
+                span.appendChild(document.createTextNode(' ' + e.name));
+                span.onclick = () => insertEmoji(e.code, false);
             }
-            builtinGrid.appendChild(span);
+            elements.builtinGrid.appendChild(span);
         });
     }
-    
+
     async function loadCustomEmojis() {
-        if (!currentUser) return;
-        const { data, error } = await supabaseClient.from('user_emojis').select('id, file_url, emoji_name').eq('user_id', currentUser.id).order('created_at', { ascending: false });
-        if (!error && data) renderCustomEmojiGrid(data);
+        if(!currentUser) return;
+        const { data, error } = await supabase.from('user_emojis').select('id, file_url, emoji_name').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+        if(!error && data) renderCustomEmojiGrid(data);
     }
     function renderCustomEmojiGrid(emojis) {
-        customGrid.innerHTML = '';
-        if (emojis.length === 0) {
-            customGrid.innerHTML = '<div style="color:var(--text-secondary); font-size:0.7rem; padding:8px;">暂无自定义表情，点击上方“导入”添加</div>';
+        elements.customGrid.innerHTML = '';
+        if(!emojis.length) {
+            elements.customGrid.innerHTML = '<div style="color:var(--text-secondary); font-size:0.7rem; padding:8px;">暂无自定义表情，点击上方“导入”添加</div>';
             return;
         }
         emojis.forEach(emoji => {
             const span = document.createElement('span');
-            span.className = 'emoji-item';
+            span.className = 'emoji-item custom-emoji-item';
             const img = document.createElement('img');
             img.src = emoji.file_url;
-            img.style.width = '36px';
-            img.style.height = '36px';
+            img.style.width = '36px'; img.style.height = '36px'; img.style.objectFit = 'contain';
             span.appendChild(img);
             span.onclick = () => insertEmoji(emoji.file_url, true);
-            customGrid.appendChild(span);
+            elements.customGrid.appendChild(span);
         });
     }
-    
+
     async function uploadCustomEmoji(file) {
-        if (!currentUser) return showNotification('请先登录', true);
-        if (!['image/jpeg','image/png','image/gif'].includes(file.type)) return showNotification('仅支持 JPG/PNG/GIF', true);
-        if (file.size > 2*1024*1024) return showNotification('图片小于2MB', true);
+        if(!currentUser) return showNotification('请先登录', true);
+        if(!['image/jpeg','image/png','image/gif'].includes(file.type)) return showNotification('仅支持 JPG/PNG/GIF', true);
+        if(file.size > 2*1024*1024) return showNotification('图片小于2MB', true);
         const ext = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${ext}`;
         const filePath = `user_emojis/${currentUser.id}/${fileName}`;
-        const { error } = await supabaseClient.storage.from('custom-emojis').upload(filePath, file);
-        if (error) return showNotification('上传失败', true);
-        const { data: urlData } = supabaseClient.storage.from('custom-emojis').getPublicUrl(filePath);
+        const { error: uploadErr } = await supabase.storage.from('custom-emojis').upload(filePath, file);
+        if(uploadErr) return showNotification('上传失败', true);
+        const { data: urlData } = supabase.storage.from('custom-emojis').getPublicUrl(filePath);
         const publicUrl = urlData.publicUrl;
-        const { error: insertErr } = await supabaseClient.from('user_emojis').insert({ user_id: currentUser.id, emoji_name: file.name.replace(/\.[^.]+$/,'').slice(0,20), file_url: publicUrl, file_type: file.type });
-        if (insertErr) return showNotification('保存失败', true);
+        const { error: insertErr } = await supabase.from('user_emojis').insert({ user_id: currentUser.id, emoji_name: file.name.replace(/\.[^.]+$/,'').slice(0,20), file_url: publicUrl, file_type: file.type });
+        if(insertErr) return showNotification('保存失败', true);
         showNotification('导入成功');
         await loadCustomEmojis();
     }
-    
+
     function initCustomEmojiUploader() {
-        addCustomBtn.onclick = () => {
+        elements.addCustomBtn.onclick = () => {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/jpeg,image/png,image/gif';
@@ -476,119 +562,104 @@
             input.click();
         };
     }
-    
-    let emojiPanelOpen = false;
+
     function toggleEmojiPanel() {
         emojiPanelOpen = !emojiPanelOpen;
-        if (emojiPanelOpen) {
-            emojiPanel.classList.add('open');
-            plusBtn.classList.add('active');
+        if(emojiPanelOpen) {
+            elements.emojiPanel.classList.add('open');
+            elements.plusBtn.classList.add('active');
+            setTimeout(() => elements.messageInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
         } else {
-            emojiPanel.classList.remove('open');
-            plusBtn.classList.remove('active');
+            elements.emojiPanel.classList.remove('open');
+            elements.plusBtn.classList.remove('active');
         }
     }
-    
-    function autoResizeTextarea() {
-        messageInput.style.height = 'auto';
-        messageInput.style.height = Math.min(messageInput.scrollHeight, 100) + 'px';
+
+    // ========== 好友关系与个人资料 ==========
+    async function loadCurrentUserProfile() {
+        if(!currentUser) return;
+        const { data, error } = await supabase.from('user_profiles').select('username, avatar_url').eq('id', currentUser.id).single();
+        if(!error && data) {
+            currentUserName = data.username || '我';
+            currentUserAvatar = data.avatar_url;
+        } else {
+            currentUserName = currentUser.email.split('@')[0];
+            currentUserAvatar = null;
+        }
     }
-    
+
+    async function loadFriendProfile() {
+        if(!friendId) return;
+        const { data, error } = await supabase.from('user_profiles').select('username, avatar_url').eq('id', friendId).single();
+        if(!error && data) {
+            friendName = data.username || '好友';
+            friendAvatar = data.avatar_url;
+            elements.friendNameSpan.textContent = friendName;
+            if(friendAvatar) {
+                const img = document.createElement('img');
+                img.src = friendAvatar;
+                elements.friendAvatarDiv.innerHTML = '';
+                elements.friendAvatarDiv.appendChild(img);
+            } else {
+                elements.friendAvatarDiv.innerHTML = '';
+                elements.friendAvatarDiv.textContent = friendName.charAt(0).toUpperCase();
+            }
+        } else {
+            elements.friendNameSpan.textContent = '好友';
+        }
+    }
+
     async function validateFriendship() {
-        if (!currentUser || !friendId) return false;
-        const { data, error } = await supabaseClient.from('friends').select('status').or(`and(requester_id.eq.${currentUser.id},addressee_id.eq.${friendId}),and(requester_id.eq.${friendId},addressee_id.eq.${currentUser.id})`).maybeSingle();
-        if (error) { console.error('好友关系查询失败:', error); return false; }
+        if(!currentUser || !friendId) return false;
+        const { data } = await supabase.from('friends').select('status').or(`and(requester_id.eq.${currentUser.id},addressee_id.eq.${friendId}),and(requester_id.eq.${friendId},addressee_id.eq.${currentUser.id})`).maybeSingle();
         return data?.status === 'accepted';
     }
-    
-    async function loadFriendProfile() {
-        if (!friendId) return;
-        const { data, error } = await supabaseClient.from('user_profiles').select('username, avatar_url').eq('id', friendId).single();
-        if (!error && data) {
-            friendName = data.username || '好友';
-            friendAvatarUrl = data.avatar_url;
-            document.getElementById('friendName').innerText = friendName;
-            const avatarDiv = document.getElementById('friendAvatar');
-            if (friendAvatarUrl) {
-                const img = document.createElement('img');
-                img.src = friendAvatarUrl;
-                avatarDiv.innerHTML = '';
-                avatarDiv.appendChild(img);
-            } else avatarDiv.innerText = friendName.charAt(0).toUpperCase();
-        } else {
-            document.getElementById('friendName').innerText = '好友';
-        }
-    }
-    
-    async function initChat() {
-        try {
-            // 1. 获取当前用户
-            const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
-            if (userErr || !user) {
-                messagesArea.innerHTML = `<div class="error-box">请先登录 <a href="index.html" style="color:var(--text-highlight);">去登录</a></div>`;
-                document.querySelector('.input-bar').style.display = 'none';
-                return;
-            }
-            currentUser = user;
-            
-            // 2. 获取 URL 参数
-            const params = new URLSearchParams(window.location.search);
-            const fId = params.get('friend_id');
-            const fName = params.get('friend_name');
-            if (!fId) {
-                messagesArea.innerHTML = `<div class="error-box">缺少好友参数，请从好友列表进入</div>`;
-                document.querySelector('.input-bar').style.display = 'none';
-                return;
-            }
-            friendId = fId;
-            if (fName) friendName = decodeURIComponent(fName);
-            
-            if (currentUser.id === friendId) {
-                messagesArea.innerHTML = `<div class="error-box">不能和自己聊天</div>`;
-                document.querySelector('.input-bar').style.display = 'none';
-                return;
-            }
-            
-            // 3. 加载好友资料
-            await loadFriendProfile();
-            
-            // 4. 验证好友关系
-            const isFriend = await validateFriendship();
-            if (!isFriend) {
-                messagesArea.innerHTML = `<div class="error-box">你们还不是好友，请先添加好友。</div>`;
-                document.querySelector('.input-bar').style.display = 'none';
-                return;
-            }
-            
-            // 5. 显示输入栏并初始化表情等功能
-            document.querySelector('.input-bar').style.display = 'block';
-            renderBuiltinEmojis();
-            await loadCustomEmojis();
-            initCustomEmojiUploader();
-            await loadMessages();
-            subscribeMessages();
-            
-            // 6. 绑定事件
-            messageInput.addEventListener('input', autoResizeTextarea);
-            sendBtn.onclick = sendMessage;
-            messageInput.addEventListener('keypress', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
-            backBtn.onclick = () => window.location.href = './friend.html';
-            plusBtn.onclick = toggleEmojiPanel;
-            messageInput.addEventListener('focus', () => {
-                if (emojiPanelOpen) toggleEmojiPanel();
-                setTimeout(scrollToBottom, 300);
-            });
-            window.addEventListener('resize', () => setTimeout(scrollToBottom, 100));
-            window.addEventListener('beforeunload', () => { if (messagesSubscription) supabaseClient.removeChannel(messagesSubscription); });
-        } catch (err) {
-            console.error('初始化失败:', err);
-            messagesArea.innerHTML = `<div class="error-box">初始化失败: ${escapeHtml(err.message)}</div>`;
+
+    async function init() {
+        const { data: { user }, error: userErr } = await supabase.auth.getUser();
+        if(userErr || !user) {
+            elements.messagesArea.innerHTML = `<div class="error-box">请先登录 <a href="index.html" style="color:var(--text-highlight);">去登录</a></div>`;
             document.querySelector('.input-bar').style.display = 'none';
+            return;
         }
+        currentUser = user;
+        await loadCurrentUserProfile();
+
+        const params = new URLSearchParams(window.location.search);
+        const fId = params.get('friend_id'), fName = params.get('friend_name');
+        if(!fId) { elements.messagesArea.innerHTML = `<div class="error-box">缺少好友参数</div>`; document.querySelector('.input-bar').style.display = 'none'; return; }
+        friendId = fId;
+        if(fName) friendName = decodeURIComponent(fName);
+        if(currentUser.id === friendId) { elements.messagesArea.innerHTML = `<div class="error-box">不能和自己聊天</div>`; document.querySelector('.input-bar').style.display = 'none'; return; }
+        await loadFriendProfile();
+        const isFriend = await validateFriendship();
+        if(!isFriend) { elements.messagesArea.innerHTML = `<div class="error-box">你们还不是好友，请先添加好友。</div>`; document.querySelector('.input-bar').style.display = 'none'; return; }
+        document.querySelector('.input-bar').style.display = 'block';
+        renderBuiltinEmojis();
+        await loadCustomEmojis();
+        initCustomEmojiUploader();
+        await loadMessages();
+        subscribeMessages();
+        elements.messageInput.addEventListener('input', autoResize);
+        elements.sendBtn.onclick = sendMessage;
+        elements.messageInput.addEventListener('keypress', e => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+        elements.plusBtn.onclick = toggleEmojiPanel;
+        elements.messageInput.addEventListener('focus', () => { if(emojiPanelOpen) toggleEmojiPanel(); setTimeout(scrollToBottom, 300); });
+        window.addEventListener('resize', () => setTimeout(scrollToBottom, 100));
+        window.addEventListener('beforeunload', () => { if(messagesSubscription) supabase.removeChannel(messagesSubscription); });
     }
-    
-    initChat();
-    window.showImagePreview = showImagePreview;
+    window.showImagePreview = url => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:10000; display:flex; align-items:center; justify-content:center; cursor:pointer;';
+        const img = document.createElement('img');
+        img.src = url;
+        img.style.maxWidth = '90%'; img.style.maxHeight = '90%';
+        overlay.appendChild(img);
+        overlay.onclick = () => overlay.remove();
+        document.body.appendChild(overlay);
+    };
+    init();
+})();
 </script>
 </body>
 </html>
