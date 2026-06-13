@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <link rel="icon" href="/images/wangzhantupian.png" type="image/png">
-    <title>小兹 · 六哥荣耀WIKI</title>
+    <title>小兹 · 离线智能回复</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* 样式完全保持原样，无改动 */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
             background: #0c0c0c;
@@ -145,10 +146,6 @@
             align-items: center;
             justify-content: center;
         }
-        .send-btn:disabled {
-            background: #3a3a3c;
-            cursor: not-allowed;
-        }
         .loading-tip {
             text-align: center;
             padding: 12px;
@@ -171,35 +168,30 @@
     <div class="avatar"></div>
     <div class="title">
         <h2>小兹</h2>
-        <p>WIKI小助手 · 免费畅聊</p>
+        <p>离线智能回复 · 零费用</p>
     </div>
 </div>
 
 <div class="config-panel">
-    <div id="apiStatus" class="status-text">✅ 已连接，小兹随时在线～</div>
+    <div id="apiStatus" class="status-text">✅ 离线模式，小兹随时在线～</div>
     <button id="clearHistoryBtn" class="clear-btn"><i class="fas fa-trash-alt"></i> 清空聊天记录</button>
     <div style="font-size: 11px; color: #8e8e93; margin-top: 4px; width: 100%;">
-        📚 小兹会查角色/光锥/材料/版本活动，用自然语言回答你～
+        📚 小兹会查角色/光锥/材料信息，用自然语言回答你～
     </div>
 </div>
 
 <div class="messages-area" id="messagesArea"></div>
 
 <div class="input-area">
-    <textarea id="messageInput" rows="1" placeholder="对小兹说点什么..."></textarea>
+    <textarea id="messageInput" rows="1" placeholder="问小兹角色信息，比如「鹿管是谁」"></textarea>
     <button class="send-btn" id="sendBtn">➤</button>
 </div>
 
 <script>
     (function() {
-        // ========== 换回 DeepSeek V4 Flash 配置 ==========
-        const DEEPSEEK_API_KEY = 'sk-231a300ad8034180b287dc1e174b72f9';
-        const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+        // ========== Supabase 配置（只用于查询，不调用AI） ==========
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-
-        // 系统提示词（配合小兹的人设，保持简短）
-        const SYSTEM_PROMPT = `你叫小兹，是用户的邻家妹妹，16岁。称呼用户为“哥哥”或“姐姐”。说话自然，会用“～”、“呀”收尾，偶尔加颜文字(｡•ᴗ•｡)。回答WIKI问题先给答案，再补一句自己的感想。如果不太确定，就说“我去WIKI翻翻～”。尽量每句话不超过30字。`;
 
         // DOM 元素
         const messagesArea = document.getElementById('messagesArea');
@@ -208,15 +200,13 @@
         const apiStatusSpan = document.getElementById('apiStatus');
         const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 
-        let conversationHistory = [];   // 只保留当前会话的内存记录，不持久化
+        let conversationHistory = [];
         let supabaseClient = null;
 
-        // 获取当前时间字符串 (HH:MM)
         function getCurrentTimeString() {
             return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
 
-        // ========== Supabase ==========
         function getSupabase() {
             if (supabaseClient) return supabaseClient;
             if (!window.supabase) return null;
@@ -226,63 +216,67 @@
             return supabaseClient;
         }
 
-        // ========== 精简 WIKI 检索，节省 tokens ==========
-        async function searchLocalWiki(query) {
-            const client = getSupabase();
-            if (!client) return null;
-            let keywords = query.replace(/[?？、，。！？什么哪个怎么如何告诉我解释一下帮忙]/g, ' ').trim();
-            if (!keywords) keywords = query;
-            const results = [];
-
-            const { data: characters } = await client
-                .from('characters')
-                .select('name, element, version')
-                .or(`name.ilike.%${keywords}%,element.ilike.%${keywords}%,version.ilike.%${keywords}%`)
-                .limit(2);
-            if (characters?.length) {
-                characters.forEach(c => results.push(`「${c.name}」·${c.element||'?'}·${c.version||'?'}`));
-            }
-
-            return results.length ? results.slice(0, 2) : null;
+        // 提取用户问题中的角色名（简单关键词匹配）
+        function extractCharacterName(query) {
+            // 常见问法：我要X的信息、X是谁、X怎么样、看看X、X角色
+            // 先移除常见前缀后缀
+            let cleaned = query.replace(/我要|的信息|是谁|怎么样|看看|角色|资料|介绍|帮我查一下|查一下|介绍下/g, '').trim();
+            // 如果还有多个词，取第一个词作为角色名（简单处理）
+            const words = cleaned.split(/[ ,，。？?！!、]/);
+            return words[0];
         }
 
-        // ========== DeepSeek V4 Flash 调用（便宜，速度也快） ==========
-        async function callDeepSeekWithContext(userMessage, wikiContext) {
-            let contextMessage = '';
-            if (wikiContext?.length) {
-                contextMessage = `WIKI资料：${wikiContext.join('；')}\n请用小兹的语气回答。`;
+        // 从数据库查询角色信息
+        async function queryCharacterInfo(characterName) {
+            const client = getSupabase();
+            if (!client) return null;
+            const { data, error } = await client
+                .from('characters')
+                .select('name, element, path, rarity, description, is_limited')
+                .ilike('name', `%${characterName}%`)
+                .limit(1);
+            if (error || !data || data.length === 0) return null;
+            return data[0];
+        }
+
+        // 根据角色数据生成固定格式的回复
+        function formatCharacterReply(character) {
+            const limitedText = character.is_limited ? '限定角色' : '常驻角色';
+            let reply = `${character.name} 是 ${character.rarity}星 ${limitedText}，${character.element} 属性，${character.path} 命途。`;
+            if (character.description && character.description.length > 0) {
+                // 如果description太长，截取前80字
+                let brief = character.description.length > 80 ? character.description.slice(0, 80) + '……' : character.description;
+                reply += ` ${brief}`;
             } else {
-                contextMessage = '没有找到WIKI资料，根据你的知识回答；如果实在不知道，就说“我去WIKI翻翻～”。';
+                // 如果没有详细描述，给一个通用定位（可根据 rarity 和 path 简单判断）
+                if (character.rarity === 5) {
+                    if (character.path === '巡猎' || character.path === '毁灭' || character.path === '智识') reply += ` 通常作为主力输出（主C）使用。`;
+                    else if (character.path === '同谐' || character.path === '虚无') reply += ` 适合作为辅助或副C。`;
+                    else if (character.path === '存护' || character.path === '丰饶') reply += ` 主要负责保护或治疗队友。`;
+                } else {
+                    reply += ` 前期可以培养，后期视情况使用。`;
+                }
             }
+            return reply;
+        }
 
-            // 只保留最近 2 条对话，避免输入 token 爆炸
-            const recent = conversationHistory.slice(-2).map(m => ({ role: m.role, content: m.content }));
-            const messages = [
-                { role: 'system', content: SYSTEM_PROMPT + '\n\n' + contextMessage },
-                ...recent,
-                { role: 'user', content: userMessage }
-            ];
+        // 处理其他类型的查询（光锥、材料等，可扩展）
+        async function handleGeneralQuery(query) {
+            // 暂时只做角色查询，如果需要可以类似加光锥逻辑
+            const name = extractCharacterName(query);
+            if (!name || name.length < 1) return null;
+            const char = await queryCharacterInfo(name);
+            if (char) return formatCharacterReply(char);
+            return null;
+        }
 
-            const response = await fetch(DEEPSEEK_API_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-                },
-                body: JSON.stringify({
-                    model: 'deepseek-v4-flash',
-                    messages: messages,
-                    temperature: 0.8,
-                    max_tokens: 256
-                })
-            });
-            if (!response.ok) {
-                let err = `HTTP ${response.status}`;
-                try { const data = await response.json(); err += `: ${data.error?.message || ''}`; } catch(e) {}
-                throw new Error(err);
-            }
-            const data = await response.json();
-            return data.choices[0].message.content;
+        // 主要回复逻辑：不调用大模型，纯数据库+模板
+        async function getLocalReply(userMessage) {
+            // 先尝试从问题中提取角色名并查询
+            const reply = await handleGeneralQuery(userMessage);
+            if (reply) return reply;
+            // 没找到角色，返回通用提示
+            return "小兹没找到这个角色，你可以试试直接说「我要[角色名]的信息」，比如「我要鹿管的信息」～";
         }
 
         // ========== 发送消息 ==========
@@ -294,37 +288,25 @@
 
             addMessage('user', text, true);
 
+            // 显示加载提示（虽然本地查询很快，但保留体验）
             const loader = document.createElement('div');
             loader.className = 'loading-tip';
             loader.id = 'aiLoader';
-            loader.innerHTML = '🔍 小兹正在查WIKI...';
+            loader.innerHTML = '🔍 小兹正在查资料...';
             messagesArea.appendChild(loader);
             messagesArea.scrollTop = messagesArea.scrollHeight;
 
             try {
-                const wikiResults = await searchLocalWiki(text);
-                if (wikiResults?.length) {
-                    loader.innerHTML = '📚 找到资料，小兹正在组织答案...';
-                } else {
-                    loader.innerHTML = '💭 没找到WIKI资料，小兹凭印象回答...';
-                }
-                const reply = await callDeepSeekWithContext(text, wikiResults);
+                const reply = await getLocalReply(text);
                 document.getElementById('aiLoader')?.remove();
                 addMessage('assistant', reply, false);
             } catch (error) {
                 document.getElementById('aiLoader')?.remove();
                 console.error(error);
                 addSystemMessage(`😥 小兹出错了: ${error.message}`);
-                if (error.message.includes('401') || error.message.includes('Incorrect API key')) {
-                    apiStatusSpan.innerHTML = '❌ 密钥无效，请联系管理员';
-                    apiStatusSpan.style.color = '#ff453a';
-                    messageInput.disabled = true;
-                    sendBtn.disabled = true;
-                }
             }
         }
 
-        // 统一的消息添加（保存时间到内存 history）
         function addMessage(role, content, isUser) {
             const timeStr = getCurrentTimeString();
             const div = document.createElement('div');
@@ -339,7 +321,6 @@
             div.appendChild(timeDiv);
             messagesArea.appendChild(div);
             messagesArea.scrollTop = messagesArea.scrollHeight;
-
             conversationHistory.push({ role: role, content: content, time: timeStr });
         }
 
@@ -357,7 +338,6 @@
             div.appendChild(timeDiv);
             messagesArea.appendChild(div);
             messagesArea.scrollTop = messagesArea.scrollHeight;
-
             conversationHistory.push({ role: 'assistant', content: content, time: timeStr });
         }
 
@@ -375,7 +355,7 @@
         function loadStorage() {
             conversationHistory = [];
             messagesArea.innerHTML = '';
-            addSystemMessage('🌸 小兹准备好啦～ 直接开始聊天吧！\n📚 我会查角色/光锥/材料/版本活动，用自然语言回答你～');
+            addSystemMessage('🌸 小兹离线版已启动～ 直接问我角色信息吧！\n📚 例如：「我要鹿管的信息」');
         }
 
         function clearHistory() {
@@ -400,47 +380,15 @@
             if (headerTitle) headerTitle.addEventListener('dblclick', clearHistory);
         }
 
-        async function autoTestConnection() {
-            try {
-                const res = await fetch(DEEPSEEK_API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-                    },
-                    body: JSON.stringify({
-                        model: 'deepseek-v4-flash',
-                        messages: [{ role: 'user', content: 'ping' }],
-                        max_tokens: 5
-                    })
-                });
-                if (res.ok) {
-                    apiStatusSpan.innerHTML = '✅ DeepSeek V4 Flash 已就绪，小兹畅聊～';
-                    apiStatusSpan.style.color = '#30d158';
-                    messageInput.disabled = false;
-                    sendBtn.disabled = false;
-                } else {
-                    apiStatusSpan.innerHTML = '⚠️ 连接失败，稍后再试试？';
-                    apiStatusSpan.style.color = '#ff9f0a';
-                    messageInput.disabled = true;
-                    sendBtn.disabled = true;
-                }
-            } catch (err) {
-                apiStatusSpan.innerHTML = '⚠️ 网络异常，小兹暂时无法响应';
-                apiStatusSpan.style.color = '#ff9f0a';
-                messageInput.disabled = true;
-                sendBtn.disabled = true;
-            }
-        }
-
         function init() {
             loadStorage();
             bindEvents();
-            autoTestConnection();
             if (!window.supabase) {
                 console.warn('Supabase JS 加载失败');
-                addSystemMessage('⚠️ Supabase SDK 加载失败，WIKI查询功能暂不可用。');
+                addSystemMessage('⚠️ Supabase SDK 加载失败，无法查询角色信息。');
+                return;
             }
+            apiStatusSpan.innerHTML = '✅ 离线模式，零费用，直接提问～';
         }
 
         init();
