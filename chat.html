@@ -54,6 +54,7 @@
             font-size: 1.2rem;
             overflow: hidden;
             flex-shrink: 0;
+            cursor: pointer;
         }
         .friend-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .friend-info h2 { font-size: 1rem; color: var(--text-highlight); }
@@ -67,7 +68,6 @@
             gap: 12px;
             scroll-behavior: smooth;
         }
-        /* 消息行：使用flex布局，头像和气囊在同一行 */
         .message-row {
             display: flex;
             align-items: flex-start;
@@ -92,6 +92,7 @@
             font-size: 1rem;
             overflow: hidden;
             flex-shrink: 0;
+            cursor: pointer;
         }
         .msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .message-content {
@@ -282,11 +283,11 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     let currentUser = null;
-    let currentUserAvatar = null;   // 自己的头像 URL
+    let currentUserAvatar = null;
     let currentUserName = '';
     let friendId = null;
     let friendName = '好友';
-    let friendAvatar = null;        // 好友的头像 URL
+    let friendAvatar = null;
     let messagesSubscription = null;
     let emojiPanelOpen = false;
 
@@ -324,8 +325,14 @@
         ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
     };
 
-    // 生成头像DOM（通用）
-    function createAvatarElement(avatarUrl, name, size = '36px') {
+    // 跳转到个人主页
+    function gotoProfile(userId) {
+        if (!userId) return;
+        window.open(`profile.html?uid=${userId}`, '_blank');
+    }
+
+    // 生成头像DOM（增加点击跳转）
+    function createAvatarElement(avatarUrl, name, userId, size = '36px') {
         const div = document.createElement('div');
         div.className = 'msg-avatar';
         div.style.width = size;
@@ -340,6 +347,13 @@
             div.style.background = 'linear-gradient(135deg, #3ecf8e, #8a4baf)';
             div.style.color = 'white';
             div.style.fontWeight = '600';
+        }
+        if (userId) {
+            div.style.cursor = 'pointer';
+            div.addEventListener('click', (e) => {
+                e.stopPropagation();
+                gotoProfile(userId);
+            });
         }
         return div;
     }
@@ -373,7 +387,7 @@
         else showNotification('已撤回');
     }
 
-    // 创建单条消息行（带头像）
+    // 创建单条消息行（带头像，点击跳转）
     function createMessageRow(msg) {
         const isOwn = msg.sender_id === currentUser?.id;
         const row = document.createElement('div');
@@ -394,14 +408,14 @@
         contentDiv.appendChild(bubble);
         contentDiv.appendChild(timeSpan);
 
-        // 头像
+        // 头像：自己的头像传 currentUser.id，对方头像传 friendId
         let avatarDiv;
         if (isOwn) {
-            avatarDiv = createAvatarElement(currentUserAvatar, currentUserName, '32px');
+            avatarDiv = createAvatarElement(currentUserAvatar, currentUserName, currentUser.id, '32px');
             row.appendChild(contentDiv);
             row.appendChild(avatarDiv);
         } else {
-            avatarDiv = createAvatarElement(friendAvatar, friendName, '32px');
+            avatarDiv = createAvatarElement(friendAvatar, friendName, friendId, '32px');
             row.appendChild(avatarDiv);
             row.appendChild(contentDiv);
         }
@@ -595,17 +609,22 @@
             friendName = data.username || '好友';
             friendAvatar = data.avatar_url;
             elements.friendNameSpan.textContent = friendName;
+            // 头部头像也可点击跳转
+            const avatarDiv = elements.friendAvatarDiv;
+            avatarDiv.innerHTML = '';
             if(friendAvatar) {
                 const img = document.createElement('img');
                 img.src = friendAvatar;
-                elements.friendAvatarDiv.innerHTML = '';
-                elements.friendAvatarDiv.appendChild(img);
+                avatarDiv.appendChild(img);
             } else {
-                elements.friendAvatarDiv.innerHTML = '';
-                elements.friendAvatarDiv.textContent = friendName.charAt(0).toUpperCase();
+                avatarDiv.textContent = friendName.charAt(0).toUpperCase();
             }
+            avatarDiv.style.cursor = 'pointer';
+            avatarDiv.onclick = () => gotoProfile(friendId);
         } else {
             elements.friendNameSpan.textContent = '好友';
+            elements.friendAvatarDiv.innerHTML = '👤';
+            elements.friendAvatarDiv.onclick = () => gotoProfile(friendId);
         }
     }
 
