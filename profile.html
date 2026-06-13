@@ -139,7 +139,7 @@
             return date.toLocaleDateString('sv-SE');
         }
 
-        // ========== 头像框系统（仅对自己生效） ==========
+        // ========== 头像框系统 ==========
         window.FrameSystem = (function() {
             const FRAMES = [
                 { id: 'frame_default', name: '默认头像框', description: '初始边框', price_candy: 0, price_rainbow: 0, cssClass: '' },
@@ -268,7 +268,6 @@
         function updateNavbar() {
             let navDiv = document.getElementById('userNavSection');
             if(!navDiv) return;
-            // 如果查看他人主页，顶部栏仍显示当前登录用户的信息（方便退出）
             if (currentUser) {
                 let username = userProfile?.username || currentUser?.email?.split('@')[0] || '用户';
                 let roleInfo = getRoleDisplay(userProfile?.role);
@@ -291,7 +290,7 @@
         window.openPasswordModal = () => { if(!isViewingSelf) return; openModal('passwordModal'); };
         window.openDeleteAccountModal = () => { if(!isViewingSelf) return; document.getElementById('confirmEmail').value = currentUser?.email || ''; openModal('deleteAccountModal'); };
 
-        // 长按更换头像（仅自己）
+        // 长按更换头像
         let longPressTimer = null;
         function onAvatarLongPressStart(e) {
             if(!isViewingSelf) return;
@@ -348,7 +347,7 @@
             closeModal('avatarConfirmModal');
         }
 
-        // ========== 用户操作（仅自己） ==========
+        // ========== 用户操作 ==========
         async function updateUsername() {
             if(!isViewingSelf) return;
             let newName = document.getElementById('newUsername').value.trim();
@@ -413,7 +412,7 @@
             window.location.href = 'index.html';
         }
 
-        // ========== 签到及统计（仅自己） ==========
+        // ========== 签到及统计 ==========
         function getCheckinRewards(streak) {
             if(streak === 1) return { candy:3, rainbow:0, active:2 };
             if(streak === 2) return { candy:5, rainbow:0, active:2 };
@@ -477,7 +476,7 @@
             showNotification(`签到 +${rewards.candy}🍬 ${rewards.rainbow>0?`+${rewards.rainbow}🌈 `:''}+${rewards.active}⚡`,'success');
         }
 
-        // ========== 商店渲染（仅自己） ==========
+        // ========== 商店渲染 ==========
         async function renderShop() {
             if(!isViewingSelf) return;
             let container = document.getElementById('shopContentContainer');
@@ -530,7 +529,7 @@
             }));
         }
 
-        // ========== 头像上传裁剪（仅自己） ==========
+        // ========== 头像上传裁剪 ==========
         async function deleteOldAvatarFiles(userId) {
             if(!isViewingSelf) return;
             try {
@@ -604,16 +603,12 @@
         }
 
         async function renderProfile() {
-            // 根据是否查看自己调整UI模式
-            const profileContainer = document.getElementById('profileContent');
+            const container = document.getElementById('profileContent');
             if (isViewingSelf) {
-                profileContainer.classList.remove('readonly-mode');
+                container.classList.remove('readonly-mode');
             } else {
-                profileContainer.classList.add('readonly-mode');
-                // 隐藏签到卡和账号设置区块（可选，因为readonly-mode已经隐藏了按钮，但标题仍然显示，可以保留标题）
-                // 也可以保留基本信息展示
+                container.classList.add('readonly-mode');
             }
-            // 填充数据
             let roleInfo = getRoleDisplay(userProfile.role);
             let usernameSpan = document.getElementById('displayUsername');
             if(usernameSpan) usernameSpan.innerHTML = `${userProfile.username} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
@@ -626,7 +621,6 @@
             else updateAvatarDisplay(null);
             let roleRow = document.getElementById('userRoleDisplay');
             if(roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
-            // 统计信息
             if(userStats) {
                 updateActivePointsDisplay();
                 if(isViewingSelf) updateShopBalanceDisplay();
@@ -642,27 +636,25 @@
                     btn.style.display = 'none';
                 }
             }
-            // 缓存（仅自己）
             if(isViewingSelf) {
                 cacheUserProfile(userProfile.username, userProfile.avatar_url);
                 refreshLocalCache();
             }
-            // 更新导航栏（显示当前登录用户）
             updateNavbar();
         }
 
         async function loadUserProfileWithCache() {
-            // 获取当前登录用户
             const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
             if(userErr || !user) {
-                // 未登录，跳转
-                window.location.href = 'login-real.html';
+                // 未登录，跳转登录页并携带当前完整url（含参数）
+                const redirectUrl = encodeURIComponent(window.location.href);
+                window.location.href = `login-real.html?redirect=${redirectUrl}`;
                 return;
             }
             currentUser = user;
             // 获取URL参数uid
             const urlParams = new URLSearchParams(window.location.search);
-            const uid = urlParams.get('uid');
+            let uid = urlParams.get('uid');
             if (uid && uid !== currentUser.id) {
                 isViewingSelf = false;
                 targetUserId = uid;
@@ -692,6 +684,13 @@
             await renderProfile();
             if (isViewingSelf && window.FrameSystem) {
                 await window.FrameSystem.initFrameForUser(currentUser.id);
+            }
+            // 更新最后登录时间（仅自己）
+            if(isViewingSelf) {
+                await supabaseClient.from('user_stats').upsert({ user_id: currentUser.id, last_login: new Date().toISOString() }, { onConflict: 'user_id' });
+                safeSetText('lastLogin', new Date().toLocaleString());
+            } else {
+                safeSetText('lastLogin', '--');
             }
             document.getElementById('loading').style.display = 'none';
             document.getElementById('profileContent').style.display = 'block';
