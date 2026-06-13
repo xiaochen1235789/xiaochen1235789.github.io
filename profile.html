@@ -39,7 +39,7 @@
         /* 他人主页只读样式 */
         .readonly-mode .username-edit,
         .readonly-mode .edit-bio,
-        .readonly-mode .checkin-btn,
+        .readonly-mode .checkin-card,
         .readonly-mode .shop-button,
         .readonly-mode .settings-item .btn,
         .readonly-mode .danger-zone {
@@ -53,7 +53,7 @@
 <body>
     <nav class="top-nav">
         <div class="nav-title">六哥荣耀WIKI</div>
-        <a href="./index.html" class="nav-link">首页</a>
+        <!-- 已删除首页链接 -->
         <a href="./admin.html" id="adminLink" class="nav-link" style="display: none;">管理后台</a>
         <div class="user-nav-section" id="userNavSection"></div>
     </nav>
@@ -265,18 +265,31 @@
             }
         }
 
+        // 导航栏：只读模式下仅显示文字，无退出按钮；自己主页显示头像/用户名+退出按钮
         function updateNavbar() {
             let navDiv = document.getElementById('userNavSection');
             if(!navDiv) return;
-            if (currentUser) {
+            if (!currentUser) {
+                navDiv.innerHTML = '<a href="login-real.html">登录</a>';
+                return;
+            }
+            if (!isViewingSelf) {
+                // 他人主页：只显示提示文字，不加退出按钮
+                navDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;"><span style="color:#81c784;">🔍 查看对方主页中</span></div>`;
+            } else {
+                // 自己的主页：显示头像、用户名和退出按钮
                 let username = userProfile?.username || currentUser?.email?.split('@')[0] || '用户';
                 let roleInfo = getRoleDisplay(userProfile?.role);
-                let avatarUrl = isViewingSelf ? (userProfile?.avatar_url || localStorage.getItem('userAvatar')) : (currentUser?.user_metadata?.avatar_url || null);
+                let avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
                 let avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;">` : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${username.charAt(0).toUpperCase()}</div>`;
-                navDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;">${avatarHtml}<span style="color:${roleInfo.color};">${username} (${roleInfo.name})</span><button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:20px;cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
+                navDiv.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        ${avatarHtml}
+                        <span style="color:${roleInfo.color};">${username} (${roleInfo.name})</span>
+                        <button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:20px;cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button>
+                    </div>
+                `;
                 document.getElementById('logoutBtn')?.addEventListener('click', () => openModal('logoutConfirmModal'));
-            } else {
-                navDiv.innerHTML = '<a href="login-real.html">登录</a>';
             }
             let adminLink = document.getElementById('adminLink');
             if(adminLink && currentUser && (userProfile?.role === 'owner' || userProfile?.role === 'admin')) adminLink.style.display = 'inline-block';
@@ -588,7 +601,7 @@
             document.getElementById('cropImage').removeAttribute('src');
         }
 
-        // ========== 资料加载（支持查看他人） ==========
+        // ========== 资料加载 ==========
         async function loadTargetProfile(targetId) {
             let { data: profile, error } = await supabaseClient.from('user_profiles').select('*').eq('id', targetId).single();
             if(error) throw error;
@@ -646,13 +659,11 @@
         async function loadUserProfileWithCache() {
             const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
             if(userErr || !user) {
-                // 未登录，跳转登录页并携带当前完整url（含参数）
                 const redirectUrl = encodeURIComponent(window.location.href);
                 window.location.href = `login-real.html?redirect=${redirectUrl}`;
                 return;
             }
             currentUser = user;
-            // 获取URL参数uid
             const urlParams = new URLSearchParams(window.location.search);
             let uid = urlParams.get('uid');
             if (uid && uid !== currentUser.id) {
@@ -669,7 +680,6 @@
             } else {
                 isViewingSelf = true;
                 targetUserId = currentUser.id;
-                // 尝试从缓存加载
                 let cachedProfile = localStorage.getItem('cachedUserProfile');
                 let cachedStats = localStorage.getItem('cachedUserStats');
                 let lastUpdated = localStorage.getItem('profileLastUpdated');
@@ -685,7 +695,6 @@
             if (isViewingSelf && window.FrameSystem) {
                 await window.FrameSystem.initFrameForUser(currentUser.id);
             }
-            // 更新最后登录时间（仅自己）
             if(isViewingSelf) {
                 await supabaseClient.from('user_stats').upsert({ user_id: currentUser.id, last_login: new Date().toISOString() }, { onConflict: 'user_id' });
                 safeSetText('lastLogin', new Date().toLocaleString());
@@ -696,7 +705,6 @@
             document.getElementById('profileContent').style.display = 'block';
         }
 
-        // ========== 初始化与事件绑定 ==========
         function bindEventListeners() {
             document.getElementById('saveUsername')?.addEventListener('click', updateUsername);
             document.getElementById('saveBio')?.addEventListener('click', updateBio);
