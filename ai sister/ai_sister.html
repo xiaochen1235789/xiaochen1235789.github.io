@@ -192,14 +192,14 @@
 
 <script>
     (function() {
-        // ========== 智谱免费 API 配置 ==========
-        const ZHIPU_API_KEY = 'aa4e4217d4214f18944355e5e0568161.w8BnADQSgmuFhuZQ';
-        const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+        // ========== 换回 DeepSeek V4 Flash 配置 ==========
+        const DEEPSEEK_API_KEY = 'sk-231a300ad8034180b287dc1e174b72f9';
+        const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
-        // 精简后的系统提示词
-        const SYSTEM_PROMPT = `你叫小兹，是邻家妹妹，16岁。称呼用户为“哥哥”或“姐姐”。说话自然，会用“～”、“呀”收尾，偶尔加颜文字(｡•ᴗ•｡)。回答WIKI问题先给答案，再补一句自己的感想。不确定时说“我去WIKI翻翻～”。每句话不超过100字，不用列表。`;
+        // 系统提示词（配合小兹的人设，保持简短）
+        const SYSTEM_PROMPT = `你叫小兹，是用户的邻家妹妹，16岁。称呼用户为“哥哥”或“姐姐”。说话自然，会用“～”、“呀”收尾，偶尔加颜文字(｡•ᴗ•｡)。回答WIKI问题先给答案，再补一句自己的感想。如果不太确定，就说“我去WIKI翻翻～”。尽量每句话不超过30字。`;
 
         // DOM 元素
         const messagesArea = document.getElementById('messagesArea');
@@ -208,13 +208,15 @@
         const apiStatusSpan = document.getElementById('apiStatus');
         const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 
-        let conversationHistory = [];
+        let conversationHistory = [];   // 只保留当前会话的内存记录，不持久化
         let supabaseClient = null;
 
+        // 获取当前时间字符串 (HH:MM)
         function getCurrentTimeString() {
             return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
 
+        // ========== Supabase ==========
         function getSupabase() {
             if (supabaseClient) return supabaseClient;
             if (!window.supabase) return null;
@@ -224,6 +226,7 @@
             return supabaseClient;
         }
 
+        // ========== 精简 WIKI 检索，节省 tokens ==========
         async function searchLocalWiki(query) {
             const client = getSupabase();
             if (!client) return null;
@@ -243,14 +246,16 @@
             return results.length ? results.slice(0, 2) : null;
         }
 
-        async function callZhipuWithContext(userMessage, wikiContext) {
+        // ========== DeepSeek V4 Flash 调用（便宜，速度也快） ==========
+        async function callDeepSeekWithContext(userMessage, wikiContext) {
             let contextMessage = '';
             if (wikiContext?.length) {
-                contextMessage = `WIKI资料：${wikiContext.join('；')}\n请用小兹语气回答。`;
+                contextMessage = `WIKI资料：${wikiContext.join('；')}\n请用小兹的语气回答。`;
             } else {
-                contextMessage = '没有找到WIKI资料，根据你的知识回答，否则说去WIKI翻翻。';
+                contextMessage = '没有找到WIKI资料，根据你的知识回答；如果实在不知道，就说“我去WIKI翻翻～”。';
             }
 
+            // 只保留最近 2 条对话，避免输入 token 爆炸
             const recent = conversationHistory.slice(-2).map(m => ({ role: m.role, content: m.content }));
             const messages = [
                 { role: 'system', content: SYSTEM_PROMPT + '\n\n' + contextMessage },
@@ -258,14 +263,14 @@
                 { role: 'user', content: userMessage }
             ];
 
-            const response = await fetch(ZHIPU_API_URL, {
+            const response = await fetch(DEEPSEEK_API_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${ZHIPU_API_KEY}`
+                    'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
                 },
                 body: JSON.stringify({
-                    model: 'GLM-4.7-Flash',   // ✅ 按用户要求改为大写开头
+                    model: 'deepseek-v4-flash',
                     messages: messages,
                     temperature: 0.8,
                     max_tokens: 256
@@ -280,6 +285,7 @@
             return data.choices[0].message.content;
         }
 
+        // ========== 发送消息 ==========
         async function sendMessage() {
             const text = messageInput.value.trim();
             if (!text) return;
@@ -302,15 +308,15 @@
                 } else {
                     loader.innerHTML = '💭 没找到WIKI资料，小兹凭印象回答...';
                 }
-                const reply = await callZhipuWithContext(text, wikiResults);
+                const reply = await callDeepSeekWithContext(text, wikiResults);
                 document.getElementById('aiLoader')?.remove();
                 addMessage('assistant', reply, false);
             } catch (error) {
                 document.getElementById('aiLoader')?.remove();
                 console.error(error);
                 addSystemMessage(`😥 小兹出错了: ${error.message}`);
-                if (error.message.includes('401') || error.message.includes('Invalid')) {
-                    apiStatusSpan.innerHTML = '❌ 智谱密钥无效，请联系管理员';
+                if (error.message.includes('401') || error.message.includes('Incorrect API key')) {
+                    apiStatusSpan.innerHTML = '❌ 密钥无效，请联系管理员';
                     apiStatusSpan.style.color = '#ff453a';
                     messageInput.disabled = true;
                     sendBtn.disabled = true;
@@ -318,6 +324,7 @@
             }
         }
 
+        // 统一的消息添加（保存时间到内存 history）
         function addMessage(role, content, isUser) {
             const timeStr = getCurrentTimeString();
             const div = document.createElement('div');
@@ -332,6 +339,7 @@
             div.appendChild(timeDiv);
             messagesArea.appendChild(div);
             messagesArea.scrollTop = messagesArea.scrollHeight;
+
             conversationHistory.push({ role: role, content: content, time: timeStr });
         }
 
@@ -349,6 +357,7 @@
             div.appendChild(timeDiv);
             messagesArea.appendChild(div);
             messagesArea.scrollTop = messagesArea.scrollHeight;
+
             conversationHistory.push({ role: 'assistant', content: content, time: timeStr });
         }
 
@@ -393,25 +402,25 @@
 
         async function autoTestConnection() {
             try {
-                const res = await fetch(ZHIPU_API_URL, {
+                const res = await fetch(DEEPSEEK_API_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${ZHIPU_API_KEY}`
+                        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
                     },
                     body: JSON.stringify({
-                        model: 'GLM-4.7-Flash',
+                        model: 'deepseek-v4-flash',
                         messages: [{ role: 'user', content: 'ping' }],
                         max_tokens: 5
                     })
                 });
                 if (res.ok) {
-                    apiStatusSpan.innerHTML = '✅ 智谱免费模型(GLM-4.7-Flash)已就绪，畅聊无限～';
+                    apiStatusSpan.innerHTML = '✅ DeepSeek V4 Flash 已就绪，小兹畅聊～';
                     apiStatusSpan.style.color = '#30d158';
                     messageInput.disabled = false;
                     sendBtn.disabled = false;
                 } else {
-                    apiStatusSpan.innerHTML = '⚠️ 连接失败，请检查密钥';
+                    apiStatusSpan.innerHTML = '⚠️ 连接失败，稍后再试试？';
                     apiStatusSpan.style.color = '#ff9f0a';
                     messageInput.disabled = true;
                     sendBtn.disabled = true;
