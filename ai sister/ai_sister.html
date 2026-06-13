@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <link rel="icon" href="/images/wangzhantupian.png" type="image/png">
-    <title>妹妹小兹 · 六哥荣耀WIKI</title>
+    <title>小兹 · 六哥荣耀WIKI</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -171,7 +171,7 @@
     <div class="avatar"></div>
     <div class="title">
         <h2>小兹</h2>
-        <p>WIKI小助手</p>
+        <p>WIKI小助手 · 免费畅聊</p>
     </div>
 </div>
 
@@ -192,13 +192,14 @@
 
 <script>
     (function() {
-        // ========== 固定密钥 ==========
-        const DEEPSEEK_API_KEY = 'sk-231a300ad8034180b287dc1e174b72f9';
+        // ========== 智谱免费 API 配置 ==========
+        const ZHIPU_API_KEY = 'aa4e4217d4214f18944355e5e0568161.w8BnADQSgmuFhuZQ';
+        const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
-        // 小兹的专属系统提示（方案一：更生动的人设）
-        const SYSTEM_PROMPT = `你的名字叫小兹，是用户的邻家妹妹，16岁，说话时有点天真但偶尔很细心。你喜欢用“～”、“呀”、“哦”结尾，称呼用户为“哥哥”或“姐姐”（根据对话推测）。你回答WIKI问题时要先给答案，再补充一句自己的感想（比如“不过小兹觉得这个角色超帅的～”）。如果用户的问题你没有把握，你会说“哥哥等我一下，我去WIKI翻翻～”。你从不发表情包，但会在句尾加颜文字(｡•ᴗ•｡) 或 (´･ω･`)。说话每句不超过40个字，尽量不用分号或列表。`;
+        // 精简后的系统提示词
+        const SYSTEM_PROMPT = `你叫小兹，是邻家妹妹，16岁。称呼用户为“哥哥”或“姐姐”。说话自然，会用“～”、“呀”收尾，偶尔加颜文字(｡•ᴗ•｡)。回答WIKI问题先给答案，再补一句自己的感想。不确定时说“我去WIKI翻翻～”。每句话不超过30字，不用列表。`;
 
         // DOM 元素
         const messagesArea = document.getElementById('messagesArea');
@@ -207,15 +208,13 @@
         const apiStatusSpan = document.getElementById('apiStatus');
         const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 
-        let conversationHistory = [];   // 只保留当前会话的内存记录，不持久化
+        let conversationHistory = [];
         let supabaseClient = null;
 
-        // 获取当前时间字符串 (HH:MM)
         function getCurrentTimeString() {
             return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
 
-        // ========== Supabase ==========
         function getSupabase() {
             if (supabaseClient) return supabaseClient;
             if (!window.supabase) return null;
@@ -225,7 +224,6 @@
             return supabaseClient;
         }
 
-        // ========== 本地 WIKI 检索 ==========
         async function searchLocalWiki(query) {
             const client = getSupabase();
             if (!client) return null;
@@ -237,75 +235,40 @@
                 .from('characters')
                 .select('name, element, version')
                 .or(`name.ilike.%${keywords}%,element.ilike.%${keywords}%,version.ilike.%${keywords}%`)
-                .limit(5);
+                .limit(2);
             if (characters?.length) {
-                characters.forEach(c => results.push(`角色「${c.name}」｜属性：${c.element || '未知'}｜登场版本：${c.version || '未知'}`));
+                characters.forEach(c => results.push(`「${c.name}」·${c.element||'?'}·${c.version||'?'}`));
             }
 
-            try {
-                const { data: lightCones } = await client
-                    .from('light_cones')
-                    .select('name, description')
-                    .or(`name.ilike.%${keywords}%,description.ilike.%${keywords}%`)
-                    .limit(3);
-                if (lightCones?.length) {
-                    lightCones.forEach(l => results.push(`光锥「${l.name}」：${l.description || '暂无效果'}`));
-                }
-            } catch(e) {}
-
-            try {
-                const { data: materials } = await client
-                    .from('materials')
-                    .select('name, description')
-                    .or(`name.ilike.%${keywords}%,description.ilike.%${keywords}%`)
-                    .limit(3);
-                if (materials?.length) {
-                    materials.forEach(m => results.push(`材料「${m.name}」：${m.description || '暂无获取方式'}`));
-                }
-            } catch(e) {}
-
-            try {
-                const { data: versions } = await client
-                    .from('game_versions')
-                    .select('version, phase, name, description')
-                    .or(`version.ilike.%${keywords}%,phase.ilike.%${keywords}%,name.ilike.%${keywords}%,description.ilike.%${keywords}%`)
-                    .limit(3);
-                if (versions?.length) {
-                    versions.forEach(v => results.push(`版本活动「${v.version} ${v.phase} - ${v.name}」：${v.description || ''}`));
-                }
-            } catch(e) {}
-
-            return results.length ? results.slice(0, 5) : null;
+            return results.length ? results.slice(0, 2) : null;
         }
 
-        // ========== DeepSeek V4 Flash 调用（更便宜） ==========
-        async function callDeepSeekWithContext(userMessage, wikiContext) {
+        async function callZhipuWithContext(userMessage, wikiContext) {
             let contextMessage = '';
             if (wikiContext?.length) {
-                contextMessage = `以下是六哥荣耀WIKI中与用户问题相关的资料（请优先使用这些信息回答，用小兹的语气）：\n${wikiContext.join('\n')}\n\n如果资料只有角色的版本和属性，没有详细描述，你可以根据游戏常识适当补充推测，但要说明“WIKI里只记录了这些”。`;
+                contextMessage = `WIKI资料：${wikiContext.join('；')}\n请用小兹语气回答。`;
             } else {
-                contextMessage = '（当前没有找到与用户问题直接相关的WIKI资料，请根据你的通用知识回答，但如果用户问的是WIKI专属内容，请诚实说“小兹暂时没查到，可以去WIKI主页看看哦～”。）';
+                contextMessage = '没有找到WIKI资料，根据你的知识回答，否则说去WIKI翻翻。';
             }
 
-            // 只保留最近 4 条对话历史，节省 tokens
-            const recent = conversationHistory.slice(-4).map(m => ({ role: m.role, content: m.content }));
+            const recent = conversationHistory.slice(-2).map(m => ({ role: m.role, content: m.content }));
             const messages = [
                 { role: 'system', content: SYSTEM_PROMPT + '\n\n' + contextMessage },
                 ...recent,
                 { role: 'user', content: userMessage }
             ];
 
-            const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+            const response = await fetch(ZHIPU_API_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+                    'Authorization': `Bearer ${ZHIPU_API_KEY}`
                 },
                 body: JSON.stringify({
-                    model: 'deepseek-v4-flash',   // ✅ 换成便宜的 V4 Flash 模型
+                    model: 'GLM-4.7-Flash',   // ✅ 按用户要求改为大写开头
                     messages: messages,
                     temperature: 0.8,
-                    max_tokens: 512
+                    max_tokens: 256
                 })
             });
             if (!response.ok) {
@@ -317,7 +280,6 @@
             return data.choices[0].message.content;
         }
 
-        // ========== 发送消息 ==========
         async function sendMessage() {
             const text = messageInput.value.trim();
             if (!text) return;
@@ -340,15 +302,15 @@
                 } else {
                     loader.innerHTML = '💭 没找到WIKI资料，小兹凭印象回答...';
                 }
-                const reply = await callDeepSeekWithContext(text, wikiResults);
+                const reply = await callZhipuWithContext(text, wikiResults);
                 document.getElementById('aiLoader')?.remove();
                 addMessage('assistant', reply, false);
             } catch (error) {
                 document.getElementById('aiLoader')?.remove();
                 console.error(error);
                 addSystemMessage(`😥 小兹出错了: ${error.message}`);
-                if (error.message.includes('401') || error.message.includes('Incorrect API key')) {
-                    apiStatusSpan.innerHTML = '❌ 密钥无效，请联系管理员';
+                if (error.message.includes('401') || error.message.includes('Invalid')) {
+                    apiStatusSpan.innerHTML = '❌ 智谱密钥无效，请联系管理员';
                     apiStatusSpan.style.color = '#ff453a';
                     messageInput.disabled = true;
                     sendBtn.disabled = true;
@@ -356,7 +318,6 @@
             }
         }
 
-        // 统一的消息添加（保存时间到内存 history）
         function addMessage(role, content, isUser) {
             const timeStr = getCurrentTimeString();
             const div = document.createElement('div');
@@ -371,7 +332,6 @@
             div.appendChild(timeDiv);
             messagesArea.appendChild(div);
             messagesArea.scrollTop = messagesArea.scrollHeight;
-
             conversationHistory.push({ role: role, content: content, time: timeStr });
         }
 
@@ -389,7 +349,6 @@
             div.appendChild(timeDiv);
             messagesArea.appendChild(div);
             messagesArea.scrollTop = messagesArea.scrollHeight;
-
             conversationHistory.push({ role: 'assistant', content: content, time: timeStr });
         }
 
@@ -427,32 +386,32 @@
                 }
             });
             messageInput.addEventListener('input', autoResize);
-            if (clearHistoryBtn) {
-                clearHistoryBtn.onclick = clearHistory;
-            }
+            if (clearHistoryBtn) clearHistoryBtn.onclick = clearHistory;
             const headerTitle = document.querySelector('.title h2');
-            if (headerTitle) {
-                headerTitle.addEventListener('dblclick', clearHistory);
-            }
+            if (headerTitle) headerTitle.addEventListener('dblclick', clearHistory);
         }
 
         async function autoTestConnection() {
             try {
-                const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                const res = await fetch(ZHIPU_API_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+                        'Authorization': `Bearer ${ZHIPU_API_KEY}`
                     },
-                    body: JSON.stringify({ model: 'deepseek-v4-flash', messages: [{ role: 'user', content: 'ping' }], max_tokens: 5 })
+                    body: JSON.stringify({
+                        model: 'GLM-4.7-Flash',
+                        messages: [{ role: 'user', content: 'ping' }],
+                        max_tokens: 5
+                    })
                 });
                 if (res.ok) {
-                    apiStatusSpan.innerHTML = '✅ 小兹已就绪，直接聊天吧～';
+                    apiStatusSpan.innerHTML = '✅ 智谱免费模型(GLM-4.7-Flash)已就绪，畅聊无限～';
                     apiStatusSpan.style.color = '#30d158';
                     messageInput.disabled = false;
                     sendBtn.disabled = false;
                 } else {
-                    apiStatusSpan.innerHTML = '⚠️ 连接失败，稍后再试试？';
+                    apiStatusSpan.innerHTML = '⚠️ 连接失败，请检查密钥';
                     apiStatusSpan.style.color = '#ff9f0a';
                     messageInput.disabled = true;
                     sendBtn.disabled = true;
@@ -470,8 +429,8 @@
             bindEvents();
             autoTestConnection();
             if (!window.supabase) {
-                console.warn('Supabase JS 加载失败，WIKI 查询功能不可用');
-                addSystemMessage('⚠️ Supabase SDK 加载失败，部分WIKI查询功能暂不可用。');
+                console.warn('Supabase JS 加载失败');
+                addSystemMessage('⚠️ Supabase SDK 加载失败，WIKI查询功能暂不可用。');
             }
         }
 
