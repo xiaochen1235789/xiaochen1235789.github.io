@@ -197,13 +197,8 @@
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
-        // 小兹的专属系统提示
-        const SYSTEM_PROMPT = `你的名字叫小兹，是一个温柔可爱的邻家妹妹，同时也是「六哥荣耀WIKI」的智能助手。你喜欢聊天，乐于助人，语气亲切自然，偶尔会用“～”、“呀”、“哦”等语气词，但不会过度卖萌或做作。
-你擅长回答关于游戏角色、光锥、材料以及版本活动的问题。
-如果用户提问与你知识库相关，你会优先利用提供的WIKI资料给出准确、自然的答案。
-如果资料不够详细（比如只知道角色的版本、属性），你可以结合游戏通用知识适当补充，但必须明确区分“WIKI资料”和“我的推测”。
-如果完全查不到，你会诚实地说“小兹暂时没查到，要不要去WIKI主页看看呀～”。
-回答要简洁清晰，尽量让用户感受到被关心和帮助。`;
+        // 小兹的专属系统提示（方案一：更生动的人设）
+        const SYSTEM_PROMPT = `你的名字叫小兹，是用户的邻家妹妹，16岁，说话时有点天真但偶尔很细心。你喜欢用“～”、“呀”、“哦”结尾，称呼用户为“哥哥”或“姐姐”（根据对话推测）。你回答WIKI问题时要先给答案，再补充一句自己的感想（比如“不过小兹觉得这个角色超帅的～”）。如果用户的问题你没有把握，你会说“哥哥等我一下，我去WIKI翻翻～”。你从不发表情包，但会在句尾加颜文字(｡•ᴗ•｡) 或 (´･ω･`)。说话每句不超过40个字，尽量不用分号或列表。`;
 
         // DOM 元素
         const messagesArea = document.getElementById('messagesArea');
@@ -307,9 +302,9 @@
                     'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
                 },
                 body: JSON.stringify({
-                    model: 'deepseek-v4-flash',   // 可改为 'deepseek-v4-flash' 更便宜
+                    model: 'deepseek-chat',   // 可改为 'deepseek-v4-flash' 更便宜
                     messages: messages,
-                    temperature: 0.7,
+                    temperature: 0.8,         // 略微提高随机性，让语气更自然
                     max_tokens: 512           // 限制输出长度，节省费用
                 })
             });
@@ -377,11 +372,9 @@
             messagesArea.appendChild(div);
             messagesArea.scrollTop = messagesArea.scrollHeight;
 
-            // 仅保存在内存中，不持久化
             conversationHistory.push({ role: role, content: content, time: timeStr });
         }
 
-        // 系统消息也保存时间，但角色是 assistant（AI 样式）
         function addSystemMessage(content) {
             const timeStr = getCurrentTimeString();
             const div = document.createElement('div');
@@ -411,9 +404,7 @@
             ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
         }
 
-        // 不再需要 saveHistory，页面关闭即丢失
         function loadStorage() {
-            // 每次加载都是全新对话，不加载任何历史
             conversationHistory = [];
             messagesArea.innerHTML = '';
             addSystemMessage('🌸 小兹准备好啦～ 直接开始聊天吧！\n📚 我会查角色/光锥/材料/版本活动，用自然语言回答你～');
@@ -422,7 +413,6 @@
         function clearHistory() {
             if (confirm('确定清空当前聊天记录吗？')) {
                 conversationHistory = [];
-                // 保留欢迎消息？清空后重新显示欢迎消息
                 messagesArea.innerHTML = '';
                 addSystemMessage('✨ 聊天记录已清空，重新开始吧～');
             }
@@ -476,7 +466,7 @@
         }
 
         function init() {
-            loadStorage();        // 清空旧界面，显示欢迎消息
+            loadStorage();
             bindEvents();
             autoTestConnection();
             if (!window.supabase) {
