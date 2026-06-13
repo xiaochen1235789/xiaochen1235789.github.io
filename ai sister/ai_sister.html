@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <link rel="icon" href="/images/wangzhantupian.png" type="image/png">
-    <title>妹妹小兹 · 六哥荣耀WIKI</title>
+    <title>助手小兹 · 六哥荣耀WIKI</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -212,7 +212,7 @@
         const apiStatusSpan = document.getElementById('apiStatus');
         const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 
-        let conversationHistory = [];
+        let conversationHistory = [];   // 只保留当前会话的内存记录，不持久化
         let supabaseClient = null;
 
         // 获取当前时间字符串 (HH:MM)
@@ -283,7 +283,7 @@
             return results.length ? results.slice(0, 5) : null;
         }
 
-        // ========== DeepSeek 调用 ==========
+        // ========== DeepSeek 调用（限制长度） ==========
         async function callDeepSeekWithContext(userMessage, wikiContext) {
             let contextMessage = '';
             if (wikiContext?.length) {
@@ -292,7 +292,8 @@
                 contextMessage = '（当前没有找到与用户问题直接相关的WIKI资料，请根据你的通用知识回答，但如果用户问的是WIKI专属内容，请诚实说“小兹暂时没查到，可以去WIKI主页看看哦～”。）';
             }
 
-            const recent = conversationHistory.slice(-8).map(m => ({ role: m.role, content: m.content }));
+            // 只保留最近 4 条对话历史，节省 tokens
+            const recent = conversationHistory.slice(-4).map(m => ({ role: m.role, content: m.content }));
             const messages = [
                 { role: 'system', content: SYSTEM_PROMPT + '\n\n' + contextMessage },
                 ...recent,
@@ -306,10 +307,10 @@
                     'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
                 },
                 body: JSON.stringify({
-                    model: 'deepseek-chat',
+                    model: 'deepseek-chat',   // 可改为 'deepseek-v4-flash' 更便宜
                     messages: messages,
                     temperature: 0.7,
-                    max_tokens: 2048
+                    max_tokens: 512           // 限制输出长度，节省费用
                 })
             });
             if (!response.ok) {
@@ -360,7 +361,7 @@
             }
         }
 
-        // 统一的消息添加（保存时间到 history）
+        // 统一的消息添加（保存时间到内存 history）
         function addMessage(role, content, isUser) {
             const timeStr = getCurrentTimeString();
             const div = document.createElement('div');
@@ -376,9 +377,8 @@
             messagesArea.appendChild(div);
             messagesArea.scrollTop = messagesArea.scrollHeight;
 
-            // 保存时附带时间
+            // 仅保存在内存中，不持久化
             conversationHistory.push({ role: role, content: content, time: timeStr });
-            saveHistory();
         }
 
         // 系统消息也保存时间，但角色是 assistant（AI 样式）
@@ -398,7 +398,6 @@
             messagesArea.scrollTop = messagesArea.scrollHeight;
 
             conversationHistory.push({ role: 'assistant', content: content, time: timeStr });
-            saveHistory();
         }
 
         function escapeHtml(str) {
@@ -412,51 +411,18 @@
             ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
         }
 
-        function saveHistory() {
-            localStorage.setItem('ai_sister_history', JSON.stringify(conversationHistory));
-        }
-
+        // 不再需要 saveHistory，页面关闭即丢失
         function loadStorage() {
-            const savedHistory = localStorage.getItem('ai_sister_history');
-            if (savedHistory) {
-                try {
-                    conversationHistory = JSON.parse(savedHistory);
-                    renderMessagesFromHistory();
-                } catch(e) {}
-            }
-            if (!conversationHistory.length) {
-                addSystemMessage('🌸 小兹准备好啦～ 直接开始聊天吧！\n📚 我会查角色/光锥/材料/版本活动，用自然语言回答你～');
-            }
-        }
-
-        // 渲染历史消息，使用存储的时间
-        function renderMessagesFromHistory() {
+            // 每次加载都是全新对话，不加载任何历史
+            conversationHistory = [];
             messagesArea.innerHTML = '';
-            for (const msg of conversationHistory) {
-                const isUser = (msg.role === 'user');
-                const div = document.createElement('div');
-                div.className = `message ${isUser ? 'user' : 'ai'}`;
-                const bubble = document.createElement('div');
-                bubble.className = 'bubble';
-                bubble.innerHTML = escapeHtml(msg.content).replace(/\n/g, '<br>');
-                const timeDiv = document.createElement('div');
-                timeDiv.className = 'time';
-                // 如果历史记录中有 time 字段就使用，否则用占位符（兼容旧数据）
-                timeDiv.textContent = msg.time || '·';
-                div.appendChild(bubble);
-                div.appendChild(timeDiv);
-                messagesArea.appendChild(div);
-            }
-            if (conversationHistory.length === 0) {
-                addSystemMessage('🌸 小兹准备好啦～');
-            }
-            messagesArea.scrollTop = messagesArea.scrollHeight;
+            addSystemMessage('🌸 小兹准备好啦～ 直接开始聊天吧！\n📚 我会查角色/光锥/材料/版本活动，用自然语言回答你～');
         }
 
         function clearHistory() {
-            if (confirm('确定清空所有聊天记录吗？此操作不可恢复。')) {
+            if (confirm('确定清空当前聊天记录吗？')) {
                 conversationHistory = [];
-                localStorage.removeItem('ai_sister_history');
+                // 保留欢迎消息？清空后重新显示欢迎消息
                 messagesArea.innerHTML = '';
                 addSystemMessage('✨ 聊天记录已清空，重新开始吧～');
             }
@@ -510,7 +476,7 @@
         }
 
         function init() {
-            loadStorage();
+            loadStorage();        // 清空旧界面，显示欢迎消息
             bindEvents();
             autoTestConnection();
             if (!window.supabase) {
