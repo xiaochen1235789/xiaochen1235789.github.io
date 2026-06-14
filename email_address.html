@@ -23,14 +23,15 @@
         async function loadMails() {
             const container = document.getElementById('mailsContainer');
             try {
-                // 获取 token
+                // 获取 token 和用户信息
                 const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
-                if (!sessionStr) throw new Error('未登录');
+                if (!sessionStr) throw new Error('未登录，请先登录');
                 const session = JSON.parse(sessionStr);
                 const token = session.access_token;
+                const userId = session.user.id;   // 当前登录用户ID
 
-                // 获取邮件
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?select=*&order=created_at.desc`, {
+                // 查询只属于当前用户的邮件
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?select=*&to_user_id=eq.${userId}&order=created_at.desc`, {
                     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
                 });
                 if (!res.ok) throw new Error(await res.text());
@@ -41,7 +42,7 @@
                     return;
                 }
 
-                // 生成简单的卡片列表，不依赖复杂渲染
+                // 生成简单的卡片列表
                 let html = '';
                 for (const mail of mails) {
                     const hasAttach = (mail.claimable_items && mail.claimable_items.length > 0);
@@ -78,19 +79,20 @@
                 if (!sessionStr) throw new Error('未登录');
                 const session = JSON.parse(sessionStr);
                 const token = session.access_token;
+                const userId = session.user.id;
 
-                // 1. 获取当前邮件
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?id=eq.${mailId}&select=*`, {
+                // 1. 获取当前邮件（同时验证归属）
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?id=eq.${mailId}&to_user_id=eq.${userId}&select=*`, {
                     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
                 });
                 const mails = await res.json();
                 const mail = mails[0];
-                if (!mail) throw new Error('邮件不存在');
+                if (!mail) throw new Error('邮件不存在或不属于你');
                 if (mail.claimed_at) throw new Error('已领取过');
                 const items = mail.claimable_items || [];
                 if (items.length === 0) throw new Error('无附件');
 
-                // 2. 原子更新 claimed_at
+                // 2. 原子更新 claimed_at（只更新未领取的）
                 const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?id=eq.${mailId}&claimed_at=is.null`, {
                     method: 'PATCH',
                     headers: {
@@ -110,21 +112,21 @@
                 }
                 if (candyDelta > 0) {
                     // 获取当前糖果
-                    const statsRes = await fetch(`${SUPABASE_URL}/rest/v1/user_stats?user_id=eq.${session.user.id}&select=candy_crumbles`, {
+                    const statsRes = await fetch(`${SUPABASE_URL}/rest/v1/user_stats?user_id=eq.${userId}&select=candy_crumbles`, {
                         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
                     });
                     const stats = await statsRes.json();
                     const currentCandy = stats[0]?.candy_crumbles || 0;
                     const newCandy = currentCandy + candyDelta;
                     // 更新（upsert）
-                    await fetch(`${SUPABASE_URL}/rest/v1/user_stats?user_id=eq.${session.user.id}`, {
+                    await fetch(`${SUPABASE_URL}/rest/v1/user_stats?user_id=eq.${userId}`, {
                         method: 'PUT',
                         headers: {
                             'apikey': SUPABASE_KEY,
                             'Authorization': `Bearer ${token}`,
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ user_id: session.user.id, candy_crumbles: newCandy })
+                        body: JSON.stringify({ user_id: userId, candy_crumbles: newCandy })
                     });
                 }
 
