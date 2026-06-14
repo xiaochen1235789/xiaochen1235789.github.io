@@ -180,8 +180,45 @@
             <div class="misc-title"><i class="fas fa-image"></i> 头像框拥有管理</div>
             <div id="framesManagementArea"></div>
         </div>
-        <!-- 称号管理会动态添加到此面板 -->
-        <!-- 自动签到卡管理会动态添加到此面板 -->
+        <!-- 称号管理会动态添加 -->
+        <!-- 自动签到卡管理会动态添加 -->
+        <!-- 系统邮件发送区域 -->
+        <div class="misc-section">
+            <div class="misc-title"><i class="fas fa-mail-bulk"></i> 发送系统邮件</div>
+            <div class="asset-control" style="flex-direction: column; align-items: stretch;">
+                <div class="form-field">
+                    <label>接收用户</label>
+                    <select id="mailTargetUser" class="form-select">
+                        <option value="all">📢 全体用户</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label>邮件标题</label>
+                    <input type="text" id="mailTitle" placeholder="例如：版本更新奖励" style="width:100%;">
+                </div>
+                <div class="form-field">
+                    <label>邮件内容</label>
+                    <textarea id="mailContent" rows="3" placeholder="填写邮件正文..."></textarea>
+                </div>
+                <div class="form-field">
+                    <label>附件（可选）</label>
+                    <div id="attachmentsList">
+                        <div style="display:flex; gap:8px; margin-bottom:8px;">
+                            <select class="attach-type" style="width:120px;">
+                                <option value="candy">🍬 糖果碎</option>
+                                <option value="rainbow">🌈 彩虹棒糖</option>
+                                <option value="title">🏅 称号</option>
+                                <option value="frame">🖼️ 头像框</option>
+                            </select>
+                            <input type="number" class="attach-amount" placeholder="数量/ID" value="10" style="width:100px;">
+                            <button type="button" class="add-attach-btn" style="background:#3b82f6;">+</button>
+                        </div>
+                    </div>
+                    <small>支持多个附件。称号和头像框请输入对应ID（称号id数字，头像框frame_id字符串）</small>
+                </div>
+                <button id="sendMailBtn" class="save-asset-btn" style="background: #10b981;"><i class="fas fa-paper-plane"></i> 发送邮件</button>
+            </div>
+        </div>
     </div>
 
     <!-- 抽卡配置面板 -->
@@ -243,6 +280,7 @@
                     <option value="头像框调整">头像框调整</option>
                     <option value="徽章调整">徽章调整</option>
                     <option value="自动签到卡调整">自动签到卡调整</option>
+                    <option value="发送系统邮件">发送系统邮件</option>
                     <option value="编辑卡池">编辑卡池</option>
                     <option value="添加卡池">添加卡池</option>
                     <option value="删除卡池">删除卡池</option>
@@ -409,7 +447,7 @@
             html += `<tr>
                 <td>${time}</td>
                 <td>${escapeHtml(log.admin_email)}<br><span style="font-size:0.7rem;">(${roleDisplay})</span></td>
-                <td>${escapeHtml(log.action_type)}</td>
+                <td>${escapeHtml(log.action_type)}</span></td>
                 <td>${escapeHtml(log.target_name || log.target_type || '')}</td>
                 <td>${escapeHtml(log.details || '')}</td>
             </tr>`;
@@ -444,7 +482,7 @@
         return true;
     }
 
-    // 用户管理
+    // ==================== 用户管理 ====================
     async function fetchAllUsers() {
         const { data: profiles } = await supabaseAdmin.from('user_profiles').select('id, username, role, created_at').order('created_at', { ascending: false });
         const { data: stats } = await supabaseAdmin.from('user_stats').select('user_id, candy_crumbles, rainbow_lollipops, active_points, checkin_streak');
@@ -466,12 +504,12 @@
                 <td>🍬 ${u.candy_crumbles}</td>
                 <td>🌈 ${u.rainbow_lollipops}</td>
                 <td>⚡ ${u.active_points}</td>
-                <td>🔥 ${u.streak}天</td>
+                <td>🔥 ${u.streak}天</span></td>
                 <td>${createdDate}</td>
                 <td class="action-buttons">
                     ${canEditRole ? `<button class="edit-btn" onclick="openUserRoleModal('${u.id}', '${escapeHtml(u.username)}', '${u.role}')"><i class="fas fa-user-tag"></i> 改角色</button>` : ''}
                     ${canDelete ? `<button class="delete-btn" onclick="deleteUserById('${u.id}', '${escapeHtml(u.username)}')"><i class="fas fa-trash"></i> 删除</button>` : ''}
-                </td>
+                </span></td>
             </tr>`;
         });
         html += '</tbody></table>';
@@ -516,7 +554,7 @@
         } catch(err) { showNotification('删除失败: '+err.message, 'error'); }
     };
 
-    // 内容管理
+    // ==================== 内容管理 ====================
     async function loadContentTable(table) {
         try {
             const { data, error } = await supabaseAdmin.from(table).select('*').order('display_order', { ascending: true });
@@ -549,7 +587,7 @@
             html += `<td class="action-buttons">
                 <button class="edit-btn" onclick="editContentItem('${table}', ${row.id})"><i class="fas fa-edit"></i> 编辑</button>
                 <button class="delete-btn" onclick="deleteContentItem('${table}', ${row.id})"><i class="fas fa-trash"></i> 删除</button>
-            </td></tr>`;
+            </span></td>`;
         }
         html += '</tbody></table></div>';
         container.innerHTML = html;
@@ -845,31 +883,134 @@
             }
         };
         if (selectedMiscUserId) await reloadMiscData(selectedMiscUserId);
+        initMailSender(); // 初始化邮件发送组件
     }
 
-    // 抽卡配置管理（保持原有功能，略作错误处理）
+    // ==================== 邮件发送 ====================
+    async function loadMailUserSelect() {
+        const select = document.getElementById('mailTargetUser');
+        if (!select) return;
+        const users = allUsers.length ? allUsers : await fetchAllUsers();
+        select.innerHTML = '<option value="all">📢 全体用户</option>' + users.map(u => `<option value="${u.id}">${escapeHtml(u.username)} (${u.id.slice(0,8)})</option>`).join('');
+    }
+
+    function addAttachmentRow(container) {
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.gap = '8px';
+        div.style.marginBottom = '8px';
+        div.innerHTML = `
+            <select class="attach-type" style="width:120px;">
+                <option value="candy">🍬 糖果碎</option>
+                <option value="rainbow">🌈 彩虹棒糖</option>
+                <option value="title">🏅 称号</option>
+                <option value="frame">🖼️ 头像框</option>
+            </select>
+            <input type="number" class="attach-amount" placeholder="数量/ID" value="10" style="width:100px;">
+            <button type="button" class="remove-attach-btn" style="background:#f87171;">-</button>
+        `;
+        div.querySelector('.remove-attach-btn').addEventListener('click', () => div.remove());
+        container.appendChild(div);
+    }
+
+    async function sendSystemMail() {
+        const targetValue = document.getElementById('mailTargetUser').value;
+        const title = document.getElementById('mailTitle').value.trim();
+        const content = document.getElementById('mailContent').value.trim();
+        if (!title || !content) {
+            showNotification('标题和内容不能为空', 'error');
+            return;
+        }
+        const attachments = [];
+        const rows = document.querySelectorAll('#attachmentsList > div');
+        for (let row of rows) {
+            const type = row.querySelector('.attach-type').value;
+            const amount = row.querySelector('.attach-amount').value;
+            if (!amount) continue;
+            if (type === 'candy' || type === 'rainbow') {
+                attachments.push({ type, amount: parseInt(amount) });
+            } else if (type === 'title') {
+                attachments.push({ type, title_id: parseInt(amount) });
+            } else if (type === 'frame') {
+                attachments.push({ type, frame_id: amount });
+            }
+        }
+        let targetUserIds = [];
+        if (targetValue === 'all') {
+            targetUserIds = allUsers.map(u => u.id);
+        } else {
+            targetUserIds = [targetValue];
+        }
+        if (targetUserIds.length === 0) {
+            showNotification('没有可发送的用户', 'error');
+            return;
+        }
+        const mails = targetUserIds.map(to_user_id => ({
+            to_user_id,
+            title,
+            content,
+            claimable_items: attachments,
+            created_by_admin: currentUser.id
+        }));
+        const batchSize = 50;
+        let success = 0;
+        for (let i = 0; i < mails.length; i += batchSize) {
+            const batch = mails.slice(i, i + batchSize);
+            const { error } = await supabaseAdmin.from('user_mails').insert(batch);
+            if (error) {
+                showNotification(`发送失败: ${error.message}`, 'error');
+                return;
+            }
+            success += batch.length;
+        }
+        showNotification(`成功发送 ${success} 封邮件`, 'success');
+        await logAction('发送系统邮件', 'user_mails', '', `${targetUserIds.length}人`, `标题: ${title}`);
+        document.getElementById('mailTitle').value = '';
+        document.getElementById('mailContent').value = '';
+        const attachContainer = document.getElementById('attachmentsList');
+        attachContainer.innerHTML = '';
+        addAttachmentRow(attachContainer);
+    }
+
+    function initMailSender() {
+        const attachContainer = document.getElementById('attachmentsList');
+        if (attachContainer) {
+            attachContainer.innerHTML = '';
+            addAttachmentRow(attachContainer);
+            attachContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('add-attach-btn')) {
+                    addAttachmentRow(attachContainer);
+                }
+            });
+        }
+        const sendBtn = document.getElementById('sendMailBtn');
+        if (sendBtn) sendBtn.onclick = sendSystemMail;
+        loadMailUserSelect();
+    }
+
+    // ==================== 抽卡配置管理 ====================
+    let currentBanners = [];
     async function loadBanners() {
         const { data } = await supabaseAdmin.from('gacha_banners').select('*').order('display_order');
         currentBanners = data || [];
         renderBannersTable();
     }
-    let currentBanners = [];
     function renderBannersTable() {
         const container = document.getElementById('bannersListArea');
         if (!currentBanners.length) { container.innerHTML = '<div class="empty-data">暂无卡池</div>'; return; }
         let html = '<table class="data-table"><thead><tr><th>标识</th><th>名称</th><th>UP五星</th><th>开始时间</th><th>结束时间</th><th>激活</th><th>操作</th></tr></thead><tbody>';
         for (const b of currentBanners) {
             html += `<tr>
-                <td>${escapeHtml(b.banner_key)}</td>
-                <td>${escapeHtml(b.name)}</td>
-                <td>${escapeHtml(b.up_five_star)}</td>
-                <td>${new Date(b.start_time).toLocaleString()}</td>
-                <td>${new Date(b.end_time).toLocaleString()}</td>
-                <td><input type="checkbox" class="banner-active" data-id="${b.id}" ${b.is_active ? 'checked' : ''}></td>
+                <td>${escapeHtml(b.banner_key)}</span></td>
+                <td>${escapeHtml(b.name)}</span></td>
+                <td>${escapeHtml(b.up_five_star)}</span></td>
+                <td>${new Date(b.start_time).toLocaleString()}</span></td>
+                <td>${new Date(b.end_time).toLocaleString()}</span></td>
+                <td><input type="checkbox" class="banner-active" data-id="${b.id}" ${b.is_active ? 'checked' : ''}></span></td>
                 <td class="action-buttons">
                     <button class="edit-btn" onclick="editBanner(${b.id})">编辑</button>
                     <button class="delete-btn" onclick="deleteBanner(${b.id})">删除</button>
-                </td>
+                </span></td>
             </tr>`;
         }
         html += '</tbody></table>';
@@ -985,15 +1126,15 @@
         let html = '<table class="data-table"><thead><tr><th>名称</th><th>排序</th><th>操作</th></tr></thead><tbody>';
         for (const item of data) {
             html += `<tr>
-                <td>${escapeHtml(item[nameField])}</td>
-                <td>${item.sort_order}</td>
+                <td>${escapeHtml(item[nameField])}</span></td>
+                <td>${item.sort_order}</span></td>
                 <td class="action-buttons">
                     <button class="edit-btn" onclick="editSimpleItem('${tableName}', ${item.id}, '${nameField}', '${escapeHtml(item[nameField])}', ${item.sort_order})">编辑</button>
                     <button class="delete-btn" onclick="deleteSimpleItem('${tableName}', ${item.id})">删除</button>
-                </td>
+                </span></td>
             </tr>`;
         }
-        html += '</tbody></table><button class="add-btn btn-sm" onclick="addSimpleItem(\''+tableName+'\', \''+nameField+'\')" style="margin-top:10px;"><i class="fas fa-plus"></i> 添加</button>';
+        html += '</tbody></td><button class="add-btn btn-sm" onclick="addSimpleItem(\''+tableName+'\', \''+nameField+'\')" style="margin-top:10px;"><i class="fas fa-plus"></i> 添加</button>';
         container.innerHTML = html;
     }
     window.editSimpleItem = async function(tableName, id, nameField, currentName, currentOrder) {
@@ -1084,7 +1225,7 @@
         } catch(err) { showNotification('保存失败: '+err.message, 'error'); }
     }
 
-    // 标签页切换
+    // ==================== 标签页切换 ====================
     function switchTab(tabId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
