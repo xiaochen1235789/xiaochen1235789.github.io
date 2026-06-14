@@ -3,76 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>邮箱 - 稳定版</title>
+    <title>我的邮箱 - 稳定版</title>
     <style>
-        body { background: #0a0f1e; color: #eee; font-family: monospace; padding: 20px; }
-        pre { background: #1e293b; padding: 12px; border-radius: 12px; overflow-x: auto; }
-        button { background: #f59e0b; border: none; padding: 6px 12px; border-radius: 20px; cursor: pointer; margin-left: 12px; }
-        .mail-item { background: #1e293b; margin-bottom: 16px; padding: 12px; border-radius: 12px; }
-        .mail-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        body { background: #0a0f1e; color: #eee; font-family: system-ui, monospace; padding: 20px; }
+        .mail-item { background: #1e293b; margin-bottom: 16px; padding: 12px; border-radius: 12px; cursor: pointer; transition: 0.2s; }
+        .mail-item:hover { background: #2d3a4e; }
+        .mail-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+        .mail-title { font-weight: bold; font-size: 1.1rem; }
+        .mail-date { font-size: 0.75rem; color: #94a3b8; }
+        .claim-btn { background: #f59e0b; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-weight: bold; }
+        .claim-btn:disabled { background: #475569; cursor: not-allowed; }
+        /* 模态框样式 */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 1000; }
+        .modal.show { display: flex; }
+        .modal-content { background: #1e293b; max-width: 600px; width: 90%; border-radius: 24px; padding: 24px; max-height: 80vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .modal-title { font-size: 1.3rem; font-weight: bold; }
+        .close-modal { background: none; border: none; color: #94a3b8; font-size: 28px; cursor: pointer; }
+        .modal-body { white-space: pre-wrap; margin: 16px 0; }
+        .modal-attach { background: #0f172a; border-radius: 16px; padding: 12px; margin: 12px 0; }
+        .detail-claim-btn { background: #f59e0b; border: none; padding: 8px 20px; border-radius: 40px; font-weight: bold; cursor: pointer; margin-top: 12px; }
+        .detail-claim-btn:disabled { background: #475569; cursor: not-allowed; }
     </style>
 </head>
 <body>
     <h2>📬 我的邮箱</h2>
     <div id="mailsContainer">加载中...</div>
 
+    <!-- 模态框 -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="modalTitle"></span>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modalDate" style="font-size:0.8rem; color:#94a3b8;"></div>
+            <div id="modalContent" class="modal-body"></div>
+            <div id="modalAttach" class="modal-attach"></div>
+            <button id="modalClaimBtn" class="detail-claim-btn" style="display:none;">领取附件</button>
+        </div>
+    </div>
+
     <script>
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
+        let currentMails = [];
+        let currentUserId = null;
+
         async function loadMails() {
             const container = document.getElementById('mailsContainer');
             try {
-                // 获取 token 和用户信息
                 const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
                 if (!sessionStr) throw new Error('未登录，请先登录');
                 const session = JSON.parse(sessionStr);
                 const token = session.access_token;
-                const userId = session.user.id;   // 当前登录用户ID
+                currentUserId = session.user.id;
 
-                // 查询只属于当前用户的邮件
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?select=*&to_user_id=eq.${userId}&order=created_at.desc`, {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?select=*&to_user_id=eq.${currentUserId}&order=created_at.desc`, {
                     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
                 });
                 if (!res.ok) throw new Error(await res.text());
                 const mails = await res.json();
+                currentMails = mails;
 
                 if (mails.length === 0) {
                     container.innerHTML = '<div>📭 暂无邮件</div>';
                     return;
                 }
 
-                // 生成简单的卡片列表
                 let html = '';
                 for (const mail of mails) {
                     const hasAttach = (mail.claimable_items && mail.claimable_items.length > 0);
                     const isClaimed = !!mail.claimed_at;
                     html += `
-                        <div class="mail-item">
+                        <div class="mail-item" data-id="${mail.id}">
                             <div class="mail-header">
-                                <strong>${escapeHtml(mail.title)}</strong>
-                                <small>${new Date(mail.created_at).toLocaleString()}</small>
-                                ${hasAttach && !isClaimed ? `<button data-id="${mail.id}" class="claim-btn">🎁 领取</button>` : ''}
-                                ${isClaimed ? '<span>✅ 已领取</span>' : ''}
+                                <div>
+                                    <div class="mail-title">${escapeHtml(mail.title)}</div>
+                                    <div class="mail-date">${new Date(mail.created_at).toLocaleString()}</div>
+                                </div>
+                                ${hasAttach && !isClaimed ? `<button class="claim-btn" data-id="${mail.id}" onclick="event.stopPropagation(); directClaim(${mail.id})">🎁 领取</button>` : (isClaimed ? '<span>✅ 已领取</span>' : '')}
                             </div>
-                            <div style="margin-top: 8px; white-space: pre-wrap;">${escapeHtml(mail.content || '(无内容)')}</div>
                         </div>
                     `;
                 }
                 container.innerHTML = html;
 
-                // 绑定领取按钮
-                document.querySelectorAll('.claim-btn').forEach(btn => {
-                    btn.addEventListener('click', async (e) => {
-                        const mailId = parseInt(btn.dataset.id);
-                        await claimMail(mailId);
+                // 点击邮件项打开详情模态框
+                document.querySelectorAll('.mail-item').forEach(el => {
+                    el.addEventListener('click', (e) => {
+                        // 如果点击的是按钮本身，不打开模态框
+                        if (e.target.classList.contains('claim-btn')) return;
+                        const id = parseInt(el.dataset.id);
+                        const mail = currentMails.find(m => m.id === id);
+                        if (mail) openModal(mail);
                     });
                 });
             } catch (err) {
-                container.innerHTML = `<div>❌ 错误：${err.message}<br>请确保已登录（先访问一次邮箱登录页）</div>`;
+                container.innerHTML = `<div>❌ 错误：${err.message}<br>请确保已登录</div>`;
             }
         }
 
+        // 直接领取（用于列表中的按钮）
+        async function directClaim(mailId) {
+            await claimMail(mailId);
+            await loadMails(); // 刷新列表
+        }
+
+        // 领取核心逻辑
         async function claimMail(mailId) {
             try {
                 const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
@@ -81,7 +120,6 @@
                 const token = session.access_token;
                 const userId = session.user.id;
 
-                // 1. 获取当前邮件（同时验证归属）
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?id=eq.${mailId}&to_user_id=eq.${userId}&select=*`, {
                     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
                 });
@@ -92,7 +130,7 @@
                 const items = mail.claimable_items || [];
                 if (items.length === 0) throw new Error('无附件');
 
-                // 2. 原子更新 claimed_at（只更新未领取的）
+                // 原子更新
                 const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?id=eq.${mailId}&claimed_at=is.null`, {
                     method: 'PATCH',
                     headers: {
@@ -105,20 +143,18 @@
                 });
                 if (!updateRes.ok) throw new Error('领取失败，可能已被领取');
 
-                // 3. 增加糖果
+                // 增加糖果
                 let candyDelta = 0;
                 for (const item of items) {
                     if (item.type === 'candy') candyDelta += item.amount;
                 }
                 if (candyDelta > 0) {
-                    // 获取当前糖果
                     const statsRes = await fetch(`${SUPABASE_URL}/rest/v1/user_stats?user_id=eq.${userId}&select=candy_crumbles`, {
                         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
                     });
                     const stats = await statsRes.json();
                     const currentCandy = stats[0]?.candy_crumbles || 0;
                     const newCandy = currentCandy + candyDelta;
-                    // 更新（upsert）
                     await fetch(`${SUPABASE_URL}/rest/v1/user_stats?user_id=eq.${userId}`, {
                         method: 'PUT',
                         headers: {
@@ -131,10 +167,92 @@
                 }
 
                 alert('领取成功！');
-                loadMails(); // 刷新列表
+                // 刷新数据
+                await loadMails();
+                // 如果模态框打开时领取的，也更新当前显示的邮件对象
+                if (window.currentModalMail && window.currentModalMail.id === mailId) {
+                    window.currentModalMail.claimed_at = new Date().toISOString();
+                    updateModalUI(window.currentModalMail);
+                }
             } catch (err) {
                 alert('领取失败：' + err.message);
             }
+        }
+
+        // 打开详情模态框
+        function openModal(mail) {
+            window.currentModalMail = mail;
+            document.getElementById('modalTitle').innerText = mail.title;
+            document.getElementById('modalDate').innerHTML = new Date(mail.created_at).toLocaleString();
+            document.getElementById('modalContent').innerText = mail.content || '(无内容)';
+            const attachDiv = document.getElementById('modalAttach');
+            const items = mail.claimable_items || [];
+            if (items.length === 0) {
+                attachDiv.innerHTML = '<em>无附件</em>';
+                document.getElementById('modalClaimBtn').style.display = 'none';
+            } else {
+                let attachHtml = '<strong>📦 附件：</strong><ul>';
+                for (let item of items) {
+                    if (item.type === 'candy') attachHtml += `<li>🍬 糖果 x${item.amount}</li>`;
+                    // 可扩展其他类型
+                }
+                attachHtml += '</ul>';
+                attachDiv.innerHTML = attachHtml;
+                const claimBtn = document.getElementById('modalClaimBtn');
+                claimBtn.style.display = 'block';
+                const isClaimed = !!mail.claimed_at;
+                claimBtn.disabled = isClaimed;
+                claimBtn.innerText = isClaimed ? '已领取' : '领取附件';
+                claimBtn.onclick = async () => {
+                    if (claimBtn.disabled) return;
+                    await claimMail(mail.id);
+                    // 重新获取最新邮件数据并更新界面
+                    const updatedMail = currentMails.find(m => m.id === mail.id);
+                    if (updatedMail) {
+                        window.currentModalMail = updatedMail;
+                        updateModalUI(updatedMail);
+                    }
+                };
+            }
+            document.getElementById('detailModal').classList.add('show');
+        }
+
+        function updateModalUI(mail) {
+            document.getElementById('modalTitle').innerText = mail.title;
+            document.getElementById('modalDate').innerHTML = new Date(mail.created_at).toLocaleString();
+            document.getElementById('modalContent').innerText = mail.content || '(无内容)';
+            const items = mail.claimable_items || [];
+            const attachDiv = document.getElementById('modalAttach');
+            if (items.length === 0) {
+                attachDiv.innerHTML = '<em>无附件</em>';
+                document.getElementById('modalClaimBtn').style.display = 'none';
+            } else {
+                let attachHtml = '<strong>📦 附件：</strong><ul>';
+                for (let item of items) {
+                    if (item.type === 'candy') attachHtml += `<li>🍬 糖果 x${item.amount}</li>`;
+                }
+                attachHtml += '</ul>';
+                attachDiv.innerHTML = attachHtml;
+                const claimBtn = document.getElementById('modalClaimBtn');
+                claimBtn.style.display = 'block';
+                const isClaimed = !!mail.claimed_at;
+                claimBtn.disabled = isClaimed;
+                claimBtn.innerText = isClaimed ? '已领取' : '领取附件';
+                claimBtn.onclick = async () => {
+                    if (claimBtn.disabled) return;
+                    await claimMail(mail.id);
+                    const updatedMail = currentMails.find(m => m.id === mail.id);
+                    if (updatedMail) {
+                        window.currentModalMail = updatedMail;
+                        updateModalUI(updatedMail);
+                    }
+                };
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').classList.remove('show');
+            window.currentModalMail = null;
         }
 
         function escapeHtml(str) {
