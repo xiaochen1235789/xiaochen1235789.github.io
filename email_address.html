@@ -2,636 +2,443 @@
 <html lang="zh-cmn-Hans">
 <head>
     <meta charset="UTF-8">
-    <title>奖励邮箱 - 极简版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>我的邮箱 - 六哥荣耀WIKI</title>
+    <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
-            background: #0f172a;
-            color: #f8fafc;
-            font-family: -apple-system, system-ui, sans-serif;
-            padding: 20px;
-            min-height: 100vh;
+            background: #0a0f1e;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: #eef2ff;
+            padding-bottom: 60px;
+        }
+        /* 顶部导航 */
+        .top-nav {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #F0B90B, #FFD966);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .nav-link {
+            color: #94a3b8;
+            text-decoration: none;
+            margin-left: 16px;
+        }
+        .user-nav-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
         .container {
-            max-width: 500px;
-            margin: 0 auto;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: rgba(30, 41, 59, 0.5);
-            border-radius: 12px;
-            border: 1px solid #334155;
-        }
-        h1 {
-            color: #60a5fa;
-            margin-bottom: 8px;
-            font-size: 24px;
-        }
-        .mail-list {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        .mail-card {
-            background: #1e293b;
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #334155;
-            transition: all 0.3s;
-        }
-        .mail-card.claimed {
-            opacity: 0.6;
-            border-color: #475569;
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 0 20px;
         }
         .mail-header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 12px;
-        }
-        .mail-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #f1f5f9;
-        }
-        .mail-sender {
-            font-size: 12px;
-            color: #94a3b8;
-            margin-top: 4px;
-        }
-        .mail-status {
-            font-size: 12px;
-            padding: 4px 10px;
-            border-radius: 12px;
-            background: #334155;
-            color: #cbd5e1;
-        }
-        .mail-status.new {
-            background: #22c55e20;
-            color: #22c55e;
-        }
-        .mail-status.claimed {
-            background: #64748b;
-            color: #cbd5e1;
-        }
-        .mail-content {
-            color: #cbd5e1;
-            font-size: 14px;
-            line-height: 1.5;
-            margin-bottom: 16px;
-        }
-        .rewards-section {
-            background: rgba(34, 197, 94, 0.05);
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 16px;
-            border-left: 4px solid #22c55e;
-        }
-        .rewards-title {
-            font-size: 14px;
-            color: #22c55e;
-            margin-bottom: 12px;
-            display: flex;
             align-items: center;
-            gap: 8px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
         }
-        .rewards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 8px;
+        .mail-header h1 {
+            font-size: 1.6rem;
         }
-        .reward-item {
-            background: rgba(30, 41, 59, 0.9);
-            border: 1px solid #22c55e;
-            border-radius: 6px;
-            padding: 10px;
-            text-align: center;
-        }
-        .reward-icon {
-            color: #22c55e;
-            font-size: 16px;
-            margin-bottom: 6px;
-        }
-        .reward-amount {
-            font-size: 16px;
-            font-weight: bold;
-            color: #f8fafc;
-        }
-        .reward-name {
-            font-size: 12px;
-            color: #94a3b8;
-        }
-        .mail-actions {
-            text-align: center;
-        }
-        .claim-btn {
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            color: white;
+        .back-btn {
+            background: #334155;
             border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
+            padding: 6px 16px;
+            border-radius: 40px;
+            color: white;
             cursor: pointer;
-            transition: all 0.3s;
+            text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            min-width: 140px;
+            gap: 6px;
         }
-        .claim-btn:hover:not(:disabled) {
-            background: linear-gradient(135deg, #16a34a, #15803d);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(34, 197, 94, 0.3);
+        .mail-list {
+            background: #1e293b;
+            border-radius: 24px;
+            overflow: hidden;
         }
-        .claim-btn:disabled {
-            background: #475569;
+        .mail-item {
+            padding: 16px 20px;
+            border-bottom: 1px solid #334155;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .mail-item:hover {
+            background: #2d3a4e;
+        }
+        .mail-item.unread {
+            background: #2a3f5e;
+        }
+        .mail-title {
+            font-weight: bold;
+            font-size: 1.05rem;
+            margin-bottom: 6px;
+        }
+        .mail-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
             color: #94a3b8;
-            cursor: not-allowed;
-            transform: none !important;
+            margin-bottom: 8px;
         }
-        .empty-state {
+        .mail-preview {
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .claim-badge {
+            background: #f59e0b;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            color: #1e293b;
+            font-weight: bold;
+        }
+        .claimed-badge {
+            background: #10b981;
+        }
+        .empty {
             text-align: center;
             padding: 60px 20px;
             color: #64748b;
         }
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #60a5fa;
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(6px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
         }
-        .error-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: #ef4444;
-            background: rgba(239, 68, 68, 0.1);
-            border-radius: 12px;
-            border: 1px solid rgba(239, 68, 68, 0.3);
+        .modal.active {
+            display: flex;
         }
-        .toast {
+        .modal-content {
+            background: #1e293b;
+            border-radius: 32px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 24px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .modal-header h3 {
+            font-size: 1.3rem;
+        }
+        .close-modal {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 28px;
+            cursor: pointer;
+        }
+        .mail-detail-content {
+            white-space: pre-wrap;
+            line-height: 1.5;
+            margin: 16px 0;
+        }
+        .mail-detail-attachments {
+            background: #0f172a;
+            border-radius: 20px;
+            padding: 12px;
+            margin: 12px 0;
+        }
+        .claim-btn {
+            background: #f59e0b;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            color: #1e293b;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+        .claim-btn:disabled {
+            background: #475569;
+            cursor: not-allowed;
+        }
+        .notification {
             position: fixed;
             bottom: 20px;
-            right: 20px;
-            background: #22c55e;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10b981;
             color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.3s;
-            z-index: 1000;
-            max-width: 300px;
-        }
-        .toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        .toast.error {
-            background: #ef4444;
+            padding: 8px 20px;
+            border-radius: 40px;
+            z-index: 1100;
+            display: none;
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>📬 奖励邮箱系统</h1>
-            <div>基于Supabase后端</div>
-            <a href="send_exp_email.html" >管理员邮箱</a>
-        </div>
-        
-        <div id="mailContainer">
-            <div class="loading">
-                <i class="fas fa-spinner fa-spin fa-2x"></i>
-                <p>正在加载邮件...</p>
-            </div>
-        </div>
+<nav class="top-nav">
+    <div class="nav-title">六哥荣耀WIKI</div>
+    <div class="user-nav-section" id="userNavSection">
+        <a href="login-real.html" class="nav-link" style="color:var(--text-highlight);">登录/注册</a>
     </div>
-    
-    <div class="toast" id="toast">
-        <span id="toastMessage">消息</span>
-    </div>
+</nav>
 
-    <script>
-        // ==================== 配置 ====================
-        const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-        
-        // 创建Supabase客户端（简化版）
-        let supabaseClient = null;
-        try {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        } catch (error) {
-            console.error('创建Supabase客户端失败:', error);
+<div class="container">
+    <div class="mail-header">
+        <h1><i class="fas fa-envelope"></i> 我的邮箱</h1>
+        <a href="profile.html" class="back-btn"><i class="fas fa-arrow-left"></i> 返回个人主页</a>
+    </div>
+    <div id="mailList" class="mail-list">加载中...</div>
+</div>
+
+<!-- 邮件详情模态框 -->
+<div id="detailModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="detailTitle"></h3>
+            <button class="close-modal" onclick="closeDetailModal()">&times;</button>
+        </div>
+        <div id="detailMeta" style="font-size:0.8rem; color:#94a3b8; margin-bottom:12px;"></div>
+        <div id="detailContent" class="mail-detail-content"></div>
+        <div id="detailAttachments" class="mail-detail-attachments"></div>
+        <button id="detailClaimBtn" class="claim-btn">领取附件</button>
+    </div>
+</div>
+
+<div id="notification" class="notification"></div>
+
+<script>
+    const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let currentUser = null;
+    let currentMails = [];
+    let currentDetailMail = null;
+
+    function showNotification(msg, type = 'info') {
+        const n = document.getElementById('notification');
+        n.textContent = msg;
+        n.style.background = type === 'error' ? '#f87171' : (type === 'success' ? '#10b981' : '#3b82f6');
+        n.style.display = 'block';
+        setTimeout(() => { n.style.display = 'none'; }, 3000);
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
+    }
+
+    async function loadMails() {
+        const { data, error } = await supabase
+            .from('user_mails')
+            .select('*')
+            .eq('to_user_id', currentUser.id)
+            .order('created_at', { ascending: false });
+        if (error) {
+            showNotification('加载失败', 'error');
+            return [];
         }
-        
-        // ==================== 初始化 ====================
-        async function init() {
-            try {
-                showLoading('正在加载邮件...');
-                
-                // 尝试加载当前用户的邮件
-                const userEmail = getCurrentUserEmail();
-                
-                if (userEmail) {
-                    // 如果是登录用户，加载他们的邮件
-                    await loadMails(userEmail);
-                } else {
-                    // 如果是测试，加载所有邮件
-                    await loadAllMails();
-                }
-                
-            } catch (error) {
-                console.error('初始化错误:', error);
-                showError(`加载失败: ${error.message}`);
-            }
+        return data;
+    }
+
+    async function markAsRead(mailId) {
+        await supabase
+            .from('user_mails')
+            .update({ read_at: new Date().toISOString() })
+            .eq('id', mailId)
+            .eq('to_user_id', currentUser.id);
+    }
+
+    async function claimAttachments(mail) {
+        if (mail.claimed_at) {
+            showNotification('奖励已领取过了', 'warning');
+            return false;
         }
-        
-        // ==================== 获取当前用户邮箱 ====================
-        function getCurrentUserEmail() {
-            try {
-                // 从localStorage获取用户信息
-                const userStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
-                if (userStr) {
-                    const userData = JSON.parse(userStr);
-                    return userData?.user?.email || null;
-                }
-                
-                // 从其他可能的存储位置获取
-                const cachedEmail = localStorage.getItem('userEmail');
-                return cachedEmail || null;
-                
-            } catch (error) {
-                console.log('无法获取用户邮箱:', error);
-                return null;
-            }
+        const items = mail.claimable_items || [];
+        if (items.length === 0) {
+            showNotification('这封邮件没有附件', 'info');
+            return false;
         }
-        
-        // ==================== 加载邮件 ====================
-        async function loadMails(userEmail) {
-            try {
-                showLoading('正在加载您的邮件...');
-                
-                // 使用简化的API调用
-                const response = await fetch(
-                    `${SUPABASE_URL}/rest/v1/reward_mails?select=*&order=created_at.desc`, 
-                    {
-                        headers: {
-                            'apikey': SUPABASE_ANON_KEY,
-                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                            'Accept': 'application/json'
-                        }
-                    }
-                );
-                
-                console.log('API响应状态:', response.status);
-                
-                if (!response.ok) {
-                    // 尝试不使用Authorization头
-                    return await loadMailsSimple();
-                }
-                
-                const mails = await response.json();
-                console.log('加载到的邮件:', mails);
-                
-                if (!mails || mails.length === 0) {
-                    showNoMails();
-                    return;
-                }
-                
-                // 如果提供了用户邮箱，只显示该用户的邮件
-                let filteredMails = mails;
-                if (userEmail) {
-                    filteredMails = mails.filter(mail => {
-                        // 检查邮件是否属于当前用户
-                        return mail.user_id && mail.user_id.includes(userEmail) || 
-                               mail.user_email === userEmail ||
-                               mail.sender_email === userEmail;
-                    });
-                    
-                    if (filteredMails.length === 0) {
-                        showNoMails();
-                        return;
-                    }
-                }
-                
-                renderMails(filteredMails);
-                
-            } catch (error) {
-                console.error('加载邮件错误:', error);
-                await loadMailsSimple();
-            }
+        let candyDelta = 0, rainbowDelta = 0;
+        let titleIds = [], frameIds = [];
+        for (let item of items) {
+            if (item.type === 'candy') candyDelta += item.amount;
+            else if (item.type === 'rainbow') rainbowDelta += item.amount;
+            else if (item.type === 'title') titleIds.push(item.title_id);
+            else if (item.type === 'frame') frameIds.push(item.frame_id);
         }
-        
-        // ==================== 加载所有邮件（简化版） ====================
-        async function loadAllMails() {
-            try {
-                showLoading('正在加载邮件...');
-                
-                // 最简化的API调用
-                const url = `${SUPABASE_URL}/rest/v1/reward_mails?select=*&order=created_at.desc&apikey=${SUPABASE_ANON_KEY}`;
-                console.log('请求URL:', url);
-                
-                const response = await fetch(url);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
-                }
-                
-                const mails = await response.json();
-                console.log('邮件数据:', mails);
-                
-                if (!mails || mails.length === 0) {
-                    showNoMails();
-                    return;
-                }
-                
-                renderMails(mails);
-                
-            } catch (error) {
-                console.error('加载邮件失败:', error);
-                showError(`无法加载邮件: ${error.message}`);
-            }
+        // 更新资产
+        if (candyDelta !== 0 || rainbowDelta !== 0) {
+            const { data: stats } = await supabase.from('user_stats').select('candy_crumbles, rainbow_lollipops').eq('user_id', currentUser.id).single();
+            const newCandy = (stats?.candy_crumbles || 0) + candyDelta;
+            const newRainbow = (stats?.rainbow_lollipops || 0) + rainbowDelta;
+            await supabase.from('user_stats').update({ candy_crumbles: newCandy, rainbow_lollipops: newRainbow }).eq('user_id', currentUser.id);
         }
-        
-        // ==================== 简单加载邮件 ====================
-        async function loadMailsSimple() {
-            try {
-                const url = `${SUPABASE_URL}/rest/v1/reward_mails?select=*&apikey=${SUPABASE_ANON_KEY}`;
-                const response = await fetch(url);
-                
-                if (!response.ok) {
-                    throw new Error(`请求失败: ${response.status}`);
-                }
-                
-                const mails = await response.json();
-                
-                if (!mails || mails.length === 0) {
-                    showNoMails();
-                    return;
-                }
-                
-                renderMails(mails);
-                
-            } catch (error) {
-                console.error('简单加载失败:', error);
-                // 显示示例数据
-                showSampleMails();
-            }
+        for (let tid of titleIds) {
+            await supabase.from('user_titles').upsert({ user_id: currentUser.id, title_id: tid }, { onConflict: 'user_id, title_id' });
         }
-        
-        // ==================== 渲染邮件 ====================
-        function renderMails(mails) {
-            const container = document.getElementById('mailContainer');
-            
-            if (!mails || mails.length === 0) {
-                showNoMails();
-                return;
-            }
-            
-            const html = mails.map(mail => {
-                // 处理奖励数据
-                let rewards = [];
-                try {
-                    if (mail.rewards) {
-                        if (typeof mail.rewards === 'string') {
-                            rewards = JSON.parse(mail.rewards);
-                        } else if (Array.isArray(mail.rewards)) {
-                            rewards = mail.rewards;
-                        }
-                    }
-                    
-                    // 如果有经验奖励，添加到rewards中
-                    if (mail.exp_reward && mail.exp_reward > 0) {
-                        rewards.push({
-                            type: 'experience',
-                            name: '经验值',
-                            amount: mail.exp_reward,
-                            icon: 'fas fa-star'
-                        });
-                    }
-                } catch (e) {
-                    console.warn('解析rewards失败:', e);
-                }
-                
-                return `
-                <div class="mail-card ${mail.claimed ? 'claimed' : ''}" data-id="${mail.id}">
-                    <div class="mail-header">
-                        <div>
-                            <div class="mail-title">${mail.title || '无标题邮件'}</div>
-                            <div class="mail-sender">发件人：${mail.sender || '系统管理员'}</div>
-                        </div>
-                        <div class="mail-status ${mail.claimed ? 'claimed' : 'new'}">
-                            ${mail.claimed ? '已领取' : '未领取'}
-                        </div>
+        for (let fid of frameIds) {
+            await supabase.from('user_frames').upsert({ user_id: currentUser.id, frame_id: fid, equipped: false }, { onConflict: 'user_id, frame_id' });
+        }
+        // 标记已领取
+        const { error } = await supabase
+            .from('user_mails')
+            .update({ claimed_items: items, claimed_at: new Date().toISOString() })
+            .eq('id', mail.id)
+            .eq('to_user_id', currentUser.id);
+        if (error) {
+            showNotification('领取失败', 'error');
+            return false;
+        }
+        showNotification('奖励已领取！', 'success');
+        return true;
+    }
+
+    function renderMailList() {
+        const container = document.getElementById('mailList');
+        if (!currentMails.length) {
+            container.innerHTML = '<div class="empty">📭 暂无邮件，管理员可能会给你发送奖励哦~</div>';
+            return;
+        }
+        let html = '';
+        for (const mail of currentMails) {
+            const unreadClass = !mail.read_at ? 'unread' : '';
+            const hasAttach = (mail.claimable_items || []).length > 0;
+            const isClaimed = !!mail.claimed_at;
+            html += `
+                <div class="mail-item ${unreadClass}" data-id="${mail.id}">
+                    <div class="mail-title">${escapeHtml(mail.title)}</div>
+                    <div class="mail-meta">
+                        <span>${new Date(mail.created_at).toLocaleString()}</span>
+                        ${hasAttach ? (isClaimed ? '<span class="claim-badge claimed-badge">已领取</span>' : '<span class="claim-badge">📎 有附件</span>') : ''}
                     </div>
-                    
-                    <div class="mail-content">${mail.content || '这是一封奖励邮件，请领取奖励。'}</div>
-                    
-                    ${rewards.length > 0 ? `
-                        <div class="rewards-section">
-                            <div class="rewards-title">
-                                <i class="fas fa-gift"></i>
-                                <span>奖励内容</span>
-                            </div>
-                            <div class="rewards-grid">
-                                ${rewards.map(reward => `
-                                    <div class="reward-item">
-                                        <i class="${reward.icon || 'fas fa-gift'} reward-icon"></i>
-                                        <div class="reward-amount">${reward.amount || 0}</div>
-                                        <div class="reward-name">${reward.name || '未知奖励'}</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <div class="mail-actions">
-                        <button class="claim-btn" 
-                                onclick="claimReward('${mail.id}')"
-                                ${mail.claimed ? 'disabled' : ''}>
-                            <i class="fas fa-gift"></i>
-                            ${mail.claimed ? '已领取' : '领取奖励'}
-                        </button>
-                    </div>
-                </div>
-            `}).join('');
-            
-            container.innerHTML = `
-                <div class="mail-list">
-                    ${html}
-                </div>
-            `;
-        }
-        
-        // ==================== 显示示例邮件 ====================
-        function showSampleMails() {
-            const container = document.getElementById('mailContainer');
-            
-            container.innerHTML = `
-                <div class="mail-list">
-                    <div class="mail-card">
-                        <div class="mail-header">
-                            <div>
-                                <div class="mail-title">欢迎奖励</div>
-                                <div class="mail-sender">发件人：系统</div>
-                            </div>
-                            <div class="mail-status new">未领取</div>
-                        </div>
-                        
-                        <div class="mail-content">欢迎来到我们的平台！这是您的第一封奖励邮件。</div>
-                        
-                        <div class="rewards-section">
-                            <div class="rewards-title">
-                                <i class="fas fa-gift"></i>
-                                <span>奖励内容</span>
-                            </div>
-                            <div class="rewards-grid">
-                                <div class="reward-item">
-                                    <i class="fas fa-star reward-icon"></i>
-                                    <div class="reward-amount">100</div>
-                                    <div class="reward-name">经验值</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mail-actions">
-                            <button class="claim-btn" onclick="claimReward('sample')">
-                                <i class="fas fa-gift"></i>
-                                领取奖励
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div style="text-align: center; margin-top: 20px; color: #94a3b8; font-size: 14px;">
-                    <i class="fas fa-info-circle"></i> 当前显示的是示例邮件。请检查数据库连接。
-                </div>
-            `;
-        }
-        
-        // ==================== 领取奖励 ====================
-        async function claimReward(mailId) {
-            if (mailId === 'sample') {
-                showToast('这是示例邮件，无法实际领取', 'info');
-                return;
-            }
-            
-            try {
-                showToast('正在领取奖励...', 'info');
-                
-                // 使用最简单的API更新
-                const response = await fetch(
-                    `${SUPABASE_URL}/rest/v1/reward_mails?id=eq.${mailId}`, 
-                    {
-                        method: 'PATCH',
-                        headers: {
-                            'apikey': SUPABASE_ANON_KEY,
-                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                            'Content-Type': 'application/json',
-                            'Prefer': 'return=representation'
-                        },
-                        body: JSON.stringify({ 
-                            claimed: true,
-                            claimed_at: new Date().toISOString()
-                        })
-                    }
-                );
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`更新失败: ${response.status} - ${errorText}`);
-                }
-                
-                // 获取邮件详情，检查是否有经验奖励
-                const mailResponse = await fetch(
-                    `${SUPABASE_URL}/rest/v1/reward_mails?id=eq.${mailId}&apikey=${SUPABASE_ANON_KEY}`
-                );
-                
-                if (mailResponse.ok) {
-                    const [mail] = await mailResponse.json();
-                    
-                    if (mail && mail.exp_reward && mail.exp_reward > 0) {
-                        // 这里可以添加发放经验值的逻辑
-                        console.log(`用户应获得 ${mail.exp_reward} 点经验值`);
-                        
-                        // TODO: 调用发放经验值的API
-                        // await addExpToUser(mail.user_id, mail.exp_reward);
-                    }
-                }
-                
-                showToast('🎉 成功领取奖励！', 'success');
-                
-                // 刷新邮件列表
-                setTimeout(() => init(), 1000);
-                
-            } catch (error) {
-                console.error('领取失败:', error);
-                showToast(`领取失败: ${error.message}`, 'error');
-            }
-        }
-        
-        // ==================== UI辅助函数 ====================
-        function showLoading(message = '加载中...') {
-            document.getElementById('mailContainer').innerHTML = `
-                <div class="loading">
-                    <i class="fas fa-spinner fa-spin fa-2x"></i>
-                    <p>${message}</p>
-                </div>
-            `;
-        }
-        
-        function showNoMails() {
-            document.getElementById('mailContainer').innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-inbox"></i>
-                    <h3>📭 邮箱是空的</h3>
-                    <p>暂时没有可领取的奖励邮件</p>
-                    <button class="claim-btn" onclick="init()" style="margin-top: 20px;">
-                        <i class="fas fa-redo"></i> 重新加载
-                    </button>
-                </div>
-            `;
-        }
-        
-        function showError(message) {
-            document.getElementById('mailContainer').innerHTML = `
-                <div class="error-state">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <h3>出错了</h3>
-                    <p>${message}</p>
-                    <button class="claim-btn" onclick="init()" style="margin-top: 20px;">
-                        <i class="fas fa-redo"></i> 重新连接
-                    </button>
-                    <div style="margin-top: 20px;">
-                        <button class="claim-btn" onclick="showSampleMails()" style="background: #3b82f6;">
-                            <i class="fas fa-eye"></i> 查看示例邮件
-                        </button>
+                    <div class="mail-preview">
+                        <span>${escapeHtml(mail.content.substring(0, 100))}${mail.content.length > 100 ? '…' : ''}</span>
+                        ${!mail.read_at ? '<i class="fas fa-envelope" style="color:#facc15;"></i>' : ''}
                     </div>
                 </div>
             `;
         }
-        
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            const messageEl = document.getElementById('toastMessage');
-            
-            messageEl.textContent = message;
-            toast.className = 'toast show';
-            if (type === 'error') toast.classList.add('error');
-            
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
-        
-        // ==================== 页面加载 ====================
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('页面加载完成，开始初始化邮箱系统...');
-            setTimeout(init, 100);
+        container.innerHTML = html;
+        // 绑定点击事件
+        document.querySelectorAll('.mail-item').forEach(el => {
+            el.addEventListener('click', async () => {
+                const id = parseInt(el.dataset.id);
+                const mail = currentMails.find(m => m.id === id);
+                if (mail && !mail.read_at) {
+                    await markAsRead(id);
+                    mail.read_at = new Date().toISOString();
+                    renderMailList();
+                }
+                openDetailModal(mail);
+            });
         });
-    </script>
+    }
+
+    function openDetailModal(mail) {
+        currentDetailMail = mail;
+        document.getElementById('detailTitle').innerText = mail.title;
+        document.getElementById('detailMeta').innerHTML = `时间：${new Date(mail.created_at).toLocaleString()}`;
+        document.getElementById('detailContent').innerText = mail.content;
+        const attachContainer = document.getElementById('detailAttachments');
+        const items = mail.claimable_items || [];
+        if (items.length === 0) {
+            attachContainer.innerHTML = '<em>无附件</em>';
+            document.getElementById('detailClaimBtn').style.display = 'none';
+        } else {
+            let attachHtml = '<strong>📦 附件：</strong><ul style="margin-top:8px; list-style:none;">';
+            for (let item of items) {
+                if (item.type === 'candy') attachHtml += `<li>🍬 糖果碎 x${item.amount}</li>`;
+                else if (item.type === 'rainbow') attachHtml += `<li>🌈 彩虹棒糖 x${item.amount}</li>`;
+                else if (item.type === 'title') attachHtml += `<li>🏅 称号 ID:${item.title_id}</li>`;
+                else if (item.type === 'frame') attachHtml += `<li>🖼️ 头像框:${item.frame_id}</li>`;
+            }
+            attachHtml += '</ul>';
+            attachContainer.innerHTML = attachHtml;
+            const claimBtn = document.getElementById('detailClaimBtn');
+            claimBtn.style.display = 'block';
+            claimBtn.disabled = !!mail.claimed_at;
+            claimBtn.innerText = mail.claimed_at ? '已领取' : '领取附件';
+            claimBtn.onclick = async () => {
+                if (mail.claimed_at) return;
+                const success = await claimAttachments(mail);
+                if (success) {
+                    mail.claimed_at = new Date().toISOString();
+                    mail.claimed_items = mail.claimable_items;
+                    claimBtn.disabled = true;
+                    claimBtn.innerText = '已领取';
+                    renderMailList(); // 刷新列表中的标记
+                }
+            };
+        }
+        document.getElementById('detailModal').classList.add('active');
+    }
+
+    function closeDetailModal() {
+        document.getElementById('detailModal').classList.remove('active');
+        currentDetailMail = null;
+    }
+
+    async function initUser() {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user) {
+            window.location.href = 'login-real.html';
+            return;
+        }
+        currentUser = user;
+        // 更新导航栏
+        const navDiv = document.getElementById('userNavSection');
+        let username = user.email.split('@')[0];
+        navDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;">
+            <span style="color:#81c784;">${escapeHtml(username)}</span>
+            <button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:20px;cursor:pointer;">退出</button>
+        </div>`;
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await supabase.auth.signOut();
+            window.location.href = 'index.html';
+        });
+        // 加载邮件
+        currentMails = await loadMails();
+        renderMailList();
+    }
+
+    initUser();
+</script>
 </body>
 </html>
