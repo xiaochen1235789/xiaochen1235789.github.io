@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/admin.css">
     <style>
-        /* 原有样式 + 新增杂项样式 */
         .log-filters {
             display: flex;
             gap: 10px;
@@ -286,7 +285,6 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
     const OWNER_ID = '2e617135-daa2-4619-a7df-dacd425da881';
 
-    // 头像框列表
     const FRAMES_LIST = [
         { id: 'frame_default', name: '默认头像框' },
         { id: 'frame_gold', name: '黄金边框' },
@@ -303,15 +301,7 @@
     let currentContentTable = null;
     let editingContentId = null;
     let editingUserId = null;
-
     let selectedMiscUserId = null;
-    let currentUserFrames = [];
-
-    // 抽卡配置相关变量
-    let currentBanners = [];
-    let currentPermFive = [];
-    let currentFourStar = [];
-    let currentThreeStar = [];
 
     const roleConfig = {
         owner: { name: '站长', class: 'role-owner' },
@@ -351,7 +341,35 @@
         ] }
     };
 
-    // ==================== 日志记录 ====================
+    // ==================== 辅助函数 ====================
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
+    }
+
+    function showNotification(msg, type = 'info') {
+        const notif = document.createElement('div');
+        notif.className = `notification ${type}`;
+        notif.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${escapeHtml(msg)}`;
+        document.body.appendChild(notif);
+        setTimeout(() => notif.classList.add('show'), 10);
+        setTimeout(() => { notif.classList.remove('show'); setTimeout(() => notif.remove(), 300); }, 3000);
+    }
+
+    function closeModal() {
+        document.getElementById('genericModal').style.display = 'none';
+        document.body.classList.remove('modal-open');
+        editingContentId = null; editingUserId = null; currentContentTable = null;
+    }
+    function openModal(title, fieldsHtml) {
+        const modal = document.getElementById('genericModal');
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalFields').innerHTML = fieldsHtml;
+        modal.style.display = 'flex';
+        document.body.classList.add('modal-open');
+    }
+
+    // 日志记录
     async function logAction(actionType, targetType, targetId, targetName, details) {
         if (!currentUser) return;
         try {
@@ -374,12 +392,8 @@
         let query = supabaseAdmin.from('admin_logs').select('*', { count: 'exact' }).order('created_at', { ascending: false });
         const searchVal = document.getElementById('logSearch')?.value.trim().toLowerCase();
         const actionFilter = document.getElementById('logActionFilter')?.value;
-        if (searchVal) {
-            query = query.or(`admin_email.ilike.%${searchVal}%,target_name.ilike.%${searchVal}%,details.ilike.%${searchVal}%`);
-        }
-        if (actionFilter) {
-            query = query.eq('action_type', actionFilter);
-        }
+        if (searchVal) query = query.or(`admin_email.ilike.%${searchVal}%,target_name.ilike.%${searchVal}%,details.ilike.%${searchVal}%`);
+        if (actionFilter) query = query.eq('action_type', actionFilter);
         const { data, error, count } = await query.range(0, 499);
         if (error) { console.error(error); return; }
         document.getElementById('totalLogs').innerText = count || 0;
@@ -395,7 +409,7 @@
             html += `<tr>
                 <td>${time}</td>
                 <td>${escapeHtml(log.admin_email)}<br><span style="font-size:0.7rem;">(${roleDisplay})</span></td>
-                <td>${escapeHtml(log.action_type)}</span></td>
+                <td>${escapeHtml(log.action_type)}</td>
                 <td>${escapeHtml(log.target_name || log.target_type || '')}</td>
                 <td>${escapeHtml(log.details || '')}</td>
             </tr>`;
@@ -410,32 +424,6 @@
         const { error } = await supabaseAdmin.from('admin_logs').delete().neq('id', 0);
         if (error) showNotification('清空失败', 'error');
         else { showNotification('日志已清空', 'success'); refreshLogs(); }
-    }
-
-    // ==================== 通用函数 ====================
-    function showNotification(msg, type = 'info') {
-        const notif = document.createElement('div');
-        notif.className = `notification ${type}`;
-        notif.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${escapeHtml(msg)}`;
-        document.body.appendChild(notif);
-        setTimeout(() => notif.classList.add('show'), 10);
-        setTimeout(() => { notif.classList.remove('show'); setTimeout(() => notif.remove(), 300); }, 3000);
-    }
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
-    }
-    function closeModal() {
-        document.getElementById('genericModal').style.display = 'none';
-        document.body.classList.remove('modal-open');
-        editingContentId = null; editingUserId = null; currentContentTable = null;
-    }
-    function openModal(title, fieldsHtml) {
-        const modal = document.getElementById('genericModal');
-        document.getElementById('modalTitle').innerText = title;
-        document.getElementById('modalFields').innerHTML = fieldsHtml;
-        modal.style.display = 'flex';
-        document.body.classList.add('modal-open');
     }
 
     // 权限校验
@@ -456,7 +444,7 @@
         return true;
     }
 
-    // ==================== 用户管理 ====================
+    // 用户管理
     async function fetchAllUsers() {
         const { data: profiles } = await supabaseAdmin.from('user_profiles').select('id, username, role, created_at').order('created_at', { ascending: false });
         const { data: stats } = await supabaseAdmin.from('user_stats').select('user_id, candy_crumbles, rainbow_lollipops, active_points, checkin_streak');
@@ -486,7 +474,7 @@
                 </td>
             </tr>`;
         });
-        html += '</tbody><table>';
+        html += '</tbody></table>';
         container.innerHTML = html;
         document.getElementById('totalUsers').innerText = users.length;
     }
@@ -501,29 +489,34 @@
             e.preventDefault();
             const newRole = document.getElementById('newRoleSelect').value;
             if (newRole === currentRole) { closeModal(); return; }
-            const { error } = await supabaseAdmin.from('user_profiles').update({ role: newRole }).eq('id', userId);
-            if (error) showNotification('修改失败', 'error');
-            else {
+            try {
+                const { error } = await supabaseAdmin.from('user_profiles').update({ role: newRole }).eq('id', userId);
+                if (error) throw error;
                 showNotification('角色已更新', 'success');
                 await refreshUserList();
                 await logAction('修改用户角色', 'user', userId, username, `角色由 ${currentRole} 改为 ${newRole}`);
                 closeModal();
-            }
+            } catch(err) { showNotification('修改失败: '+err.message, 'error'); }
         };
     };
     window.deleteUserById = async (userId, username) => {
         if (userId === OWNER_ID || userId === currentUser.id) { showNotification('无法删除此用户', 'error'); return; }
         if (!confirm(`确定永久删除「${username}」吗？`)) return;
-        await supabaseAdmin.from('user_stats').delete().eq('user_id', userId);
-        await supabaseAdmin.from('user_profiles').delete().eq('id', userId);
-        await supabaseAdmin.from('user_frames').delete().eq('user_id', userId);
-        showNotification('已删除用户', 'success');
-        await refreshUserList();
-        if (selectedMiscUserId === userId) refreshMiscPanel();
-        await logAction('删除用户', 'user', userId, username, `删除了用户 ${username}`);
+        try {
+            await supabaseAdmin.from('user_stats').delete().eq('user_id', userId);
+            await supabaseAdmin.from('user_profiles').delete().eq('id', userId);
+            await supabaseAdmin.from('user_frames').delete().eq('user_id', userId);
+            showNotification('已删除用户', 'success');
+            await refreshUserList();
+            if (selectedMiscUserId === userId) {
+                selectedMiscUserId = null;
+                initMiscPanel();
+            }
+            await logAction('删除用户', 'user', userId, username, `删除了用户 ${username}`);
+        } catch(err) { showNotification('删除失败: '+err.message, 'error'); }
     };
 
-    // ==================== 内容管理 ====================
+    // 内容管理
     async function loadContentTable(table) {
         try {
             const { data, error } = await supabaseAdmin.from(table).select('*').order('display_order', { ascending: true });
@@ -540,7 +533,6 @@
         if (table === 'characters') headers = ['name', 'description', 'element', 'path', 'rarity', 'version', 'image_url', 'detail_url', 'is_limited', 'display_order'];
         else if (table === 'light_cones') headers = ['name', 'description', 'path', 'character_id', 'image_url', 'detail_url', 'display_order'];
         else headers = ['name', 'description', 'rarity', 'image_url', 'detail_url', 'display_order'];
-        
         let html = '<div style="overflow-x:auto;"><table class="data-table"><thead><tr>';
         headers.forEach(h => html += `<th>${h}</th>`);
         html += '<th>操作</th></tr></thead><tbody>';
@@ -612,110 +604,118 @@
         if (!confirm('确定删除？')) return;
         const { data: item } = await supabaseAdmin.from(table).select('name').eq('id', id).single();
         const targetName = item?.name || '未知';
-        const { error } = await supabaseAdmin.from(table).delete().eq('id', id);
-        if (error) showNotification('删除失败', 'error');
-        else {
+        try {
+            const { error } = await supabaseAdmin.from(table).delete().eq('id', id);
+            if (error) throw error;
             showNotification('删除成功', 'success');
             await loadContentTable(table);
             filterContentTable(table);
             await logAction(`删除${getTableChinese(table)}`, table, id, targetName, `删除了 ${targetName}`);
-        }
+        } catch(err) { showNotification('删除失败: '+err.message, 'error'); }
     };
     function getTableChinese(table) { const map = { characters: '角色', light_cones: '光锥', materials: '材料' }; return map[table] || table; }
 
-    // ==================== 杂项管理 ====================
+    // ==================== 杂项管理（严谨版） ====================
     async function loadUserFrames(userId) {
         if (!userId) return [];
         const { data, error } = await supabaseAdmin.from('user_frames').select('frame_id').eq('user_id', userId);
-        if (error) return [];
+        if (error) throw new Error(`加载头像框失败: ${error.message}`);
         return data.map(d => d.frame_id);
     }
+
+    async function updateUserAssets(userId, candy, rainbow) {
+        const { error } = await supabaseAdmin.from('user_stats').upsert({ user_id: userId, candy_crumbles: candy, rainbow_lollipops: rainbow }, { onConflict: 'user_id' });
+        if (error) throw new Error(`资产更新失败: ${error.message}`);
+    }
+
     async function updateUserFrames(userId, ownedFrameIds) {
         const existing = await loadUserFrames(userId);
         const toAdd = ownedFrameIds.filter(id => !existing.includes(id));
         const toRemove = existing.filter(id => !ownedFrameIds.includes(id) && id !== 'frame_default');
         for (const frameId of toAdd) {
-            await supabaseAdmin.from('user_frames').upsert({ user_id: userId, frame_id: frameId, equipped: false, purchased_at: new Date().toISOString() }, { onConflict: 'user_id, frame_id', ignoreDuplicates: true });
+            const { error } = await supabaseAdmin.from('user_frames').upsert(
+                { user_id: userId, frame_id: frameId, equipped: false, purchased_at: new Date().toISOString() },
+                { onConflict: 'user_id, frame_id', ignoreDuplicates: true }
+            );
+            if (error) throw new Error(`添加头像框 ${frameId} 失败: ${error.message}`);
         }
         for (const frameId of toRemove) {
-            await supabaseAdmin.from('user_frames').delete().eq('user_id', userId).eq('frame_id', frameId);
+            const { error } = await supabaseAdmin.from('user_frames').delete().eq('user_id', userId).eq('frame_id', frameId);
+            if (error) throw new Error(`移除头像框 ${frameId} 失败: ${error.message}`);
         }
     }
-    async function updateUserAssets(userId, candy, rainbow) {
-        await supabaseAdmin.from('user_stats').upsert({ user_id: userId, candy_crumbles: candy, rainbow_lollipops: rainbow }, { onConflict: 'user_id' });
-    }
+
     async function updateUserTitles(userId, titleIds) {
-        const { data: current } = await supabaseAdmin.from('user_titles').select('title_id').eq('user_id', userId);
+        const { data: current, error: fetchErr } = await supabaseAdmin.from('user_titles').select('title_id').eq('user_id', userId);
+        if (fetchErr) throw new Error(`获取当前称号失败: ${fetchErr.message}`);
         const currentIds = new Set((current || []).map(t => t.title_id));
         const newIds = new Set(titleIds);
         const toAdd = titleIds.filter(id => !currentIds.has(id));
         const toRemove = (current || []).filter(t => !newIds.has(t.title_id)).map(t => t.title_id);
         for (const tid of toAdd) {
-            await supabaseAdmin.from('user_titles').insert({ user_id: userId, title_id: tid });
+            const { error } = await supabaseAdmin.from('user_titles').insert({ user_id: userId, title_id: tid });
+            if (error) throw new Error(`添加称号 ID ${tid} 失败: ${error.message}`);
         }
         if (toRemove.length) {
-            await supabaseAdmin.from('user_titles').delete().eq('user_id', userId).in('title_id', toRemove);
-        }
-    }
-    async function updateAutoSignCard(userId, hasCard) {
-        if (hasCard) {
-            await supabaseAdmin.from('user_auto_sign_card').upsert({ user_id: userId, owned: true }, { onConflict: 'user_id' });
-        } else {
-            await supabaseAdmin.from('user_auto_sign_card').delete().eq('user_id', userId);
+            const { error } = await supabaseAdmin.from('user_titles').delete().eq('user_id', userId).in('title_id', toRemove);
+            if (error) throw new Error(`移除称号失败: ${error.message}`);
         }
     }
 
-    async function refreshMiscPanel() {
-        const selectEl = document.getElementById('miscUserSelect');
-        if (!selectEl) return;
-        const users = allUsers.length ? allUsers : await fetchAllUsers();
-        if (!allUsers.length) allUsers = users;
-        selectEl.innerHTML = '<option value="">-- 选择用户 --</option>' + users.map(u => `<option value="${u.id}" ${selectedMiscUserId === u.id ? 'selected' : ''}>${escapeHtml(u.username)} (${u.id.slice(0,8)})</option>`).join('');
-        if (selectedMiscUserId) {
-            await loadMiscUserData(selectedMiscUserId);
+    async function updateAutoSignCard(userId, hasCard) {
+        if (hasCard) {
+            const { error } = await supabaseAdmin.from('user_auto_sign_card').upsert({ user_id: userId, owned: true }, { onConflict: 'user_id' });
+            if (error) throw new Error(`授予自动签到卡失败: ${error.message}`);
         } else {
-            document.getElementById('assetControlArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
-            document.getElementById('framesManagementArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
+            const { error } = await supabaseAdmin.from('user_auto_sign_card').delete().eq('user_id', userId);
+            if (error) throw new Error(`移除自动签到卡失败: ${error.message}`);
         }
     }
-    async function loadMiscUserData(userId) {
+
+    async function reloadMiscData(userId) {
         if (!userId) return;
-        const canEdit = currentUserRole === 'owner'; // 只有站长可编辑杂项
-        // 资产数据
-        const { data: stats } = await supabaseAdmin.from('user_stats').select('candy_crumbles, rainbow_lollipops').eq('user_id', userId).single();
+        const canEdit = currentUserRole === 'owner';
+        const { data: stats, error: statsErr } = await supabaseAdmin.from('user_stats').select('candy_crumbles, rainbow_lollipops').eq('user_id', userId).single();
+        if (statsErr && statsErr.code !== 'PGRST116') throw statsErr;
         const candy = stats?.candy_crumbles ?? 100;
         const rainbow = stats?.rainbow_lollipops ?? 5;
-        currentUserFrames = await loadUserFrames(userId);
-        if (!currentUserFrames.includes('frame_default')) currentUserFrames.push('frame_default');
-        
-        // 资产UI
+        let userFrames = [];
+        try { userFrames = await loadUserFrames(userId); } catch(e) { showNotification(e.message, 'error'); userFrames = []; }
+        if (!userFrames.includes('frame_default')) userFrames.push('frame_default');
+
+        // 资产 UI
         const assetHtml = `
-            <div class="asset-item"><img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp">糖果碎: <input type="number" id="miscCandy" value="${candy}" min="0" style="width:100px; background:#1e2a2a; border:1px solid #3e5a5a; border-radius:8px; padding:4px 8px; color:#fff;" ${canEdit ? '' : 'disabled'}></div>
+            <div class="asset-item"><img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp">糖果碎: <input type="number" id="miscCandy" value="${candy}" min="0" style="width:100px;" ${canEdit ? '' : 'disabled'}></div>
             <div class="asset-item"><img src="https://xiaochen1235789.github.io/images/Super_Sweet.webp">超级棒糖: <input type="number" id="miscRainbow" value="${rainbow}" min="0" style="width:100px;" ${canEdit ? '' : 'disabled'}></div>
             ${canEdit ? '<button class="save-asset-btn" id="saveAssetBtn"><i class="fas fa-save"></i> 保存资产修改</button>' : '<span style="color: var(--text-secondary);">仅站长可修改资产</span>'}
         `;
         document.getElementById('assetControlArea').innerHTML = assetHtml;
         if (canEdit) {
-            document.getElementById('saveAssetBtn')?.addEventListener('click', async () => {
+            const saveBtn = document.getElementById('saveAssetBtn');
+            if (saveBtn) saveBtn.onclick = async () => {
                 const newCandy = parseInt(document.getElementById('miscCandy').value, 10);
                 const newRainbow = parseInt(document.getElementById('miscRainbow').value, 10);
                 if (isNaN(newCandy) || isNaN(newRainbow) || newCandy < 0 || newRainbow < 0) {
                     showNotification('请输入非负整数', 'error');
                     return;
                 }
-                await updateUserAssets(userId, newCandy, newRainbow);
-                const targetUser = allUsers.find(u => u.id === userId);
-                await logAction('资产调整', 'user_stats', userId, targetUser?.username || userId, `糖果碎: ${candy} → ${newCandy}, 棒糖: ${rainbow} → ${newRainbow}`);
-                showNotification('资产已更新', 'success');
-                await refreshUserList();
-                await loadMiscUserData(userId);
-            });
+                try {
+                    await updateUserAssets(userId, newCandy, newRainbow);
+                    const targetUser = allUsers.find(u => u.id === userId);
+                    await logAction('资产调整', 'user_stats', userId, targetUser?.username || userId, `糖果碎: ${candy} → ${newCandy}, 棒糖: ${rainbow} → ${newRainbow}`);
+                    showNotification('资产已更新', 'success');
+                    await refreshUserList();
+                    await reloadMiscData(userId);
+                } catch (err) {
+                    showNotification(err.message, 'error');
+                }
+            };
         }
-        
-        // 头像框UI
+
+        // 头像框 UI
         let framesHtml = '<div class="frames-grid">';
         for (const frame of FRAMES_LIST) {
-            const isOwned = currentUserFrames.includes(frame.id);
+            const isOwned = userFrames.includes(frame.id);
             const disabledAttr = (frame.id === 'frame_default') ? 'disabled ' : '';
             framesHtml += `<label class="frame-checkbox-item"><input type="checkbox" class="frame-checkbox" data-frame-id="${frame.id}" ${isOwned ? 'checked' : ''} ${disabledAttr} ${!canEdit ? 'disabled' : ''}><div class="frame-name">${escapeHtml(frame.name)}</div>${frame.id === 'frame_default' ? '<span style="font-size:0.7rem;">(默认，不可取消)</span>' : ''}</label>`;
         }
@@ -724,23 +724,28 @@
         else framesHtml += '<span style="color: var(--text-secondary);">仅站长可修改头像框拥有状态</span>';
         document.getElementById('framesManagementArea').innerHTML = framesHtml;
         if (canEdit) {
-            document.getElementById('saveFramesBtn')?.addEventListener('click', async () => {
+            const framesSaveBtn = document.getElementById('saveFramesBtn');
+            if (framesSaveBtn) framesSaveBtn.onclick = async () => {
                 const checkboxes = document.querySelectorAll('.frame-checkbox');
                 const newOwned = [];
                 checkboxes.forEach(cb => { if (cb.checked) newOwned.push(cb.dataset.frameId); });
-                await updateUserFrames(userId, newOwned);
-                const targetUser = allUsers.find(u => u.id === userId);
-                const added = newOwned.filter(id => !currentUserFrames.includes(id));
-                const removed = currentUserFrames.filter(id => !newOwned.includes(id) && id !== 'frame_default');
-                await logAction('头像框调整', 'user_frames', userId, targetUser?.username || userId, `新增: ${added.join(',')}, 移除: ${removed.join(',')}`);
-                showNotification('头像框拥有状态已更新', 'success');
-                await loadMiscUserData(userId);
-            });
+                try {
+                    await updateUserFrames(userId, newOwned);
+                    const targetUser = allUsers.find(u => u.id === userId);
+                    const added = newOwned.filter(id => !userFrames.includes(id));
+                    const removed = userFrames.filter(id => !newOwned.includes(id) && id !== 'frame_default');
+                    await logAction('头像框调整', 'user_frames', userId, targetUser?.username || userId, `新增: ${added.join(',')}, 移除: ${removed.join(',')}`);
+                    showNotification('头像框拥有状态已更新', 'success');
+                    await reloadMiscData(userId);
+                } catch (err) {
+                    showNotification(err.message, 'error');
+                }
+            };
         }
 
-        // 称号（徽章）管理
-        const { data: allTitles } = await supabaseAdmin.from('titles').select('id, name, description, is_limited');
-        if (allTitles) {
+        // 称号管理
+        const { data: allTitles, error: titlesErr } = await supabaseAdmin.from('titles').select('id, name, description, is_limited');
+        if (!titlesErr && allTitles) {
             const { data: userTitles } = await supabaseAdmin.from('user_titles').select('title_id').eq('user_id', userId);
             const ownedTitleIds = new Set((userTitles || []).map(t => t.title_id));
             let titlesHtml = '<div class="misc-title"><i class="fas fa-medal"></i> 徽章（称号）管理</div><div class="frames-grid" id="titlesGrid">';
@@ -755,7 +760,6 @@
             titlesHtml += '</div>';
             if (canEdit) titlesHtml += '<button class="save-frames-btn" id="saveTitlesBtn"><i class="fas fa-save"></i> 保存徽章修改</button>';
             else titlesHtml += '<span style="color: var(--text-secondary);">仅站长可修改徽章拥有状态</span>';
-            
             let titleSection = document.getElementById('titleManagementArea');
             if (!titleSection) {
                 const miscPanel = document.getElementById('misc-panel');
@@ -767,16 +771,21 @@
             }
             titleSection.innerHTML = titlesHtml;
             if (canEdit) {
-                document.getElementById('saveTitlesBtn')?.addEventListener('click', async () => {
+                const titlesSaveBtn = document.getElementById('saveTitlesBtn');
+                if (titlesSaveBtn) titlesSaveBtn.onclick = async () => {
                     const checkboxes = document.querySelectorAll('.title-checkbox');
                     const newOwnedIds = [];
                     checkboxes.forEach(cb => { if (cb.checked) newOwnedIds.push(parseInt(cb.dataset.titleId)); });
-                    await updateUserTitles(userId, newOwnedIds);
-                    const targetUser = allUsers.find(u => u.id === userId);
-                    await logAction('徽章调整', 'user_titles', userId, targetUser?.username || userId, `称号ID列表: ${newOwnedIds.join(',')}`);
-                    showNotification('徽章已更新', 'success');
-                    await loadMiscUserData(userId);
-                });
+                    try {
+                        await updateUserTitles(userId, newOwnedIds);
+                        const targetUser = allUsers.find(u => u.id === userId);
+                        await logAction('徽章调整', 'user_titles', userId, targetUser?.username || userId, `称号ID列表: ${newOwnedIds.join(',')}`);
+                        showNotification('徽章已更新', 'success');
+                        await reloadMiscData(userId);
+                    } catch (err) {
+                        showNotification(err.message, 'error');
+                    }
+                };
             }
         }
 
@@ -801,34 +810,50 @@
         }
         autoCardSection.innerHTML = autoCardHtml;
         if (canEdit) {
-            document.getElementById('toggleAutoCardBtn')?.addEventListener('click', async () => {
+            const toggleBtn = document.getElementById('toggleAutoCardBtn');
+            if (toggleBtn) toggleBtn.onclick = async () => {
                 const newHas = !hasAutoCard;
-                await updateAutoSignCard(userId, newHas);
-                const targetUser = allUsers.find(u => u.id === userId);
-                await logAction('自动签到卡调整', 'user_auto_sign_card', userId, targetUser?.username || userId, `新状态: ${newHas ? '授予' : '移除'}`);
-                showNotification(`自动签到卡已${newHas ? '授予' : '移除'}`, 'success');
-                await loadMiscUserData(userId);
-            });
+                try {
+                    await updateAutoSignCard(userId, newHas);
+                    const targetUser = allUsers.find(u => u.id === userId);
+                    await logAction('自动签到卡调整', 'user_auto_sign_card', userId, targetUser?.username || userId, `新状态: ${newHas ? '授予' : '移除'}`);
+                    showNotification(`自动签到卡已${newHas ? '授予' : '移除'}`, 'success');
+                    await reloadMiscData(userId);
+                } catch (err) {
+                    showNotification(err.message, 'error');
+                }
+            };
         }
-    }
-    function initMiscPanel() {
-        const selectEl = document.getElementById('miscUserSelect');
-        if (selectEl) {
-            selectEl.addEventListener('change', async (e) => {
-                selectedMiscUserId = e.target.value;
-                if (selectedMiscUserId) { await loadMiscUserData(selectedMiscUserId); }
-                else { document.getElementById('assetControlArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>'; document.getElementById('framesManagementArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>'; }
-            });
-        }
-        refreshMiscPanel();
     }
 
-    // ==================== 抽卡配置管理 ====================
+    async function initMiscPanel() {
+        const selectEl = document.getElementById('miscUserSelect');
+        if (!selectEl) return;
+        if (!allUsers.length) allUsers = await fetchAllUsers();
+        selectEl.innerHTML = '<option value="">-- 选择用户 --</option>' + allUsers.map(u => `<option value="${u.id}" ${selectedMiscUserId === u.id ? 'selected' : ''}>${escapeHtml(u.username)} (${u.id.slice(0,8)})</option>`).join('');
+        selectEl.onchange = async (e) => {
+            selectedMiscUserId = e.target.value;
+            if (selectedMiscUserId) {
+                try { await reloadMiscData(selectedMiscUserId); } catch(err) { showNotification(err.message, 'error'); }
+            } else {
+                document.getElementById('assetControlArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
+                document.getElementById('framesManagementArea').innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
+                const titleSec = document.getElementById('titleManagementArea');
+                if (titleSec) titleSec.innerHTML = '';
+                const autoSec = document.getElementById('autoCardManagementArea');
+                if (autoSec) autoSec.innerHTML = '';
+            }
+        };
+        if (selectedMiscUserId) await reloadMiscData(selectedMiscUserId);
+    }
+
+    // 抽卡配置管理（保持原有功能，略作错误处理）
     async function loadBanners() {
         const { data } = await supabaseAdmin.from('gacha_banners').select('*').order('display_order');
         currentBanners = data || [];
         renderBannersTable();
     }
+    let currentBanners = [];
     function renderBannersTable() {
         const container = document.getElementById('bannersListArea');
         if (!currentBanners.length) { container.innerHTML = '<div class="empty-data">暂无卡池</div>'; return; }
@@ -845,7 +870,7 @@
                     <button class="edit-btn" onclick="editBanner(${b.id})">编辑</button>
                     <button class="delete-btn" onclick="deleteBanner(${b.id})">删除</button>
                 </td>
-             </tr>`;
+            </tr>`;
         }
         html += '</tbody></table>';
         container.innerHTML = html;
@@ -853,9 +878,7 @@
             cb.addEventListener('change', async (e) => {
                 const id = parseInt(cb.dataset.id);
                 const isActive = cb.checked;
-                if (isActive) {
-                    await supabaseAdmin.from('gacha_banners').update({ is_active: false }).neq('id', id);
-                }
+                if (isActive) await supabaseAdmin.from('gacha_banners').update({ is_active: false }).neq('id', id);
                 await supabaseAdmin.from('gacha_banners').update({ is_active: isActive }).eq('id', id);
                 loadBanners();
                 showNotification('卡池激活状态已更新', 'success');
@@ -880,30 +903,34 @@
         openModal('编辑卡池', fieldsHtml);
         document.getElementById('modalForm').onsubmit = async (e) => {
             e.preventDefault();
-            const formData = new FormData(e.target);
+            const fd = new FormData(e.target);
             const data = {
-                banner_key: formData.get('banner_key'),
-                name: formData.get('name'),
-                sub_name: formData.get('sub_name'),
-                up_five_star: formData.get('up_five_star'),
-                splash_url: formData.get('splash_url'),
-                caption: formData.get('caption'),
-                start_time: new Date(formData.get('start_time')).toISOString(),
-                end_time: new Date(formData.get('end_time')).toISOString(),
-                display_order: parseInt(formData.get('display_order')) || 0
+                banner_key: fd.get('banner_key'),
+                name: fd.get('name'),
+                sub_name: fd.get('sub_name'),
+                up_five_star: fd.get('up_five_star'),
+                splash_url: fd.get('splash_url'),
+                caption: fd.get('caption'),
+                start_time: new Date(fd.get('start_time')).toISOString(),
+                end_time: new Date(fd.get('end_time')).toISOString(),
+                display_order: parseInt(fd.get('display_order')) || 0
             };
-            await supabaseAdmin.from('gacha_banners').update(data).eq('id', id);
-            showNotification('卡池已更新', 'success');
-            closeModal();
-            loadBanners();
-            await logAction('编辑卡池', 'gacha_banners', id, data.name, JSON.stringify(data));
+            try {
+                await supabaseAdmin.from('gacha_banners').update(data).eq('id', id);
+                showNotification('卡池已更新', 'success');
+                closeModal();
+                loadBanners();
+                await logAction('编辑卡池', 'gacha_banners', id, data.name, JSON.stringify(data));
+            } catch(err) { showNotification('更新失败: '+err.message, 'error'); }
         };
     };
     window.deleteBanner = async function(id) {
         if (!confirm('确定删除该卡池吗？')) return;
-        await supabaseAdmin.from('gacha_banners').delete().eq('id', id);
-        loadBanners();
-        await logAction('删除卡池', 'gacha_banners', id, '', '');
+        try {
+            await supabaseAdmin.from('gacha_banners').delete().eq('id', id);
+            loadBanners();
+            await logAction('删除卡池', 'gacha_banners', id, '', '');
+        } catch(err) { showNotification('删除失败', 'error'); }
     };
     async function addBanner() {
         const fieldsHtml = `
@@ -933,11 +960,13 @@
                 display_order: parseInt(fd.get('display_order')) || 0,
                 is_active: false
             };
-            await supabaseAdmin.from('gacha_banners').insert([data]);
-            showNotification('卡池已添加', 'success');
-            closeModal();
-            loadBanners();
-            await logAction('添加卡池', 'gacha_banners', '', data.name, JSON.stringify(data));
+            try {
+                await supabaseAdmin.from('gacha_banners').insert([data]);
+                showNotification('卡池已添加', 'success');
+                closeModal();
+                loadBanners();
+                await logAction('添加卡池', 'gacha_banners', '', data.name, JSON.stringify(data));
+            } catch(err) { showNotification('添加失败: '+err.message, 'error'); }
         };
     }
 
@@ -962,7 +991,7 @@
                     <button class="edit-btn" onclick="editSimpleItem('${tableName}', ${item.id}, '${nameField}', '${escapeHtml(item[nameField])}', ${item.sort_order})">编辑</button>
                     <button class="delete-btn" onclick="deleteSimpleItem('${tableName}', ${item.id})">删除</button>
                 </td>
-             </tr>`;
+            </tr>`;
         }
         html += '</tbody></table><button class="add-btn btn-sm" onclick="addSimpleItem(\''+tableName+'\', \''+nameField+'\')" style="margin-top:10px;"><i class="fas fa-plus"></i> 添加</button>';
         container.innerHTML = html;
@@ -977,23 +1006,27 @@
             e.preventDefault();
             const fd = new FormData(e.target);
             const data = { [nameField]: fd.get('name'), sort_order: parseInt(fd.get('sort_order')) || 0 };
-            await supabaseAdmin.from(tableName).update(data).eq('id', id);
-            showNotification('更新成功', 'success');
-            closeModal();
-            if (tableName === 'gacha_permanent_five') loadPermFive();
-            else if (tableName === 'gacha_four_star') loadFourStar();
-            else if (tableName === 'gacha_three_star') loadThreeStar();
-            await logAction('编辑抽卡池项目', tableName, id, data[nameField], JSON.stringify(data));
+            try {
+                await supabaseAdmin.from(tableName).update(data).eq('id', id);
+                showNotification('更新成功', 'success');
+                closeModal();
+                if (tableName === 'gacha_permanent_five') loadPermFive();
+                else if (tableName === 'gacha_four_star') loadFourStar();
+                else if (tableName === 'gacha_three_star') loadThreeStar();
+                await logAction('编辑抽卡池项目', tableName, id, data[nameField], JSON.stringify(data));
+            } catch(err) { showNotification('更新失败: '+err.message, 'error'); }
         };
     };
     window.deleteSimpleItem = async function(tableName, id) {
         if (!confirm('确定删除吗？')) return;
-        await supabaseAdmin.from(tableName).delete().eq('id', id);
-        showNotification('删除成功', 'success');
-        if (tableName === 'gacha_permanent_five') loadPermFive();
-        else if (tableName === 'gacha_four_star') loadFourStar();
-        else if (tableName === 'gacha_three_star') loadThreeStar();
-        await logAction('删除抽卡池项目', tableName, id, '', '');
+        try {
+            await supabaseAdmin.from(tableName).delete().eq('id', id);
+            showNotification('删除成功', 'success');
+            if (tableName === 'gacha_permanent_five') loadPermFive();
+            else if (tableName === 'gacha_four_star') loadFourStar();
+            else if (tableName === 'gacha_three_star') loadThreeStar();
+            await logAction('删除抽卡池项目', tableName, id, '', '');
+        } catch(err) { showNotification('删除失败', 'error'); }
     };
     window.addSimpleItem = async function(tableName, nameField) {
         const fieldsHtml = `
@@ -1005,27 +1038,20 @@
             e.preventDefault();
             const fd = new FormData(e.target);
             const data = { [nameField]: fd.get('name'), sort_order: parseInt(fd.get('sort_order')) || 0 };
-            await supabaseAdmin.from(tableName).insert([data]);
-            showNotification('添加成功', 'success');
-            closeModal();
-            if (tableName === 'gacha_permanent_five') loadPermFive();
-            else if (tableName === 'gacha_four_star') loadFourStar();
-            else if (tableName === 'gacha_three_star') loadThreeStar();
-            await logAction('添加抽卡池项目', tableName, '', data[nameField], JSON.stringify(data));
+            try {
+                await supabaseAdmin.from(tableName).insert([data]);
+                showNotification('添加成功', 'success');
+                closeModal();
+                if (tableName === 'gacha_permanent_five') loadPermFive();
+                else if (tableName === 'gacha_four_star') loadFourStar();
+                else if (tableName === 'gacha_three_star') loadThreeStar();
+                await logAction('添加抽卡池项目', tableName, '', data[nameField], JSON.stringify(data));
+            } catch(err) { showNotification('添加失败: '+err.message, 'error'); }
         };
     };
-    async function loadPermFive() {
-        const data = await loadSimpleTable('gacha_permanent_five', 'character_name', 'permFiveListArea');
-        currentPermFive = data;
-    }
-    async function loadFourStar() {
-        const data = await loadSimpleTable('gacha_four_star', 'character_name', 'fourStarListArea');
-        currentFourStar = data;
-    }
-    async function loadThreeStar() {
-        const data = await loadSimpleTable('gacha_three_star', 'item_name', 'threeStarListArea');
-        currentThreeStar = data;
-    }
+    async function loadPermFive() { await loadSimpleTable('gacha_permanent_five', 'character_name', 'permFiveListArea'); }
+    async function loadFourStar() { await loadSimpleTable('gacha_four_star', 'character_name', 'fourStarListArea'); }
+    async function loadThreeStar() { await loadSimpleTable('gacha_three_star', 'item_name', 'threeStarListArea'); }
     async function loadGachaConfig() {
         const { data } = await supabaseAdmin.from('gacha_config').select('*').single();
         if (!data) return;
@@ -1051,12 +1077,14 @@
             exchange_rate: parseInt(document.getElementById('cfg_exchange').value),
             updated_at: new Date().toISOString()
         };
-        await supabaseAdmin.from('gacha_config').update(updates).eq('id', 1);
-        showNotification('全局配置已保存', 'success');
-        await logAction('修改抽卡全局配置', 'gacha_config', '1', 'system', JSON.stringify(updates));
+        try {
+            await supabaseAdmin.from('gacha_config').update(updates).eq('id', 1);
+            showNotification('全局配置已保存', 'success');
+            await logAction('修改抽卡全局配置', 'gacha_config', '1', 'system', JSON.stringify(updates));
+        } catch(err) { showNotification('保存失败: '+err.message, 'error'); }
     }
 
-    // ==================== 标签页切换 ====================
+    // 标签页切换
     function switchTab(tabId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
@@ -1066,7 +1094,7 @@
         else if (tabId === 'characters') loadContentTable('characters');
         else if (tabId === 'light_cones') loadContentTable('light_cones');
         else if (tabId === 'materials') loadContentTable('materials');
-        else if (tabId === 'misc') { refreshMiscPanel(); initMiscPanel(); }
+        else if (tabId === 'misc') { initMiscPanel(); }
         else if (tabId === 'gacha') {
             loadBanners();
             loadPermFive();
@@ -1079,7 +1107,7 @@
             document.getElementById('addFourStarBtn').onclick = () => addSimpleItem('gacha_four_star', 'character_name');
             document.getElementById('addThreeStarBtn').onclick = () => addSimpleItem('gacha_three_star', 'item_name');
         }
-        else if (tabId === 'logs') { refreshLogs(); }
+        else if (tabId === 'logs') refreshLogs();
     }
 
     function bindEvents() {
@@ -1102,11 +1130,11 @@
         document.getElementById('logActionFilter').addEventListener('change', () => refreshLogs());
     }
 
-    async function init() { 
-        if (await checkAuthAndRole()) { 
-            bindEvents(); 
-            await refreshUserList(); 
-        } 
+    async function init() {
+        if (await checkAuthAndRole()) {
+            bindEvents();
+            await refreshUserList();
+        }
     }
     init();
 </script>
