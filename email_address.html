@@ -3,39 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>认证测试</title>
+    <title>邮件数量测试</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <h1>Supabase 认证测试</h1>
-    <div id="log"></div>
+    <h1>邮箱接口测试</h1>
+    <div id="result">正在检测...</div>
     <script>
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
         
-        function log(msg) {
-            const div = document.getElementById('log');
-            div.innerHTML += '<p>' + msg + '</p>';
-            alert(msg);
-        }
+        window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
         async function test() {
-            log('1. 开始初始化 Supabase 客户端');
-            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            log('2. Supabase 客户端创建成功，准备调用 getUser()');
-            
             try {
-                const { data: { user }, error } = await supabase.auth.getUser();
-                log('3. getUser() 返回了结果');
-                if (error) {
-                    log('4. 出现错误: ' + error.message);
-                } else if (user) {
-                    log('5. 用户已登录: ' + user.email);
-                } else {
-                    log('5. 用户未登录');
+                // 1. 获取当前用户
+                const { data: { user }, error: userError } = await window.supabase.auth.getUser();
+                if (userError || !user) {
+                    document.getElementById('result').innerHTML = '❌ 未登录或获取用户失败：' + (userError?.message || 'no user');
+                    return;
+                }
+                
+                // 2. 查询邮件
+                const { data: mails, error: mailError } = await window.supabase
+                    .from('user_mails')
+                    .select('*', { count: 'exact', head: false })
+                    .eq('to_user_id', user.id);
+                    
+                if (mailError) {
+                    document.getElementById('result').innerHTML = '❌ 查询失败：' + mailError.message;
+                    return;
+                }
+                
+                // 3. 显示数量
+                document.getElementById('result').innerHTML = `✅ 成功！你的邮件数量：${mails.length}`;
+                if (mails.length === 0) {
+                    document.getElementById('result').innerHTML += '<br>📭 没有邮件，请管理员发一封测试邮件。';
                 }
             } catch (err) {
-                log('捕获异常: ' + err.message);
+                document.getElementById('result').innerHTML = '⚠️ 异常：' + err.message;
             }
         }
         
