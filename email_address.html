@@ -45,12 +45,12 @@
                 position: sticky;
                 top: 20px;
             }
-            /* 横屏时隐藏模态框（改用右侧面板） */
+            /* 横屏时隐藏竖屏模态框 */
             .modal:not(.reward-modal):not(.info-modal):not(.confirm-modal) {
                 display: none !important;
             }
             .detail-panel-close {
-                display: none;
+                display: inline-flex !important;
             }
         }
         @media (max-width: 767px), (orientation: portrait) {
@@ -131,6 +131,14 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            transition: background 0.2s;
+        }
+        .delete-btn:active {
+            background: rgba(248,113,113,0.2);
+        }
+        .delete-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
         .detail-panel {
             background: #1e293b;
@@ -201,6 +209,10 @@
             font-size: 0.9rem;
             cursor: pointer;
             color: white;
+            transition: opacity 0.2s;
+        }
+        .delete-all-btn:active {
+            opacity: 0.8;
         }
         .back-link {
             display: inline-block;
@@ -209,7 +221,7 @@
             text-decoration: none;
             font-size: 0.9rem;
         }
-        /* 模态框样式（保留竖屏使用） */
+        /* 模态框基础样式 */
         .modal {
             display: none;
             position: fixed;
@@ -235,6 +247,35 @@
             overflow-y: auto;
             position: relative;
         }
+        /* 美化关闭按钮（模态框 + 右侧面板） */
+        .close-modal,
+        .detail-panel-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #cbd5e1;
+            font-size: 24px;
+            font-weight: 300;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            line-height: 1;
+        }
+        .close-modal:hover,
+        .detail-panel-close:hover {
+            background: rgba(248, 113, 113, 0.3);
+            color: #f87171;
+            transform: scale(1.05);
+        }
+        .close-modal:active,
+        .detail-panel-close:active {
+            transform: scale(0.95);
+        }
+        /* 奖励弹窗 */
         .reward-modal .modal-content {
             text-align: center;
             max-width: 280px;
@@ -336,14 +377,6 @@
             background: #f87171;
             color: white;
         }
-        .detail-panel-close {
-            background: none;
-            border: none;
-            color: #94a3b8;
-            font-size: 28px;
-            cursor: pointer;
-            line-height: 1;
-        }
     </style>
 </head>
 <body>
@@ -361,7 +394,7 @@
     <div class="mail-detail-section" id="detailPanel">
         <div class="detail-header">
             <span class="detail-title" id="panelTitle">邮件详情</span>
-            <button class="detail-panel-close" id="closePanelBtn" style="display: none;">&times;</button>
+            <button class="detail-panel-close" id="closePanelBtn">&times;</button>
         </div>
         <div id="panelDate" class="detail-date"></div>
         <div id="panelContent" class="detail-content"></div>
@@ -375,7 +408,7 @@
 <!-- 以下是模态框（竖屏使用） -->
 <div id="detailModal" class="modal">
     <div class="modal-content">
-        <div class="modal-header">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
             <span class="modal-title" id="modalTitle"></span>
             <button class="close-modal" onclick="closeDetailModal()">&times;</button>
         </div>
@@ -424,11 +457,22 @@
     let currentMails = [];
     let currentUserId = null;
     let pendingDeleteAction = null;
-    let currentSelectedMail = null; // 当前选中的邮件（横屏右侧显示用）
+    let currentSelectedMail = null;
 
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+    }
+
+    function showNotification(msg, type = 'info') {
+        alert(msg);
+    }
+
+    // 检查邮件是否可删除（无未领取附件）
+    function isDeletable(mail) {
+        const items = mail.claimable_items || [];
+        const hasUnclaimed = items.length > 0 && !mail.claimed_at;
+        return !hasUnclaimed;
     }
 
     function showConfirm(message, onConfirm) {
@@ -444,11 +488,53 @@
         pendingDeleteAction = null;
     }
 
-    function showNotification(msg, type = 'success') {
-        alert(msg);
+    // 删除单封邮件（仅当可删除时调用）
+    async function deleteMail(mailId) {
+        const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
+        if (!sessionStr) throw new Error('未登录');
+        const session = JSON.parse(sessionStr);
+        const token = session.access_token;
+        const userId = session.user.id;
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?id=eq.${mailId}&to_user_id=eq.${userId}`, {
+            method: 'DELETE',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('删除失败');
+        showNotification('邮件已删除', 'success');
     }
 
-    // 右侧面板渲染（横屏）
+    // 全部删除（只删除可删除的邮件：已读 + 无未领取附件）
+    async function deleteAllMails() {
+        const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
+        if (!sessionStr) throw new Error('未登录');
+        const session = JSON.parse(sessionStr);
+        const token = session.access_token;
+        const userId = session.user.id;
+        // 筛选可删除的邮件ID（已读且没有未领取附件）
+        const deletableIds = currentMails.filter(mail => {
+            const hasUnclaimed = (mail.claimable_items?.length > 0 && !mail.claimed_at);
+            return mail.read_at && !hasUnclaimed;
+        }).map(mail => mail.id);
+        if (deletableIds.length === 0) {
+            showNotification('没有可删除的邮件（只有已读且无未领取附件的邮件才能批量删除）', 'info');
+            return;
+        }
+        // 逐个删除（或使用 id in 条件，但为了安全用循环）
+        for (let id of deletableIds) {
+            await fetch(`${SUPABASE_URL}/rest/v1/user_mails?id=eq.${id}&to_user_id=eq.${userId}`, {
+                method: 'DELETE',
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
+            });
+        }
+        showNotification(`已删除 ${deletableIds.length} 封邮件`, 'success');
+        await loadMails();
+        if (currentSelectedMail && !currentMails.find(m => m.id === currentSelectedMail.id)) {
+            renderDetailPanel(null);
+            currentSelectedMail = null;
+        }
+    }
+
+    // 右侧面板渲染
     function renderDetailPanel(mail) {
         const panel = document.getElementById('detailPanel');
         if (!mail) {
@@ -489,14 +575,21 @@
                 if (claimBtn.disabled) return;
                 await claimMail(mail.id);
                 await loadMails();
-                // 刷新右侧显示
                 const updatedMail = currentMails.find(m => m.id === mail.id);
                 if (updatedMail) renderDetailPanel(updatedMail);
             };
         }
         const delBtn = document.getElementById('panelDeleteBtn');
         delBtn.style.display = 'block';
+        const deletable = isDeletable(mail);
+        delBtn.disabled = !deletable;
+        delBtn.style.opacity = deletable ? '1' : '0.6';
+        delBtn.innerText = deletable ? '删除邮件' : '有未领取附件，不可删除';
         delBtn.onclick = () => {
+            if (!deletable) {
+                showNotification('该邮件有未领取的附件，请先领取后再删除', 'warning');
+                return;
+            }
             showConfirm('确定要删除这封邮件吗？', async () => {
                 await deleteMail(mail.id);
                 await loadMails();
@@ -509,112 +602,7 @@
         };
     }
 
-    // 加载邮件列表
-    async function loadMails() {
-        const container = document.getElementById('mailList');
-        container.innerHTML = '加载中...';
-        try {
-            const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
-            if (!sessionStr) throw new Error('未登录，请先登录');
-            const session = JSON.parse(sessionStr);
-            const token = session.access_token;
-            currentUserId = session.user.id;
-
-            const response = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?select=*&to_user_id=eq.${currentUserId}&order=created_at.desc`, {
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
-            });
-            if (!response.ok) throw new Error(await response.text());
-            const mails = await response.json();
-            currentMails = mails;
-
-            if (mails.length === 0) {
-                container.innerHTML = '<div class="empty-tip">📭 暂无邮件</div>';
-                if (document.getElementById('detailPanel')) renderDetailPanel(null);
-                return;
-            }
-
-            let html = '';
-            for (const mail of mails) {
-                const hasAttach = (mail.claimable_items && mail.claimable_items.length > 0);
-                const isClaimed = !!mail.claimed_at;
-                const unreadClass = !mail.read_at ? 'unread' : '';
-                const selectedClass = (currentSelectedMail && currentSelectedMail.id === mail.id) ? 'selected' : '';
-                html += `
-                    <div class="mail-item ${unreadClass} ${selectedClass}" data-id="${mail.id}">
-                        <div class="mail-header">
-                            <div>
-                                <div class="mail-title">${escapeHtml(mail.title)}</div>
-                                <div class="mail-date">${new Date(mail.created_at).toLocaleString()}</div>
-                            </div>
-                            <div class="mail-actions">
-                                ${hasAttach && !isClaimed ? `<button class="claim-btn" data-id="${mail.id}">🎁 领取</button>` : (isClaimed ? '<span class="claimed-badge">✅ 已领取</span>' : '')}
-                                <button class="delete-btn" data-id="${mail.id}" title="删除邮件">🗑️</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            container.innerHTML = html;
-
-            // 绑定领取按钮
-            document.querySelectorAll('.claim-btn').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    e.stopPropagation();
-                    const mailId = parseInt(btn.dataset.id);
-                    await claimMail(mailId);
-                    await loadMails();
-                });
-            });
-
-            // 绑定删除按钮
-            document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    e.stopPropagation();
-                    const mailId = parseInt(btn.dataset.id);
-                    showConfirm('确定要删除这封邮件吗？', async () => {
-                        await deleteMail(mailId);
-                        await loadMails();
-                        closeConfirmModal();
-                        if (currentSelectedMail && currentSelectedMail.id === mailId) {
-                            renderDetailPanel(null);
-                            currentSelectedMail = null;
-                        }
-                    });
-                });
-            });
-
-            // 绑定邮件项点击
-            document.querySelectorAll('.mail-item').forEach(el => {
-                el.addEventListener('click', async (e) => {
-                    if (e.target.classList.contains('claim-btn') || e.target.classList.contains('delete-btn')) return;
-                    const id = parseInt(el.dataset.id);
-                    const mail = currentMails.find(m => m.id === id);
-                    if (!mail) return;
-                    // 更新选中样式
-                    document.querySelectorAll('.mail-item').forEach(item => item.classList.remove('selected'));
-                    el.classList.add('selected');
-                    currentSelectedMail = mail;
-                    // 标记已读
-                    if (!mail.read_at) {
-                        await markAsRead(mail.id);
-                        mail.read_at = new Date().toISOString();
-                        // 刷新列表中的未读样式
-                        loadMails();
-                    }
-                    // 横屏时更新右侧面板
-                    if (window.innerWidth >= 768 && window.matchMedia("(orientation: landscape)").matches) {
-                        renderDetailPanel(mail);
-                    } else {
-                        // 竖屏：打开模态框
-                        openDetailModal(mail);
-                    }
-                });
-            });
-        } catch (err) {
-            container.innerHTML = `<div style="color:#f87171; padding:20px;">❌ 错误：${err.message}<br>请确保已登录</div>`;
-        }
-    }
-
+    // 标记已读
     async function markAsRead(mailId) {
         const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
         if (!sessionStr) return;
@@ -631,37 +619,7 @@
         });
     }
 
-    async function deleteMail(mailId) {
-        const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
-        if (!sessionStr) throw new Error('未登录');
-        const session = JSON.parse(sessionStr);
-        const token = session.access_token;
-        const userId = session.user.id;
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?id=eq.${mailId}&to_user_id=eq.${userId}`, {
-            method: 'DELETE',
-            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
-        });
-        if (!response.ok) throw new Error('删除失败');
-        showNotification('邮件已删除', 'success');
-    }
-
-    async function deleteAllMails() {
-        const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
-        if (!sessionStr) throw new Error('未登录');
-        const session = JSON.parse(sessionStr);
-        const token = session.access_token;
-        const userId = session.user.id;
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?to_user_id=eq.${userId}`, {
-            method: 'DELETE',
-            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
-        });
-        if (!response.ok) throw new Error('全部删除失败');
-        showNotification('所有邮件已清空', 'success');
-        await loadMails();
-        renderDetailPanel(null);
-        currentSelectedMail = null;
-    }
-
+    // 领取附件核心逻辑
     async function claimMail(mailId) {
         try {
             const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
@@ -742,6 +700,115 @@
         }
     }
 
+    // 加载邮件列表
+    async function loadMails() {
+        const container = document.getElementById('mailList');
+        container.innerHTML = '加载中...';
+        try {
+            const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
+            if (!sessionStr) throw new Error('未登录，请先登录');
+            const session = JSON.parse(sessionStr);
+            const token = session.access_token;
+            currentUserId = session.user.id;
+
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?select=*&to_user_id=eq.${currentUserId}&order=created_at.desc`, {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error(await response.text());
+            const mails = await response.json();
+            currentMails = mails;
+
+            if (mails.length === 0) {
+                container.innerHTML = '<div class="empty-tip">📭 暂无邮件</div>';
+                if (document.getElementById('detailPanel')) renderDetailPanel(null);
+                return;
+            }
+
+            let html = '';
+            for (const mail of mails) {
+                const hasAttach = (mail.claimable_items && mail.claimable_items.length > 0);
+                const isClaimed = !!mail.claimed_at;
+                const unreadClass = !mail.read_at ? 'unread' : '';
+                const selectedClass = (currentSelectedMail && currentSelectedMail.id === mail.id) ? 'selected' : '';
+                html += `
+                    <div class="mail-item ${unreadClass} ${selectedClass}" data-id="${mail.id}">
+                        <div class="mail-header">
+                            <div>
+                                <div class="mail-title">${escapeHtml(mail.title)}</div>
+                                <div class="mail-date">${new Date(mail.created_at).toLocaleString()}</div>
+                            </div>
+                            <div class="mail-actions">
+                                ${hasAttach && !isClaimed ? `<button class="claim-btn" data-id="${mail.id}">🎁 领取</button>` : (isClaimed ? '<span class="claimed-badge">✅ 已领取</span>' : '')}
+                                <button class="delete-btn" data-id="${mail.id}" title="删除邮件">🗑️</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+
+            // 绑定领取按钮
+            document.querySelectorAll('.claim-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const mailId = parseInt(btn.dataset.id);
+                    await claimMail(mailId);
+                    await loadMails();
+                });
+            });
+
+            // 绑定删除按钮（单个删除，检查可删除性）
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const mailId = parseInt(btn.dataset.id);
+                    const mail = currentMails.find(m => m.id === mailId);
+                    if (!mail) return;
+                    if (!isDeletable(mail)) {
+                        showNotification('该邮件有未领取的附件，请先领取后再删除', 'warning');
+                        return;
+                    }
+                    showConfirm('确定要删除这封邮件吗？', async () => {
+                        await deleteMail(mailId);
+                        await loadMails();
+                        closeConfirmModal();
+                        if (currentSelectedMail && currentSelectedMail.id === mailId) {
+                            renderDetailPanel(null);
+                            currentSelectedMail = null;
+                        }
+                    });
+                });
+            });
+
+            // 绑定邮件项点击（打开详情）
+            document.querySelectorAll('.mail-item').forEach(el => {
+                el.addEventListener('click', async (e) => {
+                    if (e.target.classList.contains('claim-btn') || e.target.classList.contains('delete-btn')) return;
+                    const id = parseInt(el.dataset.id);
+                    const mail = currentMails.find(m => m.id === id);
+                    if (!mail) return;
+                    // 更新选中样式
+                    document.querySelectorAll('.mail-item').forEach(item => item.classList.remove('selected'));
+                    el.classList.add('selected');
+                    currentSelectedMail = mail;
+                    if (!mail.read_at) {
+                        await markAsRead(mail.id);
+                        mail.read_at = new Date().toISOString();
+                        await loadMails(); // 刷新未读标记
+                    }
+                    if (window.innerWidth >= 768 && window.matchMedia("(orientation: landscape)").matches) {
+                        renderDetailPanel(mail);
+                    } else {
+                        openDetailModal(mail);
+                    }
+                });
+            });
+        } catch (err) {
+            container.innerHTML = `<div style="color:#f87171; padding:20px;">❌ 错误：${err.message}<br>请确保已登录</div>`;
+        }
+    }
+
+    // 竖屏模态框打开详情
     function openDetailModal(mail) {
         document.getElementById('modalTitle').innerText = mail.title;
         document.getElementById('modalDate').innerText = new Date(mail.created_at).toLocaleString();
@@ -751,7 +818,6 @@
         if (items.length === 0) {
             attachDiv.innerHTML = '<em>无附件</em>';
             document.getElementById('modalClaimBtn').style.display = 'none';
-            document.getElementById('modalDeleteBtn').style.display = 'none';
         } else {
             let attachHtml = '<strong>📦 附件：</strong><ul style="margin-top:6px; list-style:none;">';
             for (let item of items) {
@@ -775,8 +841,16 @@
             };
         }
         const delBtn = document.getElementById('modalDeleteBtn');
+        const deletable = isDeletable(mail);
         delBtn.style.display = 'block';
+        delBtn.disabled = !deletable;
+        delBtn.style.opacity = deletable ? '1' : '0.6';
+        delBtn.innerText = deletable ? '删除邮件' : '有未领取附件，不可删除';
         delBtn.onclick = () => {
+            if (!deletable) {
+                showNotification('该邮件有未领取的附件，请先领取后再删除', 'warning');
+                return;
+            }
             showConfirm('确定要删除这封邮件吗？', async () => {
                 await deleteMail(mail.id);
                 await loadMails();
@@ -795,6 +869,7 @@
         document.getElementById('detailModal').classList.remove('show');
     }
 
+    // 奖励弹窗
     function showRewardModal(imgUrl, amount, itemType) {
         const modal = document.getElementById('rewardModal');
         const img = document.getElementById('rewardImage');
@@ -831,21 +906,33 @@
         modal.classList.add('show');
     }
 
-    function closeItemInfoModal() { document.getElementById('itemInfoModal').classList.remove('show'); }
-    function closeRewardModal() { document.getElementById('rewardModal').classList.remove('show'); }
+    function closeItemInfoModal() {
+        document.getElementById('itemInfoModal').classList.remove('show');
+    }
 
+    function closeRewardModal() {
+        document.getElementById('rewardModal').classList.remove('show');
+    }
+
+    // 事件绑定
     document.getElementById('confirmCancelBtn').onclick = closeConfirmModal;
-    document.getElementById('confirmOkBtn').onclick = () => { if(pendingDeleteAction) pendingDeleteAction(); closeConfirmModal(); };
-    document.getElementById('deleteAllBtn').onclick = () => showConfirm('⚠️ 确定要删除所有邮件吗？此操作不可恢复。', async () => { await deleteAllMails(); closeConfirmModal(); });
-    document.getElementById('closePanelBtn').onclick = () => { renderDetailPanel(null); currentSelectedMail = null; };
-
-    // 监听窗口尺寸变化，如果从横屏切回竖屏，关闭右侧面板内容但不影响列表
+    document.getElementById('confirmOkBtn').onclick = () => {
+        if (pendingDeleteAction) pendingDeleteAction();
+        closeConfirmModal();
+    };
+    document.getElementById('deleteAllBtn').onclick = () => {
+        showConfirm('⚠️ 全部删除将删除所有已读且无未领取附件的邮件，不可恢复。确定继续吗？', async () => {
+            await deleteAllMails();
+            closeConfirmModal();
+        });
+    };
+    document.getElementById('closePanelBtn').onclick = () => {
+        renderDetailPanel(null);
+        currentSelectedMail = null;
+    };
     window.addEventListener('resize', () => {
-        if (window.innerWidth < 768 || window.matchMedia("(orientation: portrait)").matches) {
-            // 竖屏时无需处理右侧面板，它隐藏了
-        } else {
-            // 横屏时如果有选中的邮件，重新渲染右侧
-            if (currentSelectedMail) renderDetailPanel(currentSelectedMail);
+        if (window.innerWidth >= 768 && window.matchMedia("(orientation: landscape)").matches && currentSelectedMail) {
+            renderDetailPanel(currentSelectedMail);
         }
     });
 
