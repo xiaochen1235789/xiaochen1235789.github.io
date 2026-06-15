@@ -16,26 +16,49 @@
             color: #eef2ff;
             font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
             padding: 20px;
-            padding-bottom: 80px;
+            min-height: 100vh;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        h2 {
-            font-size: 1.8rem;
-            margin-bottom: 20px;
+        /* 横屏/宽屏时左右分栏 */
+        .mail-layout {
             display: flex;
-            align-items: center;
-            gap: 12px;
+            flex-direction: column;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 20px;
         }
-        .back-link {
-            display: inline-block;
-            margin-top: 24px;
-            color: #94a3b8;
-            text-decoration: none;
-            font-size: 0.9rem;
+        @media (min-width: 768px) and (orientation: landscape) {
+            .mail-layout {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+            .mail-list-section {
+                flex: 1.2;
+                min-width: 280px;
+                max-width: 400px;
+            }
+            .mail-detail-section {
+                flex: 2;
+                background: #1e293b;
+                border-radius: 28px;
+                padding: 20px;
+                min-height: 70vh;
+                position: sticky;
+                top: 20px;
+            }
+            /* 横屏时隐藏模态框（改用右侧面板） */
+            .modal:not(.reward-modal):not(.info-modal):not(.confirm-modal) {
+                display: none !important;
+            }
+            .detail-panel-close {
+                display: none;
+            }
         }
+        @media (max-width: 767px), (orientation: portrait) {
+            .mail-detail-section {
+                display: none;
+            }
+        }
+        /* 公用样式 */
         .mail-list {
             display: flex;
             flex-direction: column;
@@ -48,6 +71,10 @@
             cursor: pointer;
             transition: background 0.2s, transform 0.1s;
             border-left: 3px solid transparent;
+        }
+        .mail-item.selected {
+            border-left-color: #facc15;
+            background: #2a3f5e;
         }
         .mail-item.unread {
             border-left-color: #facc15;
@@ -72,6 +99,11 @@
             font-size: 0.7rem;
             color: #94a3b8;
         }
+        .mail-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
         .claim-btn {
             background: #f59e0b;
             border: none;
@@ -82,14 +114,102 @@
             cursor: pointer;
             color: #1e293b;
         }
-        .claim-btn:active {
-            opacity: 0.8;
-        }
         .claimed-badge {
             font-size: 0.75rem;
             color: #10b981;
         }
-        /* 模态框通用 */
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #f87171;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .detail-panel {
+            background: #1e293b;
+            border-radius: 28px;
+            padding: 20px;
+        }
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .detail-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+        .detail-date {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-bottom: 12px;
+        }
+        .detail-content {
+            white-space: pre-wrap;
+            margin: 16px 0;
+            line-height: 1.5;
+        }
+        .detail-attach {
+            background: #0f172a;
+            border-radius: 20px;
+            padding: 12px;
+            margin: 12px 0;
+        }
+        .detail-claim-btn {
+            background: #f59e0b;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1rem;
+            margin-top: 12px;
+        }
+        .detail-claim-btn:disabled {
+            background: #475569;
+            cursor: not-allowed;
+        }
+        .empty-tip {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+        }
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .delete-all-btn {
+            background: #f87171;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            color: white;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 24px;
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        /* 模态框样式（保留竖屏使用） */
         .modal {
             display: none;
             position: fixed;
@@ -115,55 +235,6 @@
             overflow-y: auto;
             position: relative;
         }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-        .modal-title {
-            font-size: 1.3rem;
-            font-weight: bold;
-        }
-        .close-modal {
-            background: none;
-            border: none;
-            color: #94a3b8;
-            font-size: 28px;
-            cursor: pointer;
-            line-height: 1;
-        }
-        .modal-date {
-            font-size: 0.75rem;
-            color: #94a3b8;
-            margin-bottom: 12px;
-        }
-        .modal-body {
-            white-space: pre-wrap;
-            margin: 16px 0;
-            line-height: 1.5;
-        }
-        .modal-attach {
-            background: #0f172a;
-            border-radius: 20px;
-            padding: 12px;
-            margin: 12px 0;
-        }
-        .detail-claim-btn {
-            background: #f59e0b;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 40px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            font-size: 1rem;
-        }
-        .detail-claim-btn:disabled {
-            background: #475569;
-            cursor: not-allowed;
-        }
-        /* 奖励弹窗（带角标数量） */
         .reward-modal .modal-content {
             text-align: center;
             max-width: 280px;
@@ -198,8 +269,6 @@
             padding: 2px 8px;
             border-radius: 40px;
             border: 2px solid #1e293b;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-            white-space: nowrap;
         }
         .reward-confirm {
             background: #f59e0b;
@@ -212,7 +281,6 @@
             width: 80%;
             margin-top: 24px;
         }
-        /* 物品信息模态框（小号） */
         .info-modal .modal-content {
             max-width: 280px;
             text-align: center;
@@ -243,16 +311,68 @@
             cursor: pointer;
             margin-top: 16px;
         }
+        .confirm-modal .modal-content {
+            max-width: 300px;
+            text-align: center;
+        }
+        .confirm-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .confirm-btn {
+            padding: 6px 20px;
+            border-radius: 40px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .confirm-btn.cancel {
+            background: #475569;
+            color: white;
+        }
+        .confirm-btn.confirm {
+            background: #f87171;
+            color: white;
+        }
+        .detail-panel-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 28px;
+            cursor: pointer;
+            line-height: 1;
+        }
     </style>
 </head>
 <body>
-<div class="container">
-    <h2>📬 我的邮箱</h2>
-    <div id="mailList" class="mail-list">加载中...</div>
-    <a href="profile.html" class="back-link">← 返回个人主页</a>
+<div class="mail-layout">
+    <!-- 左侧：邮件列表区 -->
+    <div class="mail-list-section">
+        <h2>
+            📬 我的邮箱
+            <button id="deleteAllBtn" class="delete-all-btn">全部删除</button>
+        </h2>
+        <div id="mailList" class="mail-list">加载中...</div>
+        <a href="profile.html" class="back-link">← 返回个人主页</a>
+    </div>
+    <!-- 右侧：详情面板（横屏时显示） -->
+    <div class="mail-detail-section" id="detailPanel">
+        <div class="detail-header">
+            <span class="detail-title" id="panelTitle">邮件详情</span>
+            <button class="detail-panel-close" id="closePanelBtn" style="display: none;">&times;</button>
+        </div>
+        <div id="panelDate" class="detail-date"></div>
+        <div id="panelContent" class="detail-content"></div>
+        <div id="panelAttach" class="detail-attach"></div>
+        <button id="panelClaimBtn" class="detail-claim-btn" style="display:none;">领取附件</button>
+        <button id="panelDeleteBtn" class="detail-claim-btn" style="display:none; background:#f87171; margin-top:8px;">删除邮件</button>
+        <div id="panelEmpty" class="empty-tip">点击左侧邮件查看详情</div>
+    </div>
 </div>
 
-<!-- 邮件详情模态框 -->
+<!-- 以下是模态框（竖屏使用） -->
 <div id="detailModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -263,10 +383,10 @@
         <div id="modalContent" class="modal-body"></div>
         <div id="modalAttach" class="modal-attach"></div>
         <button id="modalClaimBtn" class="detail-claim-btn" style="display:none;">领取附件</button>
+        <button id="modalDeleteBtn" class="detail-claim-btn" style="display:none; background:#f87171; margin-top:8px;">删除邮件</button>
     </div>
 </div>
 
-<!-- 奖励弹窗（图片右下角 ×数量，点击图片弹出物品信息模态框） -->
 <div id="rewardModal" class="modal reward-modal">
     <div class="modal-content">
         <div class="reward-title">🎉 获得奖励</div>
@@ -278,7 +398,6 @@
     </div>
 </div>
 
-<!-- 物品信息模态框 -->
 <div id="itemInfoModal" class="modal info-modal">
     <div class="modal-content">
         <div class="info-icon" id="infoIcon">🍬</div>
@@ -288,18 +407,109 @@
     </div>
 </div>
 
+<div id="confirmModal" class="modal confirm-modal">
+    <div class="modal-content">
+        <div id="confirmMessage" style="margin: 16px 0;">确定要删除吗？</div>
+        <div class="confirm-buttons">
+            <button class="confirm-btn cancel" id="confirmCancelBtn">取消</button>
+            <button class="confirm-btn confirm" id="confirmOkBtn">确定</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
     let currentMails = [];
     let currentUserId = null;
+    let pendingDeleteAction = null;
+    let currentSelectedMail = null; // 当前选中的邮件（横屏右侧显示用）
 
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
     }
 
+    function showConfirm(message, onConfirm) {
+        const modal = document.getElementById('confirmModal');
+        document.getElementById('confirmMessage').innerText = message;
+        pendingDeleteAction = onConfirm;
+        modal.classList.add('show');
+    }
+
+    function closeConfirmModal() {
+        const modal = document.getElementById('confirmModal');
+        modal.classList.remove('show');
+        pendingDeleteAction = null;
+    }
+
+    function showNotification(msg, type = 'success') {
+        alert(msg);
+    }
+
+    // 右侧面板渲染（横屏）
+    function renderDetailPanel(mail) {
+        const panel = document.getElementById('detailPanel');
+        if (!mail) {
+            document.getElementById('panelEmpty').style.display = 'block';
+            document.getElementById('panelTitle').innerText = '邮件详情';
+            document.getElementById('panelDate').innerHTML = '';
+            document.getElementById('panelContent').innerHTML = '';
+            document.getElementById('panelAttach').innerHTML = '';
+            document.getElementById('panelClaimBtn').style.display = 'none';
+            document.getElementById('panelDeleteBtn').style.display = 'none';
+            return;
+        }
+        document.getElementById('panelEmpty').style.display = 'none';
+        document.getElementById('panelTitle').innerText = mail.title;
+        document.getElementById('panelDate').innerHTML = new Date(mail.created_at).toLocaleString();
+        document.getElementById('panelContent').innerText = mail.content || '(无内容)';
+        const items = mail.claimable_items || [];
+        const attachDiv = document.getElementById('panelAttach');
+        if (items.length === 0) {
+            attachDiv.innerHTML = '<em>无附件</em>';
+            document.getElementById('panelClaimBtn').style.display = 'none';
+        } else {
+            let attachHtml = '<strong>📦 附件：</strong><ul style="margin-top:6px; list-style:none;">';
+            for (let item of items) {
+                if (item.type === 'candy') attachHtml += `<li>🍬 糖果 x${item.amount}</li>`;
+                else if (item.type === 'rainbow') attachHtml += `<li>🌈 彩虹棒糖 x${item.amount}</li>`;
+                else if (item.type === 'title') attachHtml += `<li>🏅 称号 ID:${item.title_id}</li>`;
+                else if (item.type === 'frame') attachHtml += `<li>🖼️ 头像框:${item.frame_id}</li>`;
+            }
+            attachHtml += '</ul>';
+            attachDiv.innerHTML = attachHtml;
+            const claimBtn = document.getElementById('panelClaimBtn');
+            claimBtn.style.display = 'block';
+            const isClaimed = !!mail.claimed_at;
+            claimBtn.disabled = isClaimed;
+            claimBtn.innerText = isClaimed ? '已领取' : '领取附件';
+            claimBtn.onclick = async () => {
+                if (claimBtn.disabled) return;
+                await claimMail(mail.id);
+                await loadMails();
+                // 刷新右侧显示
+                const updatedMail = currentMails.find(m => m.id === mail.id);
+                if (updatedMail) renderDetailPanel(updatedMail);
+            };
+        }
+        const delBtn = document.getElementById('panelDeleteBtn');
+        delBtn.style.display = 'block';
+        delBtn.onclick = () => {
+            showConfirm('确定要删除这封邮件吗？', async () => {
+                await deleteMail(mail.id);
+                await loadMails();
+                closeConfirmModal();
+                if (currentSelectedMail && currentSelectedMail.id === mail.id) {
+                    renderDetailPanel(null);
+                    currentSelectedMail = null;
+                }
+            });
+        };
+    }
+
+    // 加载邮件列表
     async function loadMails() {
         const container = document.getElementById('mailList');
         container.innerHTML = '加载中...';
@@ -318,7 +528,8 @@
             currentMails = mails;
 
             if (mails.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:40px;">📭 暂无邮件</div>';
+                container.innerHTML = '<div class="empty-tip">📭 暂无邮件</div>';
+                if (document.getElementById('detailPanel')) renderDetailPanel(null);
                 return;
             }
 
@@ -327,20 +538,25 @@
                 const hasAttach = (mail.claimable_items && mail.claimable_items.length > 0);
                 const isClaimed = !!mail.claimed_at;
                 const unreadClass = !mail.read_at ? 'unread' : '';
+                const selectedClass = (currentSelectedMail && currentSelectedMail.id === mail.id) ? 'selected' : '';
                 html += `
-                    <div class="mail-item ${unreadClass}" data-id="${mail.id}">
+                    <div class="mail-item ${unreadClass} ${selectedClass}" data-id="${mail.id}">
                         <div class="mail-header">
                             <div>
                                 <div class="mail-title">${escapeHtml(mail.title)}</div>
                                 <div class="mail-date">${new Date(mail.created_at).toLocaleString()}</div>
                             </div>
-                            ${hasAttach && !isClaimed ? `<button class="claim-btn" data-id="${mail.id}">🎁 领取</button>` : (isClaimed ? '<span class="claimed-badge">✅ 已领取</span>' : '')}
+                            <div class="mail-actions">
+                                ${hasAttach && !isClaimed ? `<button class="claim-btn" data-id="${mail.id}">🎁 领取</button>` : (isClaimed ? '<span class="claimed-badge">✅ 已领取</span>' : '')}
+                                <button class="delete-btn" data-id="${mail.id}" title="删除邮件">🗑️</button>
+                            </div>
                         </div>
                     </div>
                 `;
             }
             container.innerHTML = html;
 
+            // 绑定领取按钮
             document.querySelectorAll('.claim-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     e.stopPropagation();
@@ -350,16 +566,100 @@
                 });
             });
 
+            // 绑定删除按钮
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const mailId = parseInt(btn.dataset.id);
+                    showConfirm('确定要删除这封邮件吗？', async () => {
+                        await deleteMail(mailId);
+                        await loadMails();
+                        closeConfirmModal();
+                        if (currentSelectedMail && currentSelectedMail.id === mailId) {
+                            renderDetailPanel(null);
+                            currentSelectedMail = null;
+                        }
+                    });
+                });
+            });
+
+            // 绑定邮件项点击
             document.querySelectorAll('.mail-item').forEach(el => {
-                el.addEventListener('click', () => {
+                el.addEventListener('click', async (e) => {
+                    if (e.target.classList.contains('claim-btn') || e.target.classList.contains('delete-btn')) return;
                     const id = parseInt(el.dataset.id);
                     const mail = currentMails.find(m => m.id === id);
-                    if (mail) openDetailModal(mail);
+                    if (!mail) return;
+                    // 更新选中样式
+                    document.querySelectorAll('.mail-item').forEach(item => item.classList.remove('selected'));
+                    el.classList.add('selected');
+                    currentSelectedMail = mail;
+                    // 标记已读
+                    if (!mail.read_at) {
+                        await markAsRead(mail.id);
+                        mail.read_at = new Date().toISOString();
+                        // 刷新列表中的未读样式
+                        loadMails();
+                    }
+                    // 横屏时更新右侧面板
+                    if (window.innerWidth >= 768 && window.matchMedia("(orientation: landscape)").matches) {
+                        renderDetailPanel(mail);
+                    } else {
+                        // 竖屏：打开模态框
+                        openDetailModal(mail);
+                    }
                 });
             });
         } catch (err) {
             container.innerHTML = `<div style="color:#f87171; padding:20px;">❌ 错误：${err.message}<br>请确保已登录</div>`;
         }
+    }
+
+    async function markAsRead(mailId) {
+        const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
+        if (!sessionStr) return;
+        const session = JSON.parse(sessionStr);
+        const token = session.access_token;
+        await fetch(`${SUPABASE_URL}/rest/v1/user_mails?id=eq.${mailId}`, {
+            method: 'PATCH',
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ read_at: new Date().toISOString() })
+        });
+    }
+
+    async function deleteMail(mailId) {
+        const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
+        if (!sessionStr) throw new Error('未登录');
+        const session = JSON.parse(sessionStr);
+        const token = session.access_token;
+        const userId = session.user.id;
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?id=eq.${mailId}&to_user_id=eq.${userId}`, {
+            method: 'DELETE',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('删除失败');
+        showNotification('邮件已删除', 'success');
+    }
+
+    async function deleteAllMails() {
+        const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
+        if (!sessionStr) throw new Error('未登录');
+        const session = JSON.parse(sessionStr);
+        const token = session.access_token;
+        const userId = session.user.id;
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?to_user_id=eq.${userId}`, {
+            method: 'DELETE',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('全部删除失败');
+        showNotification('所有邮件已清空', 'success');
+        await loadMails();
+        renderDetailPanel(null);
+        currentSelectedMail = null;
     }
 
     async function claimMail(mailId) {
@@ -417,10 +717,7 @@
                 body: JSON.stringify({ user_id: userId, candy_crumbles: newCandy, rainbow_lollipops: newRainbow })
             });
 
-            // 决定展示哪种物品（优先展示糖果）
-            let rewardImg = '';
-            let rewardAmount = 0;
-            let itemType = '';
+            let rewardImg = '', rewardAmount = 0, itemType = '';
             if (candyDelta > 0) {
                 rewardImg = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp';
                 rewardAmount = candyDelta;
@@ -435,9 +732,11 @@
                 itemType = 'candy';
             }
             showRewardModal(rewardImg, rewardAmount, itemType);
-
-            const index = currentMails.findIndex(m => m.id === mailId);
-            if (index !== -1) currentMails[index].claimed_at = new Date().toISOString();
+            await loadMails();
+            const updatedMail = currentMails.find(m => m.id === mailId);
+            if (updatedMail && window.innerWidth >= 768 && window.matchMedia("(orientation: landscape)").matches) {
+                renderDetailPanel(updatedMail);
+            }
         } catch (err) {
             alert('领取失败：' + err.message);
         }
@@ -452,6 +751,7 @@
         if (items.length === 0) {
             attachDiv.innerHTML = '<em>无附件</em>';
             document.getElementById('modalClaimBtn').style.display = 'none';
+            document.getElementById('modalDeleteBtn').style.display = 'none';
         } else {
             let attachHtml = '<strong>📦 附件：</strong><ul style="margin-top:6px; list-style:none;">';
             for (let item of items) {
@@ -474,6 +774,20 @@
                 closeDetailModal();
             };
         }
+        const delBtn = document.getElementById('modalDeleteBtn');
+        delBtn.style.display = 'block';
+        delBtn.onclick = () => {
+            showConfirm('确定要删除这封邮件吗？', async () => {
+                await deleteMail(mail.id);
+                await loadMails();
+                closeConfirmModal();
+                closeDetailModal();
+                if (currentSelectedMail && currentSelectedMail.id === mail.id) {
+                    renderDetailPanel(null);
+                    currentSelectedMail = null;
+                }
+            });
+        };
         document.getElementById('detailModal').classList.add('show');
     }
 
@@ -481,13 +795,11 @@
         document.getElementById('detailModal').classList.remove('show');
     }
 
-    // 显示奖励弹窗，并为图片容器绑定点击事件（弹出物品信息模态框）
     function showRewardModal(imgUrl, amount, itemType) {
         const modal = document.getElementById('rewardModal');
         const img = document.getElementById('rewardImage');
         const badge = document.getElementById('rewardCountBadge');
         const container = document.getElementById('rewardIconContainer');
-        
         img.src = imgUrl;
         if (amount > 0) {
             badge.textContent = `× ${amount}`;
@@ -495,33 +807,22 @@
         } else {
             badge.style.display = 'none';
         }
-        
-        // 移除旧的点击监听器，重新绑定（避免重复）
         const newContainer = container.cloneNode(true);
         container.parentNode.replaceChild(newContainer, container);
         newContainer.id = 'rewardIconContainer';
         document.getElementById('rewardModal').querySelector('.modal-content').insertBefore(newContainer, document.querySelector('#rewardModal .reward-confirm'));
-        
         const newImg = newContainer.querySelector('#rewardImage');
         const newBadge = newContainer.querySelector('#rewardCountBadge');
         newImg.id = 'rewardImage';
         newBadge.id = 'rewardCountBadge';
-        
-        // 绑定点击事件：弹出物品信息模态框
         newContainer.addEventListener('click', () => {
-            if (itemType === 'candy') {
-                showItemInfoModal('🍬', '糖果碎', '可用于购买道具、兑换物品。');
-            } else if (itemType === 'rainbow') {
-                showItemInfoModal('🌈', '彩虹棒糖', '稀有货币，高级商品兑换。');
-            } else {
-                showItemInfoModal('🎁', '神秘物品', '未知奖励。');
-            }
+            if (itemType === 'candy') showItemInfoModal('🍬', '糖果碎', '可用于购买道具、兑换物品。');
+            else if (itemType === 'rainbow') showItemInfoModal('🌈', '彩虹棒糖', '稀有货币，高级商品兑换。');
+            else showItemInfoModal('🎁', '神秘物品', '未知奖励。');
         });
-        
         modal.classList.add('show');
     }
 
-    // 显示物品信息模态框
     function showItemInfoModal(icon, name, desc) {
         const modal = document.getElementById('itemInfoModal');
         document.getElementById('infoIcon').innerText = icon;
@@ -530,13 +831,23 @@
         modal.classList.add('show');
     }
 
-    function closeItemInfoModal() {
-        document.getElementById('itemInfoModal').classList.remove('show');
-    }
+    function closeItemInfoModal() { document.getElementById('itemInfoModal').classList.remove('show'); }
+    function closeRewardModal() { document.getElementById('rewardModal').classList.remove('show'); }
 
-    function closeRewardModal() {
-        document.getElementById('rewardModal').classList.remove('show');
-    }
+    document.getElementById('confirmCancelBtn').onclick = closeConfirmModal;
+    document.getElementById('confirmOkBtn').onclick = () => { if(pendingDeleteAction) pendingDeleteAction(); closeConfirmModal(); };
+    document.getElementById('deleteAllBtn').onclick = () => showConfirm('⚠️ 确定要删除所有邮件吗？此操作不可恢复。', async () => { await deleteAllMails(); closeConfirmModal(); });
+    document.getElementById('closePanelBtn').onclick = () => { renderDetailPanel(null); currentSelectedMail = null; };
+
+    // 监听窗口尺寸变化，如果从横屏切回竖屏，关闭右侧面板内容但不影响列表
+    window.addEventListener('resize', () => {
+        if (window.innerWidth < 768 || window.matchMedia("(orientation: portrait)").matches) {
+            // 竖屏时无需处理右侧面板，它隐藏了
+        } else {
+            // 横屏时如果有选中的邮件，重新渲染右侧
+            if (currentSelectedMail) renderDetailPanel(currentSelectedMail);
+        }
+    });
 
     loadMails();
 </script>
