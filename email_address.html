@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>我的邮箱 - 六哥荣耀</title>
+    <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png">
     <style>
         * {
             margin: 0;
@@ -162,7 +163,7 @@
             background: #475569;
             cursor: not-allowed;
         }
-        /* ********** 奖励弹窗（带角标数量） ********** */
+        /* 奖励弹窗（带角标数量） */
         .reward-modal .modal-content {
             text-align: center;
             max-width: 280px;
@@ -178,6 +179,7 @@
             position: relative;
             display: inline-block;
             margin: 10px auto;
+            cursor: pointer;
         }
         .reward-image {
             width: 100px;
@@ -210,6 +212,37 @@
             width: 80%;
             margin-top: 24px;
         }
+        /* 物品信息模态框（小号） */
+        .info-modal .modal-content {
+            max-width: 280px;
+            text-align: center;
+            padding: 24px 20px;
+        }
+        .info-icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+        }
+        .info-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #facc15;
+        }
+        .info-desc {
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin: 12px 0;
+            color: #cbd5e1;
+        }
+        .info-close {
+            background: #f59e0b;
+            border: none;
+            padding: 6px 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 16px;
+        }
     </style>
 </head>
 <body>
@@ -233,15 +266,25 @@
     </div>
 </div>
 
-<!-- 奖励弹窗（图片右下角显示 ×数量） -->
+<!-- 奖励弹窗（图片右下角 ×数量，点击图片弹出物品信息模态框） -->
 <div id="rewardModal" class="modal reward-modal">
     <div class="modal-content">
         <div class="reward-title">🎉 获得奖励</div>
-        <div class="reward-icon-container">
+        <div class="reward-icon-container" id="rewardIconContainer">
             <img id="rewardImage" class="reward-image" src="" alt="奖励图标">
             <span id="rewardCountBadge" class="reward-count-badge"></span>
         </div>
         <button class="reward-confirm" onclick="closeRewardModal()">确定</button>
+    </div>
+</div>
+
+<!-- 物品信息模态框 -->
+<div id="itemInfoModal" class="modal info-modal">
+    <div class="modal-content">
+        <div class="info-icon" id="infoIcon">🍬</div>
+        <div class="info-name" id="infoName">糖果碎</div>
+        <div class="info-desc" id="infoDesc">可用于购买道具、兑换物品。</div>
+        <button class="info-close" onclick="closeItemInfoModal()">知道了</button>
     </div>
 </div>
 
@@ -374,28 +417,24 @@
                 body: JSON.stringify({ user_id: userId, candy_crumbles: newCandy, rainbow_lollipops: newRainbow })
             });
 
-            // 展示带角标的奖励弹窗
+            // 决定展示哪种物品（优先展示糖果）
             let rewardImg = '';
             let rewardAmount = 0;
-            let rewardType = '';
-            if (candyDelta > 0 && rainbowDelta > 0) {
-                // 如果同时有两种，只展示糖果（或可改成合并显示，这里简单取糖果）
+            let itemType = '';
+            if (candyDelta > 0) {
                 rewardImg = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp';
                 rewardAmount = candyDelta;
-                rewardType = 'candy';
-            } else if (candyDelta > 0) {
-                rewardImg = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp';
-                rewardAmount = candyDelta;
-                rewardType = 'candy';
+                itemType = 'candy';
             } else if (rainbowDelta > 0) {
                 rewardImg = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp';
                 rewardAmount = rainbowDelta;
-                rewardType = 'rainbow';
+                itemType = 'rainbow';
             } else {
                 rewardImg = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp';
                 rewardAmount = 0;
+                itemType = 'candy';
             }
-            showRewardModal(rewardImg, rewardAmount);
+            showRewardModal(rewardImg, rewardAmount, itemType);
 
             const index = currentMails.findIndex(m => m.id === mailId);
             if (index !== -1) currentMails[index].claimed_at = new Date().toISOString();
@@ -442,11 +481,13 @@
         document.getElementById('detailModal').classList.remove('show');
     }
 
-    // 带角标的奖励弹窗
-    function showRewardModal(imgUrl, amount) {
+    // 显示奖励弹窗，并为图片容器绑定点击事件（弹出物品信息模态框）
+    function showRewardModal(imgUrl, amount, itemType) {
         const modal = document.getElementById('rewardModal');
         const img = document.getElementById('rewardImage');
         const badge = document.getElementById('rewardCountBadge');
+        const container = document.getElementById('rewardIconContainer');
+        
         img.src = imgUrl;
         if (amount > 0) {
             badge.textContent = `× ${amount}`;
@@ -454,7 +495,43 @@
         } else {
             badge.style.display = 'none';
         }
+        
+        // 移除旧的点击监听器，重新绑定（避免重复）
+        const newContainer = container.cloneNode(true);
+        container.parentNode.replaceChild(newContainer, container);
+        newContainer.id = 'rewardIconContainer';
+        document.getElementById('rewardModal').querySelector('.modal-content').insertBefore(newContainer, document.querySelector('#rewardModal .reward-confirm'));
+        
+        const newImg = newContainer.querySelector('#rewardImage');
+        const newBadge = newContainer.querySelector('#rewardCountBadge');
+        newImg.id = 'rewardImage';
+        newBadge.id = 'rewardCountBadge';
+        
+        // 绑定点击事件：弹出物品信息模态框
+        newContainer.addEventListener('click', () => {
+            if (itemType === 'candy') {
+                showItemInfoModal('🍬', '糖果碎', '可用于购买道具、兑换物品。');
+            } else if (itemType === 'rainbow') {
+                showItemInfoModal('🌈', '彩虹棒糖', '稀有货币，高级商品兑换。');
+            } else {
+                showItemInfoModal('🎁', '神秘物品', '未知奖励。');
+            }
+        });
+        
         modal.classList.add('show');
+    }
+
+    // 显示物品信息模态框
+    function showItemInfoModal(icon, name, desc) {
+        const modal = document.getElementById('itemInfoModal');
+        document.getElementById('infoIcon').innerText = icon;
+        document.getElementById('infoName').innerText = name;
+        document.getElementById('infoDesc').innerText = desc;
+        modal.classList.add('show');
+    }
+
+    function closeItemInfoModal() {
+        document.getElementById('itemInfoModal').classList.remove('show');
     }
 
     function closeRewardModal() {
