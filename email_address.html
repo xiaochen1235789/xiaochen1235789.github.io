@@ -162,32 +162,53 @@
             background: #475569;
             cursor: not-allowed;
         }
-        /* 奖励弹窗专用 */
+        /* ********** 奖励弹窗（带角标数量） ********** */
         .reward-modal .modal-content {
             text-align: center;
-            max-width: 300px;
+            max-width: 280px;
+            padding: 20px;
+        }
+        .reward-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #facc15;
+        }
+        .reward-icon-container {
+            position: relative;
+            display: inline-block;
+            margin: 10px auto;
         }
         .reward-image {
             width: 100px;
             height: 100px;
             object-fit: contain;
-            margin: 20px auto;
             display: block;
         }
-        .reward-message {
-            font-size: 1.2rem;
+        .reward-count-badge {
+            position: absolute;
+            bottom: -8px;
+            right: -8px;
+            background: #f59e0b;
+            color: #1e293b;
             font-weight: bold;
-            margin: 10px 0;
-            color: #facc15;
+            font-size: 0.9rem;
+            padding: 2px 8px;
+            border-radius: 40px;
+            border: 2px solid #1e293b;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            white-space: nowrap;
         }
-        .reward-btn {
+        .reward-confirm {
             background: #f59e0b;
             border: none;
             padding: 8px 24px;
             border-radius: 40px;
             font-weight: bold;
-            margin-top: 12px;
+            font-size: 1rem;
             cursor: pointer;
+            width: 80%;
+            margin-top: 24px;
         }
     </style>
 </head>
@@ -212,13 +233,15 @@
     </div>
 </div>
 
-<!-- 领取成功奖励模态框 -->
-<div id="rewardModal" class="modal">
+<!-- 奖励弹窗（图片右下角显示 ×数量） -->
+<div id="rewardModal" class="modal reward-modal">
     <div class="modal-content">
-        <button class="close-modal" onclick="closeRewardModal()" style="position:absolute; right:16px; top:12px;">&times;</button>
-        <img id="rewardImage" class="reward-image" src="" alt="奖励图标">
-        <div id="rewardMessage" class="reward-message"></div>
-        <button class="reward-btn" onclick="closeRewardModal()">确定</button>
+        <div class="reward-title">🎉 获得奖励</div>
+        <div class="reward-icon-container">
+            <img id="rewardImage" class="reward-image" src="" alt="奖励图标">
+            <span id="rewardCountBadge" class="reward-count-badge"></span>
+        </div>
+        <button class="reward-confirm" onclick="closeRewardModal()">确定</button>
     </div>
 </div>
 
@@ -229,7 +252,6 @@
     let currentMails = [];
     let currentUserId = null;
 
-    // 辅助函数
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
@@ -276,17 +298,15 @@
             }
             container.innerHTML = html;
 
-            // 绑定领取按钮事件（阻止冒泡）
             document.querySelectorAll('.claim-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     e.stopPropagation();
                     const mailId = parseInt(btn.dataset.id);
                     await claimMail(mailId);
-                    await loadMails(); // 刷新列表
+                    await loadMails();
                 });
             });
 
-            // 绑定邮件卡片点击事件（打开详情）
             document.querySelectorAll('.mail-item').forEach(el => {
                 el.addEventListener('click', () => {
                     const id = parseInt(el.dataset.id);
@@ -299,7 +319,6 @@
         }
     }
 
-    // 核心领取函数（支持 candy 和 rainbow）
     async function claimMail(mailId) {
         try {
             const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
@@ -308,7 +327,6 @@
             const token = session.access_token;
             const userId = session.user.id;
 
-            // 获取邮件详情
             const res = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?id=eq.${mailId}&to_user_id=eq.${userId}&select=*`, {
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
             });
@@ -319,7 +337,6 @@
             const items = mail.claimable_items || [];
             if (items.length === 0) throw new Error('该邮件没有附件');
 
-            // 原子更新 claimed_at
             const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?id=eq.${mailId}&claimed_at=is.null`, {
                 method: 'PATCH',
                 headers: {
@@ -332,14 +349,12 @@
             });
             if (!patchRes.ok) throw new Error('领取失败，可能已被抢先领取');
 
-            // 计算奖励
             let candyDelta = 0, rainbowDelta = 0;
             for (const item of items) {
                 if (item.type === 'candy') candyDelta += item.amount;
                 else if (item.type === 'rainbow') rainbowDelta += item.amount;
             }
 
-            // 获取当前资产
             const statsRes = await fetch(`${SUPABASE_URL}/rest/v1/user_stats?user_id=eq.${userId}&select=candy_crumbles,rainbow_lollipops`, {
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
             });
@@ -349,7 +364,6 @@
             const newCandy = currentCandy + candyDelta;
             const newRainbow = currentRainbow + rainbowDelta;
 
-            // 更新资产
             await fetch(`${SUPABASE_URL}/rest/v1/user_stats?user_id=eq.${userId}`, {
                 method: 'PUT',
                 headers: {
@@ -360,25 +374,29 @@
                 body: JSON.stringify({ user_id: userId, candy_crumbles: newCandy, rainbow_lollipops: newRainbow })
             });
 
-            // 显示奖励模态框（带图片）
-            let rewardText = '';
+            // 展示带角标的奖励弹窗
             let rewardImg = '';
+            let rewardAmount = 0;
+            let rewardType = '';
             if (candyDelta > 0 && rainbowDelta > 0) {
-                rewardText = `获得 🍬 糖果 x${candyDelta} 和 🌈 棒糖 x${rainbowDelta}`;
-                rewardImg = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp'; // 可改成你喜欢的图片
+                // 如果同时有两种，只展示糖果（或可改成合并显示，这里简单取糖果）
+                rewardImg = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp';
+                rewardAmount = candyDelta;
+                rewardType = 'candy';
             } else if (candyDelta > 0) {
-                rewardText = `获得 🍬 糖果 x${candyDelta}`;
                 rewardImg = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp';
+                rewardAmount = candyDelta;
+                rewardType = 'candy';
             } else if (rainbowDelta > 0) {
-                rewardText = `获得 🌈 彩虹棒糖 x${rainbowDelta}`;
                 rewardImg = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp';
+                rewardAmount = rainbowDelta;
+                rewardType = 'rainbow';
             } else {
-                rewardText = `领取成功！`;
                 rewardImg = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp';
+                rewardAmount = 0;
             }
-            showRewardModal(rewardImg, rewardText);
+            showRewardModal(rewardImg, rewardAmount);
 
-            // 更新内存中的邮件状态
             const index = currentMails.findIndex(m => m.id === mailId);
             if (index !== -1) currentMails[index].claimed_at = new Date().toISOString();
         } catch (err) {
@@ -386,7 +404,6 @@
         }
     }
 
-    // 打开邮件详情模态框
     function openDetailModal(mail) {
         document.getElementById('modalTitle').innerText = mail.title;
         document.getElementById('modalDate').innerText = new Date(mail.created_at).toLocaleString();
@@ -414,8 +431,8 @@
             claimBtn.onclick = async () => {
                 if (claimBtn.disabled) return;
                 await claimMail(mail.id);
-                await loadMails();      // 刷新列表
-                closeDetailModal();     // 关闭详情框
+                await loadMails();
+                closeDetailModal();
             };
         }
         document.getElementById('detailModal').classList.add('show');
@@ -425,11 +442,18 @@
         document.getElementById('detailModal').classList.remove('show');
     }
 
-    // 奖励模态框
-    function showRewardModal(imgUrl, message) {
+    // 带角标的奖励弹窗
+    function showRewardModal(imgUrl, amount) {
         const modal = document.getElementById('rewardModal');
-        document.getElementById('rewardImage').src = imgUrl;
-        document.getElementById('rewardMessage').innerText = message;
+        const img = document.getElementById('rewardImage');
+        const badge = document.getElementById('rewardCountBadge');
+        img.src = imgUrl;
+        if (amount > 0) {
+            badge.textContent = `× ${amount}`;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
         modal.classList.add('show');
     }
 
@@ -437,7 +461,6 @@
         document.getElementById('rewardModal').classList.remove('show');
     }
 
-    // 初始化
     loadMails();
 </script>
 </body>
