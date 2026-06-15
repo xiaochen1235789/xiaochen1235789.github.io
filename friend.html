@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="./css/friend.css">
     <style>
+        /* 原有样式保持不变 */
         .tab-buttons {
             display: flex;
             gap: 12px;
@@ -39,11 +40,9 @@
         .friends-card.hide-card {
             display: none;
         }
-        /* 小兹专属置顶样式 - 无发光，仅保留边框加粗 */
         .friend-item.system-friend {
             border: 2px solid #81c784;
             background: linear-gradient(135deg, #1e3a2f, #2a4a3c);
-            /* 去掉了 box-shadow，不再有发光效果 */
         }
         .friend-item.system-friend .friend-name {
             color: #81c784;
@@ -60,12 +59,101 @@
         .friend-item.system-friend .friend-avatar {
             background: linear-gradient(135deg, #81c784, #4caf50);
         }
+        .modal-mask {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-mask.active {
+            display: flex;
+        }
+        .modal-container {
+            background: #1e293b;
+            border-radius: 28px;
+            width: 90%;
+            max-width: 320px;
+            padding: 20px;
+            text-align: center;
+            color: #eef2ff;
+        }
+        .modal-container h3 {
+            margin: 12px 0;
+        }
+        .modal-container select, .modal-container input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 40px;
+            border: none;
+            background: #0f172a;
+            color: white;
+            text-align: center;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 16px;
+        }
+        .modal-btn {
+            padding: 8px 20px;
+            border-radius: 40px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .modal-btn-cancel {
+            background: #475569;
+            color: white;
+        }
+        .modal-btn-confirm {
+            background: #f59e0b;
+            color: #1e293b;
+        }
+        .modal-btn-danger {
+            background: #f87171;
+            color: white;
+        }
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10b981;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 40px;
+            z-index: 2100;
+            display: none;
+        }
+        .notification.show {
+            display: block;
+        }
+        /* 新增邮箱链接样式，与原有nav-link一致 */
+        .nav-link {
+            color: #94a3b8;
+            text-decoration: none;
+            margin-left: 16px;
+            font-size: 0.95rem;
+        }
+        .nav-link i {
+            margin-right: 4px;
+        }
     </style>
 </head>
 <body>
 
 <nav class="top-nav">
     <div class="nav-title">六哥荣耀WIKI</div>
+    <!-- 新增邮箱入口 -->
+    <a href="email_address.html" class="nav-link"><i class="fas fa-envelope"></i> 邮箱</a>
     <div class="user-nav-section" id="userNavSection">
         <a href="login-real.html" class="nav-link" style="color:var(--text-highlight);text-decoration:none;">登录/注册</a>
     </div>
@@ -96,6 +184,24 @@
         <div class="modal-buttons">
             <button class="modal-btn modal-btn-cancel" id="cancelLogoutBtn">取消</button>
             <button class="modal-btn modal-btn-danger" id="confirmLogoutBtn">退出</button>
+        </div>
+    </div>
+</div>
+
+<!-- 赠送模态框 -->
+<div class="modal-mask" id="giftModal">
+    <div class="modal-container">
+        <i class="fas fa-gift" style="font-size:2rem;color:#f59e0b;"></i>
+        <h3>赠送礼物</h3>
+        <select id="giftType">
+            <option value="candy">🍬 糖果碎</option>
+            <option value="rainbow">🌈 彩虹棒糖</option>
+        </select>
+        <input type="number" id="giftAmount" placeholder="数量" min="1" value="1">
+        <div id="giftBalanceInfo" style="font-size:0.8rem; margin:5px 0; color:#aaa;">当前拥有: --</div>
+        <div class="modal-buttons">
+            <button class="modal-btn modal-btn-cancel" id="cancelGiftBtn">取消</button>
+            <button class="modal-btn modal-btn-confirm" id="confirmGiftBtn">赠送</button>
         </div>
     </div>
 </div>
@@ -144,7 +250,6 @@
     let currentUserId = null;
     let userStats = null;
 
-    // 小兹固定数据 - 置顶专用
     const AI_SISTER_DATA = {
         id: 'ai_sister_system',
         username: '小兹（bate）',
@@ -152,6 +257,8 @@
         last_seen_at: new Date().toISOString(),
         is_system: true
     };
+
+    let currentGiftTarget = null;
 
     function escapeHtml(str) {
         if (!str) return '';
@@ -198,7 +305,6 @@
         }
     }
 
-    // 纯 DOM 构建函数
     function createAvatarElement(avatarUrl, username, isSystem = false) {
         const div = document.createElement('div');
         div.className = 'friend-avatar';
@@ -222,28 +328,88 @@
         return div;
     }
 
-    // 创建好友/请求条目（增加系统好友支持）
+    function showGiftModal(friendId, friendName) {
+        if(!currentUserId) return;
+        currentGiftTarget = { id: friendId, name: friendName };
+        const balanceInfo = document.getElementById('giftBalanceInfo');
+        if(userStats) {
+            const candy = userStats.candy_crumbles || 0;
+            const rainbow = userStats.rainbow_lollipops || 0;
+            balanceInfo.innerText = `🍬糖果: ${candy}  🌈棒糖: ${rainbow}`;
+        } else {
+            balanceInfo.innerText = `加载中...`;
+        }
+        document.getElementById('giftAmount').value = 1;
+        openModal('giftModal');
+    }
+
+    async function performGift() {
+        if(!currentGiftTarget) return;
+        const type = document.getElementById('giftType').value;
+        const amount = parseInt(document.getElementById('giftAmount').value);
+        if(isNaN(amount) || amount < 1) {
+            showNotification('请输入有效数量', 'error');
+            return;
+        }
+        let currentBalance = 0;
+        if(type === 'candy') currentBalance = userStats?.candy_crumbles || 0;
+        else currentBalance = userStats?.rainbow_lollipops || 0;
+        if(currentBalance < amount) {
+            showNotification(`${type === 'candy' ? '糖果碎' : '彩虹棒糖'}不足`, 'error');
+            return;
+        }
+        let newBalance = currentBalance - amount;
+        let updateData = {};
+        if(type === 'candy') updateData.candy_crumbles = newBalance;
+        else updateData.rainbow_lollipops = newBalance;
+        const { error: updateError } = await supabase
+            .from('user_stats')
+            .update(updateData)
+            .eq('user_id', currentUserId);
+        if(updateError) {
+            showNotification('扣除资产失败', 'error');
+            return;
+        }
+        if(type === 'candy') userStats.candy_crumbles = newBalance;
+        else userStats.rainbow_lollipops = newBalance;
+        const giftItem = { type: type, amount: amount };
+        const mailTitle = `🎁 来自 ${currentUser.email.split('@')[0]} 的礼物`;
+        const mailContent = `您的好友赠送您 ${amount} 个${type === 'candy' ? '糖果碎' : '彩虹棒糖'}，请查收附件。`;
+        const { error: mailError } = await supabase
+            .from('user_mails')
+            .insert({
+                to_user_id: currentGiftTarget.id,
+                title: mailTitle,
+                content: mailContent,
+                claimable_items: [giftItem],
+                created_by_admin: currentUserId
+            });
+        if(mailError) {
+            showNotification('邮件发送失败，但资产已扣除，请联系管理员', 'error');
+            console.error(mailError);
+        } else {
+            showNotification(`成功赠送 ${amount} 个${type === 'candy' ? '糖果碎' : '彩虹棒糖'} 给 ${currentGiftTarget.name}`, 'success');
+        }
+        closeModal('giftModal');
+        currentGiftTarget = null;
+    }
+
     function createFriendItem(friend, type = 'friend') {
         const div = document.createElement('div');
         div.className = 'friend-item';
-        // 如果是小兹，添加特殊样式类
         if (friend.is_system) {
             div.classList.add('system-friend');
         }
-        
         const infoDiv = document.createElement('div');
         infoDiv.className = 'friend-info';
-        
         const avatarDiv = createAvatarElement(friend.avatar_url, friend.username, friend.is_system);
         infoDiv.appendChild(avatarDiv);
-        
         const detailsDiv = document.createElement('div');
         detailsDiv.className = 'friend-details';
         const nameSpan = document.createElement('div');
         nameSpan.className = 'friend-name';
         nameSpan.textContent = friend.username;
         detailsDiv.appendChild(nameSpan);
-        
         if (type === 'friend') {
             const statusSpan = document.createElement('div');
             statusSpan.className = 'online-status';
@@ -256,12 +422,9 @@
         }
         infoDiv.appendChild(detailsDiv);
         div.appendChild(infoDiv);
-        
         const actionsDiv = document.createElement('div');
         actionsDiv.className = 'card-actions';
-        
         if (type === 'friend') {
-            // 聊天按钮 - 系统好友跳转 ai_sister.html（保持不变）
             const chatBtn = document.createElement('button');
             chatBtn.innerHTML = '<i class="fas fa-comment"></i> 聊天';
             chatBtn.style.marginRight = '8px';
@@ -276,8 +439,15 @@
                 });
             }
             actionsDiv.appendChild(chatBtn);
-            
-            // 删除按钮（系统好友不显示删除）
+            if (!friend.is_system) {
+                const giftBtn = document.createElement('button');
+                giftBtn.innerHTML = '<i class="fas fa-gift"></i> 赠送';
+                giftBtn.style.marginRight = '8px';
+                giftBtn.style.background = '#f59e0b';
+                giftBtn.style.color = '#1e293b';
+                giftBtn.addEventListener('click', () => showGiftModal(friend.id, friend.username));
+                actionsDiv.appendChild(giftBtn);
+            }
             if (!friend.is_system) {
                 const delBtn = document.createElement('button');
                 delBtn.innerHTML = '<i class="fas fa-user-minus"></i> 删除';
@@ -327,10 +497,7 @@
                 if(!aOnline && bOnline) return 1;
                 return 0;
             });
-            
-            // 将小兹固定置顶（插入到数组最前面）
             friendsData.unshift(AI_SISTER_DATA);
-            
             const friendsContainer = document.getElementById('friendsList');
             friendsContainer.innerHTML = '';
             if (friendsData.length === 0) {
@@ -474,7 +641,6 @@
         searchTimeout = setTimeout(performSearch, 400);
     });
 
-    // 签到
     async function loadUserStats() {
         const { data, error } = await supabase.from('user_stats').select('*').eq('user_id', currentUserId).single();
         if(error && error.code === 'PGRST116') {
@@ -544,7 +710,6 @@
         showTab('friends');
     }
 
-    // 纯 DOM 构建顶部用户区域
     function buildUserMenu(username, avatarUrl) {
         const container = document.getElementById('userNavSection');
         container.innerHTML = '';
@@ -643,6 +808,9 @@
                 window.location.href = 'index.html';
             };
             document.getElementById('cancelLogoutBtn').onclick = () => closeModal('logoutModal');
+
+            document.getElementById('cancelGiftBtn').onclick = () => closeModal('giftModal');
+            document.getElementById('confirmGiftBtn').onclick = () => performGift();
             
             await loadFriendsData();
             initTabs();
