@@ -45,7 +45,6 @@
                 position: sticky;
                 top: 20px;
             }
-            /* 横屏时隐藏竖屏模态框 */
             .modal:not(.reward-modal):not(.info-modal):not(.confirm-modal) {
                 display: none !important;
             }
@@ -95,9 +94,10 @@
             font-weight: bold;
             font-size: 1.1rem;
         }
-        .mail-date {
+        .mail-meta {
             font-size: 0.7rem;
             color: #94a3b8;
+            margin-top: 4px;
         }
         .mail-actions {
             display: flex;
@@ -156,6 +156,11 @@
             font-weight: bold;
         }
         .detail-date {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+        .detail-from {
             font-size: 0.75rem;
             color: #94a3b8;
             margin-bottom: 12px;
@@ -247,7 +252,7 @@
             overflow-y: auto;
             position: relative;
         }
-        /* 美化关闭按钮（模态框 + 右侧面板） */
+        /* 美化关闭按钮 */
         .close-modal,
         .detail-panel-close {
             width: 36px;
@@ -397,6 +402,7 @@
             <button class="detail-panel-close" id="closePanelBtn">&times;</button>
         </div>
         <div id="panelDate" class="detail-date"></div>
+        <div id="panelFrom" class="detail-from"></div>
         <div id="panelContent" class="detail-content"></div>
         <div id="panelAttach" class="detail-attach"></div>
         <button id="panelClaimBtn" class="detail-claim-btn" style="display:none;">领取附件</button>
@@ -413,6 +419,7 @@
             <button class="close-modal" onclick="closeDetailModal()">&times;</button>
         </div>
         <div id="modalDate" class="modal-date"></div>
+        <div id="modalFrom" class="detail-from"></div>
         <div id="modalContent" class="modal-body"></div>
         <div id="modalAttach" class="modal-attach"></div>
         <button id="modalClaimBtn" class="detail-claim-btn" style="display:none;">领取附件</button>
@@ -458,6 +465,7 @@
     let currentUserId = null;
     let pendingDeleteAction = null;
     let currentSelectedMail = null;
+    let userNamesMap = new Map(); // 缓存用户ID -> 用户名
 
     function escapeHtml(str) {
         if (!str) return '';
@@ -468,7 +476,6 @@
         alert(msg);
     }
 
-    // 检查邮件是否可删除（无未领取附件）
     function isDeletable(mail) {
         const items = mail.claimable_items || [];
         const hasUnclaimed = items.length > 0 && !mail.claimed_at;
@@ -488,7 +495,34 @@
         pendingDeleteAction = null;
     }
 
-    // 删除单封邮件（仅当可删除时调用）
+    // 获取发送者显示文本
+    function getSenderDisplay(mail) {
+        const senderId = mail.created_by_admin;
+        if (!senderId) return '系统';
+        const username = userNamesMap.get(senderId);
+        if (username) return username;
+        return '未知用户';
+    }
+
+    // 批量加载用户名
+    async function loadUserNames(mails) {
+        const ids = [...new Set(mails.filter(m => m.created_by_admin).map(m => m.created_by_admin))];
+        if (ids.length === 0) return;
+        // 过滤掉已经缓存的ID
+        const needFetch = ids.filter(id => !userNamesMap.has(id));
+        if (needFetch.length === 0) return;
+        const query = needFetch.map(id => `id=eq.${id}`).join(',');
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?select=id,username&${query}`, {
+            headers: { 'apikey': SUPABASE_KEY }
+        });
+        if (response.ok) {
+            const users = await response.json();
+            users.forEach(u => userNamesMap.set(u.id, u.username));
+        } else {
+            console.error('加载用户名失败');
+        }
+    }
+
     async function deleteMail(mailId) {
         const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
         if (!sessionStr) throw new Error('未登录');
@@ -503,14 +537,12 @@
         showNotification('邮件已删除', 'success');
     }
 
-    // 全部删除（只删除可删除的邮件：已读 + 无未领取附件）
     async function deleteAllMails() {
         const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
         if (!sessionStr) throw new Error('未登录');
         const session = JSON.parse(sessionStr);
         const token = session.access_token;
         const userId = session.user.id;
-        // 筛选可删除的邮件ID（已读且没有未领取附件）
         const deletableIds = currentMails.filter(mail => {
             const hasUnclaimed = (mail.claimable_items?.length > 0 && !mail.claimed_at);
             return mail.read_at && !hasUnclaimed;
@@ -519,7 +551,6 @@
             showNotification('没有可删除的邮件（只有已读且无未领取附件的邮件才能批量删除）', 'info');
             return;
         }
-        // 逐个删除（或使用 id in 条件，但为了安全用循环）
         for (let id of deletableIds) {
             await fetch(`${SUPABASE_URL}/rest/v1/user_mails?id=eq.${id}&to_user_id=eq.${userId}`, {
                 method: 'DELETE',
@@ -534,13 +565,13 @@
         }
     }
 
-    // 右侧面板渲染
     function renderDetailPanel(mail) {
         const panel = document.getElementById('detailPanel');
         if (!mail) {
             document.getElementById('panelEmpty').style.display = 'block';
             document.getElementById('panelTitle').innerText = '邮件详情';
             document.getElementById('panelDate').innerHTML = '';
+            document.getElementById('panelFrom').innerHTML = '';
             document.getElementById('panelContent').innerHTML = '';
             document.getElementById('panelAttach').innerHTML = '';
             document.getElementById('panelClaimBtn').style.display = 'none';
@@ -550,6 +581,7 @@
         document.getElementById('panelEmpty').style.display = 'none';
         document.getElementById('panelTitle').innerText = mail.title;
         document.getElementById('panelDate').innerHTML = new Date(mail.created_at).toLocaleString();
+        document.getElementById('panelFrom').innerHTML = `来自：${escapeHtml(getSenderDisplay(mail))}`;
         document.getElementById('panelContent').innerText = mail.content || '(无内容)';
         const items = mail.claimable_items || [];
         const attachDiv = document.getElementById('panelAttach');
@@ -602,7 +634,6 @@
         };
     }
 
-    // 标记已读
     async function markAsRead(mailId) {
         const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
         if (!sessionStr) return;
@@ -619,7 +650,6 @@
         });
     }
 
-    // 领取附件核心逻辑
     async function claimMail(mailId) {
         try {
             const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
@@ -700,7 +730,6 @@
         }
     }
 
-    // 加载邮件列表
     async function loadMails() {
         const container = document.getElementById('mailList');
         container.innerHTML = '加载中...';
@@ -718,6 +747,9 @@
             const mails = await response.json();
             currentMails = mails;
 
+            // 批量加载用户名
+            await loadUserNames(mails);
+
             if (mails.length === 0) {
                 container.innerHTML = '<div class="empty-tip">📭 暂无邮件</div>';
                 if (document.getElementById('detailPanel')) renderDetailPanel(null);
@@ -730,12 +762,13 @@
                 const isClaimed = !!mail.claimed_at;
                 const unreadClass = !mail.read_at ? 'unread' : '';
                 const selectedClass = (currentSelectedMail && currentSelectedMail.id === mail.id) ? 'selected' : '';
+                const sender = escapeHtml(getSenderDisplay(mail));
                 html += `
                     <div class="mail-item ${unreadClass} ${selectedClass}" data-id="${mail.id}">
                         <div class="mail-header">
                             <div>
                                 <div class="mail-title">${escapeHtml(mail.title)}</div>
-                                <div class="mail-date">${new Date(mail.created_at).toLocaleString()}</div>
+                                <div class="mail-meta">来自：${sender} · ${new Date(mail.created_at).toLocaleString()}</div>
                             </div>
                             <div class="mail-actions">
                                 ${hasAttach && !isClaimed ? `<button class="claim-btn" data-id="${mail.id}">🎁 领取</button>` : (isClaimed ? '<span class="claimed-badge">✅ 已领取</span>' : '')}
@@ -757,7 +790,7 @@
                 });
             });
 
-            // 绑定删除按钮（单个删除，检查可删除性）
+            // 绑定删除按钮
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     e.stopPropagation();
@@ -780,21 +813,20 @@
                 });
             });
 
-            // 绑定邮件项点击（打开详情）
+            // 绑定邮件项点击
             document.querySelectorAll('.mail-item').forEach(el => {
                 el.addEventListener('click', async (e) => {
                     if (e.target.classList.contains('claim-btn') || e.target.classList.contains('delete-btn')) return;
                     const id = parseInt(el.dataset.id);
                     const mail = currentMails.find(m => m.id === id);
                     if (!mail) return;
-                    // 更新选中样式
                     document.querySelectorAll('.mail-item').forEach(item => item.classList.remove('selected'));
                     el.classList.add('selected');
                     currentSelectedMail = mail;
                     if (!mail.read_at) {
                         await markAsRead(mail.id);
                         mail.read_at = new Date().toISOString();
-                        await loadMails(); // 刷新未读标记
+                        await loadMails();
                     }
                     if (window.innerWidth >= 768 && window.matchMedia("(orientation: landscape)").matches) {
                         renderDetailPanel(mail);
@@ -808,10 +840,10 @@
         }
     }
 
-    // 竖屏模态框打开详情
     function openDetailModal(mail) {
         document.getElementById('modalTitle').innerText = mail.title;
         document.getElementById('modalDate').innerText = new Date(mail.created_at).toLocaleString();
+        document.getElementById('modalFrom').innerHTML = `来自：${escapeHtml(getSenderDisplay(mail))}`;
         document.getElementById('modalContent').innerText = mail.content || '(无内容)';
         const attachDiv = document.getElementById('modalAttach');
         const items = mail.claimable_items || [];
@@ -869,7 +901,6 @@
         document.getElementById('detailModal').classList.remove('show');
     }
 
-    // 奖励弹窗
     function showRewardModal(imgUrl, amount, itemType) {
         const modal = document.getElementById('rewardModal');
         const img = document.getElementById('rewardImage');
@@ -914,7 +945,6 @@
         document.getElementById('rewardModal').classList.remove('show');
     }
 
-    // 事件绑定
     document.getElementById('confirmCancelBtn').onclick = closeConfirmModal;
     document.getElementById('confirmOkBtn').onclick = () => {
         if (pendingDeleteAction) pendingDeleteAction();
