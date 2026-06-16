@@ -363,28 +363,8 @@
             color: #facc15;
         }
         .reward-icon-container {
-            position: relative;
-            display: inline-block;
+            font-size: 4rem;
             margin: 10px auto;
-            cursor: pointer;
-        }
-        .reward-image {
-            width: 100px;
-            height: 100px;
-            object-fit: contain;
-            display: block;
-        }
-        .reward-count-badge {
-            position: absolute;
-            bottom: -8px;
-            right: -8px;
-            background: #f59e0b;
-            color: #1e293b;
-            font-weight: bold;
-            font-size: 0.9rem;
-            padding: 2px 8px;
-            border-radius: 40px;
-            border: 2px solid #1e293b;
         }
         .reward-confirm {
             background: #f59e0b;
@@ -510,10 +490,8 @@
 <div id="rewardModal" class="modal reward-modal">
     <div class="modal-content">
         <div class="reward-title">🎉 获得奖励</div>
-        <div class="reward-icon-container" id="rewardIconContainer">
-            <img id="rewardImage" class="reward-image" src="" alt="奖励图标">
-            <span id="rewardCountBadge" class="reward-count-badge"></span>
-        </div>
+        <div class="reward-icon-container" id="rewardIconDisplay">🎁</div>
+        <div id="rewardTextDisplay" style="margin: 12px 0; font-size: 1.1rem;"></div>
         <button class="reward-confirm" id="rewardConfirmBtn">确定</button>
     </div>
 </div>
@@ -541,19 +519,18 @@
     const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
-    let currentMails = [];          // 全量邮件
-    let filteredMails = [];         // 过滤/搜索后的邮件
+    let currentMails = [];
+    let filteredMails = [];
     let currentUserId = null;
     let pendingDeleteAction = null;
     let currentSelectedMail = null;
-    let userNamesMap = new Map();    // 管理员ID -> 用户名快照（实际我们会优先使用 sender_name）
+    let userNamesMap = new Map();
     let currentUserStats = { candy_crumbles: 0, rainbow_lollipops: 0 };
     let currentPage = 1;
     const PAGE_SIZE = 15;
     let searchKeyword = '';
     let loadingError = false;
 
-    // 辅助函数
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
@@ -568,7 +545,6 @@
         return new Date(isoString).toLocaleString();
     }
 
-    // 发件人显示（优先使用 sender_name 快照，否则从缓存获取用户名）
     function getSenderDisplay(mail) {
         if (mail.sender_name) return mail.sender_name;
         const senderId = mail.created_by_admin;
@@ -577,14 +553,12 @@
         return username || '未知用户';
     }
 
-    // 判断邮件是否可删除（无未领取的附件）
     function isDeletable(mail) {
         const items = mail.claimable_items || [];
         const hasUnclaimed = items.length > 0 && !mail.claimed_at;
         return !hasUnclaimed;
     }
 
-    // 未读角标更新
     function updateUnreadBadge() {
         const unreadCount = currentMails.filter(m => !m.read_at).length;
         const badge = document.getElementById('unreadBadge');
@@ -594,11 +568,9 @@
         } else {
             badge.style.display = 'none';
         }
-        // 修改页面标题显示未读数
         document.title = unreadCount > 0 ? `(${unreadCount}) 我的邮箱 - 六哥荣耀` : '我的邮箱 - 六哥荣耀';
     }
 
-    // 过滤邮件（基于搜索关键词）
     function applyFilter() {
         if (!searchKeyword.trim()) {
             filteredMails = [...currentMails];
@@ -614,7 +586,6 @@
         renderPagination();
     }
 
-    // 分页渲染列表
     function renderMailList() {
         const container = document.getElementById('mailList');
         if (!container) return;
@@ -648,7 +619,6 @@
         }
         container.innerHTML = html;
 
-        // 绑定领取按钮
         document.querySelectorAll('.claim-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
@@ -656,7 +626,6 @@
                 await claimMail(mailId);
             });
         });
-        // 绑定删除按钮
         document.querySelectorAll('.delete-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
@@ -677,14 +646,12 @@
                 });
             });
         });
-        // 绑定邮件项点击
         document.querySelectorAll('.mail-item').forEach(el => {
             el.addEventListener('click', async (e) => {
                 if (e.target.classList.contains('claim-btn') || e.target.classList.contains('delete-btn')) return;
                 const id = parseInt(el.dataset.id);
                 const mail = currentMails.find(m => m.id === id);
                 if (!mail) return;
-                // 更新选中样式
                 document.querySelectorAll('.mail-item').forEach(item => item.classList.remove('selected'));
                 el.classList.add('selected');
                 currentSelectedMail = mail;
@@ -692,7 +659,7 @@
                     await markAsRead(mail.id);
                     mail.read_at = new Date().toISOString();
                     updateUnreadBadge();
-                    renderMailList(); // 刷新未读样式
+                    renderMailList();
                 }
                 if (window.innerWidth >= 768 && window.matchMedia("(orientation: landscape)").matches) {
                     renderDetailPanel(mail);
@@ -711,9 +678,7 @@
             return;
         }
         let html = '';
-        // 上一页
         html += `<button class="page-btn" data-page="${currentPage-1}" ${currentPage===1 ? 'disabled' : ''}>‹</button>`;
-        // 页码
         for (let i = 1; i <= totalPages; i++) {
             html += `<button class="page-btn ${i===currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
         }
@@ -759,9 +724,8 @@
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) throw new Error('删除失败');
-        // 本地删除
         currentMails = currentMails.filter(m => m.id !== mailId);
-        applyFilter(); // 重新过滤并刷新
+        applyFilter();
         if (currentSelectedMail && currentSelectedMail.id === mailId) {
             renderDetailPanel(null);
             currentSelectedMail = null;
@@ -770,7 +734,6 @@
         showNotification('邮件已删除', 'success');
     }
 
-    // 批量删除所有可删除邮件（一次性）
     async function deleteAllMails() {
         const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
         if (!sessionStr) throw new Error('未登录');
@@ -785,7 +748,6 @@
             showNotification('没有可删除的邮件（只有已读且无未领取附件的邮件才能批量删除）', 'info');
             return;
         }
-        // 使用 in 条件一次性删除
         const idsParam = deletableIds.join(',');
         const response = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?id=in.(${idsParam})&to_user_id=eq.${userId}`, {
             method: 'DELETE',
@@ -802,7 +764,6 @@
         showNotification(`已删除 ${deletableIds.length} 封邮件`, 'success');
     }
 
-    // 发放称号
     async function grantTitle(userId, titleId, token) {
         const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/user_titles?user_id=eq.${userId}&title_id=eq.${titleId}`, {
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
@@ -817,7 +778,6 @@
         }
     }
 
-    // 发放头像框
     async function grantFrame(userId, frameId, token) {
         const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/user_frames?user_id=eq.${userId}&frame_id=eq.${frameId}`, {
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
@@ -832,7 +792,6 @@
         }
     }
 
-    // 领取附件（完整版，支持称号和头像框）
     async function claimMail(mailId) {
         const claimBtn = document.querySelector(`.claim-btn[data-id="${mailId}"]`);
         const panelClaimBtn = document.getElementById('panelClaimBtn');
@@ -841,8 +800,8 @@
             if (claimBtn) claimBtn.disabled = loading;
             if (panelClaimBtn) panelClaimBtn.disabled = loading;
             if (modalClaimBtn) modalClaimBtn.disabled = loading;
-            if (panelClaimBtn) panelClaimBtn.innerText = loading ? '领取中...' : (mail ? (mail.claimed_at ? '已领取' : '领取附件') : '领取附件');
-            if (modalClaimBtn) modalClaimBtn.innerText = loading ? '领取中...' : (mail ? (mail.claimed_at ? '已领取' : '领取附件') : '领取附件');
+            if (panelClaimBtn) panelClaimBtn.innerText = loading ? '领取中...' : (mail => mail && mail.claimed_at ? '已领取' : '领取附件');
+            if (modalClaimBtn) modalClaimBtn.innerText = loading ? '领取中...' : (mail => mail && mail.claimed_at ? '已领取' : '领取附件');
         };
         try {
             const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
@@ -851,7 +810,6 @@
             const token = session.access_token;
             const userId = session.user.id;
 
-            // 获取邮件详情
             const res = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?id=eq.${mailId}&to_user_id=eq.${userId}&select=*`, {
                 headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
             });
@@ -863,7 +821,6 @@
             if (items.length === 0) throw new Error('该邮件没有附件');
 
             setButtonsLoading(true);
-            // 先更新数据库标记已领取（乐观锁）
             const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?id=eq.${mailId}&claimed_at=is.null`, {
                 method: 'PATCH',
                 headers: {
@@ -877,18 +834,33 @@
             if (!patchRes.ok) throw new Error('领取失败，可能已被抢先领取');
 
             let candyDelta = 0, rainbowDelta = 0;
-            // 处理物品
+            let rewardIcon = '🎁';
+            let rewardText = '';
+
             for (const item of items) {
                 if (item.type === 'candy') candyDelta += item.amount;
                 else if (item.type === 'rainbow') rainbowDelta += item.amount;
                 else if (item.type === 'title') {
                     await grantTitle(userId, item.title_id, token);
+                    rewardIcon = '🏅';
+                    rewardText += `称号 ID:${item.title_id} `;
                 } else if (item.type === 'frame') {
                     await grantFrame(userId, item.frame_id, token);
+                    rewardIcon = '🖼️';
+                    rewardText += `头像框:${item.frame_id} `;
                 }
             }
 
-            // 更新用户货币
+            if (candyDelta > 0) {
+                rewardIcon = '🍬';
+                rewardText = `糖果 x${candyDelta}`;
+            } else if (rainbowDelta > 0) {
+                rewardIcon = '🌈';
+                rewardText = `彩虹棒糖 x${rainbowDelta}`;
+            } else if (!rewardText) {
+                rewardText = '物品';
+            }
+
             if (candyDelta > 0 || rainbowDelta > 0) {
                 const newCandy = (currentUserStats.candy_crumbles || 0) + candyDelta;
                 const newRainbow = (currentUserStats.rainbow_lollipops || 0) + rainbowDelta;
@@ -905,12 +877,11 @@
                 currentUserStats.rainbow_lollipops = newRainbow;
             }
 
-            // 更新本地邮件状态
             const targetMail = currentMails.find(m => m.id === mailId);
             if (targetMail) {
                 targetMail.claimed_at = new Date().toISOString();
             }
-            applyFilter(); // 刷新列表和详情
+            applyFilter();
             if (currentSelectedMail && currentSelectedMail.id === mailId) {
                 currentSelectedMail.claimed_at = targetMail.claimed_at;
                 renderDetailPanel(currentSelectedMail);
@@ -918,86 +889,50 @@
             setButtonsLoading(false);
 
             // 显示奖励弹窗
-            let rewardImg = '', rewardAmount = 0, itemType = '';
-            if (candyDelta > 0) {
-                rewardImg = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp';
-                rewardAmount = candyDelta;
-                itemType = 'candy';
-            } else if (rainbowDelta > 0) {
-                rewardImg = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp';
-                rewardAmount = rainbowDelta;
-                itemType = 'rainbow';
-            } else {
-                rewardImg = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp';
-                rewardAmount = 0;
-                itemType = 'candy';
-            }
-            showRewardModal(rewardImg, rewardAmount, itemType);
+            showRewardModal(rewardIcon, rewardText);
         } catch (err) {
             setButtonsLoading(false);
             alert('领取失败：' + err.message);
         }
     }
 
-    async function fetchUserStats(userId, token) {
-        const statsRes = await fetch(`${SUPABASE_URL}/rest/v1/user_stats?user_id=eq.${userId}&select=candy_crumbles,rainbow_lollipops`, {
-            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
-        });
-        const statsArr = await statsRes.json();
-        if (statsArr && statsArr[0]) {
-            currentUserStats.candy_crumbles = statsArr[0].candy_crumbles || 0;
-            currentUserStats.rainbow_lollipops = statsArr[0].rainbow_lollipops || 0;
-        }
+    function showRewardModal(icon, text) {
+        const modal = document.getElementById('rewardModal');
+        const iconDiv = document.getElementById('rewardIconDisplay');
+        const textDiv = document.getElementById('rewardTextDisplay');
+        iconDiv.innerHTML = icon;
+        textDiv.innerText = text;
+        modal.classList.add('show');
     }
 
-    // 加载邮件（带重试）
-    async function loadMailsWithRetry(retryCount = 2) {
-        const container = document.getElementById('mailList');
-        container.innerHTML = '加载中...';
-        loadingError = false;
-        try {
-            const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
-            if (!sessionStr) throw new Error('未登录，请先登录');
-            const session = JSON.parse(sessionStr);
-            const token = session.access_token;
-            currentUserId = session.user.id;
+    function closeRewardModal() {
+        const modal = document.getElementById('rewardModal');
+        modal.classList.remove('show');
+    }
 
-            await fetchUserStats(currentUserId, token);
+    function showItemInfoModal(icon, name, desc) {
+        const modal = document.getElementById('itemInfoModal');
+        document.getElementById('infoIcon').innerText = icon;
+        document.getElementById('infoName').innerText = name;
+        document.getElementById('infoDesc').innerText = desc;
+        modal.classList.add('show');
+    }
 
-            const response = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?select=*&to_user_id=eq.${currentUserId}&order=created_at.desc`, {
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
-            });
-            if (!response.ok) throw new Error(await response.text());
-            const mails = await response.json();
-            currentMails = mails;
+    function closeItemInfoModal() {
+        document.getElementById('itemInfoModal').classList.remove('show');
+    }
 
-            // 加载发件人名称（如果 sender_name 不存在，才从用户表查，这里简单从邮件中提取）
-            const adminIds = [...new Set(mails.filter(m => m.created_by_admin && !m.sender_name).map(m => m.created_by_admin))];
-            if (adminIds.length) {
-                const query = adminIds.map(id => `id=eq.${id}`).join(',');
-                const userRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?select=id,username&${query}`, {
-                    headers: { 'apikey': SUPABASE_KEY }
-                });
-                if (userRes.ok) {
-                    const users = await userRes.json();
-                    users.forEach(u => userNamesMap.set(u.id, u.username));
-                }
-            }
-            // 为没有 sender_name 的邮件补充临时显示（不写入数据库）
-            for (let mail of currentMails) {
-                if (!mail.sender_name && mail.created_by_admin) {
-                    mail.sender_name = userNamesMap.get(mail.created_by_admin) || '管理员';
-                } else if (!mail.sender_name) {
-                    mail.sender_name = '系统';
-                }
-            }
-            applyFilter();
-            updateUnreadBadge();
-        } catch (err) {
-            console.error(err);
-            loadingError = true;
-            container.innerHTML = `<div class="error-tip">❌ 加载失败：${err.message}<br><button class="retry-btn" onclick="location.reload()">重试</button></div>`;
-        }
+    function showConfirm(message, onConfirm) {
+        const modal = document.getElementById('confirmModal');
+        document.getElementById('confirmMessage').innerText = message;
+        pendingDeleteAction = onConfirm;
+        modal.classList.add('show');
+    }
+
+    function closeConfirmModal() {
+        const modal = document.getElementById('confirmModal');
+        modal.classList.remove('show');
+        pendingDeleteAction = null;
     }
 
     function renderDetailPanel(mail) {
@@ -1017,7 +952,6 @@
         document.getElementById('panelTitle').innerText = mail.title;
         document.getElementById('panelDate').innerHTML = formatDate(mail.created_at);
         document.getElementById('panelFrom').innerHTML = `来自：${escapeHtml(getSenderDisplay(mail))}`;
-        // 支持换行
         document.getElementById('panelContent').innerHTML = escapeHtml(mail.content || '(无内容)').replace(/\n/g, '<br>');
         const items = mail.claimable_items || [];
         const attachDiv = document.getElementById('panelAttach');
@@ -1125,72 +1059,64 @@
         document.getElementById('detailModal').classList.remove('show');
     }
 
-    let autoCloseTimer = null;
-    function showRewardModal(imgUrl, amount, itemType) {
-        const modal = document.getElementById('rewardModal');
-        const img = document.getElementById('rewardImage');
-        const badge = document.getElementById('rewardCountBadge');
-        const container = document.getElementById('rewardIconContainer');
-        img.src = imgUrl;
-        if (amount > 0) {
-            badge.textContent = `× ${amount}`;
-            badge.style.display = 'inline-block';
-        } else {
-            badge.style.display = 'none';
-        }
-        const newContainer = container.cloneNode(true);
-        container.parentNode.replaceChild(newContainer, container);
-        newContainer.id = 'rewardIconContainer';
-        document.getElementById('rewardModal').querySelector('.modal-content').insertBefore(newContainer, document.querySelector('#rewardModal .reward-confirm'));
-        const newImg = newContainer.querySelector('#rewardImage');
-        const newBadge = newContainer.querySelector('#rewardCountBadge');
-        newImg.id = 'rewardImage';
-        newBadge.id = 'rewardCountBadge';
-        newContainer.addEventListener('click', () => {
-            if (itemType === 'candy') showItemInfoModal('🍬', '糖果碎', '可用于购买道具、兑换物品。');
-            else if (itemType === 'rainbow') showItemInfoModal('🌈', '彩虹棒糖', '稀有货币，高级商品兑换。');
-            else showItemInfoModal('🎁', '神秘物品', '未知奖励。');
+    async function fetchUserStats(userId, token) {
+        const statsRes = await fetch(`${SUPABASE_URL}/rest/v1/user_stats?user_id=eq.${userId}&select=candy_crumbles,rainbow_lollipops`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
         });
-        modal.classList.add('show');
-        // 自动关闭（1.5秒后）
-        if (autoCloseTimer) clearTimeout(autoCloseTimer);
-        autoCloseTimer = setTimeout(() => {
-            closeRewardModal();
-        }, 1500);
+        const statsArr = await statsRes.json();
+        if (statsArr && statsArr[0]) {
+            currentUserStats.candy_crumbles = statsArr[0].candy_crumbles || 0;
+            currentUserStats.rainbow_lollipops = statsArr[0].rainbow_lollipops || 0;
+        }
     }
 
-    function closeRewardModal() {
-        const modal = document.getElementById('rewardModal');
-        modal.classList.remove('show');
-        if (autoCloseTimer) clearTimeout(autoCloseTimer);
+    async function loadMailsWithRetry(retryCount = 2) {
+        const container = document.getElementById('mailList');
+        container.innerHTML = '加载中...';
+        loadingError = false;
+        try {
+            const sessionStr = localStorage.getItem('sb-ysmijycsyzpjoieaknmb-auth-token');
+            if (!sessionStr) throw new Error('未登录，请先登录');
+            const session = JSON.parse(sessionStr);
+            const token = session.access_token;
+            currentUserId = session.user.id;
+
+            await fetchUserStats(currentUserId, token);
+
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/user_mails?select=*&to_user_id=eq.${currentUserId}&order=created_at.desc`, {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error(await response.text());
+            const mails = await response.json();
+            currentMails = mails;
+
+            const adminIds = [...new Set(mails.filter(m => m.created_by_admin && !m.sender_name).map(m => m.created_by_admin))];
+            if (adminIds.length) {
+                const query = adminIds.map(id => `id=eq.${id}`).join(',');
+                const userRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?select=id,username&${query}`, {
+                    headers: { 'apikey': SUPABASE_KEY }
+                });
+                if (userRes.ok) {
+                    const users = await userRes.json();
+                    users.forEach(u => userNamesMap.set(u.id, u.username));
+                }
+            }
+            for (let mail of currentMails) {
+                if (!mail.sender_name && mail.created_by_admin) {
+                    mail.sender_name = userNamesMap.get(mail.created_by_admin) || '管理员';
+                } else if (!mail.sender_name) {
+                    mail.sender_name = '系统';
+                }
+            }
+            applyFilter();
+            updateUnreadBadge();
+        } catch (err) {
+            console.error(err);
+            loadingError = true;
+            container.innerHTML = `<div class="error-tip">❌ 加载失败：${err.message}<br><button class="retry-btn" onclick="location.reload()">重试</button></div>`;
+        }
     }
 
-    function showItemInfoModal(icon, name, desc) {
-        const modal = document.getElementById('itemInfoModal');
-        document.getElementById('infoIcon').innerText = icon;
-        document.getElementById('infoName').innerText = name;
-        document.getElementById('infoDesc').innerText = desc;
-        modal.classList.add('show');
-    }
-
-    function closeItemInfoModal() {
-        document.getElementById('itemInfoModal').classList.remove('show');
-    }
-
-    function showConfirm(message, onConfirm) {
-        const modal = document.getElementById('confirmModal');
-        document.getElementById('confirmMessage').innerText = message;
-        pendingDeleteAction = onConfirm;
-        modal.classList.add('show');
-    }
-
-    function closeConfirmModal() {
-        const modal = document.getElementById('confirmModal');
-        modal.classList.remove('show');
-        pendingDeleteAction = null;
-    }
-
-    // 事件绑定
     document.getElementById('confirmCancelBtn').onclick = closeConfirmModal;
     document.getElementById('confirmOkBtn').onclick = () => {
         if (pendingDeleteAction) pendingDeleteAction();
@@ -1216,12 +1142,9 @@
             renderDetailPanel(currentSelectedMail);
         }
     });
-    // 奖励弹窗的手动关闭按钮（覆盖自动关闭）
     document.getElementById('rewardConfirmBtn').onclick = () => {
         closeRewardModal();
-        if (autoCloseTimer) clearTimeout(autoCloseTimer);
     };
-
     loadMailsWithRetry();
 </script>
 </body>
