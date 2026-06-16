@@ -5,14 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>六哥荣耀 - 音乐播放器</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: linear-gradient(135deg, #1e3a2f 0%, #0f2a1f 100%);
-            font-family: "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, sans-serif;
+            font-family: system-ui, -apple-system, 'Microsoft YaHei', sans-serif;
             min-height: 100vh;
             padding: 20px;
             display: flex;
@@ -27,305 +23,71 @@
             border-radius: 48px;
             overflow: hidden;
             box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-            transition: all 0.3s;
         }
-        .cover-area {
-            display: flex;
-            justify-content: center;
-            padding: 30px 24px 20px;
-        }
-        .cover-img {
-            width: 70%;
-            max-width: 240px;
-            border-radius: 24px;
-            box-shadow: 0 12px 24px rgba(0,0,0,0.3);
-            transition: transform 0.2s;
-        }
-        .cover-img:hover {
-            transform: scale(1.02);
-        }
-        .song-info {
-            text-align: center;
-            padding: 0 20px 20px;
-        }
-        .song-title {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: white;
-            margin-bottom: 6px;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-        }
-        .song-artist {
-            font-size: 1rem;
-            color: #b0c4b0;
-        }
-        .progress-area {
-            padding: 0 24px 12px;
-        }
-        .time-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            color: #a0b8a0;
-            margin-bottom: 6px;
-        }
-        .progress-bar {
-            background: #3d6a58;
-            height: 6px;
-            border-radius: 8px;
-            cursor: pointer;
-            position: relative;
-        }
-        .progress-fill {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #81c784, #a8e6b0);
-            border-radius: 8px;
-            position: relative;
-        }
-        .progress-handle {
-            position: absolute;
-            right: -6px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 12px;
-            height: 12px;
-            background: white;
-            border-radius: 50%;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-        .progress-bar:hover .progress-handle {
-            opacity: 1;
-        }
-        .controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 28px;
-            padding: 16px 24px;
-        }
-        .ctrl-btn {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            font-size: 1.8rem;
-            color: white;
-            cursor: pointer;
-            transition: all 0.2s;
-            backdrop-filter: blur(4px);
-        }
-        .ctrl-btn:active {
-            transform: scale(0.96);
-        }
-        .play-btn {
-            background: #81c784;
-            color: #1e3a2f;
-            width: 72px;
-            height: 72px;
-            font-size: 2rem;
-            box-shadow: 0 8px 18px rgba(129,199,132,0.3);
-        }
-        .play-btn:hover {
-            background: #a3d9a8;
-            transform: scale(1.02);
-        }
-        .extra-bar {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 24px 24px;
-            gap: 12px;
-            flex-wrap: wrap;
-            border-top: 1px solid rgba(129,199,132,0.2);
-        }
-        .volume-wrap, .loop-wrap, .list-wrap {
-            background: rgba(0,0,0,0.2);
-            padding: 6px 14px;
-            border-radius: 40px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        button {
-            background: none;
-            border: none;
-            color: #c0e0c0;
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        button:hover {
-            color: #81c784;
-        }
-        .volume-slider {
-            width: 80px;
-            height: 4px;
-            -webkit-appearance: none;
-            background: #3d6a58;
-            border-radius: 4px;
-        }
-        .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 14px;
-            height: 14px;
-            background: #81c784;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-        .loop-btn.active {
-            color: #81c784;
-        }
-        .song-list-panel {
-            max-height: 0;
-            overflow-y: auto;
-            transition: max-height 0.4s ease;
-            background: rgba(0,0,0,0.3);
-            border-top: 1px solid transparent;
-        }
-        .song-list-panel.show {
-            max-height: 320px;
-            border-top-color: rgba(129,199,132,0.3);
-        }
-        .song-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 24px;
-            color: #e0f0e0;
-            border-bottom: 1px solid rgba(129,199,132,0.1);
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .song-item.active {
-            background: rgba(129,199,132,0.2);
-            color: #81c784;
-            border-left: 4px solid #81c784;
-        }
-        .song-item:hover {
-            background: rgba(129,199,132,0.1);
-        }
-        .search-area {
-            padding: 16px 24px;
-            display: flex;
-            gap: 8px;
-            border-top: 1px solid rgba(129,199,132,0.2);
-        }
-        .search-input {
-            flex: 1;
-            padding: 10px 16px;
-            border-radius: 40px;
-            border: none;
-            background: rgba(255,255,255,0.1);
-            color: white;
-            font-size: 0.9rem;
-            outline: none;
-        }
-        .search-input::placeholder {
-            color: #a0b8a0;
-        }
-        .search-btn {
-            background: #81c784;
-            color: #1e3a2f;
-            padding: 0 20px;
-            border-radius: 40px;
-            font-weight: bold;
-            font-size: 0.9rem;
-        }
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: #81c784;
-            padding: 8px 16px;
-            border-radius: 40px;
-            font-size: 12px;
-            z-index: 1000;
-            display: none;
-            white-space: nowrap;
-        }
+        .cover-area { display: flex; justify-content: center; padding: 30px 24px 20px; }
+        .cover-img { width: 70%; max-width: 240px; border-radius: 24px; box-shadow: 0 12px 24px rgba(0,0,0,0.3); transition: transform 0.2s; }
+        .cover-img:hover { transform: scale(1.02); }
+        .song-info { text-align: center; padding: 0 20px 20px; }
+        .song-title { font-size: 1.8rem; font-weight: 700; color: white; margin-bottom: 6px; }
+        .song-artist { font-size: 1rem; color: #b0c4b0; }
+        .progress-area { padding: 0 24px 12px; }
+        .time-row { display: flex; justify-content: space-between; font-size: 0.75rem; color: #a0b8a0; margin-bottom: 6px; }
+        .progress-bar { background: #3d6a58; height: 6px; border-radius: 8px; cursor: pointer; position: relative; }
+        .progress-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #81c784, #a8e6b0); border-radius: 8px; }
+        .controls { display: flex; justify-content: center; gap: 28px; padding: 16px 24px; }
+        .ctrl-btn { background: rgba(255,255,255,0.1); border: none; width: 56px; height: 56px; border-radius: 50%; font-size: 1.8rem; color: white; cursor: pointer; transition: 0.2s; }
+        .play-btn { background: #81c784; color: #1e3a2f; width: 72px; height: 72px; font-size: 2rem; box-shadow: 0 8px 18px rgba(129,199,132,0.3); }
+        .extra-bar { display: flex; justify-content: space-between; padding: 12px 24px 24px; gap: 12px; flex-wrap: wrap; border-top: 1px solid rgba(129,199,132,0.2); }
+        .volume-wrap, .loop-wrap, .list-wrap { background: rgba(0,0,0,0.2); padding: 6px 14px; border-radius: 40px; display: flex; align-items: center; gap: 8px; }
+        button { background: none; border: none; color: #c0e0c0; font-size: 1.2rem; cursor: pointer; }
+        .volume-slider { width: 80px; height: 4px; -webkit-appearance: none; background: #3d6a58; border-radius: 4px; }
+        .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: #81c784; border-radius: 50%; cursor: pointer; }
+        .loop-btn.active { color: #81c784; }
+        .song-list-panel { max-height: 0; overflow-y: auto; transition: max-height 0.4s; background: rgba(0,0,0,0.3); border-top: 1px solid transparent; }
+        .song-list-panel.show { max-height: 320px; border-top-color: rgba(129,199,132,0.3); }
+        .song-item { display: flex; justify-content: space-between; padding: 12px 24px; color: #e0f0e0; border-bottom: 1px solid rgba(129,199,132,0.1); cursor: pointer; }
+        .song-item.active { background: rgba(129,199,132,0.2); color: #81c784; border-left: 4px solid #81c784; }
+        .search-area { padding: 16px 24px; display: flex; gap: 8px; border-top: 1px solid rgba(129,199,132,0.2); }
+        .search-input { flex: 1; padding: 10px 16px; border-radius: 40px; border: none; background: rgba(255,255,255,0.1); color: white; font-size: 0.9rem; }
+        .search-btn { background: #81c784; color: #1e3a2f; padding: 0 20px; border-radius: 40px; font-weight: bold; }
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #81c784; padding: 8px 16px; border-radius: 40px; font-size: 12px; z-index: 1000; display: none; }
         @media (max-width: 500px) {
             .song-title { font-size: 1.4rem; }
             .ctrl-btn { width: 48px; height: 48px; font-size: 1.4rem; }
             .play-btn { width: 64px; height: 64px; font-size: 1.8rem; }
             .extra-bar { flex-direction: column; align-items: stretch; }
-            .volume-wrap, .loop-wrap, .list-wrap { justify-content: space-between; }
             .cover-img { width: 80%; }
-            .toast { white-space: normal; max-width: 80%; text-align: center; }
-        }
-        @media (hover: none) and (pointer: coarse) {
-            .progress-handle { opacity: 1; width: 16px; height: 16px; }
-            .progress-bar { height: 8px; }
-            .ctrl-btn, .play-btn, button { min-height: 44px; }
         }
     </style>
 </head>
 <body>
 <div class="player">
-    <div class="cover-area">
-        <img class="cover-img" id="cover" src="http://p2.music.126.net/BKJrPO1FlbXcy-98AYXOzg==/109951172268004943.jpg?param=300x300" alt="封面">
-    </div>
-    <div class="song-info">
-        <div class="song-title" id="title">昔涟</div>
-        <div class="song-artist" id="artist">张韶涵、HOYO-MiX</div>
-    </div>
-    <div class="progress-area">
-        <div class="time-row">
-            <span id="currentTime">00:00</span>
-            <span id="totalTime">03:06</span>
-        </div>
-        <div class="progress-bar" id="progressBar">
-            <div class="progress-fill" id="progressFill"></div>
-            <div class="progress-handle" id="progressHandle"></div>
-        </div>
-    </div>
-    <div class="controls">
-        <button class="ctrl-btn" id="prevBtn">❮</button>
-        <button class="ctrl-btn play-btn" id="playBtn">▶</button>
-        <button class="ctrl-btn" id="nextBtn">❯</button>
-    </div>
-    <div class="extra-bar">
-        <div class="volume-wrap">
-            <button id="volumeBtn">🔊</button>
-            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.01" value="0.7">
-        </div>
-        <div class="loop-wrap">
-            <button id="loopBtn">🔁</button>
-            <span id="loopText">顺序</span>
-        </div>
-        <div class="list-wrap">
-            <button id="listToggleBtn">📋 歌单</button>
-        </div>
-    </div>
-    <div class="search-area">
-        <input type="text" class="search-input" id="searchKeyword" placeholder="搜索歌曲...">
-        <button class="search-btn" id="searchBtn">搜索</button>
-    </div>
-    <div class="song-list-panel" id="songListPanel">
-        <div id="songListContainer"></div>
-    </div>
+    <div class="cover-area"><img class="cover-img" id="cover" src="https://p2.music.126.net/BKJrPO1FlbXcy-98AYXOzg==/109951172268004943.jpg?param=300x300"></div>
+    <div class="song-info"><div class="song-title" id="title">昔涟</div><div class="song-artist" id="artist">张韶涵、HOYO-MiX</div></div>
+    <div class="progress-area"><div class="time-row"><span id="currentTime">00:00</span><span id="totalTime">03:06</span></div><div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div></div>
+    <div class="controls"><button class="ctrl-btn" id="prevBtn">❮</button><button class="ctrl-btn play-btn" id="playBtn">▶</button><button class="ctrl-btn" id="nextBtn">❯</button></div>
+    <div class="extra-bar"><div class="volume-wrap"><button id="volumeBtn">🔊</button><input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.01" value="0.7"></div><div class="loop-wrap"><button id="loopBtn">🔁</button><span id="loopText">顺序</span></div><div class="list-wrap"><button id="listToggleBtn">📋 歌单</button></div></div>
+    <div class="search-area"><input type="text" class="search-input" id="searchKeyword" placeholder="搜索歌曲..."><button class="search-btn" id="searchBtn">搜索</button></div>
+    <div class="song-list-panel" id="songListPanel"><div id="songListContainer"></div></div>
 </div>
-<div class="toast" id="toast">提示</div>
-
+<div class="toast" id="toast"></div>
 <audio id="audio" preload="metadata"></audio>
 
 <script>
-    // ---------- 公共 API 配置 (使用 injahow 的 meting 服务，无需部署) ----------
-    const API_BASE = "https://api.injahow.cn/meting/";
-    // 默认歌单 ID (网易云热歌榜)
+    // 使用稳定的 HTTPS API (liyefeng.top 提供网易云代理)
+    const GET_URL_API = (id) => `https://api.liyefeng.top/song/url?id=${id}`;
+    const SEARCH_API = (keyword) => `https://api.liyefeng.top/search?keywords=${encodeURIComponent(keyword)}`;
+    const PLAYLIST_API = (id) => `https://api.liyefeng.top/playlist/track/all?id=${id}`;
     const DEFAULT_PLAYLIST_ID = "3778678";
 
-    let currentSongList = [];      // 当前歌曲列表 [{id, title, artist, duration, pic}]
+    let currentSongList = [];
     let currentIndex = 0;
     let isPlaying = false;
-    let loopMode = 0;              // 0顺序 1列表循环 2单曲循环
+    let loopMode = 0; // 0顺序 1列表循环 2单曲循环
     let volume = 0.7;
     let progressInterval = null;
     let isDragging = false;
 
-    // DOM 元素
     const audio = document.getElementById('audio');
     const coverImg = document.getElementById('cover');
     const titleSpan = document.getElementById('title');
@@ -352,7 +114,7 @@
         toast.textContent = msg;
         toast.style.background = isError ? '#f87171' : 'rgba(0,0,0,0.8)';
         toast.style.display = 'block';
-        setTimeout(() => { toast.style.display = 'none'; }, 2000);
+        setTimeout(() => toast.style.display = 'none', 2000);
     }
 
     function formatTime(sec) {
@@ -362,42 +124,36 @@
         return `${mins.toString().padStart(2,'0')}:${remain.toString().padStart(2,'0')}`;
     }
 
-    // 更新界面显示
     function updateUI() {
         const song = currentSongList[currentIndex];
         if (!song) return;
         titleSpan.innerText = song.title;
         artistSpan.innerText = song.artist;
         totalTimeSpan.innerText = song.duration;
-        coverImg.src = song.pic || 'http://p2.music.126.net/BKJrPO1FlbXcy-98AYXOzg==/109951172268004943.jpg?param=300x300';
+        coverImg.src = song.pic || 'https://p2.music.126.net/BKJrPO1FlbXcy-98AYXOzg==/109951172268004943.jpg?param=300x300';
         renderSongList();
-        // 保存当前播放歌曲ID到本地
         localStorage.setItem('currentSongId', song.id);
         localStorage.setItem('currentIndex', currentIndex);
     }
 
-    // 获取播放地址并播放
     async function playSong(index) {
         if (index < 0) index = 0;
         if (index >= currentSongList.length) index = 0;
         currentIndex = index;
         const song = currentSongList[currentIndex];
         updateUI();
-
         try {
             showMessage("加载中...");
-            // 通过公共 API 获取真实播放地址
-            const res = await fetch(`${API_BASE}?type=url&id=${song.id}`);
+            const res = await fetch(GET_URL_API(song.id));
             const data = await res.json();
-            if (data && data.url) {
-                audio.src = data.url;
+            if (data && data.data && data.data[0] && data.data[0].url) {
+                audio.src = data.data[0].url;
                 audio.volume = volume;
                 if (isPlaying) {
                     await audio.play();
                     startProgressTimer();
                 }
                 showMessage("正在播放: " + song.title);
-                // 保存状态
                 localStorage.setItem('currentList', JSON.stringify(currentSongList.map(s => s.id)));
             } else {
                 throw new Error("无法获取播放地址");
@@ -488,19 +244,18 @@
         localStorage.setItem('loopMode', loopMode);
     }
 
-    // 加载歌单（通过公共 API）
     async function loadPlaylist(playlistId) {
         showMessage("加载歌单...");
         try {
-            const res = await fetch(`${API_BASE}?type=playlist&id=${playlistId}`);
+            const res = await fetch(PLAYLIST_API(playlistId));
             const data = await res.json();
             if (data && data.songs && data.songs.length) {
                 currentSongList = data.songs.map(s => ({
                     id: s.id,
                     title: s.name,
-                    artist: s.artist,
-                    duration: formatTime(s.duration / 1000),
-                    pic: s.picUrl
+                    artist: s.ar.map(a => a.name).join('/'),
+                    duration: formatTime(s.dt / 1000),
+                    pic: s.al.picUrl
                 }));
                 currentIndex = 0;
                 isPlaying = true;
@@ -513,11 +268,9 @@
         } catch (err) {
             console.error(err);
             showMessage("加载歌单失败，使用内置歌曲", true);
-            // 降级：使用内置几首歌
             currentSongList = [
-                { id: "3316968660", title: "昔涟", artist: "张韶涵、HOYO-MiX", duration: "03:06", pic: "http://p2.music.126.net/BKJrPO1FlbXcy-98AYXOzg==/109951172268004943.jpg?param=300x300" },
-                { id: "2722510685", title: "耀斑", artist: "HOYO-MiX,YMIR", duration: "03:33", pic: "http://p2.music.126.net/DYDACa_8zB5irAOrasVgnQ==/109951171396677694.jpg?param=300x300" },
-                { id: "2709812973", title: "拂晓 Proi Proi", artist: "HOYO-MiX,NIDA", duration: "03:58", pic: "http://p2.music.126.net/2qGGwWFlMYF2o-GyNMhH5A==/109951171066942237.jpg?param=300x300" }
+                { id: "3316968660", title: "昔涟", artist: "张韶涵、HOYO-MiX", duration: "03:06", pic: "https://p2.music.126.net/BKJrPO1FlbXcy-98AYXOzg==/109951172268004943.jpg?param=300x300" },
+                { id: "2722510685", title: "耀斑", artist: "HOYO-MiX,YMIR", duration: "03:33", pic: "https://p2.music.126.net/DYDACa_8zB5irAOrasVgnQ==/109951171396677694.jpg?param=300x300" }
             ];
             currentIndex = 0;
             isPlaying = true;
@@ -526,27 +279,25 @@
         }
     }
 
-    // 搜索歌曲
     async function searchSongs(keyword) {
         if (!keyword.trim()) return;
         showMessage("搜索中...");
         try {
-            const res = await fetch(`${API_BASE}?type=search&keywords=${encodeURIComponent(keyword)}`);
+            const res = await fetch(SEARCH_API(keyword));
             const data = await res.json();
-            if (data && data.songs && data.songs.length) {
-                currentSongList = data.songs.slice(0, 30).map(s => ({
+            if (data && data.result && data.result.songs && data.result.songs.length) {
+                currentSongList = data.result.songs.slice(0, 30).map(s => ({
                     id: s.id,
                     title: s.name,
-                    artist: s.artist,
+                    artist: s.artists.map(a => a.name).join('/'),
                     duration: formatTime(s.duration / 1000),
-                    pic: s.picUrl
+                    pic: s.album.picUrl
                 }));
                 currentIndex = 0;
                 isPlaying = true;
                 updateUI();
                 await playSong(0);
                 showMessage(`找到 ${currentSongList.length} 首`);
-                // 自动关闭歌单面板
                 songListPanel.classList.remove('show');
                 listToggleBtn.innerText = '📋 歌单';
             } else {
@@ -558,13 +309,12 @@
         }
     }
 
-    // 渲染歌曲列表
     function renderSongList() {
         songListContainer.innerHTML = '';
         currentSongList.forEach((song, idx) => {
             const div = document.createElement('div');
             div.className = 'song-item' + (idx === currentIndex ? ' active' : '');
-            div.innerHTML = `<span>${idx+1}. ${song.title} - ${song.artist}</span><span class="song-duration">${song.duration}</span>`;
+            div.innerHTML = `<span>${idx+1}. ${song.title} - ${song.artist}</span><span>${song.duration}</span>`;
             div.addEventListener('click', () => {
                 currentIndex = idx;
                 isPlaying = true;
@@ -576,7 +326,6 @@
         });
     }
 
-    // 进度条点击跳转
     function seekProgress(e) {
         const rect = progressBar.getBoundingClientRect();
         let percent = (e.clientX - rect.left) / rect.width;
@@ -586,7 +335,6 @@
         }
     }
 
-    // 事件绑定
     function bindEvents() {
         playBtn.addEventListener('click', togglePlay);
         prevBtn.addEventListener('click', prevSong);
@@ -600,47 +348,29 @@
             renderSongList();
         });
         searchBtn.addEventListener('click', () => searchSongs(searchKeyword.value));
-        searchKeyword.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') searchSongs(searchKeyword.value);
-        });
+        searchKeyword.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchSongs(searchKeyword.value); });
         progressBar.addEventListener('click', seekProgress);
-        // 进度条拖拽
         progressBar.addEventListener('mousedown', (e) => {
             isDragging = true;
             seekProgress(e);
             const onMouseMove = (e) => seekProgress(e);
-            const onMouseUp = () => {
-                isDragging = false;
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-            };
+            const onMouseUp = () => { isDragging = false; document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); };
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
         });
-        // 触摸事件支持
         progressBar.addEventListener('touchstart', (e) => {
             e.preventDefault();
             isDragging = true;
             seekProgress(e.touches[0]);
             const onTouchMove = (e) => seekProgress(e.touches[0]);
-            const onTouchEnd = () => {
-                isDragging = false;
-                document.removeEventListener('touchmove', onTouchMove);
-                document.removeEventListener('touchend', onTouchEnd);
-            };
+            const onTouchEnd = () => { isDragging = false; document.removeEventListener('touchmove', onTouchMove); document.removeEventListener('touchend', onTouchEnd); };
             document.addEventListener('touchmove', onTouchMove);
             document.addEventListener('touchend', onTouchEnd);
         });
-        // 音频结束事件
         audio.addEventListener('ended', () => {
-            if (loopMode === 2) {
-                audio.currentTime = 0;
-                audio.play();
-            } else {
-                nextSong();
-            }
+            if (loopMode === 2) { audio.currentTime = 0; audio.play(); }
+            else { nextSong(); }
         });
-        // 定期更新进度（防止 interval 不准确）
         audio.addEventListener('timeupdate', () => {
             if (!isDragging && isPlaying && audio.duration) {
                 const percent = (audio.currentTime / audio.duration) * 100;
@@ -650,7 +380,6 @@
         });
     }
 
-    // 恢复本地存储的状态
     function loadStoredState() {
         const savedVolume = localStorage.getItem('volume');
         if (savedVolume) setVolume(parseFloat(savedVolume));
@@ -661,20 +390,13 @@
             if (loopMode === 1) { loopBtn.innerText = '🔄'; loopText.innerText = '列表循环'; loopBtn.classList.add('active'); }
             if (loopMode === 2) { loopBtn.innerText = '🔂'; loopText.innerText = '单曲循环'; loopBtn.classList.add('active'); }
         }
-        // 尝试恢复上次播放列表
-        const savedList = localStorage.getItem('currentList');
-        if (savedList) {
-            // 简单恢复，但为防止过期，不强制，还是用默认歌单
-        }
     }
 
-    // 初始化
     async function init() {
         bindEvents();
         loadStoredState();
         await loadPlaylist(DEFAULT_PLAYLIST_ID);
     }
-
     init();
 </script>
 </body>
