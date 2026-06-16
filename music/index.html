@@ -2,1476 +2,680 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>崩坏：星穹铁道 - 卡池模拟</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>六哥荣耀 - 音乐播放器</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'HYWenHei', 'Microsoft YaHei', sans-serif;
-            user-select: none;
         }
-        
-        @font-face {
-            font-family: 'HYWenHei';
-            src: url('https://fonts.gstatic.com/ea/nanumgothic/v5/NanumGothic-Regular.eot');
-            font-weight: normal;
-            font-style: normal;
-        }
-        
         body {
-            background: #0a0a14;
-            color: #fff;
+            background: linear-gradient(135deg, #1e3a2f 0%, #0f2a1f 100%);
+            font-family: "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, sans-serif;
             min-height: 100vh;
-            overflow-x: hidden;
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(28, 58, 173, 0.1) 0%, transparent 20%),
-                radial-gradient(circle at 90% 80%, rgba(189, 28, 173, 0.1) 0%, transparent 20%);
-            position: relative;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
             padding: 20px;
-        }
-        
-        /* 顶部标题栏 */
-        .title-bar {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding: 15px 30px;
-            background: linear-gradient(90deg, rgba(18, 22, 55, 0.9) 0%, rgba(25, 30, 70, 0.9) 100%);
-            border-radius: 15px;
-            border: 1px solid rgba(101, 110, 255, 0.3);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-        }
-        
-        .game-logo {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .logo-icon {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #656eff, #3a42c9);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
             justify-content: center;
-            font-size: 24px;
+            align-items: center;
         }
-        
-        .logo-text h1 {
-            font-size: 24px;
-            background: linear-gradient(90deg, #a3b5ff, #ffffff);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            letter-spacing: 1px;
-        }
-        
-        .logo-text p {
-            font-size: 14px;
-            color: #b8c1ff;
-            letter-spacing: 2px;
-        }
-        
-        .nav-menu {
-            display: flex;
-            gap: 20px;
-        }
-        
-        .nav-item {
-            padding: 8px 20px;
-            background: rgba(40, 45, 100, 0.7);
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
+        .player {
+            max-width: 550px;
+            width: 100%;
+            background: rgba(30, 58, 47, 0.85);
+            backdrop-filter: blur(20px);
+            border-radius: 48px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
             transition: all 0.3s;
-            border: 1px solid transparent;
         }
-        
-        .nav-item:hover {
-            background: rgba(60, 65, 140, 0.9);
-            border-color: #656eff;
-        }
-        
-        .nav-item.active {
-            background: linear-gradient(90deg, #656eff, #3a42c9);
-            box-shadow: 0 0 10px rgba(101, 110, 255, 0.5);
-        }
-        
-        /* 主卡池区域 */
-        .warp-banner {
-            position: relative;
-            height: 500px;
-            border-radius: 20px;
-            overflow: hidden;
-            margin-bottom: 30px;
-            border: 1px solid rgba(101, 110, 255, 0.4);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
-        }
-        
-        .warp-bg {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: 
-                linear-gradient(90deg, rgba(10, 15, 45, 0.9) 0%, rgba(20, 25, 70, 0.9) 100%),
-                url('https://images.unsplash.com/photo-1534447677768-be436bb09401?ixlib=rb-4.0.3&auto=format&fit=crop&w=1790&q=80') center/cover;
-            filter: brightness(0.6) saturate(1.3);
-        }
-        
-        .warp-content {
-            position: relative;
-            height: 100%;
-            padding: 40px;
+        .cover-area {
             display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        
-        .warp-title {
-            font-size: 42px;
-            font-weight: bold;
-            background: linear-gradient(90deg, #ffd166, #ff9e6d, #ff6b9d);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            text-shadow: 0 0 20px rgba(255, 107, 157, 0.3);
-            margin-bottom: 10px;
-        }
-        
-        .warp-subtitle {
-            font-size: 22px;
-            color: #d8e1ff;
-            margin-bottom: 5px;
-        }
-        
-        .warp-character {
-            position: absolute;
-            right: 60px;
-            bottom: 40px;
-            width: 300px;
-            height: 400px;
-            background: linear-gradient(135deg, rgba(255, 209, 102, 0.1), rgba(255, 107, 157, 0.1));
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
             justify-content: center;
-            border: 2px solid rgba(255, 209, 102, 0.3);
-            overflow: hidden;
+            padding: 30px 24px 20px;
         }
-        
-        .char-display {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+        .cover-img {
+            width: 70%;
+            max-width: 240px;
+            border-radius: 24px;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
         }
-        
-        .char-rarity {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 28px;
-            color: #ffd166;
-            text-shadow: 0 0 10px rgba(255, 209, 102, 0.5);
+        .cover-img:hover {
+            transform: scale(1.02);
         }
-        
-        .char-name {
-            font-size: 32px;
-            font-weight: bold;
-            color: #ffd166;
-            margin-bottom: 10px;
+        .song-info {
             text-align: center;
+            padding: 0 20px 20px;
         }
-        
-        .char-type {
-            font-size: 18px;
-            color: #b8c1ff;
-            margin-bottom: 5px;
+        .song-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 6px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
-        
-        .char-path {
-            display: inline-block;
-            padding: 5px 15px;
-            background: rgba(101, 110, 255, 0.3);
-            border-radius: 20px;
-            font-size: 16px;
-            color: #a3b5ff;
-            margin-top: 10px;
+        .song-artist {
+            font-size: 1rem;
+            color: #b0c4b0;
         }
-        
-        .warp-time {
-            color: #8a94e6;
-            font-size: 18px;
-            margin-top: 20px;
+        .progress-area {
+            padding: 0 24px 12px;
         }
-        
-        /* 抽卡按钮区域 */
-        .warp-control {
-            background: rgba(18, 22, 55, 0.9);
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(101, 110, 255, 0.3);
+        .time-row {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            font-size: 0.75rem;
+            color: #a0b8a0;
+            margin-bottom: 6px;
         }
-        
-        .currency-info {
-            display: flex;
-            gap: 20px;
-        }
-        
-        .currency-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: rgba(30, 35, 80, 0.7);
-            padding: 12px 20px;
-            border-radius: 10px;
-            border: 1px solid rgba(101, 110, 255, 0.2);
-        }
-        
-        .currency-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-        
-        .stellar-icon {
-            background: linear-gradient(135deg, #00c6ff, #0072ff);
-        }
-        
-        .ticket-icon {
-            background: linear-gradient(135deg, #ff6b9d, #ff4757);
-        }
-        
-        .currency-detail {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .currency-name {
-            font-size: 14px;
-            color: #b8c1ff;
-        }
-        
-        .currency-amount {
-            font-size: 24px;
-            font-weight: bold;
-            color: white;
-        }
-        
-        .warp-buttons {
-            display: flex;
-            gap: 20px;
-        }
-        
-        .warp-button {
-            padding: 18px 35px;
-            border: none;
-            border-radius: 12px;
-            font-size: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: all 0.3s;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .warp-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
-        }
-        
-        .warp-button:hover::before {
-            left: 100%;
-        }
-        
-        .warp-single {
-            background: linear-gradient(135deg, #3a42c9, #656eff);
-            color: white;
-            box-shadow: 0 5px 15px rgba(101, 110, 255, 0.4);
-        }
-        
-        .warp-ten {
-            background: linear-gradient(135deg, #ff4757, #ff6b9d);
-            color: white;
-            box-shadow: 0 5px 15px rgba(255, 107, 157, 0.4);
-        }
-        
-        .warp-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .warp-button:disabled:hover::before {
-            left: -100%;
-        }
-        
-        /* 详细信息区域 */
-        .details-panel {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 25px;
-            margin-bottom: 30px;
-        }
-        
-        .detail-card {
-            background: rgba(18, 22, 55, 0.9);
-            border-radius: 15px;
-            padding: 25px;
-            border: 1px solid rgba(101, 110, 255, 0.3);
-        }
-        
-        .detail-title {
-            font-size: 20px;
-            font-weight: bold;
-            color: #ffd166;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(101, 110, 255, 0.3);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .rate-item {
-            margin-bottom: 15px;
-        }
-        
-        .rate-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-        
-        .rate-name {
-            font-size: 16px;
-            color: #d8e1ff;
-        }
-        
-        .rate-value {
-            font-size: 16px;
-            font-weight: bold;
-            color: #ff9e6d;
-        }
-        
-        .rate-bar {
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        
-        .rate-fill {
-            height: 100%;
-            border-radius: 4px;
-        }
-        
-        .rate-5 { background: linear-gradient(90deg, #ffd166, #ff9e6d); width: 0.6%; }
-        .rate-4 { background: linear-gradient(90deg, #b266ff, #8a2be2); width: 5.1%; }
-        .rate-3 { background: linear-gradient(90deg, #66b3ff, #0072ff); width: 94.3%; }
-        
-        .pity-count {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
-        .pity-item {
-            background: rgba(30, 35, 80, 0.7);
-            padding: 15px;
-            border-radius: 10px;
-        }
-        
-        .pity-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-        
-        .pity-name {
-            font-size: 16px;
-            color: #d8e1ff;
-        }
-        
-        .pity-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #ff9e6d;
-        }
-        
-        .pity-progress {
+        .progress-bar {
+            background: #3d6a58;
             height: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-            overflow: hidden;
-            margin-top: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            position: relative;
         }
-        
         .progress-fill {
+            width: 0%;
             height: 100%;
-            border-radius: 3px;
-            background: linear-gradient(90deg, #656eff, #ff6b9d);
+            background: linear-gradient(90deg, #81c784, #a8e6b0);
+            border-radius: 8px;
+            position: relative;
         }
-        
-        /* UP角色展示 */
-        .up-characters {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
+        .progress-handle {
+            position: absolute;
+            right: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s;
         }
-        
-        .up-character {
-            background: rgba(30, 35, 80, 0.7);
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-            border: 1px solid rgba(101, 110, 255, 0.2);
-            transition: all 0.3s;
+        .progress-bar:hover .progress-handle {
+            opacity: 1;
         }
-        
-        .up-character:hover {
-            transform: translateY(-5px);
-            border-color: #656eff;
-            box-shadow: 0 5px 15px rgba(101, 110, 255, 0.3);
-        }
-        
-        .up-rarity {
-            font-size: 18px;
-            color: #b266ff;
-            margin-bottom: 8px;
-        }
-        
-        .up-name {
-            font-size: 16px;
-            font-weight: bold;
-            color: #ffd166;
-            margin-bottom: 5px;
-        }
-        
-        .up-type {
-            font-size: 14px;
-            color: #b8c1ff;
-        }
-        
-        /* 抽卡结果弹窗 */
-        .warp-result-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
+        .controls {
+            display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 1000;
+            gap: 28px;
+            padding: 16px 24px;
         }
-        
-        .warp-result-content {
-            background: linear-gradient(135deg, rgba(10, 15, 45, 0.95), rgba(20, 25, 70, 0.95));
-            border-radius: 20px;
-            width: 95%;
-            max-width: 1000px;
-            max-height: 90vh;
-            overflow: hidden;
-            border: 1px solid rgba(101, 110, 255, 0.5);
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
-        }
-        
-        .result-header {
-            background: linear-gradient(90deg, rgba(18, 22, 55, 0.9), rgba(25, 30, 70, 0.9));
-            padding: 20px 30px;
-            text-align: center;
-            border-bottom: 1px solid rgba(101, 110, 255, 0.3);
-        }
-        
-        .result-title {
-            font-size: 28px;
-            font-weight: bold;
-            background: linear-gradient(90deg, #ffd166, #ff9e6d);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-        
-        .result-subtitle {
-            color: #b8c1ff;
-            font-size: 16px;
-            margin-top: 5px;
-        }
-        
-        .result-grid {
-            padding: 25px;
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 15px;
-            max-height: 60vh;
-            overflow-y: auto;
-        }
-        
-        .result-item {
-            background: rgba(30, 35, 80, 0.7);
-            border-radius: 12px;
-            padding: 20px 15px;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s;
-            opacity: 0;
-            transform: translateY(20px) scale(0.9);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .result-item.revealed {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-        
-        .result-rarity {
-            font-size: 20px;
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-        
-        .result-name {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .result-type {
-            font-size: 14px;
-            color: #b8c1ff;
-        }
-        
-        .result-up {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: #ff4757;
-            color: white;
-            font-size: 12px;
-            padding: 2px 8px;
-            border-radius: 10px;
-        }
-        
-        .result-5star {
-            border-color: #ffd166;
-            background: linear-gradient(135deg, rgba(40, 35, 80, 0.9), rgba(60, 50, 100, 0.9));
-            box-shadow: 0 0 20px rgba(255, 209, 102, 0.3);
-        }
-        
-        .result-4star {
-            border-color: #b266ff;
-            background: linear-gradient(135deg, rgba(35, 30, 80, 0.9), rgba(50, 40, 100, 0.9));
-            box-shadow: 0 0 10px rgba(178, 102, 255, 0.2);
-        }
-        
-        .result-3star {
-            border-color: #66b3ff;
-            background: linear-gradient(135deg, rgba(30, 35, 80, 0.9), rgba(40, 45, 100, 0.9));
-        }
-        
-        .result-footer {
-            padding: 20px;
-            text-align: center;
-            border-top: 1px solid rgba(101, 110, 255, 0.3);
-            background: rgba(18, 22, 55, 0.9);
-        }
-        
-        .close-result {
-            padding: 12px 40px;
-            background: linear-gradient(135deg, #656eff, #3a42c9);
-            color: white;
+        .ctrl-btn {
+            background: rgba(255,255,255,0.1);
             border: none;
-            border-radius: 10px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .close-result:hover {
-            background: linear-gradient(135deg, #757eff, #4a52d9);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(101, 110, 255, 0.4);
-        }
-        
-        /* 粒子背景效果 */
-        .particles {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            pointer-events: none;
-        }
-        
-        .particle {
-            position: absolute;
-            background: rgba(101, 110, 255, 0.3);
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
-            animation: float 15s infinite linear;
+            font-size: 1.8rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            backdrop-filter: blur(4px);
         }
-        
-        @keyframes float {
-            0% {
-                transform: translateY(100vh) rotate(0deg);
-                opacity: 0;
-            }
-            10% {
-                opacity: 0.7;
-            }
-            90% {
-                opacity: 0.7;
-            }
-            100% {
-                transform: translateY(-100px) rotate(360deg);
-                opacity: 0;
-            }
+        .ctrl-btn:active {
+            transform: scale(0.96);
         }
-        
-        /* 响应式调整 */
-        @media (max-width: 1024px) {
-            .details-panel {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .warp-character {
-                width: 250px;
-                height: 350px;
-                right: 30px;
-                bottom: 30px;
-            }
+        .play-btn {
+            background: #81c784;
+            color: #1e3a2f;
+            width: 72px;
+            height: 72px;
+            font-size: 2rem;
+            box-shadow: 0 8px 18px rgba(129,199,132,0.3);
         }
-        
-        @media (max-width: 768px) {
-            .title-bar {
-                flex-direction: column;
-                gap: 20px;
-            }
-            
-            .warp-control {
-                flex-direction: column;
-                gap: 25px;
-            }
-            
-            .details-panel {
-                grid-template-columns: 1fr;
-            }
-            
-            .warp-banner {
-                height: 400px;
-            }
-            
-            .warp-character {
-                position: relative;
-                right: auto;
-                bottom: auto;
-                width: 100%;
-                height: 300px;
-                margin-top: 20px;
-            }
-            
-            .result-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
+        .play-btn:hover {
+            background: #a3d9a8;
+            transform: scale(1.02);
         }
-        
-        @media (max-width: 480px) {
-            .result-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .warp-buttons {
-                flex-direction: column;
-                width: 100%;
-            }
-            
-            .warp-button {
-                width: 100%;
-                justify-content: center;
-            }
-            
-            .currency-info {
-                flex-direction: column;
-                width: 100%;
-            }
+        .extra-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 24px 24px;
+            gap: 12px;
+            flex-wrap: wrap;
+            border-top: 1px solid rgba(129,199,132,0.2);
         }
-        
-        /* 特效类 */
-        .golden-glow {
-            animation: goldenGlow 2s infinite alternate;
+        .volume-wrap, .loop-wrap, .list-wrap {
+            background: rgba(0,0,0,0.2);
+            padding: 6px 14px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        
-        @keyframes goldenGlow {
-            0% { box-shadow: 0 0 10px rgba(255, 209, 102, 0.5), 0 0 20px rgba(255, 209, 102, 0.3); }
-            100% { box-shadow: 0 0 20px rgba(255, 209, 102, 0.8), 0 0 40px rgba(255, 209, 102, 0.5), 0 0 60px rgba(255, 209, 102, 0.3); }
+        button {
+            background: none;
+            border: none;
+            color: #c0e0c0;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
         }
-        
-        .rainbow-border {
-            position: relative;
-            border: 2px solid transparent;
-            background-clip: padding-box;
+        button:hover {
+            color: #81c784;
         }
-        
-        .rainbow-border::before {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            background: linear-gradient(45deg, #ff0000, #ff9900, #ffff00, #33cc33, #0099ff, #6633cc);
-            border-radius: inherit;
-            z-index: -1;
-            animation: rainbow 3s linear infinite;
+        .volume-slider {
+            width: 80px;
+            height: 4px;
+            -webkit-appearance: none;
+            background: #3d6a58;
+            border-radius: 4px;
         }
-        
-        @keyframes rainbow {
-            0% { filter: hue-rotate(0deg); }
-            100% { filter: hue-rotate(360deg); }
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #81c784;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .loop-btn.active {
+            color: #81c784;
+        }
+        .song-list-panel {
+            max-height: 0;
+            overflow-y: auto;
+            transition: max-height 0.4s ease;
+            background: rgba(0,0,0,0.3);
+            border-top: 1px solid transparent;
+        }
+        .song-list-panel.show {
+            max-height: 320px;
+            border-top-color: rgba(129,199,132,0.3);
+        }
+        .song-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 24px;
+            color: #e0f0e0;
+            border-bottom: 1px solid rgba(129,199,132,0.1);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .song-item.active {
+            background: rgba(129,199,132,0.2);
+            color: #81c784;
+            border-left: 4px solid #81c784;
+        }
+        .song-item:hover {
+            background: rgba(129,199,132,0.1);
+        }
+        .search-area {
+            padding: 16px 24px;
+            display: flex;
+            gap: 8px;
+            border-top: 1px solid rgba(129,199,132,0.2);
+        }
+        .search-input {
+            flex: 1;
+            padding: 10px 16px;
+            border-radius: 40px;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 0.9rem;
+            outline: none;
+        }
+        .search-input::placeholder {
+            color: #a0b8a0;
+        }
+        .search-btn {
+            background: #81c784;
+            color: #1e3a2f;
+            padding: 0 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: #81c784;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 12px;
+            z-index: 1000;
+            display: none;
+            white-space: nowrap;
+        }
+        @media (max-width: 500px) {
+            .song-title { font-size: 1.4rem; }
+            .ctrl-btn { width: 48px; height: 48px; font-size: 1.4rem; }
+            .play-btn { width: 64px; height: 64px; font-size: 1.8rem; }
+            .extra-bar { flex-direction: column; align-items: stretch; }
+            .volume-wrap, .loop-wrap, .list-wrap { justify-content: space-between; }
+            .cover-img { width: 80%; }
+            .toast { white-space: normal; max-width: 80%; text-align: center; }
+        }
+        @media (hover: none) and (pointer: coarse) {
+            .progress-handle { opacity: 1; width: 16px; height: 16px; }
+            .progress-bar { height: 8px; }
+            .ctrl-btn, .play-btn, button { min-height: 44px; }
         }
     </style>
 </head>
 <body>
-    <!-- 粒子背景 -->
-    <div class="particles" id="particles"></div>
-    
-    <div class="container">
-        <!-- 顶部标题栏 -->
-        <div class="title-bar">
-            <div class="game-logo">
-                <div class="logo-icon">
-                    <i class="fas fa-rocket"></i>
-                </div>
-                <div class="logo-text">
-                    <h1>崩坏：星穹铁道</h1>
-                    <p>WARP SIMULATOR</p>
-                </div>
-            </div>
-            
-            <div class="nav-menu">
-                <div class="nav-item active">角色活动跃迁</div>
-                <div class="nav-item">光锥活动跃迁</div>
-                <div class="nav-item">常驻跃迁</div>
-            </div>
+<div class="player">
+    <div class="cover-area">
+        <img class="cover-img" id="cover" src="http://p2.music.126.net/BKJrPO1FlbXcy-98AYXOzg==/109951172268004943.jpg?param=300x300" alt="封面">
+    </div>
+    <div class="song-info">
+        <div class="song-title" id="title">昔涟</div>
+        <div class="song-artist" id="artist">张韶涵、HOYO-MiX</div>
+    </div>
+    <div class="progress-area">
+        <div class="time-row">
+            <span id="currentTime">00:00</span>
+            <span id="totalTime">03:06</span>
         </div>
-        
-        <!-- 主卡池横幅 -->
-        <div class="warp-banner">
-            <div class="warp-bg"></div>
-            <div class="warp-content">
-                <div>
-                    <h1 class="warp-title">「烛中翩影」限定跃迁</h1>
-                    <p class="warp-subtitle">米游记·金老君</p>
-                    <p class="warp-time">活动时间：2024-01-10 12:00:00 ~ 2024-01-31 11:59:59</p>
-                    <p class="warp-time">每10次跃迁必出4星或以上对象 · 指定角色出现概率提升</p>
-                </div>
-                
-                <div class="warp-character">
-                    <div class="char-display">
-                        <div class="char-rarity">★★★★★</div>
-                        <h2 class="char-name">刃</h2>
-                        <p class="char-type">业火锋芒 · 星核猎手</p>
-                        <div class="char-path">毁灭 · 风属性</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 抽卡控制区域 -->
-        <div class="warp-control">
-            <div class="currency-info">
-                <div class="currency-item">
-                    <div class="currency-icon stellar-icon">
-                        <i class="fas fa-gem"></i>
-                    </div>
-                    <div class="currency-detail">
-                        <div class="currency-name">星琼</div>
-                        <div class="currency-amount" id="stellarJade">3280</div>
-                    </div>
-                </div>
-                
-                <div class="currency-item">
-                    <div class="currency-icon ticket-icon">
-                        <i class="fas fa-ticket-alt"></i>
-                    </div>
-                    <div class="currency-detail">
-                        <div class="currency-name">星轨专票</div>
-                        <div class="currency-amount" id="specialTicket">5</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="warp-buttons">
-                <button class="warp-button warp-single" id="singleWarp">
-                    <i class="fas fa-star"></i>
-                    单次跃迁
-                    <span style="font-size: 14px; opacity: 0.9;">160 星琼</span>
-                </button>
-                
-                <button class="warp-button warp-ten" id="tenWarp">
-                    <i class="fas fa-layer-group"></i>
-                    十连跃迁
-                    <span style="font-size: 14px; opacity: 0.9;">1600 星琼</span>
-                </button>
-            </div>
-        </div>
-        
-        <!-- 详细信息区域 -->
-        <div class="details-panel">
-            <!-- 概率详情 -->
-            <div class="detail-card">
-                <h3 class="detail-title">
-                    <i class="fas fa-chart-pie"></i>
-                    概率详情
-                </h3>
-                
-                <div class="rate-item">
-                    <div class="rate-row">
-                        <span class="rate-name">★★★★★ 角色</span>
-                        <span class="rate-value">0.600%</span>
-                    </div>
-                    <div class="rate-bar">
-                        <div class="rate-fill rate-5"></div>
-                    </div>
-                </div>
-                
-                <div class="rate-item">
-                    <div class="rate-row">
-                        <span class="rate-name">★★★★ 角色</span>
-                        <span class="rate-value">5.100%</span>
-                    </div>
-                    <div class="rate-bar">
-                        <div class="rate-fill rate-4"></div>
-                    </div>
-                </div>
-                
-                <div class="rate-item">
-                    <div class="rate-row">
-                        <span class="rate-name">★★★ 光锥</span>
-                        <span class="rate-value">94.300%</span>
-                    </div>
-                    <div class="rate-bar">
-                        <div class="rate-fill rate-3"></div>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 20px; padding: 12px; background: rgba(30, 35, 80, 0.5); border-radius: 8px;">
-                    <div style="font-size: 14px; color: #b8c1ff; line-height: 1.5;">
-                        ※ 5星角色平均出现概率为1.600%，综合概率（含保底）为1.850%
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 保底计数 -->
-            <div class="detail-card">
-                <h3 class="detail-title">
-                    <i class="fas fa-history"></i>
-                    保底计数
-                </h3>
-                
-                <div class="pity-count">
-                    <div class="pity-item">
-                        <div class="pity-header">
-                            <span class="pity-name">5星保底</span>
-                            <span class="pity-value" id="pity5Count">45</span>
-                        </div>
-                        <div style="color: #ff9e6d; font-size: 14px;">剩余 <span id="pity5Remain">45</span> 抽必定获得5星</div>
-                        <div class="pity-progress">
-                            <div class="progress-fill" style="width: 50%;"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="pity-item">
-                        <div class="pity-header">
-                            <span class="pity-name">4星保底</span>
-                            <span class="pity-value" id="pity4Count">7</span>
-                        </div>
-                        <div style="color: #b266ff; font-size: 14px;">剩余 <span id="pity4Remain">3</span> 抽必定获得4星</div>
-                        <div class="pity-progress">
-                            <div class="progress-fill" style="width: 70%;"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 20px; padding: 12px; background: rgba(101, 110, 255, 0.1); border-radius: 8px;">
-                    <div style="font-size: 14px; color: #b8c1ff;">
-                        <i class="fas fa-info-circle" style="margin-right: 8px; color: #656eff;"></i>
-                        小保底：未获得UP角色时，下次5星必定为UP角色
-                    </div>
-                </div>
-            </div>
-            
-            <!-- UP角色 -->
-            <div class="detail-card">
-                <h3 class="detail-title">
-                    <i class="fas fa-users"></i>
-                    UP角色
-                </h3>
-                
-                <div class="up-characters">
-                    <div class="up-character">
-                        <div class="up-rarity">★★★★★</div>
-                        <div class="up-name">刃</div>
-                        <div class="up-type">毁灭 · 风属性</div>
-                    </div>
-                    
-                    <div class="up-character">
-                        <div class="up-rarity">★★★★</div>
-                        <div class="up-name">佩拉</div>
-                        <div class="up-type">虚无 · 冰属性</div>
-                    </div>
-                    
-                    <div class="up-character">
-                        <div class="up-rarity">★★★★</div>
-                        <div class="up-name">娜塔莎</div>
-                        <div class="up-type">丰饶 · 物理属性</div>
-                    </div>
-                    
-                    <div class="up-character">
-                        <div class="up-rarity">★★★★</div>
-                        <div class="up-name">阿兰</div>
-                        <div class="up-type">毁灭 · 雷属性</div>
-                    </div>
-                    
-                    <div class="up-character">
-                        <div class="up-rarity">★★★★</div>
-                        <div class="up-name">停云</div>
-                        <div class="up-type">同谐 · 雷属性</div>
-                    </div>
-                    
-                    <div class="up-character">
-                        <div class="up-rarity">★★★★</div>
-                        <div class="up-name">素裳</div>
-                        <div class="up-type">巡猎 · 物理属性</div>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 20px; padding: 12px; background: rgba(255, 107, 157, 0.1); border-radius: 8px;">
-                    <div style="font-size: 14px; color: #b8c1ff; line-height: 1.5;">
-                        ※ 以上4星角色在本次跃迁中出现概率大幅提升
-                    </div>
-                </div>
-            </div>
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+            <div class="progress-handle" id="progressHandle"></div>
         </div>
     </div>
-    
-    <!-- 抽卡结果弹窗 -->
-    <div class="warp-result-modal" id="warpResultModal">
-        <div class="warp-result-content">
-            <div class="result-header">
-                <h2 class="result-title">跃迁结果</h2>
-                <p class="result-subtitle">本次跃迁获得了以下角色与光锥</p>
-            </div>
-            
-            <div class="result-grid" id="warpResultGrid">
-                <!-- 抽卡结果会动态添加到这里 -->
-            </div>
-            
-            <div class="result-footer">
-                <button class="close-result" onclick="closeWarpResult()">确认</button>
-            </div>
+    <div class="controls">
+        <button class="ctrl-btn" id="prevBtn">❮</button>
+        <button class="ctrl-btn play-btn" id="playBtn">▶</button>
+        <button class="ctrl-btn" id="nextBtn">❯</button>
+    </div>
+    <div class="extra-bar">
+        <div class="volume-wrap">
+            <button id="volumeBtn">🔊</button>
+            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.01" value="0.7">
+        </div>
+        <div class="loop-wrap">
+            <button id="loopBtn">🔁</button>
+            <span id="loopText">顺序</span>
+        </div>
+        <div class="list-wrap">
+            <button id="listToggleBtn">📋 歌单</button>
         </div>
     </div>
+    <div class="search-area">
+        <input type="text" class="search-input" id="searchKeyword" placeholder="搜索歌曲...">
+        <button class="search-btn" id="searchBtn">搜索</button>
+    </div>
+    <div class="song-list-panel" id="songListPanel">
+        <div id="songListContainer"></div>
+    </div>
+</div>
+<div class="toast" id="toast">提示</div>
 
-    <script>
-        // 游戏状态
-        const gameState = {
-            stellarJade: 3280,
-            specialTicket: 5,
-            pity5: 45,
-            pity4: 7,
-            isGuaranteed: false,
-            totalDraws: 0,
-            is5StarGuaranteed: false
-        };
-        
-        // 物品池数据
-        const warpPool = {
-            5: [
-                { name: '刃', type: '角色', isUP: true, emoji: '⚔️', path: '毁灭', element: '风' }
-            ],
-            4: [
-                { name: '佩拉', type: '角色', isUP: true, emoji: '❄️', path: '虚无', element: '冰' },
-                { name: '娜塔莎', type: '角色', isUP: true, emoji: '💊', path: '丰饶', element: '物理' },
-                { name: '阿兰', type: '角色', isUP: true, emoji: '⚡', path: '毁灭', element: '雷' },
-                { name: '停云', type: '角色', isUP: false, emoji: '🎶', path: '同谐', element: '雷' },
-                { name: '素裳', type: '角色', isUP: false, emoji: '🗡️', path: '巡猎', element: '物理' },
-                { name: '三月七', type: '角色', isUP: false, emoji: '🛡️', path: '存护', element: '冰' },
-                { name: '希露瓦', type: '角色', isUP: false, emoji: '🎸', path: '智识', element: '雷' },
-                { name: '丹恒', type: '角色', isUP: false, emoji: '🌪️', path: '巡猎', element: '风' },
-                { name: '艾丝妲', type: '角色', isUP: false, emoji: '🔥', path: '同谐', element: '火' },
-                { name: '论剑', type: '光锥', isUP: false, emoji: '🔪', path: '', element: '' },
-                { name: '唯有沉默', type: '光锥', isUP: false, emoji: '🎯', path: '', element: '' },
-                { name: '点个关注吧！', type: '光锥', isUP: false, emoji: '📸', path: '', element: '' }
-            ],
-            3: [
-                { name: '轮契', type: '光锥', emoji: '🔄', path: '', element: '' },
-                { name: '琥珀', type: '光锥', emoji: '🟠', path: '', element: '' },
-                { name: '天倾', type: '光锥', emoji: '🌠', path: '', element: '' },
-                { name: '离弦', type: '光锥', emoji: '🏹', path: '', element: '' },
-                { name: '嘉果', type: '光锥', emoji: '🍎', path: '', element: '' },
-                { name: '渊环', type: '光锥', emoji: '⭕', path: '', element: '' },
-                { name: '灵钥', type: '光锥', emoji: '🗝️', path: '', element: '' },
-                { name: '戍御', type: '光锥', emoji: '🛡️', path: '', element: '' }
-            ]
-        };
-        
-        // 初始化函数
-        function init() {
-            updateUI();
-            createParticles();
-            
-            // 单抽按钮事件
-            document.getElementById('singleWarp').addEventListener('click', function() {
-                if (gameState.stellarJade >= 160) {
-                    performWarp(1);
-                } else if (gameState.specialTicket >= 1) {
-                    gameState.specialTicket -= 1;
-                    performWarp(1);
-                } else {
-                    showMessage('星琼和专票不足！');
+<audio id="audio" preload="metadata"></audio>
+
+<script>
+    // ---------- 公共 API 配置 (使用 injahow 的 meting 服务，无需部署) ----------
+    const API_BASE = "https://api.injahow.cn/meting/";
+    // 默认歌单 ID (网易云热歌榜)
+    const DEFAULT_PLAYLIST_ID = "3778678";
+
+    let currentSongList = [];      // 当前歌曲列表 [{id, title, artist, duration, pic}]
+    let currentIndex = 0;
+    let isPlaying = false;
+    let loopMode = 0;              // 0顺序 1列表循环 2单曲循环
+    let volume = 0.7;
+    let progressInterval = null;
+    let isDragging = false;
+
+    // DOM 元素
+    const audio = document.getElementById('audio');
+    const coverImg = document.getElementById('cover');
+    const titleSpan = document.getElementById('title');
+    const artistSpan = document.getElementById('artist');
+    const currentTimeSpan = document.getElementById('currentTime');
+    const totalTimeSpan = document.getElementById('totalTime');
+    const progressFill = document.getElementById('progressFill');
+    const progressBar = document.getElementById('progressBar');
+    const playBtn = document.getElementById('playBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const volumeBtn = document.getElementById('volumeBtn');
+    const volumeSlider = document.getElementById('volumeSlider');
+    const loopBtn = document.getElementById('loopBtn');
+    const loopText = document.getElementById('loopText');
+    const listToggleBtn = document.getElementById('listToggleBtn');
+    const songListPanel = document.getElementById('songListPanel');
+    const songListContainer = document.getElementById('songListContainer');
+    const searchBtn = document.getElementById('searchBtn');
+    const searchKeyword = document.getElementById('searchKeyword');
+    const toast = document.getElementById('toast');
+
+    function showMessage(msg, isError = false) {
+        toast.textContent = msg;
+        toast.style.background = isError ? '#f87171' : 'rgba(0,0,0,0.8)';
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 2000);
+    }
+
+    function formatTime(sec) {
+        if (isNaN(sec)) return "00:00";
+        const mins = Math.floor(sec / 60);
+        const remain = Math.floor(sec % 60);
+        return `${mins.toString().padStart(2,'0')}:${remain.toString().padStart(2,'0')}`;
+    }
+
+    // 更新界面显示
+    function updateUI() {
+        const song = currentSongList[currentIndex];
+        if (!song) return;
+        titleSpan.innerText = song.title;
+        artistSpan.innerText = song.artist;
+        totalTimeSpan.innerText = song.duration;
+        coverImg.src = song.pic || 'http://p2.music.126.net/BKJrPO1FlbXcy-98AYXOzg==/109951172268004943.jpg?param=300x300';
+        renderSongList();
+        // 保存当前播放歌曲ID到本地
+        localStorage.setItem('currentSongId', song.id);
+        localStorage.setItem('currentIndex', currentIndex);
+    }
+
+    // 获取播放地址并播放
+    async function playSong(index) {
+        if (index < 0) index = 0;
+        if (index >= currentSongList.length) index = 0;
+        currentIndex = index;
+        const song = currentSongList[currentIndex];
+        updateUI();
+
+        try {
+            showMessage("加载中...");
+            // 通过公共 API 获取真实播放地址
+            const res = await fetch(`${API_BASE}?type=url&id=${song.id}`);
+            const data = await res.json();
+            if (data && data.url) {
+                audio.src = data.url;
+                audio.volume = volume;
+                if (isPlaying) {
+                    await audio.play();
+                    startProgressTimer();
                 }
-            });
-            
-            // 十连按钮事件
-            document.getElementById('tenWarp').addEventListener('click', function() {
-                if (gameState.stellarJade >= 1600) {
-                    performWarp(10);
-                } else {
-                    showMessage('星琼不足！');
-                }
-            });
-            
-            // 导航菜单事件
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.addEventListener('click', function() {
-                    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-                    this.classList.add('active');
-                    showMessage(`切换到${this.textContent}`);
-                });
-            });
-        }
-        
-        // 执行抽卡
-        function performWarp(count) {
-            if (count === 1) {
-                gameState.stellarJade -= 160;
+                showMessage("正在播放: " + song.title);
+                // 保存状态
+                localStorage.setItem('currentList', JSON.stringify(currentSongList.map(s => s.id)));
             } else {
-                gameState.stellarJade -= 1600;
+                throw new Error("无法获取播放地址");
             }
-            
-            gameState.totalDraws += count;
-            
-            const results = [];
-            let got4Star = false;
-            let got5Star = false;
-            
-            for (let i = 0; i < count; i++) {
-                gameState.pity5++;
-                gameState.pity4++;
-                
-                const result = warpItem();
-                results.push(result);
-                
-                if (result.rarity === 5) {
-                    got5Star = true;
-                    gameState.pity5 = 0;
-                    // 如果是UP角色，重置保底
-                    if (result.isUP) {
-                        gameState.is5StarGuaranteed = false;
-                    } else {
-                        gameState.is5StarGuaranteed = true;
-                    }
-                }
-                
-                if (result.rarity >= 4) {
-                    got4Star = true;
-                    gameState.pity4 = 0;
-                }
-            }
-            
-            // 十连保底：确保至少一个四星
-            if (count === 10 && !got4Star) {
-                gameState.pity4 = 0;
-                results[9] = warpItem(true);
-            }
-            
-            // 五星保底检查
-            if (gameState.pity5 >= 90 && !got5Star) {
-                gameState.pity5 = 0;
-                // 如果是小保底，随机决定是否歪
-                const isUP = !gameState.is5StarGuaranteed ? Math.random() < 0.5 : true;
-                const item = getRandomItem(5, isUP);
-                item.rarity = 5;
-                if (count === 10) {
-                    results[9] = item;
-                } else {
-                    results[results.length - 1] = item;
-                }
-                
-                if (isUP) {
-                    gameState.is5StarGuaranteed = false;
-                } else {
-                    gameState.is5StarGuaranteed = true;
-                }
-            }
-            
-            updateUI();
-            showWarpResult(results);
+        } catch (err) {
+            console.error(err);
+            showMessage("播放失败: " + err.message, true);
+            isPlaying = false;
+            playBtn.innerText = '▶';
         }
-        
-        // 抽卡逻辑
-        function warpItem(force4Star = false) {
-            // 四星保底检查
-            if (gameState.pity4 >= 10 || force4Star) {
-                const item = getRandomItem(4);
-                item.rarity = 4;
-                return item;
+    }
+
+    async function togglePlay() {
+        if (!audio.src) {
+            await playSong(currentIndex);
+            isPlaying = true;
+            playBtn.innerText = '⏸';
+            return;
+        }
+        if (isPlaying) {
+            audio.pause();
+            isPlaying = false;
+            playBtn.innerText = '▶';
+            if (progressInterval) clearInterval(progressInterval);
+        } else {
+            await audio.play();
+            isPlaying = true;
+            playBtn.innerText = '⏸';
+            startProgressTimer();
+        }
+    }
+
+    function startProgressTimer() {
+        if (progressInterval) clearInterval(progressInterval);
+        progressInterval = setInterval(() => {
+            if (!isDragging && isPlaying && audio.src && !isNaN(audio.duration)) {
+                const percent = (audio.currentTime / audio.duration) * 100;
+                progressFill.style.width = `${percent}%`;
+                currentTimeSpan.innerText = formatTime(audio.currentTime);
             }
-            
-            // 五星保底检查
-            if (gameState.pity5 >= 90) {
-                const isUP = !gameState.is5StarGuaranteed ? Math.random() < 0.5 : true;
-                const item = getRandomItem(5, isUP);
-                item.rarity = 5;
-                return item;
-            }
-            
-            // 随机概率
-            const rand = Math.random() * 100;
-            
-            if (rand < 0.6) { // 0.6% 五星
-                const isUP = !gameState.is5StarGuaranteed ? Math.random() < 0.5 : true;
-                const item = getRandomItem(5, isUP);
-                item.rarity = 5;
-                return item;
-            } else if (rand < 0.6 + 5.1) { // 5.1% 四星
-                const item = getRandomItem(4);
-                item.rarity = 4;
-                return item;
-            } else { // 94.3% 三星
-                const item = getRandomItem(3);
-                item.rarity = 3;
-                return item;
+        }, 200);
+    }
+
+    function nextSong() {
+        let newIndex = currentIndex + 1;
+        if (newIndex >= currentSongList.length) {
+            if (loopMode === 1) newIndex = 0;
+            else {
+                newIndex = currentSongList.length - 1;
+                isPlaying = false;
+                playBtn.innerText = '▶';
+                if (progressInterval) clearInterval(progressInterval);
+                return;
             }
         }
-        
-        // 获取随机物品
-        function getRandomItem(rarity, forceUP = false) {
-            const pool = warpPool[rarity];
-            
-            if (rarity === 5 && forceUP) {
-                // 只返回UP角色
-                const upItems = pool.filter(item => item.isUP);
-                const randomIndex = Math.floor(Math.random() * upItems.length);
-                return {...upItems[randomIndex]};
-            }
-            
-            if (rarity === 4) {
-                // 四星有50%概率是UP角色
-                const upItems = pool.filter(item => item.isUP);
-                const nonUpItems = pool.filter(item => !item.isUP);
-                
-                if (Math.random() < 0.5 && upItems.length > 0) {
-                    const randomIndex = Math.floor(Math.random() * upItems.length);
-                    return {...upItems[randomIndex]};
-                } else {
-                    const randomIndex = Math.floor(Math.random() * nonUpItems.length);
-                    return {...nonUpItems[randomIndex]};
-                }
-            }
-            
-            const randomIndex = Math.floor(Math.random() * pool.length);
-            return {...pool[randomIndex]};
+        currentIndex = newIndex;
+        isPlaying = true;
+        playSong(currentIndex);
+    }
+
+    function prevSong() {
+        let newIndex = currentIndex - 1;
+        if (newIndex < 0) {
+            if (loopMode === 1) newIndex = currentSongList.length - 1;
+            else newIndex = 0;
         }
-        
-        // 更新界面
-        function updateUI() {
-            document.getElementById('stellarJade').textContent = gameState.stellarJade;
-            document.getElementById('specialTicket').textContent = gameState.specialTicket;
-            
-            document.getElementById('pity5Count').textContent = gameState.pity5;
-            document.getElementById('pity5Remain').textContent = 90 - gameState.pity5;
-            
-            document.getElementById('pity4Count').textContent = gameState.pity4;
-            document.getElementById('pity4Remain').textContent = 10 - gameState.pity4;
-            
-            // 更新进度条
-            const pity5Progress = document.querySelector('.pity-item:nth-child(1) .progress-fill');
-            const pity4Progress = document.querySelector('.pity-item:nth-child(2) .progress-fill');
-            
-            pity5Progress.style.width = `${(gameState.pity5 / 90) * 100}%`;
-            pity4Progress.style.width = `${(gameState.pity4 / 10) * 100}%`;
-            
-            // 更新按钮状态
-            const singleBtn = document.getElementById('singleWarp');
-            const tenBtn = document.getElementById('tenWarp');
-            
-            singleBtn.disabled = gameState.stellarJade < 160 && gameState.specialTicket < 1;
-            tenBtn.disabled = gameState.stellarJade < 1600;
-            
-            // 更新保底状态显示
-            const guaranteeBadge = document.querySelector('.pity-item:nth-child(1)');
-            if (gameState.is5StarGuaranteed) {
-                if (!guaranteeBadge.querySelector('.guarantee-tag')) {
-                    const tag = document.createElement('div');
-                    tag.className = 'guarantee-tag';
-                    tag.innerHTML = '<i class="fas fa-check-circle" style="color: #ff9e6d; margin-right: 5px;"></i>下次5星必定为UP角色';
-                    tag.style.cssText = 'margin-top: 8px; padding: 5px 10px; background: rgba(255, 107, 157, 0.2); border-radius: 5px; font-size: 12px; color: #ff9e6d;';
-                    guaranteeBadge.appendChild(tag);
-                }
+        currentIndex = newIndex;
+        isPlaying = true;
+        playSong(currentIndex);
+    }
+
+    function setVolume(val) {
+        volume = val;
+        audio.volume = volume;
+        volumeSlider.value = volume;
+        volumeBtn.innerText = volume === 0 ? '🔇' : (volume < 0.5 ? '🔉' : '🔊');
+        localStorage.setItem('volume', volume);
+    }
+
+    function toggleLoopMode() {
+        loopMode = (loopMode + 1) % 3;
+        const modes = ['顺序', '列表循环', '单曲循环'];
+        const icons = ['🔁', '🔄', '🔂'];
+        loopBtn.innerText = icons[loopMode];
+        loopText.innerText = modes[loopMode];
+        if (loopMode !== 0) loopBtn.classList.add('active');
+        else loopBtn.classList.remove('active');
+        localStorage.setItem('loopMode', loopMode);
+    }
+
+    // 加载歌单（通过公共 API）
+    async function loadPlaylist(playlistId) {
+        showMessage("加载歌单...");
+        try {
+            const res = await fetch(`${API_BASE}?type=playlist&id=${playlistId}`);
+            const data = await res.json();
+            if (data && data.songs && data.songs.length) {
+                currentSongList = data.songs.map(s => ({
+                    id: s.id,
+                    title: s.name,
+                    artist: s.artist,
+                    duration: formatTime(s.duration / 1000),
+                    pic: s.picUrl
+                }));
+                currentIndex = 0;
+                isPlaying = true;
+                updateUI();
+                await playSong(0);
+                showMessage(`加载成功，共${currentSongList.length}首`);
             } else {
-                const existingTag = guaranteeBadge.querySelector('.guarantee-tag');
-                if (existingTag) existingTag.remove();
+                throw new Error("歌单为空");
             }
+        } catch (err) {
+            console.error(err);
+            showMessage("加载歌单失败，使用内置歌曲", true);
+            // 降级：使用内置几首歌
+            currentSongList = [
+                { id: "3316968660", title: "昔涟", artist: "张韶涵、HOYO-MiX", duration: "03:06", pic: "http://p2.music.126.net/BKJrPO1FlbXcy-98AYXOzg==/109951172268004943.jpg?param=300x300" },
+                { id: "2722510685", title: "耀斑", artist: "HOYO-MiX,YMIR", duration: "03:33", pic: "http://p2.music.126.net/DYDACa_8zB5irAOrasVgnQ==/109951171396677694.jpg?param=300x300" },
+                { id: "2709812973", title: "拂晓 Proi Proi", artist: "HOYO-MiX,NIDA", duration: "03:58", pic: "http://p2.music.126.net/2qGGwWFlMYF2o-GyNMhH5A==/109951171066942237.jpg?param=300x300" }
+            ];
+            currentIndex = 0;
+            isPlaying = true;
+            updateUI();
+            await playSong(0);
         }
-        
-        // 显示抽卡结果
-        function showWarpResult(results) {
-            const resultGrid = document.getElementById('warpResultGrid');
-            resultGrid.innerHTML = '';
-            
-            // 检查是否有五星
-            const has5Star = results.some(item => item.rarity === 5);
-            
-            // 添加结果项
-            results.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = `result-item result-${item.rarity}star`;
-                
-                // 星级显示
-                let stars = '';
-                for (let i = 0; i < item.rarity; i++) {
-                    stars += '★';
-                }
-                
-                // 角色/光锥详细信息
-                let detailText = '';
-                if (item.type === '角色' && item.path && item.element) {
-                    detailText = `${item.path} · ${item.element}`;
-                } else if (item.type === '光锥') {
-                    detailText = '光锥';
-                }
-                
-                div.innerHTML = `
-                    <div class="result-rarity" style="color: ${
-                        item.rarity === 5 ? '#ffd166' : 
-                        item.rarity === 4 ? '#b266ff' : '#66b3ff'
-                    };">
-                        ${stars}
-                    </div>
-                    <div class="result-name">${item.emoji} ${item.name}</div>
-                    <div class="result-type">${detailText}</div>
-                    ${item.isUP ? '<div class="result-up">UP</div>' : ''}
-                `;
-                
-                resultGrid.appendChild(div);
-                
-                // 添加延迟显示动画
-                setTimeout(() => {
-                    div.classList.add('revealed');
-                    
-                    // 如果是五星，添加特殊效果
-                    if (item.rarity === 5) {
-                        setTimeout(() => {
-                            div.classList.add('golden-glow');
-                            div.style.transform = 'scale(1.1)';
-                            div.style.zIndex = '10';
-                            
-                            // 播放音效（模拟）
-                            if (has5Star) {
-                                console.log('✨ 金色传说！获得五星角色！');
-                            }
-                            
-                            setTimeout(() => {
-                                div.style.transform = 'scale(1)';
-                            }, 300);
-                        }, 500 + index * 100);
-                    }
-                }, index * 100 + 200);
+    }
+
+    // 搜索歌曲
+    async function searchSongs(keyword) {
+        if (!keyword.trim()) return;
+        showMessage("搜索中...");
+        try {
+            const res = await fetch(`${API_BASE}?type=search&keywords=${encodeURIComponent(keyword)}`);
+            const data = await res.json();
+            if (data && data.songs && data.songs.length) {
+                currentSongList = data.songs.slice(0, 30).map(s => ({
+                    id: s.id,
+                    title: s.name,
+                    artist: s.artist,
+                    duration: formatTime(s.duration / 1000),
+                    pic: s.picUrl
+                }));
+                currentIndex = 0;
+                isPlaying = true;
+                updateUI();
+                await playSong(0);
+                showMessage(`找到 ${currentSongList.length} 首`);
+                // 自动关闭歌单面板
+                songListPanel.classList.remove('show');
+                listToggleBtn.innerText = '📋 歌单';
+            } else {
+                showMessage("未找到相关歌曲", true);
+            }
+        } catch (err) {
+            console.error(err);
+            showMessage("搜索失败", true);
+        }
+    }
+
+    // 渲染歌曲列表
+    function renderSongList() {
+        songListContainer.innerHTML = '';
+        currentSongList.forEach((song, idx) => {
+            const div = document.createElement('div');
+            div.className = 'song-item' + (idx === currentIndex ? ' active' : '');
+            div.innerHTML = `<span>${idx+1}. ${song.title} - ${song.artist}</span><span class="song-duration">${song.duration}</span>`;
+            div.addEventListener('click', () => {
+                currentIndex = idx;
+                isPlaying = true;
+                playSong(currentIndex);
+                songListPanel.classList.remove('show');
+                listToggleBtn.innerText = '📋 歌单';
             });
-            
-            // 显示弹窗
-            document.getElementById('warpResultModal').style.display = 'flex';
-            
-            // 如果有五星，标题变化
-            if (has5Star) {
-                document.querySelector('.result-title').textContent = '✨ 金光闪耀！✨';
-                document.querySelector('.result-subtitle').textContent = '恭喜获得五星角色！';
-            }
+            songListContainer.appendChild(div);
+        });
+    }
+
+    // 进度条点击跳转
+    function seekProgress(e) {
+        const rect = progressBar.getBoundingClientRect();
+        let percent = (e.clientX - rect.left) / rect.width;
+        percent = Math.min(1, Math.max(0, percent));
+        if (audio.duration && !isNaN(audio.duration)) {
+            audio.currentTime = percent * audio.duration;
         }
-        
-        // 关闭结果弹窗
-        function closeWarpResult() {
-            document.getElementById('warpResultModal').style.display = 'none';
-            // 重置标题
-            document.querySelector('.result-title').textContent = '跃迁结果';
-            document.querySelector('.result-subtitle').textContent = '本次跃迁获得了以下角色与光锥';
-        }
-        
-        // 创建粒子背景
-        function createParticles() {
-            const particlesContainer = document.getElementById('particles');
-            const particleCount = 30;
-            
-            for (let i = 0; i < particleCount; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'particle';
-                
-                // 随机大小
-                const size = Math.random() * 4 + 1;
-                particle.style.width = `${size}px`;
-                particle.style.height = `${size}px`;
-                
-                // 随机位置
-                particle.style.left = `${Math.random() * 100}%`;
-                
-                // 随机颜色
-                const colors = [
-                    'rgba(101, 110, 255, 0.5)',
-                    'rgba(255, 107, 157, 0.4)',
-                    'rgba(255, 209, 102, 0.3)',
-                    'rgba(102, 179, 255, 0.3)'
-                ];
-                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
-                
-                // 随机动画延迟和持续时间
-                const delay = Math.random() * 15;
-                const duration = 15 + Math.random() * 10;
-                particle.style.animationDelay = `${delay}s`;
-                particle.style.animationDuration = `${duration}s`;
-                
-                particlesContainer.appendChild(particle);
-            }
-        }
-        
-        // 显示消息提示
-        function showMessage(message) {
-            // 创建消息提示元素
-            const messageEl = document.createElement('div');
-            messageEl.textContent = message;
-            messageEl.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: rgba(18, 22, 55, 0.9);
-                color: white;
-                padding: 12px 20px;
-                border-radius: 8px;
-                border: 1px solid rgba(101, 110, 255, 0.5);
-                z-index: 1000;
-                transform: translateX(100%);
-                transition: transform 0.3s;
-                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-            `;
-            
-            document.body.appendChild(messageEl);
-            
-            // 显示消息
-            setTimeout(() => {
-                messageEl.style.transform = 'translateX(0)';
-            }, 10);
-            
-            // 3秒后隐藏并移除
-            setTimeout(() => {
-                messageEl.style.transform = 'translateX(100%)';
-                setTimeout(() => {
-                    document.body.removeChild(messageEl);
-                }, 300);
-            }, 3000);
-        }
-        
-        // 点击弹窗外部关闭
-        document.getElementById('warpResultModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeWarpResult();
+    }
+
+    // 事件绑定
+    function bindEvents() {
+        playBtn.addEventListener('click', togglePlay);
+        prevBtn.addEventListener('click', prevSong);
+        nextBtn.addEventListener('click', nextSong);
+        volumeSlider.addEventListener('input', (e) => setVolume(parseFloat(e.target.value)));
+        volumeBtn.addEventListener('click', () => setVolume(audio.volume > 0 ? 0 : (volume || 0.7)));
+        loopBtn.addEventListener('click', toggleLoopMode);
+        listToggleBtn.addEventListener('click', () => {
+            songListPanel.classList.toggle('show');
+            listToggleBtn.innerText = songListPanel.classList.contains('show') ? '✖ 关闭' : '📋 歌单';
+            renderSongList();
+        });
+        searchBtn.addEventListener('click', () => searchSongs(searchKeyword.value));
+        searchKeyword.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchSongs(searchKeyword.value);
+        });
+        progressBar.addEventListener('click', seekProgress);
+        // 进度条拖拽
+        progressBar.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            seekProgress(e);
+            const onMouseMove = (e) => seekProgress(e);
+            const onMouseUp = () => {
+                isDragging = false;
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            };
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+        // 触摸事件支持
+        progressBar.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isDragging = true;
+            seekProgress(e.touches[0]);
+            const onTouchMove = (e) => seekProgress(e.touches[0]);
+            const onTouchEnd = () => {
+                isDragging = false;
+                document.removeEventListener('touchmove', onTouchMove);
+                document.removeEventListener('touchend', onTouchEnd);
+            };
+            document.addEventListener('touchmove', onTouchMove);
+            document.addEventListener('touchend', onTouchEnd);
+        });
+        // 音频结束事件
+        audio.addEventListener('ended', () => {
+            if (loopMode === 2) {
+                audio.currentTime = 0;
+                audio.play();
+            } else {
+                nextSong();
             }
         });
-        
-        // 页面加载完成时初始化
-        window.addEventListener('DOMContentLoaded', init);
-        
-        // 添加键盘快捷键
-        document.addEventListener('keydown', function(e) {
-            if (e.key === ' ' || e.key === 'Spacebar') {
-                e.preventDefault();
-                if (gameState.stellarJade >= 160) {
-                    document.getElementById('singleWarp').click();
-                }
-            }
-            
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                if (gameState.stellarJade >= 1600) {
-                    document.getElementById('tenWarp').click();
-                }
+        // 定期更新进度（防止 interval 不准确）
+        audio.addEventListener('timeupdate', () => {
+            if (!isDragging && isPlaying && audio.duration) {
+                const percent = (audio.currentTime / audio.duration) * 100;
+                progressFill.style.width = `${percent}%`;
+                currentTimeSpan.innerText = formatTime(audio.currentTime);
             }
         });
-        
-        // 添加一些视觉特效
-        function addVisualEffects() {
-            // 角色展示区域呼吸灯效果
-            const charDisplay = document.querySelector('.char-display');
-            setInterval(() => {
-                const brightness = 0.8 + Math.random() * 0.2;
-                const hue = Math.random() * 20;
-                charDisplay.style.filter = `brightness(${brightness}) hue-rotate(${hue}deg)`;
-            }, 3000);
-            
-            // 按钮闪烁效果
-            const warpButtons = document.querySelectorAll('.warp-button');
-            setInterval(() => {
-                warpButtons.forEach(btn => {
-                    if (!btn.disabled) {
-                        const random = Math.random();
-                        if (random > 0.7) {
-                            btn.style.boxShadow = `0 0 20px ${btn.classList.contains('warp-single') ? 'rgba(101, 110, 255, 0.8)' : 'rgba(255, 107, 157, 0.8)'}`;
-                            setTimeout(() => {
-                                btn.style.boxShadow = '';
-                            }, 300);
-                        }
-                    }
-                });
-            }, 2000);
+    }
+
+    // 恢复本地存储的状态
+    function loadStoredState() {
+        const savedVolume = localStorage.getItem('volume');
+        if (savedVolume) setVolume(parseFloat(savedVolume));
+        const savedLoop = localStorage.getItem('loopMode');
+        if (savedLoop) {
+            loopMode = parseInt(savedLoop);
+            if (loopMode === 0) { loopBtn.innerText = '🔁'; loopText.innerText = '顺序'; loopBtn.classList.remove('active'); }
+            if (loopMode === 1) { loopBtn.innerText = '🔄'; loopText.innerText = '列表循环'; loopBtn.classList.add('active'); }
+            if (loopMode === 2) { loopBtn.innerText = '🔂'; loopText.innerText = '单曲循环'; loopBtn.classList.add('active'); }
         }
-        
-        // 页面加载后添加视觉特效
-        window.addEventListener('load', addVisualEffects);
-    </script>
+        // 尝试恢复上次播放列表
+        const savedList = localStorage.getItem('currentList');
+        if (savedList) {
+            // 简单恢复，但为防止过期，不强制，还是用默认歌单
+        }
+    }
+
+    // 初始化
+    async function init() {
+        bindEvents();
+        loadStoredState();
+        await loadPlaylist(DEFAULT_PLAYLIST_ID);
+    }
+
+    init();
+</script>
 </body>
 </html>
