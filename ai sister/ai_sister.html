@@ -4,21 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <link rel="icon" href="/images/wangzhantupian.png" type="image/png">
-    <title>小兹 · 离线智能回复</title>
+    <title>小兹 · 智能助手</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* 样式完全保持原样 */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { background: #0c0c0c; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; height: 100dvh; display: flex; flex-direction: column; }
         .chat-header { background: #0c0c0c; padding: 16px 16px 12px; display: flex; align-items: center; gap: 12px; border-bottom: 0.5px solid #2c2c2e; flex-shrink: 0; }
         .avatar { width: 44px; height: 44px; border-radius: 50%; background-image: url('https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/avatars/icon.png'); background-size: cover; background-position: center; background-repeat: no-repeat; background-color: #4a3b2c; }
         .title h2 { font-size: 18px; font-weight: 600; color: #ffffff; }
         .title p { font-size: 12px; color: #8e8e93; margin-top: 2px; }
-        .config-panel { background: #1c1c1e; padding: 12px 16px; border-bottom: 0.5px solid #2c2c2e; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
-        .status-text { font-size: 12px; color: #30d158; margin-top: 0; }
-        .clear-btn { background: #c41e3a; border: none; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: 0.2s; }
+        
+        /* 新增设置按钮 */
+        .settings-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #0a84ff; padding: 6px; margin-left: auto; }
+        
+        /* 配置面板恢复 */
+        .config-panel { background: #1c1c1e; padding: 12px 16px; border-bottom: 0.5px solid #2c2c2e; display: none; flex-wrap: wrap; gap: 8px; }
+        .config-panel.show { display: flex; }
+        .api-row { display: flex; gap: 8px; width: 100%; align-items: center; }
+        .api-input { flex: 1; padding: 8px 12px; border: 1px solid #3a3a3c; border-radius: 20px; font-size: 14px; background: #2c2c2e; color: #ffffff; }
+        .api-input:focus { outline: none; border-color: #0a84ff; }
+        .btn-sm { background: #0a84ff; border: none; color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; }
+        .btn-outline { background: #2c2c2e; border: 1px solid #3a3a3c; color: #ffffff; }
+        .status-text { font-size: 12px; color: #ff9f0a; margin-top: 4px; width: 100%; }
+        .status-text.success { color: #30d158; }
+        .status-text.error { color: #ff453a; }
+        
+        .clear-btn { background: #c41e3a; border: none; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; }
         .clear-btn:hover { background: #a01830; }
+        
         .messages-area { flex: 1; overflow-y: auto; padding: 16px 12px; display: flex; flex-direction: column; gap: 12px; background: #0c0c0c; }
         .message { display: flex; max-width: 85%; }
         .message.user { align-self: flex-end; flex-direction: row-reverse; }
@@ -32,8 +46,9 @@
         #messageInput { flex: 1; background: #1c1c1e; border: 1px solid #3a3a3c; border-radius: 24px; padding: 10px 16px; font-size: 15px; color: #ffffff; resize: none; max-height: 100px; font-family: inherit; }
         #messageInput:focus { outline: none; border-color: #0a84ff; }
         .send-btn { background: #0a84ff; border: none; width: 44px; height: 44px; border-radius: 50%; color: white; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .send-btn:disabled { background: #3a3a3c; cursor: not-allowed; }
         .loading-tip { text-align: center; padding: 12px; color: #8e8e93; font-size: 13px; }
-        @media (max-width: 560px) { .config-panel { flex-direction: column; align-items: stretch; } .clear-btn { align-self: flex-start; } }
+        @media (max-width: 560px) { .config-panel { flex-direction: column; align-items: stretch; } .api-row { flex-wrap: wrap; } .btn-sm { flex: 1; } }
     </style>
 </head>
 <body>
@@ -41,52 +56,65 @@
     <div class="avatar"></div>
     <div class="title">
         <h2>小兹</h2>
-        <p>全能助手 · 零费用</p>
+        <p>查WIKI助手 · 双模智能回复</p>
     </div>
+    <button class="settings-btn" id="settingsBtn"><i class="fas fa-cog"></i></button>
 </div>
 
-<div class="config-panel">
-    <div id="apiStatus" class="status-text">✅ 小兹已就绪，直接聊天吧～</div>
-    <button id="clearHistoryBtn" class="clear-btn"><i class="fas fa-trash-alt"></i> 清空聊天记录</button>
+<div class="config-panel" id="configPanel">
+    <div class="api-row">
+        <input type="password" id="apiKeyInput" class="api-input" placeholder="输入 DeepSeek API 密钥 (sk-...)" autocomplete="off">
+        <button id="saveKeyBtn" class="btn-sm">保存</button>
+    </div>
+    <div class="api-row">
+        <button id="testConnBtn" class="btn-sm btn-outline">测试连接</button>
+        <button id="clearHistoryBtn" class="clear-btn"><i class="fas fa-trash-alt"></i> 清空聊天记录</button>
+    </div>
+    <div id="apiStatus" class="status-text">💡 请保存密钥后，点击测试连接。</div>
     <div style="font-size: 11px; color: #8e8e93; margin-top: 4px; width: 100%;">
-        📚 小兹会查角色/光锥/材料，用自然语言回答你～
+        🔑 密钥仅保存在本地浏览器缓存。<br>📚 小兹会优先查 WIKI 数据库，找不到才会自动调用 AI 回答。
     </div>
 </div>
 
 <div class="messages-area" id="messagesArea"></div>
 
 <div class="input-area">
-    <textarea id="messageInput" rows="1" placeholder="问小兹信息，比如「鹿管是谁」"></textarea>
-    <button class="send-btn" id="sendBtn">➤</button>
+    <textarea id="messageInput" rows="1" placeholder="请先配置密钥，再和小兹聊天..." disabled></textarea>
+    <button class="send-btn" id="sendBtn" disabled>➤</button>
 </div>
 
 <script>
     (function() {
-        // ================== Supabase 配置（纯离线查询） ==================
+        // ================== 🔑 核心配置区 ==================
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
+        
+        const SYSTEM_PROMPT = `你是一个温柔可爱的邻家妹妹，同时也是「六哥荣耀WIKI」的智能助手。你擅长回答关于游戏角色、光锥、材料等 WIKI 内容。如果用户提问与你知识库相关，你会优先利用提供的WIKI资料给出准确答案。如果资料不足，你会诚实地说“小兹暂时没查到，要不要去WIKI主页看看呀～”。回复请保持温柔、可爱的语气，尽量简短，不要长篇大论。`;
 
-        // DOM 元素
+        // ================== 全局变量 ==================
         const messagesArea = document.getElementById('messagesArea');
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const configPanel = document.getElementById('configPanel');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const saveKeyBtn = document.getElementById('saveKeyBtn');
+        const testConnBtn = document.getElementById('testConnBtn');
         const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-
+        const apiStatusSpan = document.getElementById('apiStatus');
+        
         let supabaseClient = null;
+        let conversationHistory = [];
+        let isConnected = false;
 
-        // ================== 🔥 闲聊拦截（零成本本地回复） ==================
+        // ================== 🔥 闲聊拦截 ==================
         const casualGreetings = ['你好','您好','早上好','午安','晚安','在吗','哈哈','谢谢','拜拜','吃饭了吗','忙吗','你是谁','hi','hello','再见','好棒','小兹'];
         function isCasualChat(text) {
             const cleanText = text.trim().toLowerCase();
             return casualGreetings.some(keyword => cleanText.includes(keyword));
         }
         function getRandomLocalReply() {
-            const replies = [
-                '嘿嘿，小兹在呢～有什么需要帮忙的吗？',
-                '晚安呀～做个好梦哦！(｡･ω･｡)',
-                '不客气呀，能帮到你就好～(*^▽^*)',
-                '嘻嘻，小兹一直都在呢！有啥想问的尽管说～'
-            ];
+            const replies = ['嘿嘿，小兹在呢～有什么需要帮忙的吗？','晚安呀～做个好梦哦！(｡･ω･｡)','不客气呀，能帮到你就好～(*^▽^*)','嘻嘻，小兹一直都在呢！有啥想问的尽管说～'];
             return replies[Math.floor(Math.random() * replies.length)];
         }
 
@@ -101,53 +129,85 @@
             return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
 
-        // ================== 查询逻辑优化（同时查角色/光锥/材料） ==================
+        // ================== 本地 WIKI 检索 ==================
         async function searchDatabase(query) {
             const client = getSupabase();
             if (!client) return null;
-
-            // 过滤掉用户常说的虚词，提取核心关键字
             const keywords = query.replace(/[?？什么哪个怎么如何告诉我解释一下我要查一下介绍下]/g, '').trim();
             if (!keywords) return null;
 
-            // 并行查询三张表 (使用 ilike 模糊搜索，不区分大小写)
             const [charRes, coneRes, matRes] = await Promise.all([
-                client.from('characters').select('name, element, path, rarity, description, is_limited').ilike('name', `%${keywords}%`).limit(3),
+                client.from('characters').select('name, element, path, rarity, description').ilike('name', `%${keywords}%`).limit(3),
                 client.from('light_cones').select('name, description, rarity').ilike('name', `%${keywords}%`).limit(3),
                 client.from('materials').select('name, description').ilike('name', `%${keywords}%`).limit(3)
             ]);
 
             let results = [];
-            if (charRes.data && charRes.data.length) {
-                results.push(...charRes.data.map(r => `【角色】${r.name} (${r.element}·${r.path}) ${r.rarity}星 - ${r.description || '暂无详细描述'}`));
-            }
-            if (coneRes.data && coneRes.data.length) {
-                results.push(...coneRes.data.map(r => `【光锥】${r.name} - ${r.description || '暂无效果数据'}`));
-            }
-            if (matRes.data && matRes.data.length) {
-                results.push(...matRes.data.map(r => `【材料】${r.name} - ${r.description || '暂无获取方式'}`));
-            }
+            if (charRes.data && charRes.data.length) results.push(...charRes.data.map(r => `【角色】${r.name} (${r.element}·${r.path}) ${r.rarity}星 - ${r.description || '暂无'}`));
+            if (coneRes.data && coneRes.data.length) results.push(...coneRes.data.map(r => `【光锥】${r.name} - ${r.description || '暂无'}`));
+            if (matRes.data && matRes.data.length) results.push(...matRes.data.map(r => `【材料】${r.name} - ${r.description || '暂无'}`));
             if (results.length === 0) return null;
-            return results.slice(0, 4); // 最多返回4条，防止刷屏
+            return results.slice(0, 4);
         }
 
-        // ================== 核心对话逻辑 ==================
-        async function getLocalReply(userMessage) {
-            // 1. 拦截闲聊，直接返回固定回复，不查询数据库，0消耗
-            if (isCasualChat(userMessage)) {
-                return getRandomLocalReply();
-            }
+        // ================== 🌐 AI 大模型辅助 ==================
+        async function callDeepSeek(userMessage, apiKey) {
+            if (!apiKey) throw new Error('未配置 API 密钥');
+            const recentHistory = conversationHistory.slice(-5).map(msg => ({
+                role: msg.role === 'user' ? 'user' : 'assistant',
+                content: msg.content
+            }));
+            const messages = [
+                { role: 'system', content: SYSTEM_PROMPT },
+                ...recentHistory,
+                { role: 'user', content: userMessage }
+            ];
 
-            // 2. 尝试数据库查询
+            const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'deepseek-chat',
+                    messages: messages,
+                    temperature: 0.7,
+                    max_tokens: 300 // 🔥 限制输出字数
+                })
+            });
+
+            if (!response.ok) {
+                let errMsg = `HTTP ${response.status}`;
+                try { const errData = await response.json(); errMsg += `: ${errData.error?.message || ''}`; } catch(e) {}
+                throw new Error(errMsg);
+            }
+            const data = await response.json();
+            return data.choices[0].message.content;
+        }
+
+        // ================== 核心决策逻辑 ==================
+        async function getReply(userMessage) {
+            // 1. 闲聊拦截（0花费）
+            if (isCasualChat(userMessage)) return getRandomLocalReply();
+
+            // 2. 搜数据库（0花费）
             const searchResult = await searchDatabase(userMessage);
             if (searchResult && searchResult.length > 0) {
-                // 拼接数据库结果 + 小兹特有的口吻
                 const infoText = searchResult.join('\n');
                 return `嗯～ 小兹在数据库里找到了这些信息：\n\n${infoText}\n\n需要更详细的，也可以去 WIKI 主页看看哦～ (*╹▽╹*)`;
             }
 
-            // 3. 数据库没找到
-            return "唔…小兹查了一下数据库，暂时没搜到相关的角色、光锥或材料呢。你可以试试换个更明确的名字，比如「鹿管」「皮哥」「夹子姐」，或者直接去 WIKI 主页翻翻看～";
+            // 3. 数据库搜不到，交给 AI
+            const localKey = localStorage.getItem('ai_sister_key');
+            if (!localKey) return "小兹准备好了，但你还没给我 API 密钥呢。快点击右上角设置，保存并测试连接吧～";
+            
+            try {
+                return await callDeepSeek(userMessage, localKey);
+            } catch (error) {
+                console.error('AI调用失败:', error);
+                return "唔…小兹查了数据库，也没能连上AI大脑。你可以试试换个更明确的名字，或者直接去 WIKI 主页翻翻看～";
+            }
         }
 
         // ================== 界面渲染逻辑 ==================
@@ -156,24 +216,25 @@
             if (!text) return;
             messageInput.value = '';
             autoResize();
-
             addMessage('user', text, true);
 
             const loader = document.createElement('div');
             loader.className = 'loading-tip';
             loader.id = 'aiLoader';
-            loader.innerHTML = '🔍 小兹正在翻数据库...';
+            loader.innerHTML = '🔍 小兹正在努力思考...';
             messagesArea.appendChild(loader);
             messagesArea.scrollTop = messagesArea.scrollHeight;
 
             try {
-                const reply = await getLocalReply(text);
+                const reply = await getReply(text);
                 document.getElementById('aiLoader')?.remove();
                 addMessage('assistant', reply, false);
+                conversationHistory.push({ role: 'assistant', content: reply });
+                saveHistory();
             } catch (error) {
                 document.getElementById('aiLoader')?.remove();
                 console.error(error);
-                addSystemMessage(`😥 小兹卡住了: ${error.message}`);
+                addSystemMessage(`😥 小兹出错了: ${error.message}`);
             }
         }
 
@@ -220,34 +281,136 @@
             ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
         }
 
+        // ================== 存储逻辑 ==================
+        function saveHistory() {
+            localStorage.setItem('ai_sister_history', JSON.stringify(conversationHistory));
+        }
+        
+        function loadHistory() {
+            const saved = localStorage.getItem('ai_sister_history');
+            if (saved) {
+                try {
+                    conversationHistory = JSON.parse(saved);
+                    for (let msg of conversationHistory) {
+                        const div = document.createElement('div');
+                        div.className = `message ${msg.role === 'user' ? 'user' : 'ai'}`;
+                        const bubble = document.createElement('div');
+                        bubble.className = 'bubble';
+                        bubble.innerHTML = escapeHtml(msg.content).replace(/\n/g, '<br>');
+                        const timeDiv = document.createElement('div');
+                        timeDiv.className = 'time';
+                        timeDiv.textContent = '·';
+                        div.appendChild(bubble);
+                        div.appendChild(timeDiv);
+                        messagesArea.appendChild(div);
+                    }
+                    messagesArea.scrollTop = messagesArea.scrollHeight;
+                } catch(e) {}
+            }
+            if (!conversationHistory.length) {
+                addSystemMessage('🌸 小兹欢迎你！点击右上角 ⚙️ 设置并保存您的 DeepSeek API 密钥。\n📚 我会优先查 WIKI 数据库，找不到才会用 AI 回答。');
+            }
+            
+            // 检查本地是否有已保存的密钥
+            const savedKey = localStorage.getItem('ai_sister_key');
+            if (savedKey) {
+                apiKeyInput.value = savedKey;
+                apiStatusSpan.innerHTML = '✅ 已检测到本地密钥';
+                apiStatusSpan.className = 'status-text success';
+                enableChat(true);
+            } else {
+                enableChat(false);
+            }
+        }
+
+        function enableChat(enabled) {
+            messageInput.disabled = !enabled;
+            sendBtn.disabled = !enabled;
+            if (enabled) {
+                messageInput.placeholder = "问小兹信息，比如「鹿管是谁」";
+            }
+        }
+
         function clearHistory() {
             if (confirm('确定清空当前聊天记录吗？')) {
+                conversationHistory = [];
+                localStorage.removeItem('ai_sister_history');
                 messagesArea.innerHTML = '';
                 addSystemMessage('✨ 聊天记录已清空，重新开始吧～');
             }
         }
 
+        // ================== API 密钥管理 ==================
+        async function saveApiKey() {
+            const key = apiKeyInput.value.trim();
+            if (!key || !key.startsWith('sk-')) {
+                apiStatusSpan.innerHTML = '❌ 密钥格式错误，应以 sk- 开头';
+                apiStatusSpan.className = 'status-text error';
+                return;
+            }
+            localStorage.setItem('ai_sister_key', key);
+            await testConnection(key);
+        }
+
+        async function testConnection(key) {
+            const apiKey = key || localStorage.getItem('ai_sister_key');
+            if (!apiKey) {
+                apiStatusSpan.innerHTML = '❌ 请先保存密钥';
+                apiStatusSpan.className = 'status-text error';
+                return;
+            }
+            apiStatusSpan.innerHTML = '⏳ 测试中...';
+            apiStatusSpan.className = 'status-text';
+            try {
+                const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [{ role: 'user', content: 'ping' }],
+                        max_tokens: 5
+                    })
+                });
+                if (res.ok) {
+                    apiStatusSpan.innerHTML = '✅ 连接成功！可以开始聊天了。';
+                    apiStatusSpan.className = 'status-text success';
+                    enableChat(true);
+                } else {
+                    let err = `HTTP ${res.status}`;
+                    try { const data = await res.json(); err += `: ${data.error?.message || ''}`; } catch(e) {}
+                    apiStatusSpan.innerHTML = `❌ 连接失败: ${err}`;
+                    apiStatusSpan.className = 'status-text error';
+                    enableChat(false);
+                }
+            } catch (err) {
+                apiStatusSpan.innerHTML = `❌ 网络错误: ${err.message}`;
+                apiStatusSpan.className = 'status-text error';
+                enableChat(false);
+            }
+        }
+
+        // ================== 生命周期 ==================
         function bindEvents() {
+            settingsBtn.onclick = () => { configPanel.classList.toggle('show'); };
+            saveKeyBtn.onclick = saveApiKey;
+            testConnBtn.onclick = () => testConnection();
+            clearHistoryBtn.onclick = clearHistory;
             sendBtn.onclick = sendMessage;
             messageInput.addEventListener('keypress', e => {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
             });
             messageInput.addEventListener('input', autoResize);
-            clearHistoryBtn.onclick = clearHistory;
-            // 双击标题也能清空（保留你之前的代码习惯）
             const headerTitle = document.querySelector('.title h2');
             if (headerTitle) headerTitle.addEventListener('dblclick', clearHistory);
         }
 
         function init() {
-            messagesArea.innerHTML = '';
-            addSystemMessage('🌸 小兹离线版已启动～ 直接问我各种信息吧！\n📚 例如：「鹿管是谁？」、「材料在哪刷？」');
+            loadHistory();
             bindEvents();
-            if (!window.supabase) {
-                console.warn('Supabase SDK 加载失败');
-                addSystemMessage('⚠️ 数据库连接失败，请检查网络或配置。');
-                return;
-            }
+            if (!window.supabase) console.warn('Supabase SDK 加载失败');
         }
 
         init();
