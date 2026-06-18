@@ -8,159 +8,32 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* 样式完全保持原样，无改动 */
+        /* 样式完全保持原样 */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body {
-            background: #0c0c0c;
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
-            height: 100dvh;
-            display: flex;
-            flex-direction: column;
-        }
-        .chat-header {
-            background: #0c0c0c;
-            padding: 16px 16px 12px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-bottom: 0.5px solid #2c2c2e;
-            flex-shrink: 0;
-        }
-        .avatar {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background-image: url('https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/avatars/icon.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-color: #4a3b2c;
-        }
+        body { background: #0c0c0c; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; height: 100dvh; display: flex; flex-direction: column; }
+        .chat-header { background: #0c0c0c; padding: 16px 16px 12px; display: flex; align-items: center; gap: 12px; border-bottom: 0.5px solid #2c2c2e; flex-shrink: 0; }
+        .avatar { width: 44px; height: 44px; border-radius: 50%; background-image: url('https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/avatars/icon.png'); background-size: cover; background-position: center; background-repeat: no-repeat; background-color: #4a3b2c; }
         .title h2 { font-size: 18px; font-weight: 600; color: #ffffff; }
         .title p { font-size: 12px; color: #8e8e93; margin-top: 2px; }
-        .config-panel {
-            background: #1c1c1e;
-            padding: 12px 16px;
-            border-bottom: 0.5px solid #2c2c2e;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-        }
-        .status-text {
-            font-size: 12px;
-            color: #30d158;
-            margin-top: 0;
-        }
-        .clear-btn {
-            background: #c41e3a;
-            border: none;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .clear-btn:hover {
-            background: #a01830;
-        }
-        .messages-area {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            background: #0c0c0c;
-        }
-        .message {
-            display: flex;
-            max-width: 85%;
-        }
-        .message.user {
-            align-self: flex-end;
-            flex-direction: row-reverse;
-        }
-        .message.ai {
-            align-self: flex-start;
-        }
-        .bubble {
-            padding: 10px 14px;
-            border-radius: 20px;
-            font-size: 15px;
-            line-height: 1.4;
-            word-wrap: break-word;
-            background: #1c1c1e;
-            color: #ffffff;
-        }
-        .message.user .bubble {
-            background: #0a84ff;
-            border-top-right-radius: 4px;
-        }
-        .message.ai .bubble {
-            background: #2c2c2e;
-            border-top-left-radius: 4px;
-        }
-        .time {
-            font-size: 10px;
-            color: #8e8e93;
-            margin-top: 4px;
-            padding: 0 6px;
-        }
+        .config-panel { background: #1c1c1e; padding: 12px 16px; border-bottom: 0.5px solid #2c2c2e; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+        .status-text { font-size: 12px; color: #30d158; margin-top: 0; }
+        .clear-btn { background: #c41e3a; border: none; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: 0.2s; }
+        .clear-btn:hover { background: #a01830; }
+        .messages-area { flex: 1; overflow-y: auto; padding: 16px 12px; display: flex; flex-direction: column; gap: 12px; background: #0c0c0c; }
+        .message { display: flex; max-width: 85%; }
+        .message.user { align-self: flex-end; flex-direction: row-reverse; }
+        .message.ai { align-self: flex-start; }
+        .bubble { padding: 10px 14px; border-radius: 20px; font-size: 15px; line-height: 1.4; word-wrap: break-word; background: #1c1c1e; color: #ffffff; }
+        .message.user .bubble { background: #0a84ff; border-top-right-radius: 4px; }
+        .message.ai .bubble { background: #2c2c2e; border-top-left-radius: 4px; }
+        .time { font-size: 10px; color: #8e8e93; margin-top: 4px; padding: 0 6px; }
         .message.user .time { text-align: right; }
-        .input-area {
-            background: #0c0c0c;
-            border-top: 0.5px solid #2c2c2e;
-            padding: 10px 12px;
-            padding-bottom: max(10px, env(safe-area-inset-bottom));
-            display: flex;
-            gap: 8px;
-            align-items: flex-end;
-            flex-shrink: 0;
-        }
-        #messageInput {
-            flex: 1;
-            background: #1c1c1e;
-            border: 1px solid #3a3a3c;
-            border-radius: 24px;
-            padding: 10px 16px;
-            font-size: 15px;
-            color: #ffffff;
-            resize: none;
-            max-height: 100px;
-            font-family: inherit;
-        }
+        .input-area { background: #0c0c0c; border-top: 0.5px solid #2c2c2e; padding: 10px 12px; padding-bottom: max(10px, env(safe-area-inset-bottom)); display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; }
+        #messageInput { flex: 1; background: #1c1c1e; border: 1px solid #3a3a3c; border-radius: 24px; padding: 10px 16px; font-size: 15px; color: #ffffff; resize: none; max-height: 100px; font-family: inherit; }
         #messageInput:focus { outline: none; border-color: #0a84ff; }
-        .send-btn {
-            background: #0a84ff;
-            border: none;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            color: white;
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .loading-tip {
-            text-align: center;
-            padding: 12px;
-            color: #8e8e93;
-            font-size: 13px;
-        }
-        @media (max-width: 560px) {
-            .config-panel {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .clear-btn {
-                align-self: flex-start;
-            }
-        }
+        .send-btn { background: #0a84ff; border: none; width: 44px; height: 44px; border-radius: 50%; color: white; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .loading-tip { text-align: center; padding: 12px; color: #8e8e93; font-size: 13px; }
+        @media (max-width: 560px) { .config-panel { flex-direction: column; align-items: stretch; } .clear-btn { align-self: flex-start; } }
     </style>
 </head>
 <body>
@@ -168,28 +41,28 @@
     <div class="avatar"></div>
     <div class="title">
         <h2>小兹</h2>
-        <p>离线智能回复 · 零费用</p>
+        <p>全能助手 · 零费用</p>
     </div>
 </div>
 
 <div class="config-panel">
-    <div id="apiStatus" class="status-text">✅ 离线模式，小兹随时在线～</div>
+    <div id="apiStatus" class="status-text">✅ 小兹已就绪，直接聊天吧～</div>
     <button id="clearHistoryBtn" class="clear-btn"><i class="fas fa-trash-alt"></i> 清空聊天记录</button>
     <div style="font-size: 11px; color: #8e8e93; margin-top: 4px; width: 100%;">
-        📚 小兹会查角色/光锥/材料信息，用自然语言回答你～
+        📚 小兹会查角色/光锥/材料，用自然语言回答你～
     </div>
 </div>
 
 <div class="messages-area" id="messagesArea"></div>
 
 <div class="input-area">
-    <textarea id="messageInput" rows="1" placeholder="问小兹角色信息，比如「鹿管是谁」"></textarea>
+    <textarea id="messageInput" rows="1" placeholder="问小兹信息，比如「鹿管是谁」"></textarea>
     <button class="send-btn" id="sendBtn">➤</button>
 </div>
 
 <script>
     (function() {
-        // ========== Supabase 配置（只用于查询，不调用AI） ==========
+        // ================== Supabase 配置（纯离线查询） ==================
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
@@ -197,89 +70,87 @@
         const messagesArea = document.getElementById('messagesArea');
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
-        const apiStatusSpan = document.getElementById('apiStatus');
         const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 
-        let conversationHistory = [];
         let supabaseClient = null;
 
-        function getCurrentTimeString() {
-            return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        // ================== 🔥 闲聊拦截（零成本本地回复） ==================
+        const casualGreetings = ['你好','您好','早上好','午安','晚安','在吗','哈哈','谢谢','拜拜','吃饭了吗','忙吗','你是谁','hi','hello','再见','好棒','小兹'];
+        function isCasualChat(text) {
+            const cleanText = text.trim().toLowerCase();
+            return casualGreetings.some(keyword => cleanText.includes(keyword));
+        }
+        function getRandomLocalReply() {
+            const replies = [
+                '嘿嘿，小兹在呢～有什么需要帮忙的吗？',
+                '晚安呀～做个好梦哦！(｡･ω･｡)',
+                '不客气呀，能帮到你就好～(*^▽^*)',
+                '嘻嘻，小兹一直都在呢！有啥想问的尽管说～'
+            ];
+            return replies[Math.floor(Math.random() * replies.length)];
         }
 
         function getSupabase() {
             if (supabaseClient) return supabaseClient;
             if (!window.supabase) return null;
-            try {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            } catch(e) { return null; }
+            try { supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch(e) { return null; }
             return supabaseClient;
         }
 
-        // 提取用户问题中的角色名（简单关键词匹配）
-        function extractCharacterName(query) {
-            // 常见问法：我要X的信息、X是谁、X怎么样、看看X、X角色
-            // 先移除常见前缀后缀
-            let cleaned = query.replace(/我要|的信息|是谁|怎么样|看看|角色|资料|介绍|帮我查一下|查一下|介绍下/g, '').trim();
-            // 如果还有多个词，取第一个词作为角色名（简单处理）
-            const words = cleaned.split(/[ ,，。？?！!、]/);
-            return words[0];
+        function getCurrentTimeString() {
+            return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
 
-        // 从数据库查询角色信息
-        async function queryCharacterInfo(characterName) {
+        // ================== 查询逻辑优化（同时查角色/光锥/材料） ==================
+        async function searchDatabase(query) {
             const client = getSupabase();
             if (!client) return null;
-            const { data, error } = await client
-                .from('characters')
-                .select('name, element, path, rarity, description, is_limited')
-                .ilike('name', `%${characterName}%`)
-                .limit(1);
-            if (error || !data || data.length === 0) return null;
-            return data[0];
-        }
 
-        // 根据角色数据生成固定格式的回复
-        function formatCharacterReply(character) {
-            const limitedText = character.is_limited ? '限定角色' : '常驻角色';
-            let reply = `${character.name} 是 ${character.rarity}星 ${limitedText}，${character.element} 属性，${character.path} 命途。`;
-            if (character.description && character.description.length > 0) {
-                // 如果description太长，截取前80字
-                let brief = character.description.length > 80 ? character.description.slice(0, 80) + '……' : character.description;
-                reply += ` ${brief}`;
-            } else {
-                // 如果没有详细描述，给一个通用定位（可根据 rarity 和 path 简单判断）
-                if (character.rarity === 5) {
-                    if (character.path === '巡猎' || character.path === '毁灭' || character.path === '智识') reply += ` 通常作为主力输出（主C）使用。`;
-                    else if (character.path === '同谐' || character.path === '虚无') reply += ` 适合作为辅助或副C。`;
-                    else if (character.path === '存护' || character.path === '丰饶') reply += ` 主要负责保护或治疗队友。`;
-                } else {
-                    reply += ` 前期可以培养，后期视情况使用。`;
-                }
+            // 过滤掉用户常说的虚词，提取核心关键字
+            const keywords = query.replace(/[?？什么哪个怎么如何告诉我解释一下我要查一下介绍下]/g, '').trim();
+            if (!keywords) return null;
+
+            // 并行查询三张表 (使用 ilike 模糊搜索，不区分大小写)
+            const [charRes, coneRes, matRes] = await Promise.all([
+                client.from('characters').select('name, element, path, rarity, description, is_limited').ilike('name', `%${keywords}%`).limit(3),
+                client.from('light_cones').select('name, description, rarity').ilike('name', `%${keywords}%`).limit(3),
+                client.from('materials').select('name, description').ilike('name', `%${keywords}%`).limit(3)
+            ]);
+
+            let results = [];
+            if (charRes.data && charRes.data.length) {
+                results.push(...charRes.data.map(r => `【角色】${r.name} (${r.element}·${r.path}) ${r.rarity}星 - ${r.description || '暂无详细描述'}`));
             }
-            return reply;
+            if (coneRes.data && coneRes.data.length) {
+                results.push(...coneRes.data.map(r => `【光锥】${r.name} - ${r.description || '暂无效果数据'}`));
+            }
+            if (matRes.data && matRes.data.length) {
+                results.push(...matRes.data.map(r => `【材料】${r.name} - ${r.description || '暂无获取方式'}`));
+            }
+            if (results.length === 0) return null;
+            return results.slice(0, 4); // 最多返回4条，防止刷屏
         }
 
-        // 处理其他类型的查询（光锥、材料等，可扩展）
-        async function handleGeneralQuery(query) {
-            // 暂时只做角色查询，如果需要可以类似加光锥逻辑
-            const name = extractCharacterName(query);
-            if (!name || name.length < 1) return null;
-            const char = await queryCharacterInfo(name);
-            if (char) return formatCharacterReply(char);
-            return null;
-        }
-
-        // 主要回复逻辑：不调用大模型，纯数据库+模板
+        // ================== 核心对话逻辑 ==================
         async function getLocalReply(userMessage) {
-            // 先尝试从问题中提取角色名并查询
-            const reply = await handleGeneralQuery(userMessage);
-            if (reply) return reply;
-            // 没找到角色，返回通用提示
-            return "小兹没找到这个角色，你可以试试直接说「我要[角色名]的信息」，比如「我要鹿管的信息」～";
+            // 1. 拦截闲聊，直接返回固定回复，不查询数据库，0消耗
+            if (isCasualChat(userMessage)) {
+                return getRandomLocalReply();
+            }
+
+            // 2. 尝试数据库查询
+            const searchResult = await searchDatabase(userMessage);
+            if (searchResult && searchResult.length > 0) {
+                // 拼接数据库结果 + 小兹特有的口吻
+                const infoText = searchResult.join('\n');
+                return `嗯～ 小兹在数据库里找到了这些信息：\n\n${infoText}\n\n需要更详细的，也可以去 WIKI 主页看看哦～ (*╹▽╹*)`;
+            }
+
+            // 3. 数据库没找到
+            return "唔…小兹查了一下数据库，暂时没搜到相关的角色、光锥或材料呢。你可以试试换个更明确的名字，比如「鹿管」「皮哥」「夹子姐」，或者直接去 WIKI 主页翻翻看～";
         }
 
-        // ========== 发送消息 ==========
+        // ================== 界面渲染逻辑 ==================
         async function sendMessage() {
             const text = messageInput.value.trim();
             if (!text) return;
@@ -288,11 +159,10 @@
 
             addMessage('user', text, true);
 
-            // 显示加载提示（虽然本地查询很快，但保留体验）
             const loader = document.createElement('div');
             loader.className = 'loading-tip';
             loader.id = 'aiLoader';
-            loader.innerHTML = '🔍 小兹正在查资料...';
+            loader.innerHTML = '🔍 小兹正在翻数据库...';
             messagesArea.appendChild(loader);
             messagesArea.scrollTop = messagesArea.scrollHeight;
 
@@ -303,7 +173,7 @@
             } catch (error) {
                 document.getElementById('aiLoader')?.remove();
                 console.error(error);
-                addSystemMessage(`😥 小兹出错了: ${error.message}`);
+                addSystemMessage(`😥 小兹卡住了: ${error.message}`);
             }
         }
 
@@ -321,7 +191,6 @@
             div.appendChild(timeDiv);
             messagesArea.appendChild(div);
             messagesArea.scrollTop = messagesArea.scrollHeight;
-            conversationHistory.push({ role: role, content: content, time: timeStr });
         }
 
         function addSystemMessage(content) {
@@ -338,7 +207,6 @@
             div.appendChild(timeDiv);
             messagesArea.appendChild(div);
             messagesArea.scrollTop = messagesArea.scrollHeight;
-            conversationHistory.push({ role: 'assistant', content: content, time: timeStr });
         }
 
         function escapeHtml(str) {
@@ -352,15 +220,8 @@
             ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
         }
 
-        function loadStorage() {
-            conversationHistory = [];
-            messagesArea.innerHTML = '';
-            addSystemMessage('🌸 小兹离线版已启动～ 直接问我角色信息吧！\n📚 例如：「我要鹿管的信息」');
-        }
-
         function clearHistory() {
             if (confirm('确定清空当前聊天记录吗？')) {
-                conversationHistory = [];
                 messagesArea.innerHTML = '';
                 addSystemMessage('✨ 聊天记录已清空，重新开始吧～');
             }
@@ -369,26 +230,24 @@
         function bindEvents() {
             sendBtn.onclick = sendMessage;
             messageInput.addEventListener('keypress', e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
             });
             messageInput.addEventListener('input', autoResize);
-            if (clearHistoryBtn) clearHistoryBtn.onclick = clearHistory;
+            clearHistoryBtn.onclick = clearHistory;
+            // 双击标题也能清空（保留你之前的代码习惯）
             const headerTitle = document.querySelector('.title h2');
             if (headerTitle) headerTitle.addEventListener('dblclick', clearHistory);
         }
 
         function init() {
-            loadStorage();
+            messagesArea.innerHTML = '';
+            addSystemMessage('🌸 小兹离线版已启动～ 直接问我各种信息吧！\n📚 例如：「鹿管是谁？」、「材料在哪刷？」');
             bindEvents();
             if (!window.supabase) {
-                console.warn('Supabase JS 加载失败');
-                addSystemMessage('⚠️ Supabase SDK 加载失败，无法查询角色信息。');
+                console.warn('Supabase SDK 加载失败');
+                addSystemMessage('⚠️ 数据库连接失败，请检查网络或配置。');
                 return;
             }
-            apiStatusSpan.innerHTML = '✅ 离线模式，零费用，直接提问～';
         }
 
         init();
