@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>我的邮箱 - 六哥荣耀</title>
-    <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png">
+    <link rel="icon" href="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/Green_cat_earsTXK.webp">
     <style>
         /* 完整样式（与之前完全相同，此处只展示核心，实际包含全部样式） */
         * {
@@ -542,6 +542,15 @@
     const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
+    // 新增头像框ID和中文名的映射
+    const FRAME_DISPLAY_MAP = {
+        'nature': '默认头像框',
+        'frame_gold': '黄金流光',
+        'frame_rainbow': '彩虹炫光',
+        'frame_neon_blue': '霓虹蓝光',
+        'frame_pulse_purple': '紫色脉冲'
+    };
+
     let currentMails = [];
     let filteredMails = [];
     let currentUserId = null;
@@ -801,17 +810,29 @@
         }
     }
 
+    // 【重要修改】废弃 user_frames 表，改为读写 user_profiles 的 owned_frames 数组
     async function grantFrame(userId, frameId, token) {
-        const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/user_frames?user_id=eq.${userId}&frame_id=eq.${frameId}`, {
+        // 1. 先读取用户当前的头像框拥有状态
+        const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?id=eq.${userId}&select=owned_frames`, {
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
         });
-        const existing = await checkRes.json();
-        if (existing.length === 0) {
-            await fetch(`${SUPABASE_URL}/rest/v1/user_frames`, {
-                method: 'POST',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId, frame_id: frameId, equipped: false })
+        const profiles = await profileRes.json();
+        let ownedFrames = profiles[0]?.owned_frames || ['nature'];
+
+        // 2. 检查是否已经拥有
+        if (!ownedFrames.includes(frameId)) {
+            ownedFrames.push(frameId);
+            // 3. 去重并更新 user_profiles 表
+            const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/user_profiles?id=eq.${userId}`, {
+                method: 'PATCH',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ owned_frames: ownedFrames })
             });
+            if (!patchRes.ok) throw new Error('头像框添加失败');
         }
     }
 
@@ -860,6 +881,8 @@
             let rewardImgUrl = '';
             let rewardAmount = 0;
             let rewardItemType = '';
+            let rewardName = '神秘物品';
+            let claimedFrameId = null;
 
             for (const item of items) {
                 if (item.type === 'candy') candyDelta += item.amount;
@@ -867,6 +890,7 @@
                 else if (item.type === 'title') {
                     await grantTitle(userId, item.title_id, token);
                 } else if (item.type === 'frame') {
+                    claimedFrameId = item.frame_id;
                     await grantFrame(userId, item.frame_id, token);
                 }
             }
@@ -875,15 +899,22 @@
                 rewardImgUrl = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp';
                 rewardAmount = candyDelta;
                 rewardItemType = 'candy';
+                rewardName = '糖果碎';
             } else if (rainbowDelta > 0) {
                 rewardImgUrl = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp';
                 rewardAmount = rainbowDelta;
                 rewardItemType = 'rainbow';
+                rewardName = '彩虹棒糖';
+            } else if (claimedFrameId) {
+                rewardImgUrl = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp'; // 占位图标
+                rewardAmount = 0;
+                rewardItemType = 'frame';
+                rewardName = FRAME_DISPLAY_MAP[claimedFrameId] || '全新头像框';
             } else {
-                // 非货币奖励：显示默认图标（称号或头像框）
                 rewardImgUrl = 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp';
                 rewardAmount = 0;
                 rewardItemType = 'other';
+                rewardName = '全新物品';
             }
 
             if (candyDelta > 0 || rainbowDelta > 0) {
@@ -913,15 +944,16 @@
             }
             setButtonsLoading(false);
 
-            // 显示奖励弹窗（带图片）
-            showRewardModal(rewardImgUrl, rewardAmount, rewardItemType);
+            // 显示奖励弹窗
+            showRewardModal(rewardImgUrl, rewardAmount, rewardItemType, rewardName);
         } catch (err) {
             setButtonsLoading(false);
             alert('领取失败：' + err.message);
         }
     }
 
-    function showRewardModal(imgUrl, amount, itemType) {
+    // 【重要修改】增强奖励弹窗，给头像框类型增加特定点击显示的说明
+    function showRewardModal(imgUrl, amount, itemType, rewardName) {
         const modal = document.getElementById('rewardModal');
         const img = document.getElementById('rewardImage');
         const badge = document.getElementById('rewardCountBadge');
@@ -942,10 +974,24 @@
         const newBadge = newContainer.querySelector('#rewardCountBadge');
         newImg.id = 'rewardImage';
         newBadge.id = 'rewardCountBadge';
+        
+        let infoTitle = '神秘物品';
+        let infoDesc = '';
+        if (itemType === 'candy') {
+            infoTitle = '🍬 糖果碎';
+            infoDesc = '可用于购买道具、兑换物品。';
+        } else if (itemType === 'rainbow') {
+            infoTitle = '🌈 彩虹棒糖';
+            infoDesc = '稀有货币，高级商品兑换。';
+        } else if (itemType === 'frame') {
+            infoTitle = `🖼️ ${rewardName}`;
+            infoDesc = '已自动添加到你的头像框列表中，去商店装备它吧！';
+        } else {
+            infoTitle = '🎁 神秘物品';
+            infoDesc = '未知奖励。';
+        }
         newContainer.addEventListener('click', () => {
-            if (itemType === 'candy') showItemInfoModal('🍬', '糖果碎', '可用于购买道具、兑换物品。');
-            else if (itemType === 'rainbow') showItemInfoModal('🌈', '彩虹棒糖', '稀有货币，高级商品兑换。');
-            else showItemInfoModal('🎁', '神秘物品', '未知奖励。');
+            showItemInfoModal(infoTitle, infoDesc);
         });
         modal.classList.add('show');
     }
@@ -955,10 +1001,9 @@
         modal.classList.remove('show');
     }
 
-    function showItemInfoModal(icon, name, desc) {
+    function showItemInfoModal(title, desc) {
         const modal = document.getElementById('itemInfoModal');
-        document.getElementById('infoIcon').innerText = icon;
-        document.getElementById('infoName').innerText = name;
+        document.getElementById('infoName').innerText = title;
         document.getElementById('infoDesc').innerText = desc;
         modal.classList.add('show');
     }
@@ -1009,7 +1054,10 @@
                 if (item.type === 'candy') attachHtml += `<li>🍬 糖果 x${item.amount}</li>`;
                 else if (item.type === 'rainbow') attachHtml += `<li>🌈 彩虹棒糖 x${item.amount}</li>`;
                 else if (item.type === 'title') attachHtml += `<li>🏅 称号 ID:${item.title_id}</li>`;
-                else if (item.type === 'frame') attachHtml += `<li>🖼️ 头像框:${item.frame_id}</li>`;
+                else if (item.type === 'frame') {
+                    const frameName = FRAME_DISPLAY_MAP[item.frame_id] || item.frame_id;
+                    attachHtml += `<li>🖼️ 头像框: ${frameName}</li>`;
+                }
             }
             attachHtml += '</ul>';
             attachDiv.innerHTML = attachHtml;
@@ -1061,7 +1109,10 @@
                 if (item.type === 'candy') attachHtml += `<li>🍬 糖果 x${item.amount}</li>`;
                 else if (item.type === 'rainbow') attachHtml += `<li>🌈 彩虹棒糖 x${item.amount}</li>`;
                 else if (item.type === 'title') attachHtml += `<li>🏅 称号 ID:${item.title_id}</li>`;
-                else if (item.type === 'frame') attachHtml += `<li>🖼️ 头像框:${item.frame_id}</li>`;
+                else if (item.type === 'frame') {
+                    const frameName = FRAME_DISPLAY_MAP[item.frame_id] || item.frame_id;
+                    attachHtml += `<li>🖼️ 头像框: ${frameName}</li>`;
+                }
             }
             attachHtml += '</ul>';
             attachDiv.innerHTML = attachHtml;
