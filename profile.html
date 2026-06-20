@@ -11,7 +11,6 @@
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
     <style>
-        /* 原始样式 + 必要补充 */
         #shopModal .modal #shopContentContainer {
             max-height: 60vh;
             overflow-y: auto;
@@ -49,7 +48,6 @@
         .readonly-mode .avatar-container {
             cursor: default;
         }
-        /* 商店样式 */
         .shop-panel {
             width: 100%;
         }
@@ -93,7 +91,6 @@
             color: #fbbf24;
             margin-top: 4px;
         }
-        /* 称号显示行 */
         .user-title-row {
             margin-top: 8px;
             font-size: 0.85rem;
@@ -128,7 +125,6 @@
             font-size: 0.65rem;
             color: #facc15;
         }
-        /* 帮助页面样式 */
         .help-section {
             margin-bottom: 20px;
             border-left: 3px solid #facc15;
@@ -211,8 +207,6 @@
     <div class="modal-overlay" id="deleteAccountModal"><div class="modal"><div class="modal-header"><div class="modal-title" style="color:#f87171;">注销账号</div><button class="modal-close close-modal-btn" data-modal="deleteAccountModal">&times;</button></div><p>输入邮箱确认：</p><div class="form-group"><input type="email" class="form-input" id="confirmEmail" placeholder="邮箱地址"></div><div class="form-actions"><button class="btn-cancel close-modal-btn" data-modal="deleteAccountModal">取消</button><button class="danger-btn" id="confirmDeleteAccount">确认注销</button></div></div></div>
     <div class="modal-overlay" id="logoutConfirmModal"><div class="modal"><div class="modal-header"><div class="modal-title">退出登录</div><button class="modal-close" id="closeLogoutModalBtn">&times;</button></div><p>确定退出吗？</p><div class="confirm-buttons"><button class="btn-cancel-modal" id="cancelLogoutBtn">取消</button><button class="btn-confirm" id="confirmLogoutBtn">退出</button></div></div></div>
     <div class="modal-overlay" id="avatarConfirmModal"><div class="modal"><div class="modal-header"><div class="modal-title">更换头像</div><button class="modal-close" id="closeAvatarConfirmBtn">&times;</button></div><p>确定要更换头像吗？</p><div class="confirm-buttons"><button class="btn-cancel-modal" id="cancelAvatarBtn">取消</button><button class="btn-confirm" id="confirmAvatarBtn">确定</button></div></div></div>
-
-    <!-- 称号选择模态框 -->
     <div class="modal-overlay" id="titlesModal">
         <div class="modal" style="max-width: 500px;">
             <div class="modal-header">
@@ -223,8 +217,6 @@
             <div style="margin-top: 12px; text-align: center; font-size: 0.7rem;">完成条件自动获得称号</div>
         </div>
     </div>
-
-    <!-- 帮助模态框 -->
     <div class="modal-overlay" id="helpModal">
         <div class="modal" style="max-width: 550px;">
             <div class="modal-header">
@@ -266,7 +258,6 @@
             </div>
         </div>
     </div>
-
     <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fas fa-chevron-up"></i></button>
 
     <script>
@@ -284,12 +275,10 @@
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
-        // 称号相关变量
         let allTitlesList = [];
         let userOwnedTitles = [];
         let equippedTitleObj = null;
 
-        // ========== 本地缓存 ==========
         function refreshLocalCache() {
             if (!isViewingSelf) return;
             if (userProfile) localStorage.setItem('cachedUserProfile', JSON.stringify(userProfile));
@@ -300,52 +289,102 @@
             return date.toLocaleDateString('sv-SE');
         }
 
-        // ========== 头像框系统 ==========
+        // ========== 头像框系统 (适配 user_profiles 表) ==========
         window.FrameSystem = (function() {
             const FRAMES = [
                 { id: 'frame_default', name: '默认头像框', description: '初始边框', price_candy: 0, price_rainbow: 0, cssClass: '' },
                 { id: 'frame_gold', name: '黄金边框', description: '闪耀质感', price_candy: 50, price_rainbow: 0, cssClass: 'frame-gold' },
                 { id: 'frame_rainbow', name: '彩虹炫光', description: '七彩流光', price_candy: 30, price_rainbow: 3, cssClass: 'frame-rainbow' },
                 { id: 'frame_diamond', name: '钻石星辰', description: '璀璨光环', price_candy: 100, price_rainbow: 5, cssClass: 'frame-diamond' },
-                { id: 'frame_legend', name: '传奇霸主', description: '至尊传说', price_candy: 200, price_rainbow: 10, cssClass: 'frame-legend' }
+                { id: 'frame_legend', name: '传奇霸主', description: '至尊传说', price_candy: 200, price_rainbow: 10, cssClass: 'frame-legend' },
+                // 👇 这里是你新增的猫耳框
+                { id: 'frame_cat', name: '绿色猫耳', description: '软萌绿色猫耳头像框', price_candy: 30, price_rainbow: 0, cssClass: 'frame-cat' }
             ];
+
             function getFrameById(id) { return FRAMES.find(f => f.id === id); }
+
             async function loadUserFrames(userId) {
-                const { data, error } = await supabaseClient.from('user_frames').select('frame_id, equipped').eq('user_id', userId);
-                if (error) return { owned: ['frame_default'], equipped: null };
-                let owned = data.map(item => item.frame_id);
+                const { data, error } = await supabaseClient
+                    .from('user_profiles')
+                    .select('owned_frames, equipped_frame')
+                    .eq('id', userId)
+                    .single();
+                if (error || !data) return { owned: ['frame_default'], equipped: 'frame_default' };
+                let owned = data.owned_frames || [];
                 if (!owned.includes('frame_default')) owned.push('frame_default');
-                let equipped = data.find(item => item.equipped === true)?.frame_id || 'frame_default';
+                let equipped = data.equipped_frame || 'frame_default';
                 return { owned, equipped };
             }
+
             async function ensureUserFrameFields(userId) {
-                await supabaseClient.from('user_frames').upsert({ user_id: userId, frame_id: 'frame_default', equipped: true, purchased_at: new Date().toISOString() }, { onConflict: 'user_id, frame_id', ignoreDuplicates: true });
-                let { data: equipData } = await supabaseClient.from('user_frames').select('equipped').eq('user_id', userId).eq('equipped', true).maybeSingle();
-                if (!equipData) await supabaseClient.from('user_frames').update({ equipped: true }).eq('user_id', userId).eq('frame_id', 'frame_default');
+                const { data: profile } = await supabaseClient
+                    .from('user_profiles')
+                    .select('owned_frames, equipped_frame')
+                    .eq('id', userId)
+                    .single();
+                let needUpdate = false;
+                let owned = profile?.owned_frames || [];
+                let equipped = profile?.equipped_frame || null;
+                if (!owned.includes('frame_default')) {
+                    owned.push('frame_default');
+                    needUpdate = true;
+                }
+                if (!equipped) {
+                    equipped = 'frame_default';
+                    needUpdate = true;
+                }
+                if (needUpdate) {
+                    await supabaseClient.from('user_profiles').update({
+                        owned_frames: owned,
+                        equipped_frame: equipped
+                    }).eq('id', userId);
+                }
             }
+
             async function purchaseFrame(frameId, stats, onSuccess) {
                 let frame = getFrameById(frameId);
-                if (!frame || (frame.price_candy===0 && frame.price_rainbow===0)) throw new Error('无效头像框');
+                if (!frame || (frame.price_candy === 0 && frame.price_rainbow === 0)) throw new Error('无效头像框');
                 let { owned } = await loadUserFrames(currentUser.id);
                 if (owned.includes(frameId)) throw new Error('已拥有');
                 if (stats.candy_crumbles < frame.price_candy) throw new Error(`糖果碎不足，需 ${frame.price_candy}`);
                 if (stats.rainbow_lollipops < frame.price_rainbow) throw new Error(`棒糖不足，需 ${frame.price_rainbow}`);
+
                 let newCandy = stats.candy_crumbles - frame.price_candy;
                 let newRainbow = stats.rainbow_lollipops - frame.price_rainbow;
-                await supabaseClient.from('user_stats').update({ candy_crumbles: newCandy, rainbow_lollipops: newRainbow }).eq('user_id', currentUser.id);
-                await supabaseClient.from('user_frames').upsert({ user_id: currentUser.id, frame_id: frameId, equipped: false, purchased_at: new Date().toISOString() }, { onConflict: 'user_id, frame_id', ignoreDuplicates: true });
-                if (window.userStats) { window.userStats.candy_crumbles = newCandy; window.userStats.rainbow_lollipops = newRainbow; }
+                await supabaseClient.from('user_stats').update({ 
+                    candy_crumbles: newCandy, 
+                    rainbow_lollipops: newRainbow 
+                }).eq('user_id', currentUser.id);
+
+                const { data: profile } = await supabaseClient
+                    .from('user_profiles')
+                    .select('owned_frames')
+                    .eq('id', currentUser.id)
+                    .single();
+                let currentOwned = profile?.owned_frames || [];
+                if (!currentOwned.includes(frameId)) currentOwned.push(frameId);
+                await supabaseClient.from('user_profiles').update({ 
+                    owned_frames: currentOwned 
+                }).eq('id', currentUser.id);
+
+                if (window.userStats) { 
+                    window.userStats.candy_crumbles = newCandy; 
+                    window.userStats.rainbow_lollipops = newRainbow; 
+                }
                 refreshLocalCache();
                 if (onSuccess) onSuccess(newCandy, newRainbow);
                 if (window.updateShopBalanceDisplay) window.updateShopBalanceDisplay();
             }
+
             async function equipFrame(frameId) {
                 let { owned } = await loadUserFrames(currentUser.id);
                 if (!owned.includes(frameId)) throw new Error('未拥有');
-                await supabaseClient.from('user_frames').update({ equipped: false }).eq('user_id', currentUser.id).eq('equipped', true);
-                await supabaseClient.from('user_frames').update({ equipped: true }).eq('user_id', currentUser.id).eq('frame_id', frameId);
+                await supabaseClient.from('user_profiles').update({ 
+                    equipped_frame: frameId 
+                }).eq('id', currentUser.id);
                 await applyFrameClassByFrameId(frameId);
             }
+
             async function applyFrameClassByFrameId(frameId) {
                 const avatarDiv = document.getElementById('userAvatar');
                 if (!avatarDiv) return;
@@ -358,11 +397,13 @@
                 avatarDiv.className = newClasses.join(' ').trim();
                 if (!avatarDiv.classList.contains('avatar')) avatarDiv.classList.add('avatar');
             }
+
             async function initFrameForUser(userId) {
                 await ensureUserFrameFields(userId);
                 let { equipped } = await loadUserFrames(userId);
                 await applyFrameClassByFrameId(equipped);
             }
+
             return { FRAMES, getFrameById, loadUserFrames, purchaseFrame, equipFrame, initFrameForUser, applyFrameClassByFrameId };
         })();
 
@@ -402,7 +443,7 @@
             if(!avatarDiv) return;
             const currentFrameClass = Array.from(avatarDiv.classList).find(c => c.startsWith('frame-')) || '';
             if(imageUrl) {
-                avatarDiv.innerHTML = `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">`;
+                avatarDiv.innerHTML = `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex';">`;
                 let placeholder = document.createElement('div');
                 placeholder.className = 'avatar-placeholder';
                 placeholder.style.display = 'none';
@@ -456,7 +497,6 @@
         window.openPasswordModal = () => { if(!isViewingSelf) return; openModal('passwordModal'); };
         window.openDeleteAccountModal = () => { if(!isViewingSelf) return; document.getElementById('confirmEmail').value = currentUser?.email || ''; openModal('deleteAccountModal'); };
 
-        // 长按头像
         let longPressTimer = null;
         function onAvatarLongPressStart(e) {
             if(!isViewingSelf) return;
@@ -633,7 +673,6 @@
         }
         async function performCheckin() { await executeCheckin(false); }
 
-        // 自动签到卡
         let hasAutoSignCard = false;
         let autoSignAttempted = false;
         async function loadAutoSignCardStatus() {
@@ -991,7 +1030,6 @@
                 refreshLocalCache();
             }
             updateNavbar();
-            // 称号系统
             if(isViewingSelf) {
                 await refreshTitles();
             } else {
@@ -1007,7 +1045,6 @@
                     }
                 }
             }
-            // 自动签到
             if(isViewingSelf) {
                 hasAutoSignCard = await loadAutoSignCardStatus();
                 await tryAutoSign();
