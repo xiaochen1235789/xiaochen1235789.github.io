@@ -36,6 +36,73 @@
         .help-section { margin-bottom: 20px; border-left: 3px solid #facc15; padding-left: 12px; }
         .help-section h3 { font-size: 1rem; margin-bottom: 6px; color: #facc15; }
         .help-section p { font-size: 0.85rem; line-height: 1.4; opacity: 0.9; }
+
+        /* ====== 商店预览区样式 ====== */
+        .shop-preview-area {
+            background: rgba(0,0,0,0.15);
+            border-radius: 12px;
+            padding: 15px 0;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .shop-preview-area .hint {
+            color: #b0c4d0;
+            font-size: 0.75rem;
+            margin-bottom: 8px;
+        }
+        .shop-preview-area .avatar-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3ecf8e, #8a4baf);
+            margin: 0 auto;
+            position: relative;
+            overflow: visible; /* 重要：让猫耳/光环等超出圆形 */
+        }
+        .shop-preview-area .avatar-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+            border-radius: 50%;
+        }
+        /* 确保预览头像框也能应用 ::after */
+        .avatar-preview::after {
+            content: '';
+            position: absolute;
+            top: -6px; left: -6px; right: -6px; bottom: -6px;
+            border-radius: 50%;
+            pointer-events: none;
+            transition: all 0.2s ease;
+            opacity: 0;
+        }
+        .avatar-preview.frame-gold::after {
+            opacity: 1;
+            outline: 3px solid #ffd700; outline-offset: 2px;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
+        }
+        .avatar-preview.frame-rainbow::after {
+            opacity: 1;
+            background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+            mask: radial-gradient(circle at center, transparent 62%, black 63%);
+            -webkit-mask: radial-gradient(circle at center, transparent 62%, black 63%);
+        }
+        .avatar-preview.frame-neon-blue::after {
+            opacity: 1;
+            outline: 2px solid #06b6d4; outline-offset: 2px;
+            box-shadow: 0 0 20px #06b6d4, inset 0 0 20px #06b6d4;
+            filter: drop-shadow(0 0 15px #06b6d4);
+        }
+        .avatar-preview.frame-pulse-purple::after {
+            opacity: 1;
+            outline: 3px solid #a855f7; outline-offset: 2px;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.6);
+            animation: pulsePurple 2s infinite ease-in-out;
+        }
     </style>
 </head>
 <body>
@@ -125,7 +192,6 @@
 
         // ========== 头像框系统 (适配 user_profiles 表, 默认 nature) ==========
         window.FrameSystem = (function() {
-            // 👇 全部改为纯 CSS 绘制，没有任何图片依赖
             const FRAMES = [
                 { id: 'nature', name: '默认头像框', description: '基础简洁边框', price_candy: 0, price_rainbow: 0, cssClass: '' },
                 { id: 'frame_gold', name: '黄金流光', description: '金边闪耀，流光溢彩', price_candy: 50, price_rainbow: 0, cssClass: 'frame-gold' },
@@ -138,7 +204,6 @@
 
             async function loadUserFrames(userId) {
                 const { data, error } = await supabaseClient.from('user_profiles').select('owned_frames, equipped_frame').eq('id', userId).single();
-                // 如果出错或无数据，则回退到默认组：nature
                 if (error || !data) return { owned: ['nature'], equipped: 'nature' };
                 let owned = data.owned_frames || ['nature'];
                 if (!owned.includes('nature')) owned.push('nature');
@@ -209,6 +274,20 @@
 
             return { FRAMES, getFrameById, loadUserFrames, purchaseFrame, equipFrame, initFrameForUser, applyFrameClassByFrameId };
         })();
+
+        // ====== 商店预览函数 ======
+        function updateFramePreview(frameId) {
+            const preview = document.getElementById('shopPreviewAvatar');
+            if (!preview) return;
+            const classes = preview.className.split(' ');
+            const newClasses = classes.filter(c => !c.startsWith('frame-'));
+            if (frameId && frameId !== 'nature') {
+                const frame = window.FrameSystem.getFrameById(frameId);
+                if (frame && frame.cssClass) newClasses.push(frame.cssClass);
+            }
+            preview.className = newClasses.join(' ').trim();
+            if (!preview.classList.contains('avatar-preview')) preview.classList.add('avatar-preview');
+        }
 
         // ========== 通用辅助 ==========
         function safeSetText(id, text) { let e = document.getElementById(id); if(e) e.textContent = text || '--'; }
@@ -336,20 +415,137 @@
         async function unequipTitle() { const { error } = await supabaseClient.from('user_profiles').update({ equipped_title_id: null }).eq('id', currentUser.id); if (error) { showNotification('卸下失败', 'error'); return; } userProfile.equipped_title_id = null; equippedTitleObj = null; updateTitleDisplay(); showNotification('已卸下称号', 'success'); refreshLocalCache(); }
         async function openTitlesModal() { const container = document.getElementById('titlesListContainer'); if (!container) return; const allTitles = await loadAllTitles(); const ownedIds = await loadUserOwnedTitles(currentUser.id); let html = ''; for (let title of allTitles) { const owned = ownedIds.includes(title.id); const isEquipped = (userProfile.equipped_title_id === title.id); let nameColor = ''; let extraIcon = ''; if (title.is_limited) { if (title.name.includes('创世神')) nameColor = '#f39c12'; else if (title.name.includes('管理神')) nameColor = '#60a5fa'; extraIcon = '✨ '; } let conditionText = []; if (title.required_active_points > 0) conditionText.push(`活跃度≥${title.required_active_points}`); if (title.required_streak > 0) conditionText.push(`连续签到≥${title.required_streak}`); if (title.required_candy > 0) conditionText.push(`糖果碎≥${title.required_candy}`); if (title.required_rainbow > 0) conditionText.push(`彩虹棒糖≥${title.required_rainbow}`); const conditionHtml = conditionText.length ? `<div class="title-condition">${conditionText.join(' / ')}</div>` : ''; html += `<div class="title-item"><div><div class="title-name" style="color:${nameColor || '#fff'};">${extraIcon}${title.name}</div><div class="title-desc">${title.description || ''}</div>${conditionHtml}</div><div>${owned ? (isEquipped ? '<button class="btn-owned" disabled>已装备</button>' : `<button class="btn-equip-title" data-id="${title.id}">装备</button>`) : '<span style="color:#aaa;">未获得</span>'}</div></div>`; } container.innerHTML = html; document.querySelectorAll('.btn-equip-title').forEach(btn => { btn.addEventListener('click', async (e) => { const tid = parseInt(btn.dataset.id); await equipTitle(tid); closeModal('titlesModal'); }); }); openModal('titlesModal'); }
 
+        // ====== 商店渲染 (加入了预览功能) ======
         async function renderShop() {
-            if(!isViewingSelf) return; let container = document.getElementById('shopContentContainer'); if(!container) return;
-            container.innerHTML = `<div class="shop-panel"><div class="balance-row"><div class="balance-item" data-currency="candy"><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp" style="width:20px;height:20px;object-fit:contain;">糖果碎: <span id="shopCandyBalance">0</span></div><div class="balance-item" data-currency="rainbow"><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp" style="width:20px;height:20px;object-fit:contain;">超级棒糖: <span id="shopRainbowBalance">0</span></div></div><div class="shop-section"><h3>📅 自动签到卡</h3><div id="autoSignCardItem"></div></div><div class="shop-section"><h3>🖼️ 头像框</h3><div id="framesList">⏳ 加载中...</div></div></div>`;
-            document.querySelectorAll('.balance-item').forEach(el => { el.addEventListener('click', () => { let currency = el.dataset.currency; if(currency === 'candy') showNotification('🍬 糖果碎：可用于购买道具，通过签到和活动获得', 'info'); else showNotification('🌈 彩虹棒糖：稀有货币，高级商品兑换', 'info'); }); }); updateShopBalanceDisplay(); await loadAutoSignCardUI(); await loadFramesList();
-        }
-        async function loadAutoSignCardUI() { if(!isViewingSelf) return; let container = document.getElementById('autoSignCardItem'); if(!container) return; const hasCard = await loadAutoSignCardStatus(); const priceCandy = 50; if(hasCard) { container.innerHTML = `<div class="frame-item"><div><strong>✅ 自动签到卡</strong><div class="card-note">永久有效，每天上午8点自动签到（北京时间）</div></div><button class="btn-owned" disabled>已拥有</button></div>`; } else { container.innerHTML = `<div class="frame-item"><div><strong>📅 自动签到卡</strong><div class="card-note">每天上午8点自动签到（北京时间），永不漏签</div><div>价格: 🍬 ${priceCandy}</div></div><button class="btn-buy" id="buyAutoSignBtn">购买</button></div>`; document.getElementById('buyAutoSignBtn')?.addEventListener('click', async () => { if(userStats.candy_crumbles < priceCandy) { showNotification(`糖果碎不足，需要 ${priceCandy}`, 'error'); return; } const currentHas = await loadAutoSignCardStatus(); if(currentHas) { showNotification('已经拥有自动签到卡', 'warning'); loadAutoSignCardUI(); return; } const newCandy = userStats.candy_crumbles - priceCandy; await supabaseClient.from('user_stats').update({ candy_crumbles: newCandy }).eq('user_id', currentUser.id); await supabaseClient.from('user_auto_sign_card').upsert({ user_id: currentUser.id, owned: true }); userStats.candy_crumbles = newCandy; updateShopBalanceDisplay(); hasAutoSignCard = true; showNotification('购买自动签到卡成功！明天起每日自动签到', 'success'); loadAutoSignCardUI(); refreshLocalCache(); }); } }
-        async function loadFramesList() { if(!isViewingSelf) return; let container = document.getElementById('framesList'); if(!container) return; let userId = currentUser.id; let { owned, equipped } = await window.FrameSystem.loadUserFrames(userId); let frames = window.FrameSystem.FRAMES; let html = ''; for(let frame of frames) { let isOwned = owned.includes(frame.id); let isEquipped = (equipped === frame.id); let priceHtml = (frame.price_candy>0 || frame.price_rainbow>0) ? `<span><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp" width="14" height="14" style="object-fit:contain;"> ${frame.price_candy} ${frame.price_rainbow>0?`<img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp" width="14" height="14" style="object-fit:contain;"> ${frame.price_rainbow}`:''}</span>` : '免费'; let action = ''; if(isOwned) { action = isEquipped ? '<button class="btn-owned" disabled>已装备</button>' : `<button class="btn-equip" data-id="${frame.id}">装备</button>`; } else { action = `<button class="btn-buy" data-id="${frame.id}">购买</button>`; } html += `<div class="frame-item"><div class="frame-info"><div class="frame-name">${frame.name}</div><div class="frame-desc">${frame.description}</div><div class="frame-price">${priceHtml}</div></div>${action}</div>`; } container.innerHTML = html; document.querySelectorAll('.btn-buy').forEach(btn => btn.addEventListener('click', async (e) => { let fid = btn.dataset.id; try { await window.FrameSystem.purchaseFrame(fid, userStats, (c, r) => { userStats.candy_crumbles = c; userStats.rainbow_lollipops = r; updateShopBalanceDisplay(); showNotification('购买成功','success'); loadFramesList(); refreshLocalCache(); }); } catch(err) { showNotification(err.message,'error'); } })); document.querySelectorAll('.btn-equip').forEach(btn => btn.addEventListener('click', async (e) => { let fid = btn.dataset.id; try { await window.FrameSystem.equipFrame(fid); showNotification('装备成功', 'success'); loadFramesList(); } catch(err) { showNotification(err.message,'error'); } })); }
+            if(!isViewingSelf) return; 
+            let container = document.getElementById('shopContentContainer'); 
+            if(!container) return;
+            container.innerHTML = `
+                <div class="shop-panel">
+                    <div class="balance-row">
+                        <div class="balance-item" data-currency="candy"><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp" style="width:20px;height:20px;object-fit:contain;">糖果碎: <span id="shopCandyBalance">0</span></div>
+                        <div class="balance-item" data-currency="rainbow"><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp" style="width:20px;height:20px;object-fit:contain;">超级棒糖: <span id="shopRainbowBalance">0</span></div>
+                    </div>
 
+                    <div class="shop-preview-area">
+                        <div class="hint">🖱️ 点击下方头像框预览效果</div>
+                        <div class="avatar-preview" id="shopPreviewAvatar">
+                            <div class="avatar-placeholder">P</div>
+                        </div>
+                    </div>
+
+                    <div class="shop-section"><h3>📅 自动签到卡</h3><div id="autoSignCardItem"></div></div>
+                    <div class="shop-section"><h3>🖼️ 头像框</h3><div id="framesList">⏳ 加载中...</div></div>
+                </div>
+            `;
+            document.querySelectorAll('.balance-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    let currency = el.dataset.currency;
+                    if(currency === 'candy') showNotification('🍬 糖果碎：可用于购买道具，通过签到和活动获得', 'info');
+                    else showNotification('🌈 彩虹棒糖：稀有货币，高级商品兑换', 'info');
+                });
+            });
+            updateShopBalanceDisplay();
+            await loadAutoSignCardUI();
+            await loadFramesList();
+        }
+
+        async function loadAutoSignCardUI() {
+            if(!isViewingSelf) return;
+            let container = document.getElementById('autoSignCardItem');
+            if(!container) return;
+            const hasCard = await loadAutoSignCardStatus();
+            const priceCandy = 50;
+            if(hasCard) {
+                container.innerHTML = `<div class="frame-item"><div><strong>✅ 自动签到卡</strong><div class="card-note">永久有效，每天上午8点自动签到（北京时间）</div></div><button class="btn-owned" disabled>已拥有</button></div>`;
+            } else {
+                container.innerHTML = `<div class="frame-item"><div><strong>📅 自动签到卡</strong><div class="card-note">每天上午8点自动签到（北京时间），永不漏签</div><div>价格: 🍬 ${priceCandy}</div></div><button class="btn-buy" id="buyAutoSignBtn">购买</button></div>`;
+                document.getElementById('buyAutoSignBtn')?.addEventListener('click', async () => {
+                    if(userStats.candy_crumbles < priceCandy) { showNotification(`糖果碎不足，需要 ${priceCandy}`, 'error'); return; }
+                    const currentHas = await loadAutoSignCardStatus();
+                    if(currentHas) { showNotification('已经拥有自动签到卡', 'warning'); loadAutoSignCardUI(); return; }
+                    const newCandy = userStats.candy_crumbles - priceCandy;
+                    await supabaseClient.from('user_stats').update({ candy_crumbles: newCandy }).eq('user_id', currentUser.id);
+                    await supabaseClient.from('user_auto_sign_card').upsert({ user_id: currentUser.id, owned: true });
+                    userStats.candy_crumbles = newCandy;
+                    updateShopBalanceDisplay();
+                    hasAutoSignCard = true;
+                    showNotification('购买自动签到卡成功！明天起每日自动签到', 'success');
+                    loadAutoSignCardUI();
+                    refreshLocalCache();
+                });
+            }
+        }
+
+        async function loadFramesList() {
+            if(!isViewingSelf) return;
+            let container = document.getElementById('framesList');
+            if(!container) return;
+            let userId = currentUser.id;
+            let { owned, equipped } = await window.FrameSystem.loadUserFrames(userId);
+            let frames = window.FrameSystem.FRAMES;
+            let html = '';
+            for(let frame of frames) {
+                let isOwned = owned.includes(frame.id);
+                let isEquipped = (equipped === frame.id);
+                let priceHtml = (frame.price_candy>0 || frame.price_rainbow>0) ? `<span><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp" width="14" height="14" style="object-fit:contain;"> ${frame.price_candy} ${frame.price_rainbow>0?`<img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp" width="14" height="14" style="object-fit:contain;"> ${frame.price_rainbow}`:''}</span>` : '免费';
+                let action = '';
+                if(isOwned) {
+                    action = isEquipped ? '<button class="btn-owned" disabled>已装备</button>' : `<button class="btn-equip" data-id="${frame.id}">装备</button>`;
+                } else {
+                    action = `<button class="btn-buy" data-id="${frame.id}">购买</button>`;
+                }
+                html += `<div class="frame-item" data-frame-id="${frame.id}" style="cursor:pointer;">
+                    <div class="frame-info">
+                        <div class="frame-name">${frame.name}</div>
+                        <div class="frame-desc">${frame.description}</div>
+                        <div class="frame-price">${priceHtml}</div>
+                    </div>
+                    ${action}
+                </div>`;
+            }
+            container.innerHTML = html;
+
+            document.querySelectorAll('.btn-buy').forEach(btn => btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                let fid = btn.dataset.id;
+                try {
+                    await window.FrameSystem.purchaseFrame(fid, userStats, (c, r) => { 
+                        userStats.candy_crumbles = c; userStats.rainbow_lollipops = r; 
+                        updateShopBalanceDisplay(); showNotification('购买成功','success'); loadFramesList(); refreshLocalCache(); 
+                    });
+                } catch(err) { showNotification(err.message,'error'); }
+            }));
+            document.querySelectorAll('.btn-equip').forEach(btn => btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                let fid = btn.dataset.id;
+                try {
+                    await window.FrameSystem.equipFrame(fid);
+                    showNotification('装备成功', 'success');
+                    loadFramesList();
+                } catch(err) { showNotification(err.message,'error'); }
+            }));
+
+            // 预览事件绑定
+            document.querySelectorAll('.frame-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    if (e.target.classList.contains('btn-buy') || e.target.classList.contains('btn-equip') || e.target.classList.contains('btn-owned')) return;
+                    const fid = this.dataset.frameId;
+                    if (fid) updateFramePreview(fid);
+                });
+            });
+            // 默认预览当前装备的头像框
+            updateFramePreview(equipped);
+        }
+
+        // ========== 头像上传裁剪 ==========
         async function deleteOldAvatarFiles(userId) { if(!isViewingSelf) return; try { const { data: files, error: listErr } = await supabaseClient.storage.from('avatars').list(userId); if (listErr && listErr.statusCode === 404) return; if(files && files.length) { let paths = files.map(f => `${userId}/${f.name}`); await supabaseClient.storage.from('avatars').remove(paths); } } catch(e) { console.warn('删除旧头像文件失败:', e); } }
         async function uploadCroppedImage(blob) { if(!isViewingSelf || !currentUser || isUploading) return false; isUploading = true; try { await deleteOldAvatarFiles(currentUser.id); let filePath = `${currentUser.id}/avatar_${Date.now()}.png`; let { error: uploadErr } = await supabaseClient.storage.from('avatars').upload(filePath, blob, { contentType: 'image/png' }); if(uploadErr) throw uploadErr; let { data: { publicUrl } } = supabaseClient.storage.from('avatars').getPublicUrl(filePath); await supabaseClient.from('user_profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id); if(userProfile) userProfile.avatar_url = publicUrl; localStorage.setItem('userAvatar', publicUrl); updateAvatarDisplay(publicUrl); cacheUserProfile(userProfile?.username, publicUrl); refreshLocalCache(); updateNavbar(); showNotification('头像已更新','success'); return true; } catch(err) { showNotification('上传失败: '+err.message,'error'); return false; } finally { isUploading = false; } }
         function initCropperModal(file) { let img = document.getElementById('cropImage'); let reader = new FileReader(); reader.onload = function(e) { img.src = e.target.result; if(cropper) cropper.destroy(); img.onload = () => { cropper = new Cropper(img, { aspectRatio:1, viewMode:1, autoCropArea:0.8 }); openModal('cropModal'); }; }; reader.readAsDataURL(file); }
         async function confirmCropAndUpload() { if(!cropper) return; let canvas = cropper.getCroppedCanvas({ width:500, height:500 }); canvas.toBlob(async (blob)=> { if(blob) await uploadCroppedImage(blob); closeModal('cropModal'); if(cropper){ cropper.destroy(); cropper=null; } document.getElementById('cropImage').removeAttribute('src'); },'image/png'); }
         function cancelCrop() { if(cropper){ cropper.destroy(); cropper=null; } closeModal('cropModal'); document.getElementById('cropImage').removeAttribute('src'); }
 
+        // ========== 资料加载 ==========
         async function loadTargetProfile(targetId) { let { data: profile, error } = await supabaseClient.from('user_profiles').select('*').eq('id', targetId).single(); if(error) throw error; return profile; }
         async function loadTargetStats(targetId) { let { data, error } = await supabaseClient.from('user_stats').select('*').eq('user_id', targetId).single(); if(error && error.code === 'PGRST116') { return { candy_crumbles:100, rainbow_lollipops:5, active_points:0, last_checkin_date:null, checkin_streak:0 }; } return { candy_crumbles: data?.candy_crumbles??100, rainbow_lollipops: data?.rainbow_lollipops??5, active_points: data?.active_points??0, last_checkin_date: data?.last_checkin_date, checkin_streak: data?.checkin_streak??0 }; }
 
