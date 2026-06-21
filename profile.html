@@ -384,34 +384,99 @@
         async function deleteAccount() { if(!isViewingSelf) return; let confirmEmail = document.getElementById('confirmEmail').value; if(confirmEmail !== currentUser.email) return showNotification('邮箱不匹配','error'); showNotification('账号删除需联系管理员','warning'); closeModal('deleteAccountModal'); }
         async function performLogout() { closeModal('logoutConfirmModal'); await supabaseClient.auth.signOut(); localStorage.clear(); window.location.href = 'index.html'; }
 
-        function getCheckinRewards(streak) {
-            if(streak === 1) return { candy:3, rainbow:0, active:2 };
-            if(streak === 2) return { candy:5, rainbow:0, active:2 };
-            if(streak === 3) return { candy:7, rainbow:0, active:2 };
-            if(streak === 4) return { candy:9, rainbow:0, active:2 };
-            if(streak === 5) return { candy:10, rainbow:0, active:2 };
-            if(streak === 6) return { candy:12, rainbow:0, active:2 };
-            if(streak === 7) return { candy:15, rainbow:1, active:5 };
-            if(streak >=8 && streak <=14) return { candy:10+(streak-8)*2, rainbow:2, active:8 };
-            if(streak === 15) return { candy:30, rainbow:5, active:15 };
-            if(streak >=16 && streak <=29) return { candy:50, rainbow:10, active:10 };
-            if(streak === 30) return { candy:100, rainbow:20, active:50 };
-            return { candy:80, rainbow:15, active:20 };
+        // 【已删除旧版 getCheckinRewards 函数，奖励规则现已存入数据库 checkin_config 表中】
+
+        // ====== 【新版】读取配置表 - 明日预览 ======
+        async function updateRewardPreview() {
+            if(!isViewingSelf) return;
+            let streak = userStats?.checkin_streak || 0;
+            let tomorrowStreak = streak + 1;
+            let { data, error } = await supabaseClient
+                .from('checkin_config')
+                .select('*')
+                .eq('day_num', tomorrowStreak)
+                .maybeSingle();
+            
+            // 如果没查到（比如超过了30天），就查兜底天
+            if (!data && !error) {
+                let { data: maxData } = await supabaseClient
+                    .from('checkin_config')
+                    .select('*')
+                    .eq('day_num', 9999)
+                    .single();
+                data = maxData;
+            }
+
+            let preview = document.getElementById('rewardPreview');
+            if(preview && data) {
+                preview.innerHTML = `明日奖励: 🍬${data.candy} ${data.rainbow>0?`🌈+${data.rainbow} `:''}⚡+${data.active}`;
+            }
         }
-        function updateRewardPreview() { if(!isViewingSelf) return; let streak = userStats?.checkin_streak || 0; let rewards = getCheckinRewards(streak+1); let preview = document.getElementById('rewardPreview'); if(preview) preview.innerHTML = `明日奖励: 🍬${rewards.candy} ${rewards.rainbow>0?`🌈+${rewards.rainbow} `:''}⚡+${rewards.active}`; }
+
         function updateActivePointsDisplay() { let span = document.getElementById('activePointsValue'); if(span) span.innerText = userStats?.active_points || 0; }
         function updateShopBalanceDisplay() { if(!isViewingSelf) return; let candySpan = document.getElementById('shopCandyBalance'); let rainSpan = document.getElementById('shopRainbowBalance'); if(candySpan) candySpan.innerText = userStats?.candy_crumbles || 0; if(rainSpan) rainSpan.innerText = userStats?.rainbow_lollipops || 0; }
 
+        // ====== 【新版】执行签到，从 checkin_config 取奖励 ======
         async function executeCheckin(autoTriggered = false) {
-            if (!isViewingSelf) return false; const today = getLocalDateString();
-            if (userStats.last_checkin_date === today) { if (!autoTriggered) showNotification('今日已签到', 'warning'); return false; }
-            let newStreak = 1; const last = userStats.last_checkin_date;
-            if (last) { const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1); const yesterdayStr = getLocalDateString(yesterday); if(last === yesterdayStr) newStreak = (userStats.checkin_streak||0)+1; }
-            const rewards = getCheckinRewards(newStreak); const newCandy = userStats.candy_crumbles + rewards.candy; const newRainbow = userStats.rainbow_lollipops + rewards.rainbow; const newActive = userStats.active_points + rewards.active;
-            const { error } = await supabaseClient.from('user_stats').update({ candy_crumbles: newCandy, rainbow_lollipops: newRainbow, active_points: newActive, last_checkin_date: today, checkin_streak: newStreak }).eq('user_id', currentUser.id);
-            if(error) { showNotification('签到失败','error'); return false; }
-            userStats = {...userStats, candy_crumbles:newCandy, rainbow_lollipops:newRainbow, active_points:newActive, last_checkin_date:today, checkin_streak:newStreak}; refreshLocalCache(); updateActivePointsDisplay(); updateShopBalanceDisplay(); document.getElementById('streakDays').innerText = newStreak; updateRewardPreview(); const btn = document.getElementById('checkinBtn'); if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-check-circle"></i> 已签到'; } showNotification(autoTriggered ? `✨ 自动签到卡已为您签到 +${rewards.candy}🍬` : `签到 +${rewards.candy}🍬`, 'success'); return true;
+            if (!isViewingSelf) return false;
+            const today = getLocalDateString();
+            if (userStats.last_checkin_date === today) {
+                if (!autoTriggered) showNotification('今日已签到', 'warning');
+                return false;
+            }
+            let newStreak = 1;
+            const last = userStats.last_checkin_date;
+            if (last) {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate()-1);
+                const yesterdayStr = getLocalDateString(yesterday);
+                if(last === yesterdayStr) newStreak = (userStats.checkin_streak||0)+1;
+            }
+
+            // 查数据库配置表获取奖励
+            let { data, error } = await supabaseClient
+                .from('checkin_config')
+                .select('candy, rainbow, active')
+                .eq('day_num', newStreak)
+                .maybeSingle();
+            
+            if (!data && !error) {
+                let { data: maxData } = await supabaseClient
+                    .from('checkin_config')
+                    .select('candy, rainbow, active')
+                    .eq('day_num', 9999)
+                    .single();
+                data = maxData;
+            }
+            
+            // 防出错兜底
+            let rewards = { candy: 80, rainbow: 15, active: 20 };
+            if (data) rewards = data;
+
+            const newCandy = userStats.candy_crumbles + rewards.candy;
+            const newRainbow = userStats.rainbow_lollipops + rewards.rainbow;
+            const newActive = userStats.active_points + rewards.active;
+
+            const { error: updateError } = await supabaseClient.from('user_stats').update({
+                candy_crumbles: newCandy, rainbow_lollipops: newRainbow, active_points: newActive,
+                last_checkin_date: today, checkin_streak: newStreak
+            }).eq('user_id', currentUser.id);
+
+            if(updateError) { showNotification('签到失败','error'); return false; }
+            
+            userStats = {...userStats, candy_crumbles:newCandy, rainbow_lollipops:newRainbow, active_points:newActive, last_checkin_date:today, checkin_streak:newStreak};
+            refreshLocalCache();
+            updateActivePointsDisplay();
+            updateShopBalanceDisplay();
+            document.getElementById('streakDays').innerText = newStreak;
+            await updateRewardPreview();
+            
+            const btn = document.getElementById('checkinBtn');
+            if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-check-circle"></i> 已签到'; }
+            showNotification(autoTriggered ? `✨ 自动签到卡已为您签到 +${rewards.candy}🍬` : `签到 +${rewards.candy}🍬`, 'success');
+            return true;
         }
+
         async function performCheckin() { await executeCheckin(false); }
 
         let hasAutoSignCard = false; let autoSignAttempted = false;
@@ -454,7 +519,6 @@
                         <!-- 板块二：其他道具 -->
                         <div class="shop-card hide-card" data-shop-card="others">
                             <div id="autoSignCardItem"></div>
-                            <!-- 未来如果有其他道具可以继续加在这里 -->
                         </div>
                     </div>
                 </div>
@@ -468,7 +532,6 @@
             });
             updateShopBalanceDisplay();
             
-            // 必须先加载这两个元素，然后绑定标签页切换逻辑
             await loadAutoSignCardUI();
             await loadFramesList();
 
@@ -489,11 +552,8 @@
                     });
                 });
             });
-            // 确保页面刚加载时显示的是默认激活标签页
             const activeTab = document.querySelector('.shop-tabs .tab-btn.active');
-            if (activeTab) {
-                activeTab.click();
-            }
+            if (activeTab) activeTab.click();
         }
 
         async function loadAutoSignCardUI() {
@@ -604,7 +664,7 @@
             if(userProfile.avatar_url) updateAvatarDisplay(userProfile.avatar_url); else updateAvatarDisplay(null);
             let roleRow = document.getElementById('userRoleDisplay'); if(roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
             if(userStats) {
-                updateActivePointsDisplay(); if(isViewingSelf) updateShopBalanceDisplay(); document.getElementById('streakDays').innerText = userStats.checkin_streak; if(isViewingSelf) updateRewardPreview();
+                updateActivePointsDisplay(); if(isViewingSelf) updateShopBalanceDisplay(); document.getElementById('streakDays').innerText = userStats.checkin_streak; await updateRewardPreview();
                 let today = getLocalDateString(); let btn = document.getElementById('checkinBtn');
                 if(btn && isViewingSelf) { let checked = (userStats.last_checkin_date === today); btn.disabled = checked; btn.innerHTML = checked ? '<i class="fas fa-check-circle"></i> 已签到' : '<i class="fas fa-calendar-check"></i> 签到'; } else if(btn) btn.style.display = 'none';
             }
