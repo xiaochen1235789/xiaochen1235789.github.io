@@ -23,7 +23,37 @@
         .balance-row { display: flex; gap: 16px; justify-content: center; margin-bottom: 20px; }
         .balance-item { background: rgba(0,0,0,0.2); padding: 6px 16px; border-radius: 40px; cursor: pointer; transition: 0.2s; }
         .balance-item:hover { background: rgba(0,0,0,0.4); }
-        .frame-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        
+        /* 好友系统风格的商店标签页切换 */
+        .shop-tabs {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .shop-tabs .tab-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color, #3d725f);
+            color: var(--text-main, #e0e0e0);
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .shop-tabs .tab-btn.active {
+            background: var(--text-highlight, #81c784);
+            color: var(--bg, #121212);
+            border-color: var(--text-highlight, #81c784);
+        }
+        .shop-tabs .tab-btn:hover:not(.active) {
+            background: var(--card-bg-hover, #284a3c);
+        }
+        .shop-card.hide-card {
+            display: none;
+        }
+
         .btn-buy, .btn-equip, .btn-owned { background: #f59e0b; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; color: white; }
         .btn-owned { background: #6b7280; cursor: default; }
         .card-note { font-size: 0.7rem; color: #fbbf24; margin-top: 4px; }
@@ -37,69 +67,66 @@
         .help-section h3 { font-size: 1rem; margin-bottom: 6px; color: #facc15; }
         .help-section p { font-size: 0.85rem; line-height: 1.4; opacity: 0.9; }
 
-        /* ====== 商店预览区样式 ====== */
-        .shop-preview-area {
-            background: rgba(0,0,0,0.15);
-            border-radius: 12px;
-            padding: 15px 0;
-            text-align: center;
-            margin-bottom: 15px;
-        }
-        .shop-preview-area .hint {
-            color: #b0c4d0;
-            font-size: 0.75rem;
-            margin-bottom: 8px;
-        }
-        .shop-preview-area .avatar-preview {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #3ecf8e, #8a4baf);
-            margin: 0 auto;
-            position: relative;
-            overflow: visible; /* 重要：让猫耳/光环等超出圆形 */
-        }
-        .shop-preview-area .avatar-placeholder {
-            width: 100%;
-            height: 100%;
+        /* ====== 商店列表项 - 内嵌小预览图样式 ====== */
+        .frame-item-wrap {
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 2rem;
-            font-weight: bold;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            gap: 12px;
+        }
+        .frame-left-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            cursor: pointer;
+        }
+        .frame-mini-preview {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3ecf8e, #8a4baf);
+            flex-shrink: 0;
+            position: relative;
+            overflow: visible;
+        }
+        .frame-mini-preview .placeholder {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 1rem; font-weight: bold;
             border-radius: 50%;
         }
-        /* 确保预览头像框也能应用 ::after */
-        .avatar-preview::after {
+        .frame-mini-preview::after {
             content: '';
             position: absolute;
-            top: -6px; left: -6px; right: -6px; bottom: -6px;
+            top: -4px; left: -4px; right: -4px; bottom: -4px;
             border-radius: 50%;
             pointer-events: none;
-            transition: all 0.2s ease;
             opacity: 0;
+            transition: all 0.2s ease;
         }
-        .avatar-preview.frame-gold::after {
+        .frame-mini-preview.frame-gold::after {
             opacity: 1;
-            outline: 3px solid #ffd700; outline-offset: 2px;
-            box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
+            outline: 2px solid #ffd700; outline-offset: 1px;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
         }
-        .avatar-preview.frame-rainbow::after {
+        .frame-mini-preview.frame-rainbow::after {
             opacity: 1;
             background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
-            mask: radial-gradient(circle at center, transparent 62%, black 63%);
-            -webkit-mask: radial-gradient(circle at center, transparent 62%, black 63%);
+            mask: radial-gradient(circle at center, transparent 58%, black 60%);
+            -webkit-mask: radial-gradient(circle at center, transparent 58%, black 60%);
         }
-        .avatar-preview.frame-neon-blue::after {
+        .frame-mini-preview.frame-neon-blue::after {
             opacity: 1;
-            outline: 2px solid #06b6d4; outline-offset: 2px;
-            box-shadow: 0 0 20px #06b6d4, inset 0 0 20px #06b6d4;
-            filter: drop-shadow(0 0 15px #06b6d4);
+            outline: 2px solid #06b6d4; outline-offset: 1px;
+            box-shadow: 0 0 15px #06b6d4, inset 0 0 15px #06b6d4;
+            filter: drop-shadow(0 0 10px #06b6d4);
         }
-        .avatar-preview.frame-pulse-purple::after {
+        .frame-mini-preview.frame-pulse-purple::after {
             opacity: 1;
-            outline: 3px solid #a855f7; outline-offset: 2px;
+            outline: 2px solid #a855f7; outline-offset: 1px;
             box-shadow: 0 0 15px rgba(168, 85, 247, 0.6);
             animation: pulsePurple 2s infinite ease-in-out;
         }
@@ -190,7 +217,7 @@
         function refreshLocalCache() { if (!isViewingSelf) return; if (userProfile) localStorage.setItem('cachedUserProfile', JSON.stringify(userProfile)); if (userStats) localStorage.setItem('cachedUserStats', JSON.stringify(userStats)); localStorage.setItem('profileLastUpdated', Date.now()); }
         function getLocalDateString(date = new Date()) { return date.toLocaleDateString('sv-SE'); }
 
-        // ========== 头像框系统 (适配 user_profiles 表, 默认 nature) ==========
+        // ========== 头像框系统 ==========
         window.FrameSystem = (function() {
             const FRAMES = [
                 { id: 'nature', name: '默认头像框', description: '基础简洁边框', price_candy: 0, price_rainbow: 0, cssClass: '' },
@@ -274,20 +301,6 @@
 
             return { FRAMES, getFrameById, loadUserFrames, purchaseFrame, equipFrame, initFrameForUser, applyFrameClassByFrameId };
         })();
-
-        // ====== 商店预览函数 ======
-        function updateFramePreview(frameId) {
-            const preview = document.getElementById('shopPreviewAvatar');
-            if (!preview) return;
-            const classes = preview.className.split(' ');
-            const newClasses = classes.filter(c => !c.startsWith('frame-'));
-            if (frameId && frameId !== 'nature') {
-                const frame = window.FrameSystem.getFrameById(frameId);
-                if (frame && frame.cssClass) newClasses.push(frame.cssClass);
-            }
-            preview.className = newClasses.join(' ').trim();
-            if (!preview.classList.contains('avatar-preview')) preview.classList.add('avatar-preview');
-        }
 
         // ========== 通用辅助 ==========
         function safeSetText(id, text) { let e = document.getElementById(id); if(e) e.textContent = text || '--'; }
@@ -415,7 +428,7 @@
         async function unequipTitle() { const { error } = await supabaseClient.from('user_profiles').update({ equipped_title_id: null }).eq('id', currentUser.id); if (error) { showNotification('卸下失败', 'error'); return; } userProfile.equipped_title_id = null; equippedTitleObj = null; updateTitleDisplay(); showNotification('已卸下称号', 'success'); refreshLocalCache(); }
         async function openTitlesModal() { const container = document.getElementById('titlesListContainer'); if (!container) return; const allTitles = await loadAllTitles(); const ownedIds = await loadUserOwnedTitles(currentUser.id); let html = ''; for (let title of allTitles) { const owned = ownedIds.includes(title.id); const isEquipped = (userProfile.equipped_title_id === title.id); let nameColor = ''; let extraIcon = ''; if (title.is_limited) { if (title.name.includes('创世神')) nameColor = '#f39c12'; else if (title.name.includes('管理神')) nameColor = '#60a5fa'; extraIcon = '✨ '; } let conditionText = []; if (title.required_active_points > 0) conditionText.push(`活跃度≥${title.required_active_points}`); if (title.required_streak > 0) conditionText.push(`连续签到≥${title.required_streak}`); if (title.required_candy > 0) conditionText.push(`糖果碎≥${title.required_candy}`); if (title.required_rainbow > 0) conditionText.push(`彩虹棒糖≥${title.required_rainbow}`); const conditionHtml = conditionText.length ? `<div class="title-condition">${conditionText.join(' / ')}</div>` : ''; html += `<div class="title-item"><div><div class="title-name" style="color:${nameColor || '#fff'};">${extraIcon}${title.name}</div><div class="title-desc">${title.description || ''}</div>${conditionHtml}</div><div>${owned ? (isEquipped ? '<button class="btn-owned" disabled>已装备</button>' : `<button class="btn-equip-title" data-id="${title.id}">装备</button>`) : '<span style="color:#aaa;">未获得</span>'}</div></div>`; } container.innerHTML = html; document.querySelectorAll('.btn-equip-title').forEach(btn => { btn.addEventListener('click', async (e) => { const tid = parseInt(btn.dataset.id); await equipTitle(tid); closeModal('titlesModal'); }); }); openModal('titlesModal'); }
 
-        // ====== 商店渲染 (加入了预览功能) ======
+        // ====== 商店渲染（双板块标签页切换） ======
         async function renderShop() {
             if(!isViewingSelf) return; 
             let container = document.getElementById('shopContentContainer'); 
@@ -427,15 +440,23 @@
                         <div class="balance-item" data-currency="rainbow"><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp" style="width:20px;height:20px;object-fit:contain;">超级棒糖: <span id="shopRainbowBalance">0</span></div>
                     </div>
 
-                    <div class="shop-preview-area">
-                        <div class="hint">🖱️ 点击下方头像框预览效果</div>
-                        <div class="avatar-preview" id="shopPreviewAvatar">
-                            <div class="avatar-placeholder">P</div>
-                        </div>
+                    <!-- 双板块标签页 -->
+                    <div class="shop-tabs">
+                        <button class="tab-btn active" data-shop-tab="frames">🖼️ 头像框</button>
+                        <button class="tab-btn" data-shop-tab="others">📦 其他</button>
                     </div>
 
-                    <div class="shop-section"><h3>📅 自动签到卡</h3><div id="autoSignCardItem"></div></div>
-                    <div class="shop-section"><h3>🖼️ 头像框</h3><div id="framesList">⏳ 加载中...</div></div>
+                    <div class="shop-content">
+                        <!-- 板块一：头像框 -->
+                        <div class="shop-card" data-shop-card="frames">
+                            <div id="framesList">⏳ 加载中...</div>
+                        </div>
+                        <!-- 板块二：其他道具 -->
+                        <div class="shop-card hide-card" data-shop-card="others">
+                            <div id="autoSignCardItem"></div>
+                            <!-- 未来如果有其他道具可以继续加在这里 -->
+                        </div>
+                    </div>
                 </div>
             `;
             document.querySelectorAll('.balance-item').forEach(el => {
@@ -446,8 +467,33 @@
                 });
             });
             updateShopBalanceDisplay();
+            
+            // 必须先加载这两个元素，然后绑定标签页切换逻辑
             await loadAutoSignCardUI();
             await loadFramesList();
+
+            // 绑定商店标签页逻辑
+            const shopTabs = document.querySelectorAll('.shop-tabs .tab-btn');
+            const shopCards = document.querySelectorAll('.shop-card');
+            shopTabs.forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    const target = this.dataset.shopTab;
+                    shopTabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    shopCards.forEach(card => {
+                        if (card.dataset.shopCard === target) {
+                            card.classList.remove('hide-card');
+                        } else {
+                            card.classList.add('hide-card');
+                        }
+                    });
+                });
+            });
+            // 确保页面刚加载时显示的是默认激活标签页
+            const activeTab = document.querySelector('.shop-tabs .tab-btn.active');
+            if (activeTab) {
+                activeTab.click();
+            }
         }
 
         async function loadAutoSignCardUI() {
@@ -457,9 +503,9 @@
             const hasCard = await loadAutoSignCardStatus();
             const priceCandy = 50;
             if(hasCard) {
-                container.innerHTML = `<div class="frame-item"><div><strong>✅ 自动签到卡</strong><div class="card-note">永久有效，每天上午8点自动签到（北京时间）</div></div><button class="btn-owned" disabled>已拥有</button></div>`;
+                container.innerHTML = `<div class="frame-item-wrap"><div><strong>✅ 自动签到卡</strong><div class="card-note">永久有效，每天上午8点自动签到（北京时间）</div></div><button class="btn-owned" disabled>已拥有</button></div>`;
             } else {
-                container.innerHTML = `<div class="frame-item"><div><strong>📅 自动签到卡</strong><div class="card-note">每天上午8点自动签到（北京时间），永不漏签</div><div>价格: 🍬 ${priceCandy}</div></div><button class="btn-buy" id="buyAutoSignBtn">购买</button></div>`;
+                container.innerHTML = `<div class="frame-item-wrap"><div><strong>📅 自动签到卡</strong><div class="card-note">每天上午8点自动签到（北京时间），永不漏签</div><div>价格: 🍬 ${priceCandy}</div></div><button class="btn-buy" id="buyAutoSignBtn">购买</button></div>`;
                 document.getElementById('buyAutoSignBtn')?.addEventListener('click', async () => {
                     if(userStats.candy_crumbles < priceCandy) { showNotification(`糖果碎不足，需要 ${priceCandy}`, 'error'); return; }
                     const currentHas = await loadAutoSignCardStatus();
@@ -495,14 +541,22 @@
                 } else {
                     action = `<button class="btn-buy" data-id="${frame.id}">购买</button>`;
                 }
-                html += `<div class="frame-item" data-frame-id="${frame.id}" style="cursor:pointer;">
-                    <div class="frame-info">
-                        <div class="frame-name">${frame.name}</div>
-                        <div class="frame-desc">${frame.description}</div>
-                        <div class="frame-price">${priceHtml}</div>
+                let cssClass = (frame.id !== 'nature' && frame.cssClass) ? frame.cssClass : '';
+                html += `
+                    <div class="frame-item-wrap">
+                        <div class="frame-left-box">
+                            <div class="frame-mini-preview ${cssClass}">
+                                <div class="placeholder">P</div>
+                            </div>
+                            <div class="frame-info">
+                                <div class="frame-name">${frame.name}</div>
+                                <div class="frame-desc">${frame.description}</div>
+                                <div class="frame-price">${priceHtml}</div>
+                            </div>
+                        </div>
+                        <div>${action}</div>
                     </div>
-                    ${action}
-                </div>`;
+                `;
             }
             container.innerHTML = html;
 
@@ -525,17 +579,6 @@
                     loadFramesList();
                 } catch(err) { showNotification(err.message,'error'); }
             }));
-
-            // 预览事件绑定
-            document.querySelectorAll('.frame-item').forEach(item => {
-                item.addEventListener('click', function(e) {
-                    if (e.target.classList.contains('btn-buy') || e.target.classList.contains('btn-equip') || e.target.classList.contains('btn-owned')) return;
-                    const fid = this.dataset.frameId;
-                    if (fid) updateFramePreview(fid);
-                });
-            });
-            // 默认预览当前装备的头像框
-            updateFramePreview(equipped);
         }
 
         // ========== 头像上传裁剪 ==========
