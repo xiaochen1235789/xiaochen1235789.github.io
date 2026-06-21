@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="./css/friend.css">
     <style>
-        /* 原有样式保持不变，只修改 .notification 使其与邮箱系统一致 */
         .tab-buttons {
             display: flex;
             gap: 12px;
@@ -37,9 +36,7 @@
         .tab-btn:hover:not(.active) {
             background: var(--card-bg-hover, #284a3c);
         }
-        .friends-card.hide-card {
-            display: none;
-        }
+        .friends-card.hide-card { display: none; }
         .friend-item.system-friend {
             border: 2px solid #81c784;
             background: linear-gradient(135deg, #1e3a2f, #2a4a3c);
@@ -71,9 +68,7 @@
             align-items: center;
             justify-content: center;
         }
-        .modal-mask.active {
-            display: flex;
-        }
+        .modal-mask.active { display: flex; }
         .modal-container {
             background: #1e293b;
             border-radius: 28px;
@@ -83,9 +78,7 @@
             text-align: center;
             color: #eef2ff;
         }
-        .modal-container h3 {
-            margin: 12px 0;
-        }
+        .modal-container h3 { margin: 12px 0; }
         .modal-container select, .modal-container input {
             width: 100%;
             padding: 10px;
@@ -102,26 +95,10 @@
             justify-content: center;
             margin-top: 16px;
         }
-        .modal-btn {
-            padding: 8px 20px;
-            border-radius: 40px;
-            border: none;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .modal-btn-cancel {
-            background: #475569;
-            color: white;
-        }
-        .modal-btn-confirm {
-            background: #f59e0b;
-            color: #1e293b;
-        }
-        .modal-btn-danger {
-            background: #f87171;
-            color: white;
-        }
-        /* 通知样式与邮箱系统一致 */
+        .modal-btn { padding: 8px 20px; border-radius: 40px; border: none; cursor: pointer; font-weight: bold; }
+        .modal-btn-cancel { background: #475569; color: white; }
+        .modal-btn-confirm { background: #f59e0b; color: #1e293b; }
+        .modal-btn-danger { background: #f87171; color: white; }
         .notification {
             position: fixed;
             bottom: 20px;
@@ -136,17 +113,59 @@
             white-space: nowrap;
             font-size: 0.9rem;
         }
-        .notification.show {
-            display: block;
-        }
+        .notification.show { display: block; }
         .nav-link {
             color: #94a3b8;
             text-decoration: none;
             margin-left: 16px;
             font-size: 0.95rem;
         }
-        .nav-link i {
-            margin-right: 4px;
+        .nav-link i { margin-right: 4px; }
+
+        /* ================================================== */
+        /* 【新增】完美复刻个人主页的头像框 CSS 样式        */
+        /* ================================================== */
+        .friend-avatar.avatar {
+            position: relative;
+            border-radius: 50%;
+            overflow: visible !important; /* 关键：让头像框可以溢出圆形容器 */
+        }
+        .friend-avatar.avatar::after {
+            content: '';
+            position: absolute;
+            top: -6px; left: -6px; right: -6px; bottom: -6px;
+            border-radius: 50%;
+            pointer-events: none;
+            transition: all 0.2s ease;
+            opacity: 0;
+        }
+        .friend-avatar.avatar.frame-gold::after {
+            opacity: 1;
+            outline: 3px solid #ffd700; outline-offset: 2px;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
+        }
+        .friend-avatar.avatar.frame-rainbow::after {
+            opacity: 1;
+            background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+            mask: radial-gradient(circle at center, transparent 62%, black 63%);
+            -webkit-mask: radial-gradient(circle at center, transparent 62%, black 63%);
+        }
+        .friend-avatar.avatar.frame-neon-blue::after {
+            opacity: 1;
+            outline: 2px solid #06b6d4; outline-offset: 2px;
+            box-shadow: 0 0 20px #06b6d4, inset 0 0 20px #06b6d4;
+            filter: drop-shadow(0 0 15px #06b6d4);
+        }
+        .friend-avatar.avatar.frame-pulse-purple::after {
+            opacity: 1;
+            outline: 3px solid #a855f7; outline-offset: 2px;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.6);
+            animation: pulsePurple 2s infinite ease-in-out;
+        }
+        @keyframes pulsePurple {
+            0%   { box-shadow: 0 0 10px rgba(168, 85, 247, 0.4); outline-color: #a855f7; }
+            50%  { box-shadow: 0 0 35px rgba(168, 85, 247, 0.9), 0 0 60px rgba(168, 85, 247, 0.4); outline-color: #d8b4fe; }
+            100% { box-shadow: 0 0 10px rgba(168, 85, 247, 0.4); outline-color: #a855f7; }
         }
     </style>
 </head>
@@ -189,7 +208,6 @@
     </div>
 </div>
 
-<!-- 赠送模态框 -->
 <div class="modal-mask" id="giftModal">
     <div class="modal-container">
         <i class="fas fa-gift" style="font-size:2rem;color:#f59e0b;"></i>
@@ -298,17 +316,27 @@
 
     async function getUserProfile(userId) {
         try {
-            const { data, error } = await supabase.from('user_profiles').select('username, avatar_url, last_seen_at').eq('id', userId).single();
+            // 【修改】读取 equipped_frame 字段
+            const { data, error } = await supabase.from('user_profiles').select('username, avatar_url, last_seen_at, equipped_frame').eq('id', userId).single();
             if(error) throw error;
-            return { username: data.username || '用户', avatar_url: data.avatar_url, last_seen_at: data.last_seen_at };
+            return { 
+                username: data.username || '用户', 
+                avatar_url: data.avatar_url, 
+                last_seen_at: data.last_seen_at,
+                equipped_frame: data.equipped_frame || 'nature' 
+            };
         } catch(e) {
-            return { username: '未知用户', avatar_url: null, last_seen_at: null };
+            return { username: '未知用户', avatar_url: null, last_seen_at: null, equipped_frame: 'nature' };
         }
     }
 
-    function createAvatarElement(avatarUrl, username, isSystem = false) {
+    // 【修改】增加 equipped_frame 参数
+    function createAvatarElement(avatarUrl, username, isSystem = false, frameId = 'nature') {
         const div = document.createElement('div');
-        div.className = 'friend-avatar';
+        div.className = 'friend-avatar avatar';
+        if(frameId && frameId !== 'nature') {
+            div.classList.add(frameId);
+        }
         if (avatarUrl) {
             const img = document.createElement('img');
             img.src = avatarUrl;
@@ -389,7 +417,6 @@
             showNotification('邮件发送失败，但资产已扣除，请联系管理员', 'error');
             console.error(mailError);
         } else {
-            // 简洁的提示文字，避免过长
             showNotification(`赠送成功！${type === 'candy' ? '🍬' : '🌈'}+${amount}`, 'success');
         }
         closeModal('giftModal');
@@ -404,7 +431,8 @@
         }
         const infoDiv = document.createElement('div');
         infoDiv.className = 'friend-info';
-        const avatarDiv = createAvatarElement(friend.avatar_url, friend.username, friend.is_system);
+        // 【修改】传递 frameId
+        const avatarDiv = createAvatarElement(friend.avatar_url, friend.username, friend.is_system, friend.equipped_frame);
         infoDiv.appendChild(avatarDiv);
         const detailsDiv = document.createElement('div');
         detailsDiv.className = 'friend-details';
@@ -512,7 +540,7 @@
             const incoming = relations.filter(r => r.addressee_id === currentUserId && r.status === 'pending');
             const incomingWithUser = await Promise.all(incoming.map(async r => {
                 const profile = await getUserProfile(r.requester_id);
-                return { id: r.id, username: profile.username, avatar_url: profile.avatar_url };
+                return { id: r.id, username: profile.username, avatar_url: profile.avatar_url, equipped_frame: profile.equipped_frame };
             }));
             const pendingContainer = document.getElementById('pendingRequests');
             pendingContainer.innerHTML = '';
@@ -526,7 +554,7 @@
             const sent = relations.filter(r => r.requester_id === currentUserId && r.status === 'pending');
             const sentWithUser = await Promise.all(sent.map(async r => {
                 const profile = await getUserProfile(r.addressee_id);
-                return { id: r.id, username: profile.username, avatar_url: profile.avatar_url };
+                return { id: r.id, username: profile.username, avatar_url: profile.avatar_url, equipped_frame: profile.equipped_frame };
             }));
             const sentContainer = document.getElementById('sentRequests');
             sentContainer.innerHTML = '';
@@ -579,7 +607,7 @@
         try {
             const { data: users, error } = await supabase
                 .from('user_profiles')
-                .select('id, username, avatar_url')
+                .select('id, username, avatar_url, equipped_frame')
                 .ilike('username', `%${keyword}%`)
                 .limit(10);
             if(error) throw error;
@@ -598,7 +626,7 @@
                 itemDiv.className = 'friend-item';
                 const infoDiv = document.createElement('div');
                 infoDiv.className = 'friend-info';
-                const avatarDiv = createAvatarElement(u.avatar_url, u.username);
+                const avatarDiv = createAvatarElement(u.avatar_url, u.username, false, u.equipped_frame);
                 infoDiv.appendChild(avatarDiv);
                 const nameDiv = document.createElement('div');
                 nameDiv.className = 'friend-name';
