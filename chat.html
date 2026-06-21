@@ -8,282 +8,144 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         :root {
-            --bg: #121212;
-            --card-bg: #1e3a2f;
-            --text-main: #e0e0e0;
-            --text-highlight: #81c784;
-            --text-secondary: #99aabb;
-            --border-color: #3d725f;
-            --own-msg: #2b5a42;
-            --friend-msg: #2d3748;
+            --bg: #121212; --card-bg: #1e3a2f; --text-main: #e0e0e0; --text-highlight: #81c784;
+            --text-secondary: #99aabb; --border-color: #3d725f; --own-msg: #2b5a42; --friend-msg: #2d3748;
         }
         body {
-            background: var(--bg);
-            color: var(--text-main);
-            height: 100dvh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg); color: var(--text-main); height: 100dvh; display: flex; flex-direction: column;
+            overflow: hidden; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
         }
         .chat-header {
-            background: var(--card-bg);
-            padding: 8px 12px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-bottom: 1px solid var(--border-color);
-            flex-shrink: 0;
+            background: var(--card-bg); padding: 8px 12px; display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid var(--border-color); flex-shrink: 0;
         }
+        .friend-avatar-wrapper { position: relative; }
         .friend-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #3ecf8e, #8a4baf);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1.2rem;
-            overflow: hidden;
-            flex-shrink: 0;
-            cursor: pointer;
+            width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #3ecf8e, #8a4baf);
+            display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem;
+            overflow: hidden; flex-shrink: 0; cursor: pointer; position: relative;
         }
         .friend-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .friend-info h2 { font-size: 1rem; color: var(--text-highlight); }
         .friend-info p { font-size: 0.65rem; color: var(--text-secondary); }
         .messages-area {
-            flex: 1;
-            overflow-y: auto;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            scroll-behavior: smooth;
+            flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth;
         }
-        .message-row {
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-            max-width: 100%;
-        }
-        .message-row.own {
-            justify-content: flex-end;
-        }
-        .message-row.friend {
-            justify-content: flex-start;
-        }
+        .message-row { display: flex; align-items: flex-start; gap: 8px; max-width: 100%; }
+        .message-row.own { justify-content: flex-end; }
+        .message-row.friend { justify-content: flex-start; }
+        .msg-avatar-wrapper { position: relative; flex-shrink: 0; }
         .msg-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #3ecf8e, #8a4baf);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1rem;
-            overflow: hidden;
-            flex-shrink: 0;
-            cursor: pointer;
+            border-radius: 50%; background: linear-gradient(135deg, #3ecf8e, #8a4baf);
+            display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem;
+            overflow: hidden; cursor: pointer; position: relative;
         }
         .msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .message-content {
-            max-width: 70%;
-            display: flex;
-            flex-direction: column;
-        }
+        .message-content { max-width: 70%; display: flex; flex-direction: column; }
         .message-bubble {
-            background: var(--friend-msg);
-            padding: 8px 12px;
-            border-radius: 18px;
-            word-wrap: break-word;
-            line-height: 1.4;
-            font-size: 0.9rem;
+            background: var(--friend-msg); padding: 8px 12px; border-radius: 18px; word-wrap: break-word;
+            line-height: 1.4; font-size: 0.9rem;
         }
-        .message-row.own .message-bubble {
-            background: var(--own-msg);
-            border-bottom-right-radius: 4px;
-        }
-        .message-row.friend .message-bubble {
-            border-bottom-left-radius: 4px;
-        }
-        .message-time {
-            font-size: 0.6rem;
-            color: var(--text-secondary);
-            margin-top: 4px;
-            padding: 0 4px;
-        }
-        .message-row.own .message-time {
-            text-align: right;
-        }
-        .chat-emoji-img {
-            max-width: 28px;
-            max-height: 28px;
-            vertical-align: middle;
-            margin: 0 2px;
-        }
-        .custom-emoji {
-            width: 32px !important;
-            height: 32px !important;
-            cursor: pointer;
-            border-radius: 6px;
-        }
+        .message-row.own .message-bubble { background: var(--own-msg); border-bottom-right-radius: 4px; }
+        .message-row.friend .message-bubble { border-bottom-left-radius: 4px; }
+        .message-time { font-size: 0.6rem; color: var(--text-secondary); margin-top: 4px; padding: 0 4px; }
+        .message-row.own .message-time { text-align: right; }
+        .chat-emoji-img { max-width: 28px; max-height: 28px; vertical-align: middle; margin: 0 2px; }
+        .custom-emoji { width: 32px !important; height: 32px !important; cursor: pointer; border-radius: 6px; }
         .input-bar {
-            background: var(--card-bg);
-            border-top: 1px solid var(--border-color);
-            padding: 8px 12px;
-            padding-bottom: max(8px, env(safe-area-inset-bottom));
-            flex-shrink: 0;
+            background: var(--card-bg); border-top: 1px solid var(--border-color);
+            padding: 8px 12px; padding-bottom: max(8px, env(safe-area-inset-bottom)); flex-shrink: 0;
         }
-        .input-row {
-            display: flex;
-            align-items: flex-end;
-            gap: 8px;
-        }
+        .input-row { display: flex; align-items: flex-end; gap: 8px; }
         .plus-btn {
-            background: rgba(129,199,132,0.2);
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            color: var(--text-highlight);
-            font-size: 1.4rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
+            background: rgba(129,199,132,0.2); border: none; width: 40px; height: 40px; border-radius: 50%;
+            color: var(--text-highlight); font-size: 1.4rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .plus-btn.active {
-            background: var(--text-highlight);
-            color: var(--bg);
-        }
+        .plus-btn.active { background: var(--text-highlight); color: var(--bg); }
         #messageInput {
-            flex: 1;
-            background: #2d3748;
-            border: none;
-            border-radius: 24px;
-            padding: 10px 14px;
-            color: white;
-            font-size: 0.95rem;
-            resize: none;
-            outline: none;
-            max-height: 100px;
-            line-height: 1.3;
-            font-family: inherit;
+            flex: 1; background: #2d3748; border: none; border-radius: 24px; padding: 10px 14px; color: white;
+            font-size: 0.95rem; resize: none; outline: none; max-height: 100px; line-height: 1.3; font-family: inherit;
         }
-        .send-btn {
-            background: var(--text-highlight);
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            color: var(--bg);
-            font-size: 1.1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-        .emoji-panel-container {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.2s ease-out;
-            background: var(--card-bg);
-            border-top: 1px solid var(--border-color);
-            margin-top: 8px;
-            border-radius: 12px;
-        }
-        .emoji-panel-container.open {
-            max-height: 260px;
-            overflow-y: auto;
-        }
-        .emoji-section {
-            padding: 8px 12px;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .emoji-section-title {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-        }
-        .emoji-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: center;
-        }
-        .emoji-item {
-            cursor: pointer;
-            background: rgba(255,255,255,0.08);
-            border-radius: 30px;
-            padding: 6px 12px;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 1.2rem;
-            transition: 0.1s;
-        }
+        .send-btn { background: var(--text-highlight); border: none; width: 40px; height: 40px; border-radius: 50%; color: var(--bg); font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .emoji-panel-container { max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; background: var(--card-bg); border-top: 1px solid var(--border-color); margin-top: 8px; border-radius: 12px; }
+        .emoji-panel-container.open { max-height: 260px; overflow-y: auto; }
+        .emoji-section { padding: 8px 12px; border-bottom: 1px solid var(--border-color); }
+        .emoji-section-title { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 8px; }
+        .emoji-grid { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+        .emoji-item { cursor: pointer; background: rgba(255,255,255,0.08); border-radius: 30px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px; font-size: 1.2rem; transition: 0.1s; }
         .emoji-item:active { background: var(--text-highlight); color: #121212; }
         .emoji-item img { width: 28px; height: 28px; object-fit: contain; }
         .custom-emoji-item img { width: 36px; height: 36px; }
         .loading-msg { text-align: center; padding: 20px; color: var(--text-secondary); }
         .error-box { background: rgba(248,113,113,0.1); border: 1px solid #f87171; border-radius: 10px; padding: 16px; text-align: center; margin: 16px; }
-
-        /* 自定义上下文菜单 */
-        .custom-context-menu {
-            position: fixed;
-            background: #2c2c2e;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            padding: 8px 0;
-            min-width: 120px;
-            z-index: 10000;
-            animation: fadeIn 0.1s ease;
-        }
-        .custom-context-menu .menu-item {
-            padding: 10px 16px;
-            font-size: 14px;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            transition: background 0.1s;
-        }
-        .custom-context-menu .menu-item:active {
-            background: #3a3a3c;
-        }
-        .custom-context-menu .menu-item.danger {
-            color: #ff453a;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
+        .custom-context-menu { position: fixed; background: #2c2c2e; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); padding: 8px 0; min-width: 120px; z-index: 10000; animation: fadeIn 0.1s ease; }
+        .custom-context-menu .menu-item { padding: 10px 16px; font-size: 14px; color: white; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: background 0.1s; }
+        .custom-context-menu .menu-item:active { background: #3a3a3c; }
+        .custom-context-menu .menu-item.danger { color: #ff453a; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         @media (max-width: 480px) {
-            .friend-avatar { width: 34px; height: 34px; }
-            .message-content { max-width: 80%; }
-            .msg-avatar { width: 30px; height: 30px; }
-            .plus-btn, .send-btn { width: 36px; height: 36px; font-size: 1.2rem; }
-            .emoji-item { padding: 4px 8px; font-size: 1rem; }
-            .emoji-item img { width: 24px; height: 24px; }
+            .friend-avatar { width: 34px; height: 34px; } .message-content { max-width: 80%; }
+            .msg-avatar { width: 30px; height: 30px; } .plus-btn, .send-btn { width: 36px; height: 36px; font-size: 1.2rem; }
+            .emoji-item { padding: 4px 8px; font-size: 1rem; } .emoji-item img { width: 24px; height: 24px; }
+        }
+
+        /* ================================================== */
+        /* 【新增】完美复刻个人主页的头像框 CSS 样式        */
+        /* ================================================== */
+        .avatar {
+            position: relative;
+            border-radius: 50%;
+            overflow: visible !important; /* 关键：让头像框可以溢出圆形容器 */
+        }
+        .avatar::after {
+            content: '';
+            position: absolute;
+            top: -6px; left: -6px; right: -6px; bottom: -6px;
+            border-radius: 50%;
+            pointer-events: none;
+            transition: all 0.2s ease;
+            opacity: 0;
+        }
+        .avatar.small-frame::after {
+            top: -4px; left: -4px; right: -4px; bottom: -4px;
+        }
+        .avatar.frame-gold::after {
+            opacity: 1;
+            outline: 3px solid #ffd700; outline-offset: 2px;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
+        }
+        .avatar.frame-rainbow::after {
+            opacity: 1;
+            background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+            mask: radial-gradient(circle at center, transparent 62%, black 63%);
+            -webkit-mask: radial-gradient(circle at center, transparent 62%, black 63%);
+        }
+        .avatar.frame-neon-blue::after {
+            opacity: 1;
+            outline: 2px solid #06b6d4; outline-offset: 2px;
+            box-shadow: 0 0 20px #06b6d4, inset 0 0 20px #06b6d4;
+            filter: drop-shadow(0 0 15px #06b6d4);
+        }
+        .avatar.frame-pulse-purple::after {
+            opacity: 1;
+            outline: 3px solid #a855f7; outline-offset: 2px;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.6);
+            animation: pulsePurple 2s infinite ease-in-out;
+        }
+        @keyframes pulsePurple {
+            0%   { box-shadow: 0 0 10px rgba(168, 85, 247, 0.4); outline-color: #a855f7; }
+            50%  { box-shadow: 0 0 35px rgba(168, 85, 247, 0.9), 0 0 60px rgba(168, 85, 247, 0.4); outline-color: #d8b4fe; }
+            100% { box-shadow: 0 0 10px rgba(168, 85, 247, 0.4); outline-color: #a855f7; }
         }
     </style>
 </head>
 <body>
 <div class="chat-header">
-    <div class="friend-avatar" id="friendAvatar">👤</div>
+    <div class="friend-avatar-wrapper">
+        <div class="friend-avatar" id="friendAvatar">👤</div>
+    </div>
     <div class="friend-info">
         <h2 id="friendName">加载中...</h2>
         <p id="friendStatus"><i class="fas fa-comment-dots"></i> 好友聊天</p>
@@ -318,9 +180,11 @@
     let currentUser = null;
     let currentUserAvatar = null;
     let currentUserName = '';
+    let currentUserFrame = 'nature';
     let friendId = null;
     let friendName = '好友';
     let friendAvatar = null;
+    let friendFrame = 'nature';
     let messagesSubscription = null;
     let emojiPanelOpen = false;
 
@@ -337,7 +201,6 @@
         friendAvatarDiv: document.getElementById('friendAvatar')
     };
 
-    // ========== 工具函数 ==========
     const escapeHtml = str => (str || '').replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m]));
     const showNotification = (msg, isError = false) => {
         const toast = document.createElement('div');
@@ -358,13 +221,9 @@
         ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
     };
 
-    // ========== 自定义上下文菜单 ==========
     let currentMenu = null;
     function hideContextMenu() {
-        if (currentMenu) {
-            currentMenu.remove();
-            currentMenu = null;
-        }
+        if (currentMenu) { currentMenu.remove(); currentMenu = null; }
     }
     function showContextMenu(x, y, items) {
         hideContextMenu();
@@ -386,7 +245,6 @@
         });
         document.body.appendChild(menu);
         currentMenu = menu;
-        // 点击其他地方关闭
         const closeHandler = (e) => {
             if (!menu.contains(e.target)) hideContextMenu();
             document.removeEventListener('click', closeHandler);
@@ -398,41 +256,26 @@
         }, 0);
     }
 
-    // 复制文本到剪贴板
     async function copyToClipboard(text) {
-        try {
-            await navigator.clipboard.writeText(text);
-            showNotification('已复制');
-        } catch(e) { showNotification('复制失败', true); }
+        try { await navigator.clipboard.writeText(text); showNotification('已复制'); }
+        catch(e) { showNotification('复制失败', true); }
     }
-
-    // 保存图片到相册（通过创建a标签下载）
     function saveImage(url) {
         const link = document.createElement('a');
-        link.href = url;
-        link.download = 'image.png';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        showNotification('图片已保存');
+        link.href = url; link.download = 'image.png';
+        document.body.appendChild(link); link.click();
+        document.body.removeChild(link); showNotification('图片已保存');
     }
-
-    // 删除消息（仅自己发送的）
     async function deleteMessage(msgId) {
         if(!confirm('删除这条消息？')) return;
         const { error } = await supabase.from('messages').delete().eq('id', msgId).eq('sender_id', currentUser.id);
-        if(error) showNotification('删除失败', true);
-        else showNotification('已删除');
+        if(error) showNotification('删除失败', true); else showNotification('已删除');
     }
-
-    // 撤回消息（仅自己且2分钟内）
     async function recallMessage(msgId) {
         const { error } = await supabase.from('messages').update({ is_recalled: true }).eq('id', msgId).eq('sender_id', currentUser.id);
-        if(error) showNotification('撤回失败', true);
-        else showNotification('已撤回');
+        if(error) showNotification('撤回失败', true); else showNotification('已撤回');
     }
 
-    // ========== 消息渲染（增加长按事件） ==========
     function renderMessageContent(msg) {
         if (msg.is_recalled) return `<span style="font-style:italic;">${msg.sender_id === currentUser?.id ? '你撤回了' : '对方撤回了'}</span>`;
         let text = msg.content || '';
@@ -455,11 +298,12 @@
         return escaped.replace(/\n/g, '<br>');
     }
 
-    function createAvatarElement(avatarUrl, name, userId, size = '36px') {
+    function createAvatarElement(avatarUrl, name, userId, size = '36px', frameId = 'nature') {
         const div = document.createElement('div');
-        div.className = 'msg-avatar';
-        div.style.width = size;
-        div.style.height = size;
+        div.className = 'msg-avatar avatar';
+        if (size === '32px' || size === '30px') div.classList.add('small-frame');
+        if (frameId && frameId !== 'nature') div.classList.add(frameId);
+        div.style.width = size; div.style.height = size;
         if (avatarUrl) {
             const img = document.createElement('img');
             img.src = avatarUrl;
@@ -483,46 +327,24 @@
         window.open(`profile.html?uid=${userId}`, '_blank');
     }
 
-    // 为消息气泡添加长按菜单
     function attachLongPressToBubble(bubbleElement, msg, isOwn) {
         let timer = null;
         const start = (e) => {
             e.preventDefault();
             timer = setTimeout(() => {
                 const rect = bubbleElement.getBoundingClientRect();
-                let x = rect.left + window.scrollX;
-                let y = rect.top + window.scrollY;
-                // 获取触摸点坐标（如果是触摸事件）
-                if (e.touches) {
-                    x = e.touches[0].clientX;
-                    y = e.touches[0].clientY;
-                } else if (e.clientX) {
-                    x = e.clientX;
-                    y = e.clientY;
-                }
+                let x = rect.left + window.scrollX, y = rect.top + window.scrollY;
+                if (e.touches) { x = e.touches[0].clientX; y = e.touches[0].clientY; }
+                else if (e.clientX) { x = e.clientX; y = e.clientY; }
                 const items = [];
-                // 复制文字（如果是文本消息，且未撤回）
                 if (!msg.is_recalled) {
-                    items.push({
-                        label: '复制文字',
-                        icon: 'fa-copy',
-                        action: () => copyToClipboard(msg.content)
-                    });
+                    items.push({ label: '复制文字', icon: 'fa-copy', action: () => copyToClipboard(msg.content) });
                 }
                 if (isOwn && !msg.is_recalled) {
                     if (canRecall(msg.created_at)) {
-                        items.push({
-                            label: '撤回',
-                            icon: 'fa-undo-alt',
-                            action: () => recallMessage(msg.id)
-                        });
+                        items.push({ label: '撤回', icon: 'fa-undo-alt', action: () => recallMessage(msg.id) });
                     }
-                    items.push({
-                        label: '删除',
-                        icon: 'fa-trash-alt',
-                        danger: true,
-                        action: () => deleteMessage(msg.id)
-                    });
+                    items.push({ label: '删除', icon: 'fa-trash-alt', danger: true, action: () => deleteMessage(msg.id) });
                 }
                 if (items.length > 0) showContextMenu(x, y, items);
             }, 500);
@@ -534,11 +356,9 @@
         bubbleElement.addEventListener('mousedown', start);
         bubbleElement.addEventListener('mouseup', end);
         bubbleElement.addEventListener('mouseleave', end);
-        // 禁止浏览器默认右键菜单
         bubbleElement.addEventListener('contextmenu', (e) => e.preventDefault());
     }
 
-    // 为图片添加长按保存功能
     function attachLongPressToImages(container) {
         const images = container.querySelectorAll('.custom-emoji, .chat-emoji-img');
         images.forEach(img => {
@@ -550,20 +370,10 @@
                 timer = setTimeout(() => {
                     const url = img.src;
                     const rect = img.getBoundingClientRect();
-                    let x = rect.left + window.scrollX;
-                    let y = rect.top + window.scrollY;
-                    if (e.touches) {
-                        x = e.touches[0].clientX;
-                        y = e.touches[0].clientY;
-                    } else if (e.clientX) {
-                        x = e.clientX;
-                        y = e.clientY;
-                    }
-                    showContextMenu(x, y, [{
-                        label: '保存图片',
-                        icon: 'fa-image',
-                        action: () => saveImage(url)
-                    }]);
+                    let x = rect.left + window.scrollX, y = rect.top + window.scrollY;
+                    if (e.touches) { x = e.touches[0].clientX; y = e.touches[0].clientY; }
+                    else if (e.clientX) { x = e.clientX; y = e.clientY; }
+                    showContextMenu(x, y, [{ label: '保存图片', icon: 'fa-image', action: () => saveImage(url) }]);
                 }, 500);
             };
             const end = () => { if(timer) clearTimeout(timer); };
@@ -599,21 +409,19 @@
 
         let avatarDiv;
         if (isOwn) {
-            avatarDiv = createAvatarElement(currentUserAvatar, currentUserName, currentUser.id, '32px');
+            avatarDiv = createAvatarElement(currentUserAvatar, currentUserName, currentUser.id, '32px', currentUserFrame);
             row.appendChild(contentDiv);
             row.appendChild(avatarDiv);
         } else {
-            avatarDiv = createAvatarElement(friendAvatar, friendName, friendId, '32px');
+            avatarDiv = createAvatarElement(friendAvatar, friendName, friendId, '32px', friendFrame);
             row.appendChild(avatarDiv);
             row.appendChild(contentDiv);
         }
 
-        // 为气泡内的图片附加长按菜单
         setTimeout(() => attachLongPressToImages(bubble), 10);
         return row;
     }
 
-    // 其余原有函数（加载消息、发送消息、订阅等保持不变，仅适当引用上面定义的新函数）
     async function loadMessages() {
         if(!currentUser || !friendId) return;
         const { data, error } = await supabase
@@ -668,7 +476,6 @@
         messagesSubscription = channel;
     }
 
-    // 表情相关函数（保持原样）
     function insertEmoji(code, isCustom = false) {
         const start = elements.messageInput.selectionStart;
         const val = elements.messageInput.value;
@@ -773,28 +580,35 @@
         }
     }
 
-    // ========== 好友关系与个人资料 ==========
     async function loadCurrentUserProfile() {
         if(!currentUser) return;
-        const { data, error } = await supabase.from('user_profiles').select('username, avatar_url').eq('id', currentUser.id).single();
+        const { data, error } = await supabase.from('user_profiles').select('username, avatar_url, equipped_frame').eq('id', currentUser.id).single();
         if(!error && data) {
             currentUserName = data.username || '我';
             currentUserAvatar = data.avatar_url;
+            currentUserFrame = data.equipped_frame || 'nature';
         } else {
             currentUserName = currentUser.email.split('@')[0];
             currentUserAvatar = null;
+            currentUserFrame = 'nature';
         }
     }
 
     async function loadFriendProfile() {
         if(!friendId) return;
-        const { data, error } = await supabase.from('user_profiles').select('username, avatar_url').eq('id', friendId).single();
+        const { data, error } = await supabase.from('user_profiles').select('username, avatar_url, equipped_frame').eq('id', friendId).single();
         if(!error && data) {
             friendName = data.username || '好友';
             friendAvatar = data.avatar_url;
+            friendFrame = data.equipped_frame || 'nature';
             elements.friendNameSpan.textContent = friendName;
+            
+            // 渲染顶部好友头像框（优先使用默认的，不做小尺寸特殊化）
             const avatarDiv = elements.friendAvatarDiv;
             avatarDiv.innerHTML = '';
+            let classes = 'friend-avatar avatar';
+            if(friendFrame && friendFrame !== 'nature') classes += ' ' + friendFrame;
+            avatarDiv.className = classes;
             if(friendAvatar) {
                 const img = document.createElement('img');
                 img.src = friendAvatar;
@@ -849,7 +663,6 @@
         elements.messageInput.addEventListener('focus', () => { if(emojiPanelOpen) toggleEmojiPanel(); setTimeout(scrollToBottom, 300); });
         window.addEventListener('resize', () => setTimeout(scrollToBottom, 100));
         window.addEventListener('beforeunload', () => { if(messagesSubscription) supabase.removeChannel(messagesSubscription); });
-        // 全局关闭菜单
         document.addEventListener('click', hideContextMenu);
         document.addEventListener('touchstart', hideContextMenu);
     }
