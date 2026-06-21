@@ -130,6 +130,49 @@
             box-shadow: 0 0 15px rgba(168, 85, 247, 0.6);
             animation: pulsePurple 2s infinite ease-in-out;
         }
+
+        /* ====== 背包格子样式 ====== */
+        .backpack-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 16px;
+            padding: 8px 0;
+        }
+        .backpack-item {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .backpack-item:hover {
+            background: var(--card-bg-hover);
+            border-color: var(--text-highlight);
+            transform: scale(1.02);
+        }
+        .backpack-item .item-icon {
+            font-size: 2.2rem;
+            margin-bottom: 4px;
+        }
+        .backpack-item .item-icon img {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+        .backpack-item .item-count {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+        .backpack-empty {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-secondary);
+        }
     </style>
 </head>
 <body>
@@ -156,6 +199,10 @@
                             <button class="username-edit" onclick="openUsernameModal()"><i class="fas fa-edit"></i></button>
                             <div class="register-days"><i class="fas fa-calendar-alt"></i><span id="userDaysText">已来到 0 天</span></div>
                             <div class="active-points"><i class="fas fa-bolt"></i>活跃度: <span id="activePointsValue">0</span></div>
+                            
+                            <!-- 【新增】背包按钮，放在商店左边 -->
+                            <button class="shop-button" id="openBackpackBtn" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6);"><i class="fas fa-shopping-bag"></i> 背包</button>
+                            
                             <button class="shop-button" id="openShopBtn"><i class="fas fa-store"></i> 商店</button>
                             <button class="shop-button my-title-btn" id="openTitlesBtn" style="margin-left: 8px;"><i class="fas fa-medal"></i> 我的称号</button>
                             <button class="shop-button my-title-btn" id="openHelpBtn" style="margin-left: 8px;"><i class="fas fa-question-circle"></i> 帮助</button>
@@ -174,7 +221,6 @@
             <div class="checkin-card">
                 <div class="checkin-info">
                     <div class="streak-box"><div class="streak-number" id="streakDays">0</div><div class="streak-label">连续签到</div></div>
-                    <!-- 【修改】小问号按钮，替换掉了明日奖励预览 -->
                     <div class="reward-preview" id="rewardInfoBtn" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px;" onclick="openRewardInfoModal()">
                         <i class="fas fa-question-circle"></i> <span>奖励预览</span>
                     </div>
@@ -203,16 +249,37 @@
     <div class="modal-overlay" id="titlesModal"><div class="modal" style="max-width: 500px;"><div class="modal-header"><div class="modal-title"><i class="fas fa-medal"></i> 我的称号</div><button class="modal-close close-modal-btn" data-modal="titlesModal">&times;</button></div><div id="titlesListContainer" style="max-height: 60vh; overflow-y: auto; padding: 0 4px;"></div><div style="margin-top: 12px; text-align: center; font-size: 0.7rem;">完成条件自动获得称号</div></div></div>
     <div class="modal-overlay" id="helpModal"><div class="modal" style="max-width: 550px;"><div class="modal-header"><div class="modal-title"><i class="fas fa-life-ring"></i> 帮助中心</div><button class="modal-close close-modal-btn" data-modal="helpModal">&times;</button></div><div style="max-height: 60vh; overflow-y: auto; padding-right: 8px;"><div class="help-section"><h3><i class="fas fa-star"></i> 货币与活跃度</h3><p><strong>🍬 糖果碎</strong>：每日签到、活动获得。用于购买头像框、自动签到卡等。<br><strong>🌈 彩虹棒糖</strong>：稀有货币，连续签到7天或特殊活动获得。可兑换高级物品。<br><strong>⚡ 活跃度</strong>：通过签到获得，影响称号获取条件。</p></div><div class="help-section"><h3><i class="fas fa-calendar-check"></i> 签到</h3><p>每天点击“签到”按钮可获得奖励。连续签到天数越多，奖励越丰厚。<br><strong>自动签到卡</strong>：购买后每天上午8点（北京时间）自动签到，永不漏签。</p></div><div class="help-section"><h3><i class="fas fa-medal"></i> 称号系统</h3><p>完成特定条件自动获得称号（例如连续签到7天、活跃度达到100、拥有500糖果碎等）。<br>管理员拥有特殊限定称号（🌟创世神🌟 / 🌟管理神🌟）。</p></div><div class="help-section"><h3><i class="fas fa-store"></i> 商店</h3><p>可使用糖果碎/彩虹棒糖购买头像框、自动签到卡。购买后自动生效。</p></div><div class="help-section"><h3><i class="fas fa-user"></i> 个人资料</h3><p>长按头像可更换图片；点击编辑按钮修改用户名/简介；可修改密码或注销账号。</p></div><div class="help-section"><h3><i class="fas fa-question"></i> 其他问题</h3><p>如果遇到bug或有建议，欢迎联系站长。站长QQ：1714400176。邮箱1714400176@qq.com。</p></div></div><div style="margin-top: 16px; text-align: center; font-size: 0.7rem; color: #aaa;">版本 1.0 | 持续更新中</div></div></div>
     
-    <!-- 【新增】签到奖励说明弹窗 -->
     <div class="modal-overlay" id="rewardInfoModal">
         <div class="modal" style="max-width: 480px;">
             <div class="modal-header">
                 <div class="modal-title"><i class="fas fa-calendar-alt" style="margin-right:8px;"></i> 签到奖励一览</div>
                 <button class="modal-close close-modal-btn" data-modal="rewardInfoModal">&times;</button>
             </div>
-            <div id="rewardInfoContent" style="padding: 8px 0;">
-                <!-- 动态渲染 -->
+            <div id="rewardInfoContent" style="padding: 8px 0;"></div>
+        </div>
+    </div>
+
+    <!-- 【新增】背包模态框 -->
+    <div class="modal-overlay" id="backpackModal">
+        <div class="modal" style="max-width: 480px;">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-shopping-bag"></i> 我的背包</div>
+                <button class="modal-close close-modal-btn" data-modal="backpackModal">&times;</button>
             </div>
+            <div id="backpackContent" style="padding: 8px 0; max-height: 60vh; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <!-- 【新增】背包物品详情模态框 -->
+    <div class="modal-overlay" id="backpackItemModal">
+        <div class="modal" style="max-width: 320px; text-align: center;">
+            <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+                <div class="modal-title" id="bItemTitle">物品名称</div>
+                <button class="modal-close close-modal-btn" data-modal="backpackItemModal">&times;</button>
+            </div>
+            <div id="bItemIcon" style="font-size: 4rem; margin: 15px 0;"></div>
+            <div id="bItemDesc" style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;"></div>
+            <div id="bItemCount" style="font-size: 0.85rem; color: var(--text-highlight); margin-bottom: 15px;"></div>
         </div>
     </div>
 
@@ -401,22 +468,17 @@
         async function deleteAccount() { if(!isViewingSelf) return; let confirmEmail = document.getElementById('confirmEmail').value; if(confirmEmail !== currentUser.email) return showNotification('邮箱不匹配','error'); showNotification('账号删除需联系管理员','warning'); closeModal('deleteAccountModal'); }
         async function performLogout() { closeModal('logoutConfirmModal'); await supabaseClient.auth.signOut(); localStorage.clear(); window.location.href = 'index.html'; }
 
-        // 已删除旧版 getCheckinRewards 和 updateRewardPreview 函数
-
         function updateActivePointsDisplay() { let span = document.getElementById('activePointsValue'); if(span) span.innerText = userStats?.active_points || 0; }
         function updateShopBalanceDisplay() { if(!isViewingSelf) return; let candySpan = document.getElementById('shopCandyBalance'); let rainSpan = document.getElementById('shopRainbowBalance'); if(candySpan) candySpan.innerText = userStats?.candy_crumbles || 0; if(rainSpan) rainSpan.innerText = userStats?.rainbow_lollipops || 0; }
 
-        // ====== 【新增】打开奖励详情弹窗 ======
+        // ====== 签到奖励一览 ======
         async function openRewardInfoModal() {
             const { data: configData, error } = await supabaseClient
                 .from('checkin_config')
                 .select('*')
                 .order('day_num', { ascending: true });
 
-            if (error) {
-                showNotification('获取奖励信息失败', 'error');
-                return;
-            }
+            if (error) { showNotification('获取奖励信息失败', 'error'); return; }
 
             let html = '<div style="max-height:50vh; overflow-y:auto; padding-right:8px;">';
             html += `<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
@@ -436,18 +498,10 @@
 
             for (let item of configData) {
                 let dayNum = item.day_num;
-                if (dayNum === 9999) {
-                    fallbackReward = item;
-                    continue;
-                }
-
+                if (dayNum === 9999) { fallbackReward = item; continue; }
                 let isCurrent = (dayNum === currentStreak);
                 let isTomorrow = (dayNum === currentStreak + 1);
-                
-                if (isTomorrow) {
-                    tomorrowReward = item;
-                }
-
+                if (isTomorrow) { tomorrowReward = item; }
                 let displayDay = dayNum > 30 ? '30天以上' : `第${dayNum}天`;
                 html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05); ${isCurrent ? 'background:rgba(255,215,0,0.15);' : ''}">
                     <td style="padding:8px 0; text-align:center; ${isCurrent ? 'color:#facc15;font-weight:bold;' : ''}">${displayDay}</td>
@@ -458,10 +512,7 @@
             }
             html += '</tbody></table></div>';
 
-            if (!tomorrowReward) {
-                tomorrowReward = fallbackReward || { candy: 0, rainbow: 0, active: 0 };
-            }
-
+            if (!tomorrowReward) { tomorrowReward = fallbackReward || { candy: 0, rainbow: 0, active: 0 }; }
             let footerHtml = `
                 <div style="margin-top:16px; border-top:1px solid var(--border-color); padding-top:12px; text-align:center; font-size:0.95rem; background:rgba(0,0,0,0.2); border-radius:8px; padding:12px;">
                     <div style="color:var(--text-secondary); margin-bottom:4px;">
@@ -474,13 +525,69 @@
             `;
 
             const container = document.getElementById('rewardInfoContent');
-            if (container) {
-                container.innerHTML = html + footerHtml;
-                openModal('rewardInfoModal');
-            }
+            if (container) { container.innerHTML = html + footerHtml; openModal('rewardInfoModal'); }
         }
 
-        // ====== 【新版】执行签到，从 checkin_config 取奖励 ======
+        // ====== 【新版】背包系统 ======
+        const BACKPACK_ITEMS = [
+            { id: 'candy', name: '🍬 糖果碎', desc: '可用于购买头像框、自动签到卡等道具。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp', isImg: true },
+            { id: 'rainbow', name: '🌈 超级棒糖', desc: '稀有货币，可用于兑换高级物品。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp', isImg: true },
+            { id: 'autocard', name: '📅 自动签到卡', desc: '永久有效，每天上午8点自动签到（北京时间）。', icon: 'fa-calendar-check', isImg: false }
+        ];
+
+        async function openBackpack() {
+            if(!isViewingSelf) return;
+            let container = document.getElementById('backpackContent');
+            if(!container) return;
+
+            // 获取最新的数据
+            let hasCard = await loadAutoSignCardStatus();
+            
+            let backpackData = [
+                { ...BACKPACK_ITEMS[0], count: userStats?.candy_crumbles || 0 },
+                { ...BACKPACK_ITEMS[1], count: userStats?.rainbow_lollipops || 0 },
+                { ...BACKPACK_ITEMS[2], count: hasCard ? 1 : 0 }
+            ];
+
+            // 过滤掉数量为 0 的物品
+            let filteredItems = backpackData.filter(item => item.count > 0);
+            let html = '';
+
+            if (filteredItems.length === 0) {
+                html = '<div class="backpack-empty">🎒 背包空空如也<br><span style="font-size:0.8rem;">去商店逛逛吧</span></div>';
+            } else {
+                html = '<div class="backpack-grid">';
+                for(let item of filteredItems) {
+                    let iconHtml = item.isImg ? `<img src="${item.icon}" alt="${item.name}">` : `<i class="fas ${item.icon}"></i>`;
+                    html += `
+                        <div class="backpack-item" onclick="openBackpackItemDetail('${item.id}')">
+                            <div class="item-icon">${iconHtml}</div>
+                            <div class="item-count">× ${item.count}</div>
+                        </div>
+                    `;
+                }
+                html += '</div>';
+            }
+            container.innerHTML = html;
+            openModal('backpackModal');
+        }
+
+        function openBackpackItemDetail(itemId) {
+            // 找到对应的物品配置
+            let item = BACKPACK_ITEMS.find(i => i.id === itemId);
+            if(!item) return;
+
+            let iconHtml = item.isImg ? `<img src="${item.icon}" style="width:80px;height:80px;object-fit:contain;">` : `<i class="fas ${item.icon}" style="font-size:4rem;"></i>`;
+            
+            document.getElementById('bItemTitle').innerText = item.name;
+            document.getElementById('bItemIcon').innerHTML = iconHtml;
+            document.getElementById('bItemDesc').innerText = item.desc;
+            document.getElementById('bItemCount').innerText = '';
+            
+            openModal('backpackItemModal');
+        }
+
+        // ====== 【新版】执行签到 ======
         async function executeCheckin(autoTriggered = false) {
             if (!isViewingSelf) return false;
             const today = getLocalDateString();
@@ -554,7 +661,7 @@
         async function unequipTitle() { const { error } = await supabaseClient.from('user_profiles').update({ equipped_title_id: null }).eq('id', currentUser.id); if (error) { showNotification('卸下失败', 'error'); return; } userProfile.equipped_title_id = null; equippedTitleObj = null; updateTitleDisplay(); showNotification('已卸下称号', 'success'); refreshLocalCache(); }
         async function openTitlesModal() { const container = document.getElementById('titlesListContainer'); if (!container) return; const allTitles = await loadAllTitles(); const ownedIds = await loadUserOwnedTitles(currentUser.id); let html = ''; for (let title of allTitles) { const owned = ownedIds.includes(title.id); const isEquipped = (userProfile.equipped_title_id === title.id); let nameColor = ''; let extraIcon = ''; if (title.is_limited) { if (title.name.includes('创世神')) nameColor = '#f39c12'; else if (title.name.includes('管理神')) nameColor = '#60a5fa'; extraIcon = '✨ '; } let conditionText = []; if (title.required_active_points > 0) conditionText.push(`活跃度≥${title.required_active_points}`); if (title.required_streak > 0) conditionText.push(`连续签到≥${title.required_streak}`); if (title.required_candy > 0) conditionText.push(`糖果碎≥${title.required_candy}`); if (title.required_rainbow > 0) conditionText.push(`彩虹棒糖≥${title.required_rainbow}`); const conditionHtml = conditionText.length ? `<div class="title-condition">${conditionText.join(' / ')}</div>` : ''; html += `<div class="title-item"><div><div class="title-name" style="color:${nameColor || '#fff'};">${extraIcon}${title.name}</div><div class="title-desc">${title.description || ''}</div>${conditionHtml}</div><div>${owned ? (isEquipped ? '<button class="btn-owned" disabled>已装备</button>' : `<button class="btn-equip-title" data-id="${title.id}">装备</button>`) : '<span style="color:#aaa;">未获得</span>'}</div></div>`; } container.innerHTML = html; document.querySelectorAll('.btn-equip-title').forEach(btn => { btn.addEventListener('click', async (e) => { const tid = parseInt(btn.dataset.id); await equipTitle(tid); closeModal('titlesModal'); }); }); openModal('titlesModal'); }
 
-        // ====== 商店渲染（双板块标签页切换） ======
+        // ====== 商店渲染 ======
         async function renderShop() {
             if(!isViewingSelf) return; 
             let container = document.getElementById('shopContentContainer'); 
@@ -749,6 +856,7 @@
             document.getElementById('cancelCropBtn')?.addEventListener('click', cancelCrop);
             document.getElementById('closeCropModalBtn')?.addEventListener('click', cancelCrop);
             document.getElementById('openShopBtn')?.addEventListener('click', async () => { await renderShop(); openModal('shopModal'); });
+            document.getElementById('openBackpackBtn')?.addEventListener('click', openBackpack); // 【新增】绑定背包按钮
             document.getElementById('openTitlesBtn')?.addEventListener('click', openTitlesModal);
             document.getElementById('openHelpBtn')?.addEventListener('click', () => openModal('helpModal'));
             document.getElementById('closeShopModalBtn')?.addEventListener('click', () => closeModal('shopModal'));
