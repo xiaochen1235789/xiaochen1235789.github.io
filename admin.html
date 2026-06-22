@@ -41,6 +41,8 @@
         <button class="tab-btn" data-tab="characters">📖 角色管理</button>
         <button class="tab-btn" data-tab="light_cones">✨ 光锥管理</button>
         <button class="tab-btn" data-tab="materials">🧪 材料管理</button>
+        <!-- ★★★ 新增道具管理标签 ★★★ -->
+        <button class="tab-btn" data-tab="items">📦 道具管理</button>
         <button class="tab-btn" data-tab="misc">📦 杂项管理</button>
         <button class="tab-btn" data-tab="gacha">🎲 抽卡配置</button>
         <button class="tab-btn" data-tab="logs">📜 使用日志</button>
@@ -80,6 +82,15 @@
             <button class="add-btn" id="addMaterialBtn"><i class="fas fa-plus"></i> 添加材料</button>
         </div>
         <div id="materials-table-container" class="table-container"></div>
+    </div>
+
+    <!-- ★★★ 新增道具管理面板 ★★★ -->
+    <div id="items-panel" class="panel">
+        <div class="toolbar">
+            <input type="text" id="search-items" class="search-input" placeholder="搜索道具名...">
+            <button class="add-btn" id="addItemBtn"><i class="fas fa-plus"></i> 添加道具</button>
+        </div>
+        <div id="items-table-container" class="table-container"></div>
     </div>
 
     <!-- 杂项管理面板 -->
@@ -194,6 +205,10 @@
                     <option value="添加材料">添加材料</option>
                     <option value="编辑材料">编辑材料</option>
                     <option value="删除材料">删除材料</option>
+                    <!-- ★★★ 新增道具日志操作类型 ★★★ -->
+                    <option value="添加道具">添加道具</option>
+                    <option value="编辑道具">编辑道具</option>
+                    <option value="删除道具">删除道具</option>
                     <option value="资产调整">资产调整</option>
                     <option value="头像框调整">头像框调整</option>
                     <option value="徽章调整">徽章调整</option>
@@ -254,7 +269,7 @@
     let currentUser = null;
     let currentUserRole = null;
     let allUsers = [];
-    let currentDataCache = { characters: [], light_cones: [], materials: [] };
+    let currentDataCache = { characters: [], light_cones: [], materials: [], items: [] }; // ★★★ 新增 items 缓存
     let currentContentTable = null;
     let editingContentId = null;
     let editingUserId = null;
@@ -266,6 +281,7 @@
         user:  { name: '普通用户', class: 'role-user' }
     };
 
+    // ★★★ 在 TABLE_SCHEMA 中新增 items ★★★
     const TABLE_SCHEMA = {
         characters: { fields: [
             { name: 'name', label: '角色名', type: 'text', required: true },
@@ -290,6 +306,15 @@
         ] },
         materials: { fields: [
             { name: 'name', label: '材料名', type: 'text', required: true },
+            { name: 'description', label: '描述', type: 'text' },
+            { name: 'rarity', label: '稀有度(green/blue/purple/gold)', type: 'text' },
+            { name: 'image_url', label: '图片URL', type: 'text' },
+            { name: 'detail_url', label: '详情页URL', type: 'text' },
+            { name: 'display_order', label: '排序', type: 'number', default: 0 }
+        ] },
+        // ★★★ 新增 items schema ★★★
+        items: { fields: [
+            { name: 'name', label: '道具名', type: 'text', required: true },
             { name: 'description', label: '描述', type: 'text' },
             { name: 'rarity', label: '稀有度(green/blue/purple/gold)', type: 'text' },
             { name: 'image_url', label: '图片URL', type: 'text' },
@@ -460,7 +485,6 @@
         if (userId === OWNER_ID || userId === currentUser.id) { showNotification('无法删除此用户', 'error'); return; }
         if (!confirm(`确定永久删除「${username}」吗？`)) return;
         try {
-            // 我们的 user_profiles 表设置有级联删除，因此会连带删除对应的 user_stats
             await supabaseAdmin.from('user_profiles').delete().eq('id', userId);
             showNotification('已删除用户', 'success');
             await refreshUserList();
@@ -488,7 +512,7 @@
         let headers = [];
         if (table === 'characters') headers = ['name', 'description', 'element', 'path', 'rarity', 'version', 'image_url', 'detail_url', 'is_limited', 'display_order'];
         else if (table === 'light_cones') headers = ['name', 'description', 'path', 'character_id', 'image_url', 'detail_url', 'display_order'];
-        else headers = ['name', 'description', 'rarity', 'image_url', 'detail_url', 'display_order'];
+        else headers = ['name', 'description', 'rarity', 'image_url', 'detail_url', 'display_order']; // materials 和 items 结构相同
         let html = '<div style="overflow-x:auto;"><table class="data-table"><thead><tr>';
         headers.forEach(h => html += `<th>${h}</th>`);
         html += '<th>操作</th></tr></thead><tbody>';
@@ -569,10 +593,10 @@
             await logAction(`删除${getTableChinese(table)}`, table, id, targetName, `删除了 ${targetName}`);
         } catch(err) { showNotification('删除失败: '+err.message, 'error'); }
     };
-    function getTableChinese(table) { const map = { characters: '角色', light_cones: '光锥', materials: '材料' }; return map[table] || table; }
+    // ★★★ 修改 getTableChinese 增加 items ★★★
+    function getTableChinese(table) { const map = { characters: '角色', light_cones: '光锥', materials: '材料', items: '道具' }; return map[table] || table; }
 
-    // ==================== 杂项管理（新版适配 user_profiles） ====================
-    // 【重要】不再使用 user_frames 表，直接读取 user_profiles 里的 owned_frames 数组
+    // ==================== 杂项管理（保持不变） ====================
     async function loadUserFrames(userId) {
         if (!userId) return ['nature'];
         const { data, error } = await supabaseAdmin.from('user_profiles').select('owned_frames').eq('id', userId).single();
@@ -585,14 +609,9 @@
         if (error) throw new Error(`资产更新失败: ${error.message}`);
     }
 
-    // 【重要】更新头像框：直接通过数组覆盖 user_profiles 表，强制保留 'nature'
     async function updateUserFrames(userId, ownedFrameIds) {
-        // 去重
         ownedFrameIds = [...new Set(ownedFrameIds)];
-        // 强制保有默认框，防止用户失去基本边框
-        if (!ownedFrameIds.includes('nature')) {
-            ownedFrameIds.push('nature');
-        }
+        if (!ownedFrameIds.includes('nature')) ownedFrameIds.push('nature');
         const { error } = await supabaseAdmin.from('user_profiles').update({
             owned_frames: ownedFrameIds
         }).eq('id', userId);
@@ -670,7 +689,6 @@
         let framesHtml = '<div class="frames-grid">';
         for (const frame of FRAMES_LIST) {
             const isOwned = userFrames.includes(frame.id);
-            // 注意：在 new profile.html 中，默认框的 ID 是 'nature'，不属于超管可以取消的选择
             const disabledAttr = (frame.id === 'nature') ? 'disabled ' : '';
             framesHtml += `<label class="frame-checkbox-item"><input type="checkbox" class="frame-checkbox" data-frame-id="${frame.id}" ${isOwned ? 'checked' : ''} ${disabledAttr} ${!canEdit ? 'disabled' : ''}><div class="frame-name">${escapeHtml(frame.name)}</div>${frame.id === 'nature' ? '<span style="font-size:0.7rem;">(默认，不可取消)</span>' : ''}</label>`;
         }
@@ -801,7 +819,7 @@
             }
         };
         if (selectedMiscUserId) await reloadMiscData(selectedMiscUserId);
-        initMailSender(); // 初始化邮件发送组件
+        initMailSender();
     }
 
     // ==================== 邮件发送 ====================
@@ -1153,6 +1171,8 @@
         else if (tabId === 'characters') loadContentTable('characters');
         else if (tabId === 'light_cones') loadContentTable('light_cones');
         else if (tabId === 'materials') loadContentTable('materials');
+        // ★★★ 新增 items 标签处理 ★★★
+        else if (tabId === 'items') loadContentTable('items');
         else if (tabId === 'misc') { initMiscPanel(); }
         else if (tabId === 'gacha') {
             loadBanners();
@@ -1176,13 +1196,16 @@
             if (!kw) renderUsersTable(allUsers);
             else renderUsersTable(allUsers.filter(u => u.username.toLowerCase().includes(kw)));
         });
-        ['characters', 'light_cones', 'materials'].forEach(t => {
+        // ★★★ 将 items 加入搜索绑定 ★★★
+        ['characters', 'light_cones', 'materials', 'items'].forEach(t => {
             const input = document.getElementById(`search-${t}`);
             if (input) input.addEventListener('input', () => filterContentTable(t));
         });
         document.getElementById('addCharacterBtn').onclick = () => showContentForm('characters');
         document.getElementById('addLightconeBtn').onclick = () => showContentForm('light_cones');
         document.getElementById('addMaterialBtn').onclick = () => showContentForm('materials');
+        // ★★★ 添加道具按钮事件 ★★★
+        document.getElementById('addItemBtn').onclick = () => showContentForm('items');
         document.getElementById('logoutBtn').onclick = async () => { await supabaseAdmin.auth.signOut(); window.location.href = 'index.html'; };
         document.getElementById('clearLogsBtn').onclick = () => clearAllLogs();
         document.getElementById('logSearch').addEventListener('input', () => refreshLogs());
