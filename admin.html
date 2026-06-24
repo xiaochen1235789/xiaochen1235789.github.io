@@ -86,7 +86,6 @@
 
     <!-- 面板6：杂项管理 -->
     <div id="misc-panel" class="panel">
-        <!-- 资产调整 -->
         <div class="misc-section">
             <div class="misc-title"><i class="fas fa-coins"></i> 用户资产调整</div>
             <div class="user-selector">
@@ -97,12 +96,10 @@
             </div>
             <div id="assetControlArea" class="asset-control"></div>
         </div>
-        <!-- 头像框 -->
         <div class="misc-section">
             <div class="misc-title"><i class="fas fa-image"></i> 头像框拥有管理</div>
             <div id="framesManagementArea"></div>
         </div>
-        <!-- 系统邮件 -->
         <div class="misc-section">
             <div class="misc-title"><i class="fas fa-mail-bulk"></i> 发送系统邮件</div>
             <div class="asset-control" style="flex-direction: column; align-items: stretch;">
@@ -249,7 +246,7 @@
 
 <script>
 // ============================================================
-//  完整 JavaScript 代码（包含签到配置管理）
+//  完整 JavaScript 代码（包含签到配置管理 + 用户名显示修复）
 // ============================================================
 
 // ==================== 配置 ====================
@@ -344,27 +341,50 @@ async function logAction(actionType, targetType, targetId, targetName, details) 
     if (document.getElementById('logs-panel').classList.contains('active-panel')) refreshLogs();
 }
 
-// ==================== 权限校验 ====================
+// ==================== ★★★ 权限校验（修复用户名显示） ★★★ ====================
 async function checkAuthAndRole() {
     supabaseAdmin = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const { data: { user }, error } = await supabaseAdmin.auth.getUser();
-    if (error || !user) { showNotification('请先登录', 'error'); setTimeout(() => window.location.href = 'login-real.html', 1500); return false; }
-    currentUser = user;
-    if (currentUser.id === OWNER_ID) {
-        await supabaseAdmin.from('user_profiles').update({ role: 'owner' }).eq('id', OWNER_ID);
-        currentUserRole = 'owner';
-    } else {
-        const { data: profile } = await supabaseAdmin.from('user_profiles').select('role, username').eq('id', user.id).single();
-        currentUserRole = profile?.role || 'user';
-        currentUsername = profile?.username || user.email?.split('@')[0] || '用户';
+    if (error || !user) {
+        showNotification('请先登录', 'error');
+        setTimeout(() => window.location.href = 'login-real.html', 1500);
+        return false;
     }
+    currentUser = user;
+
+    // ★★★ 从 user_profiles 获取 username 和 role ★★★
+    let { data: profile, error: profileErr } = await supabaseAdmin
+        .from('user_profiles')
+        .select('role, username')
+        .eq('id', currentUser.id)
+        .single();
+
+    if (profileErr) {
+        console.warn('获取用户资料失败，使用默认值', profileErr);
+    }
+
+    // 处理角色
+    if (currentUser.id === OWNER_ID) {
+        currentUserRole = 'owner';
+        await supabaseAdmin.from('user_profiles').update({ role: 'owner' }).eq('id', OWNER_ID);
+    } else {
+        currentUserRole = profile?.role || 'user';
+    }
+
+    // ★★★ 获取用户名：优先用 profile.username，否则用邮箱前缀 ★★★
+    currentUsername = profile?.username || currentUser.email?.split('@')[0] || '用户';
+
+    // 权限检查
     if (currentUserRole !== 'owner' && currentUserRole !== 'admin') {
         showNotification('无权限', 'error');
         setTimeout(() => window.location.href = 'index.html', 1500);
         return false;
     }
-    document.getElementById('adminUsername').innerText = currentUsername || currentUser.email?.split('@')[0] || '管理员';
+
+    // ★★★ 更新顶部显示：自定义用户名 + 小字邮箱 ★★★
+    document.getElementById('adminUsername').innerText = currentUsername;
     document.getElementById('adminUserEmail').innerText = '(' + currentUser.email + ')';
+
     return true;
 }
 
