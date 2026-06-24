@@ -586,7 +586,7 @@
         async function performCheckin() { await executeCheckin(false); }
 
         let hasAutoSignCard = false; let autoSignAttempted = false;
-        async function loadAutoSignCardStatus() { if (!isViewingSelf) return false; const { data, error } = await supabaseClient.from('user_auto_sign_card').select('owned').eq('user_id', currentUser.id).single(); if (error && error.code !== 'PGRST116') return false; return data?.owned === true; }
+        async function loadAutoSignCardStatus() { if (!isViewingSelf) return false; const { data, error } = await supabaseClient.from('user_auto_sign_card').select('owned').eq('user_id', currentUser.id).maybeSingle(); if (error && error.code !== 'PGRST116') return false; return data?.owned === true; }
         async function tryAutoSign() { if (!isViewingSelf || autoSignAttempted) return; autoSignAttempted = true; const today = getLocalDateString(); if (hasAutoSignCard && userStats.last_checkin_date !== today) { showNotification('🃏 检测到自动签到卡，正在自动签到...', 'info'); await executeCheckin(true); } }
 
         async function loadAllTitles() { const { data, error } = await supabaseClient.from('titles').select('*'); if (error) return []; return data; }
@@ -690,7 +690,7 @@
             });
         }
 
-        // --- 新增：前端兑换函数调用后端 RPC ---
+        // --- 前端兑换函数调用后端 RPC ---
         async function doLowExchange(direction) {
             let amount = parseInt(document.getElementById('lowExchangeAmount').value);
             if (!amount || amount < 1) return showNotification('请输入正确数量', 'error');
@@ -725,7 +725,7 @@
             await refreshUserStats(); // 刷新余额
         }
 
-        // --- 新增：刷新当前余额数据的辅助函数 ---
+        // --- 刷新当前余额数据的辅助函数 ---
         async function refreshUserStats() {
             const { data, error } = await supabaseClient
                 .from('v_user_full_profile')
