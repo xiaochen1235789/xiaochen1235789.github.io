@@ -11,6 +11,7 @@
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
     <style>
+        /* 内联补充样式（与zhuye.css不冲突） */
         #shopModal .modal #shopContentContainer { max-height: 60vh; overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
         #shopModal .modal #shopContentContainer::-webkit-scrollbar { width: 6px; }
         #shopModal .modal #shopContentContainer::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 3px; }
@@ -23,8 +24,6 @@
         .balance-row { display: flex; gap: 16px; justify-content: center; margin-bottom: 20px; }
         .balance-item { background: rgba(0,0,0,0.2); padding: 6px 16px; border-radius: 40px; cursor: pointer; transition: 0.2s; }
         .balance-item:hover { background: rgba(0,0,0,0.4); }
-        
-        /* 好友系统风格的商店标签页切换 */
         .shop-tabs {
             display: flex;
             gap: 12px;
@@ -53,7 +52,6 @@
         .shop-card.hide-card {
             display: none;
         }
-
         .btn-buy, .btn-equip, .btn-owned { background: #f59e0b; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; color: white; }
         .btn-owned { background: #6b7280; cursor: default; }
         .card-note { font-size: 0.7rem; color: #fbbf24; margin-top: 4px; }
@@ -66,8 +64,6 @@
         .help-section { margin-bottom: 20px; border-left: 3px solid #facc15; padding-left: 12px; }
         .help-section h3 { font-size: 1rem; margin-bottom: 6px; color: #facc15; }
         .help-section p { font-size: 0.85rem; line-height: 1.4; opacity: 0.9; }
-
-        /* ====== 商店列表项 - 内嵌小预览图样式 ====== */
         .frame-item-wrap {
             display: flex;
             align-items: center;
@@ -83,95 +79,13 @@
             flex: 1;
             cursor: pointer;
         }
-        .frame-mini-preview {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #3ecf8e, #8a4baf);
-            flex-shrink: 0;
-            position: relative;
-            overflow: visible;
+        /* 背包详情里的预览大图 */
+        .frame-mini-preview.big {
+            width: 80px;
+            height: 80px;
         }
-        .frame-mini-preview .placeholder {
-            width: 100%; height: 100%;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 1rem; font-weight: bold;
-            border-radius: 50%;
-        }
-        .frame-mini-preview::after {
-            content: '';
-            position: absolute;
-            top: -4px; left: -4px; right: -4px; bottom: -4px;
-            border-radius: 50%;
-            pointer-events: none;
-            opacity: 0;
-            transition: all 0.2s ease;
-        }
-        .frame-mini-preview.frame-gold::after {
-            opacity: 1;
-            outline: 2px solid #ffd700; outline-offset: 1px;
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
-        }
-        .frame-mini-preview.frame-rainbow::after {
-            opacity: 1;
-            background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
-            mask: radial-gradient(circle at center, transparent 58%, black 60%);
-            -webkit-mask: radial-gradient(circle at center, transparent 58%, black 60%);
-        }
-        .frame-mini-preview.frame-neon-blue::after {
-            opacity: 1;
-            outline: 2px solid #06b6d4; outline-offset: 1px;
-            box-shadow: 0 0 15px #06b6d4, inset 0 0 15px #06b6d4;
-            filter: drop-shadow(0 0 10px #06b6d4);
-        }
-        .frame-mini-preview.frame-pulse-purple::after {
-            opacity: 1;
-            outline: 2px solid #a855f7; outline-offset: 1px;
-            box-shadow: 0 0 15px rgba(168, 85, 247, 0.6);
-            animation: pulsePurple 2s infinite ease-in-out;
-        }
-
-        /* ====== 背包格子样式 ====== */
-        .backpack-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-            gap: 16px;
-            padding: 8px 0;
-        }
-        .backpack-item {
-            background: rgba(0,0,0,0.2);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            aspect-ratio: 1 / 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .backpack-item:hover {
-            background: var(--card-bg-hover);
-            border-color: var(--text-highlight);
-            transform: scale(1.02);
-        }
-        .backpack-item .item-icon {
-            font-size: 2.2rem;
-            margin-bottom: 4px;
-        }
-        .backpack-item .item-icon img {
-            width: 40px;
-            height: 40px;
-            object-fit: contain;
-        }
-        .backpack-item .item-count {
-            color: var(--text-secondary);
-            font-size: 0.8rem;
-        }
-        .backpack-empty {
-            text-align: center;
-            padding: 40px 0;
-            color: var(--text-secondary);
+        .frame-mini-preview.big .placeholder {
+            font-size: 1.5rem;
         }
     </style>
 </head>
@@ -199,10 +113,7 @@
                             <button class="username-edit" onclick="openUsernameModal()"><i class="fas fa-edit"></i></button>
                             <div class="register-days"><i class="fas fa-calendar-alt"></i><span id="userDaysText">已来到 0 天</span></div>
                             <div class="active-points"><i class="fas fa-bolt"></i>活跃度: <span id="activePointsValue">0</span></div>
-                            
-                            <!-- 【新增】背包按钮，放在商店左边 -->
                             <button class="shop-button" id="openBackpackBtn" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6);"><i class="fas fa-shopping-bag"></i> 背包</button>
-                            
                             <button class="shop-button" id="openShopBtn"><i class="fas fa-store"></i> 商店</button>
                             <button class="shop-button my-title-btn" id="openTitlesBtn" style="margin-left: 8px;"><i class="fas fa-medal"></i> 我的称号</button>
                             <button class="shop-button my-title-btn" id="openHelpBtn" style="margin-left: 8px;"><i class="fas fa-question-circle"></i> 帮助</button>
@@ -259,7 +170,7 @@
         </div>
     </div>
 
-    <!-- 【新增】背包模态框 -->
+    <!-- 背包模态框 -->
     <div class="modal-overlay" id="backpackModal">
         <div class="modal" style="max-width: 480px;">
             <div class="modal-header">
@@ -270,7 +181,7 @@
         </div>
     </div>
 
-    <!-- 【新增】背包物品详情模态框 -->
+    <!-- 背包物品详情模态框 -->
     <div class="modal-overlay" id="backpackItemModal">
         <div class="modal" style="max-width: 320px; text-align: center;">
             <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
@@ -528,11 +439,11 @@
             if (container) { container.innerHTML = html + footerHtml; openModal('rewardInfoModal'); }
         }
 
-        // ====== 【新版】背包系统 ======
+        // ====== 背包系统（含货币格式、0值显示规则） ======
         const BACKPACK_ITEMS = [
-            { id: 'candy', name: '🍬 糖果碎', desc: '可用于购买头像框、自动签到卡等道具。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp', isImg: true },
-            { id: 'rainbow', name: '🌈 超级棒糖', desc: '稀有货币，可用于兑换高级物品。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp', isImg: true },
-            { id: 'autocard', name: '📅 自动签到卡', desc: '永久有效，每天上午8点自动签到（北京时间）。', icon: 'fa-calendar-check', isImg: false }
+            { id: 'candy', name: '🍬 糖果碎', desc: '可用于购买头像框、自动签到卡等道具。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp', isImg: true, type: 'currency' },
+            { id: 'rainbow', name: '🌈 超级棒糖', desc: '稀有货币，可用于兑换高级物品。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp', isImg: true, type: 'currency' },
+            { id: 'autocard', name: '📅 自动签到卡', desc: '永久有效，每天上午8点自动签到（北京时间）。', icon: 'fa-calendar-check', isImg: false, type: 'card' }
         ];
 
         async function openBackpack() {
@@ -540,29 +451,71 @@
             let container = document.getElementById('backpackContent');
             if(!container) return;
 
-            // 获取最新的数据
             let hasCard = await loadAutoSignCardStatus();
-            
+            // 获取用户拥有的头像框（排除默认框）
+            let { owned } = await window.FrameSystem.loadUserFrames(currentUser.id);
+            let allFrames = window.FrameSystem.FRAMES;
+            let ownedFrames = allFrames.filter(f => owned.includes(f.id) && f.id !== 'nature');
+
+            // 构建数据
             let backpackData = [
-                { ...BACKPACK_ITEMS[0], count: userStats?.candy_crumbles || 0 },
-                { ...BACKPACK_ITEMS[1], count: userStats?.rainbow_lollipops || 0 },
-                { ...BACKPACK_ITEMS[2], count: hasCard ? 1 : 0 }
+                { 
+                    ...BACKPACK_ITEMS[0], 
+                    count: userStats?.candy_crumbles || 0,
+                },
+                { 
+                    ...BACKPACK_ITEMS[1], 
+                    count: userStats?.rainbow_lollipops || 0,
+                },
+                { 
+                    ...BACKPACK_ITEMS[2], 
+                    count: hasCard ? 1 : 0,
+                }
             ];
+            
+            // 添加已拥有的头像框
+            for(let frame of ownedFrames) {
+                backpackData.push({
+                    id: frame.id,
+                    name: frame.name,
+                    desc: frame.description,
+                    icon: frame.cssClass || '',
+                    isImg: false,
+                    type: 'frame',
+                    count: 1,
+                    cssClass: frame.cssClass
+                });
+            }
+            
+            // 过滤规则：货币（type === 'currency'）即使为0也显示，其他物品 count > 0 才显示
+            let filteredItems = backpackData.filter(item => {
+                if (item.type === 'currency') return true;
+                return item.count > 0;
+            });
 
-            // 过滤掉数量为 0 的物品
-            let filteredItems = backpackData.filter(item => item.count > 0);
             let html = '';
-
             if (filteredItems.length === 0) {
                 html = '<div class="backpack-empty">🎒 背包空空如也<br><span style="font-size:0.8rem;">去商店逛逛吧</span></div>';
             } else {
                 html = '<div class="backpack-grid">';
                 for(let item of filteredItems) {
-                    let iconHtml = item.isImg ? `<img src="${item.icon}" alt="${item.name}">` : `<i class="fas ${item.icon}"></i>`;
+                    let iconHtml = '';
+                    let displayCount = item.count.toLocaleString(); // 千位分隔符
+                    
+                    if (item.type === 'frame') {
+                        iconHtml = `<div class="frame-mini-preview ${item.cssClass || ''}" style="width:44px;height:44px;margin:0 auto;">
+                            <div class="placeholder" style="font-size:0.8rem;">P</div>
+                        </div>`;
+                    } else if (item.isImg) {
+                        iconHtml = `<img src="${item.icon}" alt="${item.name}">`;
+                    } else {
+                        iconHtml = `<i class="fas ${item.icon}"></i>`;
+                    }
+                    
                     html += `
                         <div class="backpack-item" onclick="openBackpackItemDetail('${item.id}')">
                             <div class="item-icon">${iconHtml}</div>
-                            <div class="item-count">× ${item.count}</div>
+                            <div class="item-count" style="color:#ffffff;font-weight:bold;">× ${displayCount}</div>
                         </div>
                     `;
                 }
@@ -573,7 +526,21 @@
         }
 
         function openBackpackItemDetail(itemId) {
-            // 找到对应的物品配置
+            // 检查是否是头像框
+            let frame = window.FrameSystem.getFrameById(itemId);
+            if(frame) {
+                let iconHtml = `<div class="frame-mini-preview big ${frame.cssClass || ''}" style="margin:0 auto;">
+                    <div class="placeholder" style="font-size:1.5rem;">P</div>
+                </div>`;
+                document.getElementById('bItemTitle').innerText = frame.name;
+                document.getElementById('bItemIcon').innerHTML = iconHtml;
+                document.getElementById('bItemDesc').innerText = frame.description;
+                document.getElementById('bItemCount').innerHTML = '<span style="color:#81c784;">已拥有</span>';
+                openModal('backpackItemModal');
+                return;
+            }
+            
+            // 货币/卡片
             let item = BACKPACK_ITEMS.find(i => i.id === itemId);
             if(!item) return;
 
@@ -587,7 +554,7 @@
             openModal('backpackItemModal');
         }
 
-        // ====== 【新版】执行签到 ======
+        // ====== 执行签到 ======
         async function executeCheckin(autoTriggered = false) {
             if (!isViewingSelf) return false;
             const today = getLocalDateString();
@@ -856,7 +823,7 @@
             document.getElementById('cancelCropBtn')?.addEventListener('click', cancelCrop);
             document.getElementById('closeCropModalBtn')?.addEventListener('click', cancelCrop);
             document.getElementById('openShopBtn')?.addEventListener('click', async () => { await renderShop(); openModal('shopModal'); });
-            document.getElementById('openBackpackBtn')?.addEventListener('click', openBackpack); // 【新增】绑定背包按钮
+            document.getElementById('openBackpackBtn')?.addEventListener('click', openBackpack);
             document.getElementById('openTitlesBtn')?.addEventListener('click', openTitlesModal);
             document.getElementById('openHelpBtn')?.addEventListener('click', () => openModal('helpModal'));
             document.getElementById('closeShopModalBtn')?.addEventListener('click', () => closeModal('shopModal'));
