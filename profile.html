@@ -21,8 +21,8 @@
         .readonly-mode .username-edit, .readonly-mode .edit-bio, .readonly-mode .checkin-card, .readonly-mode .shop-button, .readonly-mode .settings-item .btn, .readonly-mode .danger-zone, .readonly-mode .my-title-btn { display: none !important; }
         .readonly-mode .avatar-container { cursor: default; }
         .shop-panel { width: 100%; }
-        .balance-row { display: flex; gap: 16px; justify-content: center; margin-bottom: 20px; }
-        .balance-item { background: rgba(0,0,0,0.2); padding: 6px 16px; border-radius: 40px; cursor: pointer; transition: 0.2s; }
+        .balance-row { display: flex; gap: 16px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
+        .balance-item { background: rgba(0,0,0,0.2); padding: 6px 16px; border-radius: 40px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 4px; }
         .balance-item:hover { background: rgba(0,0,0,0.4); }
         .shop-tabs {
             display: flex;
@@ -79,7 +79,6 @@
             flex: 1;
             cursor: pointer;
         }
-        /* 背包详情里的预览大图 */
         .frame-mini-preview.big {
             width: 80px;
             height: 80px;
@@ -380,7 +379,7 @@
         async function performLogout() { closeModal('logoutConfirmModal'); await supabaseClient.auth.signOut(); localStorage.clear(); window.location.href = 'index.html'; }
 
         function updateActivePointsDisplay() { let span = document.getElementById('activePointsValue'); if(span) span.innerText = userStats?.active_points || 0; }
-        function updateShopBalanceDisplay() { if(!isViewingSelf) return; let candySpan = document.getElementById('shopCandyBalance'); let rainSpan = document.getElementById('shopRainbowBalance'); if(candySpan) candySpan.innerText = userStats?.candy_crumbles || 0; if(rainSpan) rainSpan.innerText = userStats?.rainbow_lollipops || 0; }
+        function updateShopBalanceDisplay() { if(!isViewingSelf) return; let candySpan = document.getElementById('shopCandyBalance'); let rainSpan = document.getElementById('shopRainbowBalance'); let syrupSpan = document.getElementById('shopDreamySyrupBalance'); if(candySpan) candySpan.innerText = userStats?.candy_crumbles || 0; if(rainSpan) rainSpan.innerText = userStats?.rainbow_lollipops || 0; if(syrupSpan) syrupSpan.innerText = userStats?.dreamy_syrup || 0; }
 
         // ====== 签到奖励一览 ======
         async function openRewardInfoModal() {
@@ -441,8 +440,9 @@
 
         // ====== 背包系统 ======
         const BACKPACK_ITEMS = [
-            { id: 'candy', name: '🍬 糖果碎', desc: '可用于购买头像框、自动签到卡等道具。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp', isImg: true, type: 'currency' },
-            { id: 'rainbow', name: '🌈 超级棒糖', desc: '稀有货币，可用于兑换高级物品。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp', isImg: true, type: 'currency' },
+            { id: 'candy', name: '🍬 糖果碎', desc: '基础货币，可用于购买头像框、自动签到卡等道具。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp', isImg: true, type: 'currency' },
+            { id: 'rainbow', name: '🌈 超级棒糖', desc: '中级稀有货币，可用于兑换高级物品。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp', isImg: true, type: 'currency' },
+            { id: 'dreamy_syrup', name: '🌌 梦幻星河糖浆', desc: '终极顶级货币！甜梦镇的最高信仰，无法通过低级货币合成。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Dream_galaxy_syrup.webp', isImg: true, type: 'currency' },
             { id: 'autocard', name: '📅 自动签到卡', desc: '永久有效，每天上午8点自动签到（北京时间）。', icon: 'fa-calendar-check', isImg: false, type: 'card' }
         ];
 
@@ -459,7 +459,8 @@
             let backpackData = [
                 { ...BACKPACK_ITEMS[0], count: userStats?.candy_crumbles || 0 },
                 { ...BACKPACK_ITEMS[1], count: userStats?.rainbow_lollipops || 0 },
-                { ...BACKPACK_ITEMS[2], count: hasCard ? 1 : 0 }
+                { ...BACKPACK_ITEMS[2], count: userStats?.dreamy_syrup || 0 },
+                { ...BACKPACK_ITEMS[3], count: hasCard ? 1 : 0 }
             ];
             
             for(let frame of ownedFrames) {
@@ -598,7 +599,7 @@
         async function unequipTitle() { const { error } = await supabaseClient.from('user_profiles').update({ equipped_title_id: null }).eq('id', currentUser.id); if (error) { showNotification('卸下失败', 'error'); return; } userProfile.equipped_title_id = null; equippedTitleObj = null; updateTitleDisplay(); showNotification('已卸下称号', 'success'); refreshLocalCache(); }
         async function openTitlesModal() { const container = document.getElementById('titlesListContainer'); if (!container) return; const allTitles = await loadAllTitles(); const ownedIds = await loadUserOwnedTitles(currentUser.id); let html = ''; for (let title of allTitles) { const owned = ownedIds.includes(title.id); const isEquipped = (userProfile.equipped_title_id === title.id); let nameColor = ''; let extraIcon = ''; if (title.is_limited) { if (title.name.includes('创世神')) nameColor = '#f39c12'; else if (title.name.includes('管理神')) nameColor = '#60a5fa'; extraIcon = '✨ '; } let conditionText = []; if (title.required_active_points > 0) conditionText.push(`活跃度≥${title.required_active_points}`); if (title.required_streak > 0) conditionText.push(`连续签到≥${title.required_streak}`); if (title.required_candy > 0) conditionText.push(`糖果碎≥${title.required_candy}`); if (title.required_rainbow > 0) conditionText.push(`超级棒糖≥${title.required_rainbow}`); const conditionHtml = conditionText.length ? `<div class="title-condition">${conditionText.join(' / ')}</div>` : ''; html += `<div class="title-item"><div><div class="title-name" style="color:${nameColor || '#fff'};">${extraIcon}${title.name}</div><div class="title-desc">${title.description || ''}</div>${conditionHtml}</div><div>${owned ? (isEquipped ? '<button class="btn-owned" disabled>已装备</button>' : `<button class="btn-equip-title" data-id="${title.id}">装备</button>`) : '<span style="color:#aaa;">未获得</span>'}</div></div>`; } container.innerHTML = html; document.querySelectorAll('.btn-equip-title').forEach(btn => { btn.addEventListener('click', async (e) => { const tid = parseInt(btn.dataset.id); await equipTitle(tid); closeModal('titlesModal'); }); }); openModal('titlesModal'); }
 
-        // ====== 商店渲染 ======
+        // ====== 商店渲染（包含等价交换） ======
         async function renderShop() {
             if(!isViewingSelf) return; 
             let container = document.getElementById('shopContentContainer'); 
@@ -608,35 +609,62 @@
                     <div class="balance-row">
                         <div class="balance-item" data-currency="candy"><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp" style="width:20px;height:20px;object-fit:contain;">糖果碎: <span id="shopCandyBalance">0</span></div>
                         <div class="balance-item" data-currency="rainbow"><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp" style="width:20px;height:20px;object-fit:contain;">超级棒糖: <span id="shopRainbowBalance">0</span></div>
+                        <div class="balance-item" data-currency="dreamy_syrup"><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Dream_galaxy_syrup.webp" style="width:20px;height:20px;object-fit:contain;">星河糖浆: <span id="shopDreamySyrupBalance">0</span></div>
                     </div>
 
                     <div class="shop-tabs">
-                        <button class="tab-btn active" data-shop-tab="frames">🖼️ 头像框</button>
+                        <button class="tab-btn" data-shop-tab="frames">🖼️ 头像框</button>
                         <button class="tab-btn" data-shop-tab="others">📦 其他</button>
+                        <button class="tab-btn active" data-shop-tab="exchange">🔄 等价交换</button>
                     </div>
 
                     <div class="shop-content">
-                        <div class="shop-card" data-shop-card="frames">
-                            <div id="framesList">⏳ 加载中...</div>
-                        </div>
-                        <div class="shop-card hide-card" data-shop-card="others">
-                            <div id="autoSignCardItem"></div>
+                        <div class="shop-card hide-card" data-shop-card="frames" id="framesCard"><div id="framesList">⏳ 加载中...</div></div>
+                        <div class="shop-card hide-card" data-shop-card="others" id="othersCard"><div id="autoSignCardItem"></div></div>
+                        <div class="shop-card" data-shop-card="exchange">
+                            <div style="padding: 10px 0;">
+                                <div style="margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px;">
+                                    <div style="font-weight:bold; font-size:1.1rem; margin-bottom:10px;">🍬 基础兑换区 (糖果碎 ↔ 超级棒糖)</div>
+                                    <div style="font-size:0.85rem; color:#aaa; margin-bottom:10px;">汇率：10 糖果碎 = 1 超级棒糖 (双向自由互换)</div>
+                                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                        <input type="number" id="lowExchangeAmount" value="1" min="1" style="flex:1; min-width:60px; background:rgba(0,0,0,0.3); border:1px solid #3d6b52; color:white; padding:6px 10px; border-radius:20px;">
+                                        <button class="btn-buy" onclick="doLowExchange('to_rainbow')">🍬 → 🌈 换棒糖</button>
+                                        <button class="btn-buy" onclick="doLowExchange('to_candy')">🌈 → 🍬 换碎糖</button>
+                                    </div>
+                                    <div id="lowExchangeMsg" style="margin-top:6px; font-size:0.85rem; color:#fbbf24;"></div>
+                                </div>
+
+                                <div>
+                                    <div style="font-weight:bold; font-size:1.1rem; margin-bottom:10px;">🌌 顶级兑换区 (梦幻星河糖浆 → 下级)</div>
+                                    <div style="font-size:0.85rem; color:#aaa; margin-bottom:10px;">汇率：1 星河糖浆 = 100 棒糖 = 1000 碎糖 (不可逆向合成)</div>
+                                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                        <input type="number" id="syrupExchangeAmount" value="1" min="1" style="flex:1; min-width:60px; background:rgba(0,0,0,0.3); border:1px solid #3d6b52; color:white; padding:6px 10px; border-radius:20px;">
+                                        <button class="btn-buy" onclick="doSyrupExchange('to_rainbow')" style="background:linear-gradient(135deg, #a855f7, #9333ea);">🌌 → 🌈 换棒糖</button>
+                                        <button class="btn-buy" onclick="doSyrupExchange('to_candy')" style="background:linear-gradient(135deg, #a855f7, #9333ea);">🌌 → 🍬 换碎糖</button>
+                                    </div>
+                                    <div id="syrupExchangeMsg" style="margin-top:6px; font-size:0.85rem; color:#fbbf24;"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             `;
+
+            // 点击余额查看提示
             document.querySelectorAll('.balance-item').forEach(el => {
                 el.addEventListener('click', () => {
                     let currency = el.dataset.currency;
-                    if(currency === 'candy') showNotification('🍬 糖果碎：可用于购买道具，通过签到和活动获得', 'info');
-                    else showNotification('🌈 超级棒糖：稀有货币，高级商品兑换', 'info');
+                    if(currency === 'candy') showNotification('🍬 糖果碎：基础货币，签到可获得', 'info');
+                    else if(currency === 'rainbow') showNotification('🌈 超级棒糖：中级货币，可用于购买商品', 'info');
+                    else if(currency === 'dreamy_syrup') showNotification('🌌 梦幻星河糖浆：最高级货币！无法通过低级合成，仅限活动获取。', 'info');
                 });
             });
-            updateShopBalanceDisplay();
-            
-            await loadAutoSignCardUI();
-            await loadFramesList();
 
+            updateShopBalanceDisplay();
+            loadAutoSignCardUI();
+            loadFramesList();
+
+            // 标签切换
             const shopTabs = document.querySelectorAll('.shop-tabs .tab-btn');
             const shopCards = document.querySelectorAll('.shop-card');
             shopTabs.forEach(tab => {
@@ -653,93 +681,60 @@
                     });
                 });
             });
-            const activeTab = document.querySelector('.shop-tabs .tab-btn.active');
-            if (activeTab) activeTab.click();
         }
 
-        async function loadAutoSignCardUI() {
-            if(!isViewingSelf) return;
-            let container = document.getElementById('autoSignCardItem');
-            if(!container) return;
-            const hasCard = await loadAutoSignCardStatus();
-            const priceCandy = 50;
-            if(hasCard) {
-                container.innerHTML = `<div class="frame-item-wrap"><div><strong>✅ 自动签到卡</strong><div class="card-note">永久有效，每天上午8点自动签到（北京时间）</div></div><button class="btn-owned" disabled>已拥有</button></div>`;
-            } else {
-                container.innerHTML = `<div class="frame-item-wrap"><div><strong>📅 自动签到卡</strong><div class="card-note">每天上午8点自动签到（北京时间），永不漏签</div><div>价格: 🍬 ${priceCandy}</div></div><button class="btn-buy" id="buyAutoSignBtn">购买</button></div>`;
-                document.getElementById('buyAutoSignBtn')?.addEventListener('click', async () => {
-                    if(userStats.candy_crumbles < priceCandy) { showNotification(`糖果碎不足，需要 ${priceCandy}`, 'error'); return; }
-                    const currentHas = await loadAutoSignCardStatus();
-                    if(currentHas) { showNotification('已经拥有自动签到卡', 'warning'); loadAutoSignCardUI(); return; }
-                    const newCandy = userStats.candy_crumbles - priceCandy;
-                    await supabaseClient.from('user_stats').update({ candy_crumbles: newCandy }).eq('user_id', currentUser.id);
-                    await supabaseClient.from('user_auto_sign_card').upsert({ user_id: currentUser.id, owned: true });
-                    userStats.candy_crumbles = newCandy;
-                    updateShopBalanceDisplay();
-                    hasAutoSignCard = true;
-                    showNotification('购买自动签到卡成功！明天起每日自动签到', 'success');
-                    loadAutoSignCardUI();
-                    refreshLocalCache();
-                });
-            }
+        // --- 新增：前端兑换函数调用后端 RPC ---
+        async function doLowExchange(direction) {
+            let amount = parseInt(document.getElementById('lowExchangeAmount').value);
+            if (!amount || amount < 1) return showNotification('请输入正确数量', 'error');
+            
+            const { data, error } = await supabaseClient.rpc('exchange_low_level', {
+                p_user_id: currentUser.id, 
+                p_direction: direction, 
+                p_amount: amount
+            });
+            
+            if (error) return showNotification('兑换失败: ' + error.message, 'error');
+            if (!data) return showNotification('余额不足，无法兑换！', 'error');
+            
+            showNotification('✅ 双向兑换成功！', 'success');
+            await refreshUserStats(); // 刷新余额
         }
 
-        async function loadFramesList() {
-            if(!isViewingSelf) return;
-            let container = document.getElementById('framesList');
-            if(!container) return;
-            let userId = currentUser.id;
-            let { owned, equipped } = await window.FrameSystem.loadUserFrames(userId);
-            let frames = window.FrameSystem.FRAMES;
-            let html = '';
-            for(let frame of frames) {
-                let isOwned = owned.includes(frame.id);
-                let isEquipped = (equipped === frame.id);
-                let priceHtml = (frame.price_candy>0 || frame.price_rainbow>0) ? `<span><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp" width="14" height="14" style="object-fit:contain;"> ${frame.price_candy} ${frame.price_rainbow>0?`<img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp" width="14" height="14" style="object-fit:contain;"> ${frame.price_rainbow}`:''}</span>` : '免费';
-                let action = '';
-                if(isOwned) {
-                    action = isEquipped ? '<button class="btn-owned" disabled>已装备</button>' : `<button class="btn-equip" data-id="${frame.id}">装备</button>`;
-                } else {
-                    action = `<button class="btn-buy" data-id="${frame.id}">购买</button>`;
-                }
-                let cssClass = (frame.id !== 'nature' && frame.cssClass) ? frame.cssClass : '';
-                html += `
-                    <div class="frame-item-wrap">
-                        <div class="frame-left-box">
-                            <div class="frame-mini-preview ${cssClass}">
-                                <div class="placeholder">P</div>
-                            </div>
-                            <div class="frame-info">
-                                <div class="frame-name">${frame.name}</div>
-                                <div class="frame-desc">${frame.description}</div>
-                                <div class="frame-price">${priceHtml}</div>
-                            </div>
-                        </div>
-                        <div>${action}</div>
-                    </div>
-                `;
-            }
-            container.innerHTML = html;
+        async function doSyrupExchange(direction) {
+            let amount = parseInt(document.getElementById('syrupExchangeAmount').value);
+            if (!amount || amount < 1) return showNotification('请输入正确数量', 'error');
 
-            document.querySelectorAll('.btn-buy').forEach(btn => btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                let fid = btn.dataset.id;
-                try {
-                    await window.FrameSystem.purchaseFrame(fid, userStats, (c, r) => { 
-                        userStats.candy_crumbles = c; userStats.rainbow_lollipops = r; 
-                        updateShopBalanceDisplay(); showNotification('购买成功','success'); loadFramesList(); refreshLocalCache(); 
-                    });
-                } catch(err) { showNotification(err.message,'error'); }
-            }));
-            document.querySelectorAll('.btn-equip').forEach(btn => btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                let fid = btn.dataset.id;
-                try {
-                    await window.FrameSystem.equipFrame(fid);
-                    showNotification('装备成功', 'success');
-                    loadFramesList();
-                } catch(err) { showNotification(err.message,'error'); }
-            }));
+            const { data, error } = await supabaseClient.rpc('exchange_syrup_down', {
+                p_user_id: currentUser.id, 
+                p_target: direction, 
+                p_amount: amount
+            });
+
+            if (error) return showNotification('兑换失败: ' + error.message, 'error');
+            if (!data) return showNotification('🌌 梦幻星河糖浆不足！', 'error');
+
+            showNotification('✨ 高阶货币向下兑换成功！', 'success');
+            await refreshUserStats(); // 刷新余额
+        }
+
+        // --- 新增：刷新当前余额数据的辅助函数 ---
+        async function refreshUserStats() {
+            const { data, error } = await supabaseClient
+                .from('v_user_full_profile')
+                .select('*')
+                .eq('id', currentUser.id)
+                .single();
+            if (!error && data) {
+                userStats = data;
+                updateShopBalanceDisplay();
+                updateActivePointsDisplay();
+                refreshLocalCache();
+                // 同时刷新背包中的货币显示
+                let candySpan = document.getElementById('shopCandyBalance'); if(candySpan) candySpan.innerText = data.candy_crumbles || 0;
+                let rainSpan = document.getElementById('shopRainbowBalance'); if(rainSpan) rainSpan.innerText = data.rainbow_lollipops || 0;
+                let syrupSpan = document.getElementById('shopDreamySyrupBalance'); if(syrupSpan) syrupSpan.innerText = data.dreamy_syrup || 0;
+            }
         }
 
         // ========== 头像上传 ==========
@@ -749,7 +744,6 @@
         function cancelCrop() { if(cropper){ cropper.destroy(); cropper=null; } closeModal('cropModal'); document.getElementById('cropImage').removeAttribute('src'); }
 
         // ========== 资料加载 ==========
-        // 🔥 优化核心：废弃原来的两个独立查询，改为只查数据库视图！
         async function fetchUserFullData(userId) {
             const { data, error } = await supabaseClient
                 .from('v_user_full_profile')
@@ -757,7 +751,7 @@
                 .eq('id', userId)
                 .single();
             if (error) throw error;
-            return data; // 这里的数据已经包含 user_profiles 和 user_stats 的全部字段
+            return data;
         }
 
         async function loadUserProfileWithCache() {
@@ -766,18 +760,16 @@
             currentUser = user; const urlParams = new URLSearchParams(window.location.search); let uid = urlParams.get('uid');
             
             if (uid && uid !== currentUser.id) { 
-                // 查看他人主页
                 isViewingSelf = false; targetUserId = uid; 
                 try { 
                     const fullData = await fetchUserFullData(targetUserId);
                     userProfile = fullData;
-                    userStats = fullData; // 直接把合并的数据赋给两个变量，保持后边代码兼容
+                    userStats = fullData; 
                 } catch(e) { 
                     showNotification('用户不存在或已注销', 'error'); 
                     setTimeout(() => window.location.href = 'index.html', 1500); return; 
                 } 
             } else { 
-                // 查看自己主页
                 isViewingSelf = true; targetUserId = currentUser.id; 
                 let cachedProfile = localStorage.getItem('cachedUserProfile'); 
                 let cachedStats = localStorage.getItem('cachedUserStats'); 
