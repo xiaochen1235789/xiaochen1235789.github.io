@@ -24,34 +24,11 @@
         .balance-row { display: flex; gap: 16px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
         .balance-item { background: rgba(0,0,0,0.2); padding: 6px 16px; border-radius: 40px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 4px; }
         .balance-item:hover { background: rgba(0,0,0,0.4); }
-        .shop-tabs {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
-        .shop-tabs .tab-btn {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--border-color, #3d725f);
-            color: var(--text-main, #e0e0e0);
-            padding: 8px 20px;
-            border-radius: 40px;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .shop-tabs .tab-btn.active {
-            background: var(--text-highlight, #81c784);
-            color: var(--bg, #121212);
-            border-color: var(--text-highlight, #81c784);
-        }
-        .shop-tabs .tab-btn:hover:not(.active) {
-            background: var(--card-bg-hover, #284a3c);
-        }
-        .shop-card.hide-card {
-            display: none;
-        }
+        .shop-tabs { display: flex; gap: 12px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap; }
+        .shop-tabs .tab-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border-color, #3d725f); color: var(--text-main, #e0e0e0); padding: 8px 20px; border-radius: 40px; font-size: 0.9rem; cursor: pointer; transition: 0.2s; }
+        .shop-tabs .tab-btn.active { background: var(--text-highlight, #81c784); color: var(--bg, #121212); border-color: var(--text-highlight, #81c784); }
+        .shop-tabs .tab-btn:hover:not(.active) { background: var(--card-bg-hover, #284a3c); }
+        .shop-card.hide-card { display: none; }
         .btn-buy, .btn-equip, .btn-owned { background: #f59e0b; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; color: white; }
         .btn-owned { background: #6b7280; cursor: default; }
         .card-note { font-size: 0.7rem; color: #fbbf24; margin-top: 4px; }
@@ -64,28 +41,16 @@
         .help-section { margin-bottom: 20px; border-left: 3px solid #facc15; padding-left: 12px; }
         .help-section h3 { font-size: 1rem; margin-bottom: 6px; color: #facc15; }
         .help-section p { font-size: 0.85rem; line-height: 1.4; opacity: 0.9; }
-        .frame-item-wrap {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            gap: 12px;
-        }
-        .frame-left-box {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex: 1;
-            cursor: pointer;
-        }
-        .frame-mini-preview.big {
-            width: 80px;
-            height: 80px;
-        }
-        .frame-mini-preview.big .placeholder {
-            font-size: 1.5rem;
-        }
+        .frame-item-wrap { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); gap: 12px; }
+        .frame-left-box { display: flex; align-items: center; gap: 12px; flex: 1; cursor: pointer; }
+        .frame-mini-preview.big { width: 80px; height: 80px; }
+        .frame-mini-preview.big .placeholder { font-size: 1.5rem; }
+        .backpack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 16px; padding: 8px 0; }
+        .backpack-item { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 12px 8px; text-align: center; cursor: pointer; transition: 0.2s; }
+        .backpack-item:hover { background: rgba(255,255,255,0.1); }
+        .backpack-item .item-icon { font-size: 2.5rem; height: 60px; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+        .backpack-item .item-count { font-size: 0.85rem; color: #81c784; font-weight: bold; }
+        .backpack-empty { text-align: center; padding: 40px 0; color: #aaa; font-size: 1.1rem; line-height: 2; }
     </style>
 </head>
 <body>
@@ -249,8 +214,8 @@
                 if (!frame || (frame.price_candy === 0 && frame.price_rainbow === 0)) throw new Error('无效头像框');
                 let { owned } = await loadUserFrames(currentUser.id);
                 if (owned.includes(frameId)) throw new Error('已拥有');
-                if (stats.candy_crumbles < frame.price_candy) throw new Error(`糖果碎不足，需 ${frame.price_candy}`);
-                if (stats.rainbow_lollipops < frame.price_rainbow) throw new Error(`超级棒糖不足，需 ${frame.price_rainbow}`);
+                if (stats.candy_crumbles < frame.price_candy) throw new Error(`糖果碎不足，需 ${frame.price_candy.toLocaleString()}`);
+                if (stats.rainbow_lollipops < frame.price_rainbow) throw new Error(`超级棒糖不足，需 ${frame.price_rainbow.toLocaleString()}`);
 
                 let newCandy = stats.candy_crumbles - frame.price_candy;
                 let newRainbow = stats.rainbow_lollipops - frame.price_rainbow;
@@ -378,8 +343,8 @@
         async function deleteAccount() { if(!isViewingSelf) return; let confirmEmail = document.getElementById('confirmEmail').value; if(confirmEmail !== currentUser.email) return showNotification('邮箱不匹配','error'); showNotification('账号删除需联系管理员','warning'); closeModal('deleteAccountModal'); }
         async function performLogout() { closeModal('logoutConfirmModal'); await supabaseClient.auth.signOut(); localStorage.clear(); window.location.href = 'index.html'; }
 
-        function updateActivePointsDisplay() { let span = document.getElementById('activePointsValue'); if(span) span.innerText = userStats?.active_points || 0; }
-        function updateShopBalanceDisplay() { if(!isViewingSelf) return; let candySpan = document.getElementById('shopCandyBalance'); let rainSpan = document.getElementById('shopRainbowBalance'); let syrupSpan = document.getElementById('shopDreamySyrupBalance'); if(candySpan) candySpan.innerText = userStats?.candy_crumbles || 0; if(rainSpan) rainSpan.innerText = userStats?.rainbow_lollipops || 0; if(syrupSpan) syrupSpan.innerText = userStats?.dreamy_syrup || 0; }
+        function updateActivePointsDisplay() { let span = document.getElementById('activePointsValue'); if(span) span.innerText = (userStats?.active_points || 0).toLocaleString(); }
+        function updateShopBalanceDisplay() { if(!isViewingSelf) return; let candySpan = document.getElementById('shopCandyBalance'); let rainSpan = document.getElementById('shopRainbowBalance'); let syrupSpan = document.getElementById('shopDreamySyrupBalance'); if(candySpan) candySpan.innerText = (userStats?.candy_crumbles || 0).toLocaleString(); if(rainSpan) rainSpan.innerText = (userStats?.rainbow_lollipops || 0).toLocaleString(); if(syrupSpan) syrupSpan.innerText = (userStats?.dreamy_syrup || 0).toLocaleString(); }
 
         // ====== 签到奖励一览 ======
         async function openRewardInfoModal() {
@@ -415,9 +380,9 @@
                 let displayDay = dayNum > 30 ? '30天以上' : `第${dayNum}天`;
                 html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05); ${isCurrent ? 'background:rgba(255,215,0,0.15);' : ''}">
                     <td style="padding:8px 0; text-align:center; ${isCurrent ? 'color:#facc15;font-weight:bold;' : ''}">${displayDay}</td>
-                    <td style="padding:8px 0; text-align:center;">${item.candy}</td>
-                    <td style="padding:8px 0; text-align:center;">${item.rainbow}</td>
-                    <td style="padding:8px 0; text-align:center;">${item.active}</td>
+                    <td style="padding:8px 0; text-align:center;">${item.candy.toLocaleString()}</td>
+                    <td style="padding:8px 0; text-align:center;">${item.rainbow.toLocaleString()}</td>
+                    <td style="padding:8px 0; text-align:center;">${item.active.toLocaleString()}</td>
                 </tr>`;
             }
             html += '</tbody></table></div>';
@@ -426,10 +391,10 @@
             let footerHtml = `
                 <div style="margin-top:16px; border-top:1px solid var(--border-color); padding-top:12px; text-align:center; font-size:0.95rem; background:rgba(0,0,0,0.2); border-radius:8px; padding:12px;">
                     <div style="color:var(--text-secondary); margin-bottom:4px;">
-                        您已连续签到 <strong style="color:#facc15; font-size:1.1rem;">${currentStreak}</strong> 天
+                        您已连续签到 <strong style="color:#facc15; font-size:1.1rem;">${currentStreak.toLocaleString()}</strong> 天
                     </div>
                     <div style="color:var(--text-highlight);">
-                        明天的奖励：🍬${tomorrowReward.candy} ${tomorrowReward.rainbow>0?`🌈${tomorrowReward.rainbow} `:''}⚡${tomorrowReward.active}
+                        明天的奖励：🍬${tomorrowReward.candy.toLocaleString()} ${tomorrowReward.rainbow>0?`🌈${tomorrowReward.rainbow.toLocaleString()} `:''}⚡${tomorrowReward.active.toLocaleString()}
                     </div>
                 </div>
             `;
@@ -487,7 +452,7 @@
                     if (item.type === 'frame') {
                         iconHtml = `<div class="frame-mini-preview ${item.cssClass || ''}" style="width:44px;height:44px;margin:0 auto;"><div class="placeholder" style="font-size:0.8rem;">P</div></div>`;
                     } else if (item.isImg) {
-                        iconHtml = `<img src="${item.icon}" alt="${item.name}">`;
+                        iconHtml = `<img src="${item.icon}" alt="${item.name}" style="width:40px;height:40px;object-fit:contain;">`;
                     } else {
                         iconHtml = `<i class="fas ${item.icon}"></i>`;
                     }
@@ -575,11 +540,11 @@
             refreshLocalCache();
             updateActivePointsDisplay();
             updateShopBalanceDisplay();
-            document.getElementById('streakDays').innerText = newStreak;
+            document.getElementById('streakDays').innerText = newStreak.toLocaleString();
             
             const btn = document.getElementById('checkinBtn');
             if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-check-circle"></i> 已签到'; }
-            showNotification(autoTriggered ? `✨ 自动签到卡已为您签到 +${rewards.candy}🍬` : `签到 +${rewards.candy}🍬`, 'success');
+            showNotification(autoTriggered ? `✨ 自动签到卡已为您签到 +${rewards.candy.toLocaleString()}🍬` : `签到 +${rewards.candy.toLocaleString()}🍬`, 'success');
             return true;
         }
 
@@ -597,9 +562,9 @@
         function updateTitleDisplay() { const container = document.getElementById('userTitleRow'); if (!container) return; if (equippedTitleObj) { let color = '#facc15'; if (equippedTitleObj.name.includes('创世神')) color = '#f39c12'; else if (equippedTitleObj.name.includes('管理神')) color = '#60a5fa'; container.innerHTML = `<div class="title-badge" style="border-left: 3px solid ${color};"><i class="fas fa-medal" style="color:${color};"></i> <span id="equippedTitleName" style="color:${color};">${equippedTitleObj.name}</span> <button id="unequipTitleBtn" style="background:none;border:none;color:#aaa;cursor:pointer;margin-left:6px;">[卸下]</button></div>`; document.getElementById('unequipTitleBtn')?.addEventListener('click', unequipTitle); } else { container.innerHTML = `<div class="title-badge"><i class="fas fa-medal"></i> <span id="equippedTitleName">无称号</span> <button id="openTitlesFromBadgeBtn" style="background:none;border:none;color:#facc15;cursor:pointer;margin-left:6px;">[选择]</button></div>`; document.getElementById('openTitlesFromBadgeBtn')?.addEventListener('click', openTitlesModal); } }
         async function equipTitle(titleId) { const { error } = await supabaseClient.from('user_profiles').update({ equipped_title_id: titleId }).eq('id', currentUser.id); if (error) { showNotification('装备失败', 'error'); return; } userProfile.equipped_title_id = titleId; equippedTitleObj = allTitlesList.find(t => t.id === titleId); updateTitleDisplay(); showNotification(`已装备称号「${equippedTitleObj.name}」`, 'success'); refreshLocalCache(); }
         async function unequipTitle() { const { error } = await supabaseClient.from('user_profiles').update({ equipped_title_id: null }).eq('id', currentUser.id); if (error) { showNotification('卸下失败', 'error'); return; } userProfile.equipped_title_id = null; equippedTitleObj = null; updateTitleDisplay(); showNotification('已卸下称号', 'success'); refreshLocalCache(); }
-        async function openTitlesModal() { const container = document.getElementById('titlesListContainer'); if (!container) return; const allTitles = await loadAllTitles(); const ownedIds = await loadUserOwnedTitles(currentUser.id); let html = ''; for (let title of allTitles) { const owned = ownedIds.includes(title.id); const isEquipped = (userProfile.equipped_title_id === title.id); let nameColor = ''; let extraIcon = ''; if (title.is_limited) { if (title.name.includes('创世神')) nameColor = '#f39c12'; else if (title.name.includes('管理神')) nameColor = '#60a5fa'; extraIcon = '✨ '; } let conditionText = []; if (title.required_active_points > 0) conditionText.push(`活跃度≥${title.required_active_points}`); if (title.required_streak > 0) conditionText.push(`连续签到≥${title.required_streak}`); if (title.required_candy > 0) conditionText.push(`糖果碎≥${title.required_candy}`); if (title.required_rainbow > 0) conditionText.push(`超级棒糖≥${title.required_rainbow}`); const conditionHtml = conditionText.length ? `<div class="title-condition">${conditionText.join(' / ')}</div>` : ''; html += `<div class="title-item"><div><div class="title-name" style="color:${nameColor || '#fff'};">${extraIcon}${title.name}</div><div class="title-desc">${title.description || ''}</div>${conditionHtml}</div><div>${owned ? (isEquipped ? '<button class="btn-owned" disabled>已装备</button>' : `<button class="btn-equip-title" data-id="${title.id}">装备</button>`) : '<span style="color:#aaa;">未获得</span>'}</div></div>`; } container.innerHTML = html; document.querySelectorAll('.btn-equip-title').forEach(btn => { btn.addEventListener('click', async (e) => { const tid = parseInt(btn.dataset.id); await equipTitle(tid); closeModal('titlesModal'); }); }); openModal('titlesModal'); }
+        async function openTitlesModal() { const container = document.getElementById('titlesListContainer'); if (!container) return; const allTitles = await loadAllTitles(); const ownedIds = await loadUserOwnedTitles(currentUser.id); let html = ''; for (let title of allTitles) { const owned = ownedIds.includes(title.id); const isEquipped = (userProfile.equipped_title_id === title.id); let nameColor = ''; let extraIcon = ''; if (title.is_limited) { if (title.name.includes('创世神')) nameColor = '#f39c12'; else if (title.name.includes('管理神')) nameColor = '#60a5fa'; extraIcon = '✨ '; } let conditionText = []; if (title.required_active_points > 0) conditionText.push(`活跃度≥${title.required_active_points.toLocaleString()}`); if (title.required_streak > 0) conditionText.push(`连续签到≥${title.required_streak.toLocaleString()}`); if (title.required_candy > 0) conditionText.push(`糖果碎≥${title.required_candy.toLocaleString()}`); if (title.required_rainbow > 0) conditionText.push(`超级棒糖≥${title.required_rainbow.toLocaleString()}`); const conditionHtml = conditionText.length ? `<div class="title-condition">${conditionText.join(' / ')}</div>` : ''; html += `<div class="title-item"><div><div class="title-name" style="color:${nameColor || '#fff'};">${extraIcon}${title.name}</div><div class="title-desc">${title.description || ''}</div>${conditionHtml}</div><div>${owned ? (isEquipped ? '<button class="btn-owned" disabled>已装备</button>' : `<button class="btn-equip-title" data-id="${title.id}">装备</button>`) : '<span style="color:#aaa;">未获得</span>'}</div></div>`; } container.innerHTML = html; document.querySelectorAll('.btn-equip-title').forEach(btn => { btn.addEventListener('click', async (e) => { const tid = parseInt(btn.dataset.id); await equipTitle(tid); closeModal('titlesModal'); }); }); openModal('titlesModal'); }
 
-        // ====== 商店渲染（包含等价交换） ======
+        // ====== 商店渲染（包含缺失的 loadFramesList 和 loadAutoSignCardUI） ======
         async function renderShop() {
             if(!isViewingSelf) return; 
             let container = document.getElementById('shopContentContainer'); 
@@ -636,7 +601,7 @@
 
                                 <div>
                                     <div style="font-weight:bold; font-size:1.1rem; margin-bottom:10px;">🌌 顶级兑换区 (梦幻星河糖浆 → 下级)</div>
-                                    <div style="font-size:0.85rem; color:#aaa; margin-bottom:10px;">汇率：1 星河糖浆 = 100 棒糖 = 1000 碎糖 (不可逆向合成)</div>
+                                    <div style="font-size:0.85rem; color:#aaa; margin-bottom:10px;">汇率：1 星河糖浆 = 100 棒糖 = 1,000 碎糖 (不可逆向合成)</div>
                                     <div style="display:flex; gap:10px; flex-wrap:wrap;">
                                         <input type="number" id="syrupExchangeAmount" value="1" min="1" style="flex:1; min-width:60px; background:rgba(0,0,0,0.3); border:1px solid #3d6b52; color:white; padding:6px 10px; border-radius:20px;">
                                         <button class="btn-buy" onclick="doSyrupExchange('to_rainbow')" style="background:linear-gradient(135deg, #a855f7, #9333ea);">🌌 → 🌈 换棒糖</button>
@@ -662,14 +627,9 @@
 
             updateShopBalanceDisplay();
             
-            // 用 try-catch 包裹，防止某个加载失败导致整个商店崩溃
-            try {
-                loadAutoSignCardUI();
-            } catch(e) { console.warn('加载签到卡失败', e); }
-            
-            try {
-                loadFramesList();
-            } catch(e) { console.warn('加载头像框失败', e); }
+            // 加载各选项卡内容
+            try { await loadAutoSignCardUI(); } catch(e) { console.warn('加载签到卡失败', e); document.getElementById('autoSignCardItem').innerHTML = '<div style="padding:20px;text-align:center;color:#f87171;">加载失败</div>'; }
+            try { await loadFramesList(); } catch(e) { console.warn('加载头像框失败', e); document.getElementById('framesList').innerHTML = '<div style="padding:20px;text-align:center;color:#f87171;">加载失败</div>'; }
 
             // 标签切换
             const shopTabs = document.querySelectorAll('.shop-tabs .tab-btn');
@@ -688,6 +648,146 @@
                     });
                 });
             });
+        }
+
+        // ========== 修复1：补充 loadFramesList 函数 ==========
+        async function loadFramesList() {
+            const container = document.getElementById('framesList');
+            if (!container) return;
+            const { owned, equipped } = await window.FrameSystem.loadUserFrames(currentUser.id);
+            const frames = window.FrameSystem.FRAMES;
+
+            let html = '';
+            for (const frame of frames) {
+                const isOwned = owned.includes(frame.id);
+                const isEquipped = equipped === frame.id;
+                const isDefault = frame.id === 'nature';
+
+                let actionHtml = '';
+                if (isEquipped) {
+                    actionHtml = `<button class="btn-owned" disabled>已装备</button>`;
+                } else if (isOwned) {
+                    actionHtml = `<button class="btn-equip" data-frame-id="${frame.id}">装备</button>`;
+                } else if (isDefault) {
+                    actionHtml = `<span style="color:#aaa;">默认</span>`;
+                } else {
+                    const priceText = `🍬${frame.price_candy.toLocaleString()} ${frame.price_rainbow > 0 ? `🌈${frame.price_rainbow.toLocaleString()}` : ''}`;
+                    actionHtml = `<button class="btn-buy" data-frame-id="${frame.id}">购买 (${priceText})</button>`;
+                }
+
+                html += `
+                    <div class="frame-item-wrap">
+                        <div class="frame-left-box" onclick="openBackpackItemDetail('${frame.id}')">
+                            <div class="frame-mini-preview ${frame.cssClass || ''}" style="width:44px;height:44px;">
+                                <div class="placeholder" style="font-size:0.8rem;">P</div>
+                            </div>
+                            <div>
+                                <div style="font-weight:bold;">${frame.name}</div>
+                                <div style="font-size:0.8rem; opacity:0.7;">${frame.description}</div>
+                            </div>
+                        </div>
+                        <div>${actionHtml}</div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+
+            // 绑定购买事件
+            container.querySelectorAll('.btn-buy').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const frameId = btn.dataset.frameId;
+                    try {
+                        await window.FrameSystem.purchaseFrame(frameId, userStats, (newCandy, newRainbow) => {
+                            userStats.candy_crumbles = newCandy;
+                            userStats.rainbow_lollipops = newRainbow;
+                            updateShopBalanceDisplay();
+                            showNotification('🎉 购买成功！', 'success');
+                            loadFramesList(); // 刷新列表
+                        });
+                    } catch (err) {
+                        showNotification(err.message, 'error');
+                    }
+                });
+            });
+
+            // 绑定装备事件
+            container.querySelectorAll('.btn-equip').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const frameId = btn.dataset.frameId;
+                    try {
+                        await window.FrameSystem.equipFrame(frameId);
+                        showNotification('✅ 已装备头像框', 'success');
+                        loadFramesList();
+                        await window.FrameSystem.applyFrameClassByFrameId(frameId);
+                    } catch (err) {
+                        showNotification(err.message, 'error');
+                    }
+                });
+            });
+        }
+
+        // ========== 修复2：补充 loadAutoSignCardUI 函数 ==========
+        async function loadAutoSignCardUI() {
+            const container = document.getElementById('autoSignCardItem');
+            if (!container) return;
+
+            const hasCard = await loadAutoSignCardStatus();
+            const price = 100; // 价格可自定义
+            const canBuy = (userStats.candy_crumbles || 0) >= price && !hasCard;
+
+            let html = `
+                <div class="frame-item-wrap" style="display:block; text-align:center; padding:20px;">
+                    <div style="font-size:2rem;">📅</div>
+                    <div style="font-weight:bold; margin-top:8px;">自动签到卡</div>
+                    <div style="font-size:0.9rem; opacity:0.7;">永久有效，每天08:00自动签到（北京时间）</div>
+                    <div style="margin-top:12px;">
+                        ${hasCard 
+                            ? `<span style="color:#81c784;">✅ 已拥有</span>`
+                            : `<button class="btn-buy" id="buyAutoCardBtn">购买 (🍬 ${price.toLocaleString()})</button>`
+                        }
+                    </div>
+                </div>
+            `;
+            container.innerHTML = html;
+
+            const buyBtn = document.getElementById('buyAutoCardBtn');
+            if (buyBtn) {
+                buyBtn.addEventListener('click', async () => {
+                    if (!canBuy) {
+                        showNotification(`糖果碎不足，需要 ${price.toLocaleString()}`, 'error');
+                        return;
+                    }
+                    // 原子操作：插入自动签到卡记录
+                    const { error: upsertError } = await supabaseClient.from('user_auto_sign_card').upsert(
+                        { user_id: currentUser.id, owned: true },
+                        { onConflict: 'user_id' }
+                    );
+                    if (upsertError) {
+                        showNotification('购买失败: ' + upsertError.message, 'error');
+                        return;
+                    }
+                    // 扣除糖果碎
+                    const newCandy = userStats.candy_crumbles - price;
+                    const { error: updateError } = await supabaseClient.from('user_stats')
+                        .update({ candy_crumbles: newCandy })
+                        .eq('user_id', currentUser.id);
+                    
+                    if (updateError) {
+                        // 回滚（简单处理，可以更完善）
+                        await supabaseClient.from('user_auto_sign_card').upsert(
+                            { user_id: currentUser.id, owned: false },
+                            { onConflict: 'user_id' }
+                        );
+                        showNotification('购买失败: ' + updateError.message, 'error');
+                        return;
+                    }
+
+                    userStats.candy_crumbles = newCandy;
+                    updateShopBalanceDisplay();
+                    showNotification('🎉 自动签到卡购买成功！', 'success');
+                    loadAutoSignCardUI();
+                });
+            }
         }
 
         // --- 前端兑换函数调用后端 RPC ---
@@ -738,9 +838,9 @@
                 updateActivePointsDisplay();
                 refreshLocalCache();
                 // 同时刷新背包中的货币显示
-                let candySpan = document.getElementById('shopCandyBalance'); if(candySpan) candySpan.innerText = data.candy_crumbles || 0;
-                let rainSpan = document.getElementById('shopRainbowBalance'); if(rainSpan) rainSpan.innerText = data.rainbow_lollipops || 0;
-                let syrupSpan = document.getElementById('shopDreamySyrupBalance'); if(syrupSpan) syrupSpan.innerText = data.dreamy_syrup || 0;
+                let candySpan = document.getElementById('shopCandyBalance'); if(candySpan) candySpan.innerText = data.candy_crumbles.toLocaleString();
+                let rainSpan = document.getElementById('shopRainbowBalance'); if(rainSpan) rainSpan.innerText = data.rainbow_lollipops.toLocaleString();
+                let syrupSpan = document.getElementById('shopDreamySyrupBalance'); if(syrupSpan) syrupSpan.innerText = data.dreamy_syrup.toLocaleString();
             }
         }
 
@@ -803,11 +903,11 @@
             safeSetText('userEmail', isViewingSelf ? currentUser.email : (userProfile.email || '未公开'));
             safeSetText('userBio', userProfile.bio || ''); safeSetText('createdAt', new Date(userProfile.created_at || currentUser?.created_at).toLocaleString());
             let days = Math.floor((new Date() - new Date(userProfile.created_at || currentUser?.created_at)) / 86400000);
-            document.getElementById('userDaysText').innerText = `已来到 ${days} 天`;
+            document.getElementById('userDaysText').innerText = `已来到 ${days.toLocaleString()} 天`;
             if(userProfile.avatar_url) updateAvatarDisplay(userProfile.avatar_url); else updateAvatarDisplay(null);
             let roleRow = document.getElementById('userRoleDisplay'); if(roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
             if(userStats) {
-                updateActivePointsDisplay(); if(isViewingSelf) updateShopBalanceDisplay(); document.getElementById('streakDays').innerText = userStats.checkin_streak;
+                updateActivePointsDisplay(); if(isViewingSelf) updateShopBalanceDisplay(); document.getElementById('streakDays').innerText = userStats.checkin_streak.toLocaleString();
                 let today = getLocalDateString(); let btn = document.getElementById('checkinBtn');
                 if(btn && isViewingSelf) { let checked = (userStats.last_checkin_date === today); btn.disabled = checked; btn.innerHTML = checked ? '<i class="fas fa-check-circle"></i> 已签到' : '<i class="fas fa-calendar-check"></i> 签到'; } else if(btn) btn.style.display = 'none';
             }
