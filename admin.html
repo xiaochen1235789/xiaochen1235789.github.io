@@ -86,6 +86,7 @@
 
     <!-- 面板6：杂项管理 -->
     <div id="misc-panel" class="panel">
+        <!-- 资产调整 -->
         <div class="misc-section">
             <div class="misc-title"><i class="fas fa-coins"></i> 用户资产调整</div>
             <div class="user-selector">
@@ -96,10 +97,12 @@
             </div>
             <div id="assetControlArea" class="asset-control"></div>
         </div>
+        <!-- 头像框 -->
         <div class="misc-section">
             <div class="misc-title"><i class="fas fa-image"></i> 头像框拥有管理</div>
             <div id="framesManagementArea"></div>
         </div>
+        <!-- 系统邮件 -->
         <div class="misc-section">
             <div class="misc-title"><i class="fas fa-mail-bulk"></i> 发送系统邮件</div>
             <div class="asset-control" style="flex-direction: column; align-items: stretch;">
@@ -246,7 +249,7 @@
 
 <script>
 // ============================================================
-//  完整 JavaScript 代码（包含签到配置管理 + 用户名显示修复）
+//  完整 JavaScript 代码（已添加梦幻星河糖浆）
 // ============================================================
 
 // ==================== 配置 ====================
@@ -341,72 +344,64 @@ async function logAction(actionType, targetType, targetId, targetName, details) 
     if (document.getElementById('logs-panel').classList.contains('active-panel')) refreshLogs();
 }
 
-// ==================== ★★★ 权限校验（修复用户名显示） ★★★ ====================
+// ==================== 权限校验 ====================
 async function checkAuthAndRole() {
     supabaseAdmin = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const { data: { user }, error } = await supabaseAdmin.auth.getUser();
-    if (error || !user) {
-        showNotification('请先登录', 'error');
-        setTimeout(() => window.location.href = 'login-real.html', 1500);
-        return false;
-    }
+    if (error || !user) { showNotification('请先登录', 'error'); setTimeout(() => window.location.href = 'login-real.html', 1500); return false; }
     currentUser = user;
-
-    // ★★★ 从 user_profiles 获取 username 和 role ★★★
-    let { data: profile, error: profileErr } = await supabaseAdmin
-        .from('user_profiles')
-        .select('role, username')
-        .eq('id', currentUser.id)
-        .single();
-
-    if (profileErr) {
-        console.warn('获取用户资料失败，使用默认值', profileErr);
-    }
-
-    // 处理角色
     if (currentUser.id === OWNER_ID) {
-        currentUserRole = 'owner';
         await supabaseAdmin.from('user_profiles').update({ role: 'owner' }).eq('id', OWNER_ID);
+        currentUserRole = 'owner';
     } else {
+        const { data: profile } = await supabaseAdmin.from('user_profiles').select('role, username').eq('id', user.id).single();
         currentUserRole = profile?.role || 'user';
+        currentUsername = profile?.username || user.email?.split('@')[0] || '用户';
     }
-
-    // ★★★ 获取用户名：优先用 profile.username，否则用邮箱前缀 ★★★
-    currentUsername = profile?.username || currentUser.email?.split('@')[0] || '用户';
-
-    // 权限检查
     if (currentUserRole !== 'owner' && currentUserRole !== 'admin') {
         showNotification('无权限', 'error');
         setTimeout(() => window.location.href = 'index.html', 1500);
         return false;
     }
-
-    // ★★★ 更新顶部显示：自定义用户名 + 小字邮箱 ★★★
-    document.getElementById('adminUsername').innerText = currentUsername;
+    document.getElementById('adminUsername').innerText = currentUsername || currentUser.email?.split('@')[0] || '管理员';
     document.getElementById('adminUserEmail').innerText = '(' + currentUser.email + ')';
-
     return true;
 }
 
 // ==================== 用户管理 ====================
 async function fetchAllUsers() {
     const { data: profiles } = await supabaseAdmin.from('user_profiles').select('id, username, role, created_at').order('created_at', { ascending: false });
-    const { data: stats } = await supabaseAdmin.from('user_stats').select('user_id, candy_crumbles, rainbow_lollipops, active_points, checkin_streak');
-    const map = new Map(stats?.map(s => [s.user_id, { candy: s.candy_crumbles??100, rainbow: s.rainbow_lollipops??5, active: s.active_points??0, streak: s.checkin_streak??0 }]));
-    return profiles.map(p => ({ ...p, role: p.id===OWNER_ID?'owner':p.role, candy_crumbles: map.get(p.id)?.candy??100, rainbow_lollipops: map.get(p.id)?.rainbow??5, active_points: map.get(p.id)?.active??0, streak: map.get(p.id)?.streak??0 }));
+    const { data: stats } = await supabaseAdmin.from('user_stats').select('user_id, candy_crumbles, rainbow_lollipops, active_points, checkin_streak, dreamy_syrup');
+    const map = new Map(stats?.map(s => [s.user_id, {
+        candy: s.candy_crumbles??100,
+        rainbow: s.rainbow_lollipops??5,
+        active: s.active_points??0,
+        streak: s.checkin_streak??0,
+        syrup: s.dreamy_syrup??0
+    }]));
+    return profiles.map(p => ({
+        ...p,
+        role: p.id===OWNER_ID?'owner':p.role,
+        candy_crumbles: map.get(p.id)?.candy??100,
+        rainbow_lollipops: map.get(p.id)?.rainbow??5,
+        active_points: map.get(p.id)?.active??0,
+        streak: map.get(p.id)?.streak??0,
+        dreamy_syrup: map.get(p.id)?.syrup??0
+    }));
 }
 function renderUsersTable(users) {
     const c = document.getElementById('usersListArea');
     if (!users.length) { c.innerHTML = '<div class="empty-data">暂无用户</div>'; return; }
-    let html = '<table class="data-table"><thead><tr><th>用户名</th><th>角色</th><th>糖果碎</th><th>超级棒糖</th><th>活跃度</th><th>连续签到</th><th>注册时间</th><th>操作</th></tr></thead><tbody>';
+    let html = '<table class="data-table"><thead><tr><th>用户名</th><th>角色</th><th>🍬 糖果碎</th><th>🌈 超级棒糖</th><th>🌌 星河糖浆</th><th>⚡ 活跃度</th><th>🔥 连续签到</th><th>注册时间</th><th>操作</th></tr></thead><tbody>';
     users.forEach(u => {
         const ri = roleConfig[u.role] || roleConfig.user;
         const canEdit = (currentUserRole==='owner' && u.id!==OWNER_ID) || (currentUserRole==='admin' && u.id!==OWNER_ID && u.id!==currentUser.id);
         const canDel = (currentUserRole==='owner' && u.id!==OWNER_ID && u.id!==currentUser.id);
         html += `<tr><td><strong>${escapeHtml(u.username)}</strong><br><span style="font-size:0.7rem;">${u.id.slice(0,8)}...</span></td>
             <td><span class="role-badge ${ri.class}">${ri.name}</span></td>
-            <td>🍬 ${u.candy_crumbles}</td><td>🌈 ${u.rainbow_lollipops}</td>
-            <td>⚡ ${u.active_points}</td><td>🔥 ${u.streak}天</td>
+            <td>🍬 ${u.candy_crumbles.toLocaleString()}</td><td>🌈 ${u.rainbow_lollipops.toLocaleString()}</td>
+            <td>🌌 ${u.dreamy_syrup.toLocaleString()}</td>
+            <td>⚡ ${u.active_points.toLocaleString()}</td><td>🔥 ${u.streak}天</td>
             <td>${u.created_at ? new Date(u.created_at).toLocaleDateString('zh-CN') : '未知'}</td>
             <td class="action-buttons">${canEdit ? `<button class="edit-btn" onclick="openUserRoleModal('${u.id}','${escapeHtml(u.username)}','${u.role}')"><i class="fas fa-user-tag"></i> 改角色</button>` : ''}${canDel ? `<button class="delete-btn" onclick="deleteUserById('${u.id}','${escapeHtml(u.username)}')"><i class="fas fa-trash"></i> 删除</button>` : ''}</td></tr>`;
     });
@@ -542,9 +537,17 @@ window.deleteContentItem = async (table, id) => {
 };
 function getTableChinese(table) { const map={characters:'角色',light_cones:'光锥',materials:'材料',items:'道具'}; return map[table]||table; }
 
-// ==================== 杂项管理 ====================
+// ==================== 杂项管理（含梦幻星河糖浆） ====================
 async function loadUserFrames(userId) { if (!userId) return ['nature']; const { data, error } = await supabaseAdmin.from('user_profiles').select('owned_frames').eq('id', userId).single(); if (error) throw new Error('加载头像框失败: '+error.message); return data?.owned_frames||['nature']; }
-async function updateUserAssets(userId, candy, rainbow) { const { error } = await supabaseAdmin.from('user_stats').upsert({ user_id: userId, candy_crumbles: candy, rainbow_lollipops: rainbow }, { onConflict: 'user_id' }); if (error) throw new Error('资产更新失败: '+error.message); }
+async function updateUserAssets(userId, candy, rainbow, syrup) {
+    const { error } = await supabaseAdmin.from('user_stats').upsert({
+        user_id: userId,
+        candy_crumbles: candy,
+        rainbow_lollipops: rainbow,
+        dreamy_syrup: syrup
+    }, { onConflict: 'user_id' });
+    if (error) throw new Error('资产更新失败: '+error.message);
+}
 async function updateUserFrames(userId, ownedFrameIds) { ownedFrameIds = [...new Set(ownedFrameIds)]; if (!ownedFrameIds.includes('nature')) ownedFrameIds.push('nature'); const { error } = await supabaseAdmin.from('user_profiles').update({ owned_frames: ownedFrameIds }).eq('id', userId); if (error) throw new Error('更新头像框失败: '+error.message); }
 async function updateUserTitles(userId, titleIds) {
     const { data: current, error: fetchErr } = await supabaseAdmin.from('user_titles').select('title_id').eq('user_id', userId);
@@ -561,18 +564,20 @@ async function updateAutoSignCard(userId, hasCard) { if (hasCard) { const { erro
 async function reloadMiscData(userId) {
     if (!userId) return;
     const canEdit = currentUserRole === 'owner';
-    const { data: stats, error: statsErr } = await supabaseAdmin.from('user_stats').select('candy_crumbles, rainbow_lollipops').eq('user_id', userId).single();
+    const { data: stats, error: statsErr } = await supabaseAdmin.from('user_stats').select('candy_crumbles, rainbow_lollipops, dreamy_syrup').eq('user_id', userId).single();
     if (statsErr && statsErr.code !== 'PGRST116') throw statsErr;
     const candy = stats?.candy_crumbles ?? 100;
     const rainbow = stats?.rainbow_lollipops ?? 5;
+    const syrup = stats?.dreamy_syrup ?? 0;
     let userFrames = [];
     try { userFrames = await loadUserFrames(userId); } catch(e) { showNotification(e.message,'error'); userFrames=['nature']; }
     if (!userFrames.includes('nature')) userFrames.push('nature');
 
-    // 资产UI
+    // 资产UI（新增梦幻星河糖浆）
     const assetHtml = `
-        <div class="asset-item"><img src="https://xiaochen1235789.github.io/images/Crushed_sugar.webp">糖果碎: <input type="number" id="miscCandy" value="${candy}" min="0" style="width:100px;" ${canEdit?'':'disabled'}></div>
-        <div class="asset-item"><img src="https://xiaochen1235789.github.io/images/Super_Sweet.webp">超级棒糖: <input type="number" id="miscRainbow" value="${rainbow}" min="0" style="width:100px;" ${canEdit?'':'disabled'}></div>
+        <div class="asset-item"><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp" style="width:24px;height:24px;object-fit:contain;">糖果碎: <input type="number" id="miscCandy" value="${candy}" min="0" style="width:100px;" ${canEdit?'':'disabled'}></div>
+        <div class="asset-item"><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp" style="width:24px;height:24px;object-fit:contain;">超级棒糖: <input type="number" id="miscRainbow" value="${rainbow}" min="0" style="width:100px;" ${canEdit?'':'disabled'}></div>
+        <div class="asset-item"><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Dream_galaxy_syrup.webp" style="width:24px;height:24px;object-fit:contain;">梦幻星河糖浆: <input type="number" id="miscSyrup" value="${syrup}" min="0" style="width:100px;" ${canEdit?'':'disabled'}></div>
         ${canEdit ? '<button class="save-asset-btn" id="saveAssetBtn"><i class="fas fa-save"></i> 保存资产修改</button>' : '<span style="color: var(--text-secondary);">仅站长可修改资产</span>'}
     `;
     document.getElementById('assetControlArea').innerHTML = assetHtml;
@@ -580,11 +585,13 @@ async function reloadMiscData(userId) {
         document.getElementById('saveAssetBtn')?.addEventListener('click', async () => {
             const nc = parseInt(document.getElementById('miscCandy').value, 10);
             const nr = parseInt(document.getElementById('miscRainbow').value, 10);
-            if (isNaN(nc)||isNaN(nr)||nc<0||nr<0) { showNotification('请输入非负整数','error'); return; }
+            const ns = parseInt(document.getElementById('miscSyrup').value, 10);
+            if (isNaN(nc)||isNaN(nr)||isNaN(ns)||nc<0||nr<0||ns<0) { showNotification('请输入非负整数','error'); return; }
             try {
-                await updateUserAssets(userId, nc, nr);
                 const targetUser = allUsers.find(u => u.id === userId);
-                await logAction('资产调整','user_stats',userId,targetUser?.username||userId,'糖果碎: '+candy+' → '+nc+', 棒糖: '+rainbow+' → '+nr);
+                await updateUserAssets(userId, nc, nr, ns);
+                await logAction('资产调整','user_stats',userId,targetUser?.username||userId,
+                    `糖果碎: ${candy} → ${nc}, 棒糖: ${rainbow} → ${nr}, 星河糖浆: ${syrup} → ${ns}`);
                 showNotification('资产已更新','success');
                 await refreshUserList();
                 await reloadMiscData(userId);
@@ -592,7 +599,7 @@ async function reloadMiscData(userId) {
         });
     }
 
-    // 头像框UI
+    // 头像框UI（保持不变）
     let framesHtml = '<div class="frames-grid">';
     for (const frame of FRAMES_LIST) {
         const isOwned = userFrames.includes(frame.id);
@@ -621,7 +628,7 @@ async function reloadMiscData(userId) {
         });
     }
 
-    // 称号管理
+    // 称号管理（保持不变）
     const { data: allTitles, error: titlesErr } = await supabaseAdmin.from('titles').select('id, name, description, is_limited');
     if (!titlesErr && allTitles) {
         const { data: userTitles } = await supabaseAdmin.from('user_titles').select('title_id').eq('user_id', userId);
@@ -661,7 +668,7 @@ async function reloadMiscData(userId) {
         }
     }
 
-    // 自动签到卡
+    // 自动签到卡（保持不变）
     const { data: autoCard } = await supabaseAdmin.from('user_auto_sign_card').select('owned').eq('user_id', userId).single();
     const hasAutoCard = autoCard?.owned === true;
     const autoHtml = `
@@ -777,7 +784,7 @@ function renderCheckinTable() {
     let html = '<table class="data-table"><thead><tr><th>天数</th><th>🍬 糖果碎</th><th>🌈 彩虹棒糖</th><th>⚡ 活跃度</th><th>操作</th></tr></thead><tbody>';
     for (const row of checkinConfigs) {
         const dayDisplay = row.day_num===9999 ? '30天以上' : '第'+row.day_num+'天';
-        html += `<tr><td><strong>${dayDisplay}</strong></td><td>${row.candy}</td><td>${row.rainbow}</td><td>${row.active}</td>
+        html += `<tr><td><strong>${dayDisplay}</strong></td><td>${row.candy.toLocaleString()}</td><td>${row.rainbow.toLocaleString()}</td><td>${row.active.toLocaleString()}</td>
             <td class="action-buttons"><button class="edit-btn" onclick="editCheckinConfig(${row.id})"><i class="fas fa-edit"></i> 编辑</button><button class="delete-btn" onclick="deleteCheckinConfig(${row.id},${row.day_num})"><i class="fas fa-trash"></i> 删除</button></td></tr>`;
     }
     html += '</tbody></table>';
