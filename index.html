@@ -141,15 +141,12 @@
             <div class="menu-item" data-section="character"><i class="fas fa-users"></i> 角色区</div>
             <div class="menu-item" data-section="lightcone"><i class="fas fa-sun"></i> 光锥区</div>
             <div class="menu-item" data-section="material"><i class="fas fa-cube"></i> 材料区</div>
-            <!-- ★★★ 道具区 ★★★ -->
             <div class="menu-item" data-section="item"><i class="fas fa-box"></i> 道具区</div>
             <div class="menu-item" id="menuFriend"><i class="fas fa-user-friends"></i> 好友系统</div>
             <div class="menu-item" id="menuMail"><i class="fas fa-envelope"></i> 邮箱系统</div>
             <div class="menu-item" id="menuGacha"><i class="fas fa-dice-d6"></i> 抽卡模拟器</div>
             <div class="menu-item" id="menuChangelog"><i class="fas fa-history"></i> 更新日志</div>
-            <!-- ★★★ 站长想说的话 ★★★ -->
             <div class="menu-item" id="menuOwnerMessage"><i class="fas fa-pen-fancy"></i> 站长想说的话</div>
-            <!-- ★★★ 黑夜/白天模式切换（汉堡菜单底部） ★★★ -->
             <div class="menu-item" id="menuNightToggle">
                 <i class="fas fa-moon" id="menuNightIcon"></i>
                 <span id="menuNightLabel">黑夜模式</span>
@@ -184,7 +181,7 @@
         </div>
     </div>
 
-    <!-- ★★★ 站长留言模态框 ★★★ -->
+    <!-- 站长留言模态框 -->
     <div class="modal-mask" id="ownerMessageModal">
         <div class="modal-container" style="max-width: 520px; text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
@@ -213,7 +210,7 @@
         <div class="search-icon">🔍</div>
     </div>
 
-    <!-- ★★★ 免责横幅（带关闭按钮） ★★★ -->
+    <!-- 免责横幅（带关闭按钮） -->
     <div class="disclaimer-banner" id="disclaimerBanner">
         <span class="close-btn" id="closeDisclaimer">&times;</span>
         ⚠️ 本WIKI为<strong>架空同人创作</strong>，所有名词（含“光锥”）及数值均为<strong>虚构</strong>，与任何现有游戏无关；<br>
@@ -242,7 +239,6 @@
         <h2 class="section-header" id="material">养成材料</h2>
         <div class="grid-container" id="material-container"></div>
     </div>
-    <!-- ★★★ 道具区域 ★★★ -->
     <div class="content-section" id="itemSection">
         <h2 class="section-header" id="item">道具列表</h2>
         <div class="grid-container" id="item-container"></div>
@@ -278,6 +274,8 @@
         let currentUser = null;
         let userStats = null;
         let searchTimeout;
+        let hasAutoSignCard = false;
+        let autoSignAttempted = false;
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
@@ -481,64 +479,69 @@
             if (event.data && event.data.type === 'closeModal') closeChangelogModal();
         });
 
-        // ==================== 每日签到逻辑 ====================
+        // ==================== 日期工具 ====================
         function getLocalDateString(date = new Date()) {
             return date.toLocaleDateString('sv-SE');
         }
-        function getCheckinRewards(streak) {
-            if(streak === 1) return { candy:3, rainbow:0, active:2 };
-            if(streak === 2) return { candy:5, rainbow:0, active:2 };
-            if(streak === 3) return { candy:7, rainbow:0, active:2 };
-            if(streak === 4) return { candy:9, rainbow:0, active:2 };
-            if(streak === 5) return { candy:10, rainbow:0, active:2 };
-            if(streak === 6) return { candy:12, rainbow:0, active:2 };
-            if(streak === 7) return { candy:15, rainbow:1, active:5 };
-            if(streak >=8 && streak <=14) return { candy:10+Math.floor((streak-8)*2), rainbow:2, active:8 };
-            if(streak === 15) return { candy:30, rainbow:5, active:15 };
-            if(streak >=16 && streak <=29) return { candy:50, rainbow:10, active:10 };
-            if(streak === 30) return { candy:100, rainbow:20, active:50 };
-            return { candy:80, rainbow:15, active:20 };
+
+        // ==================== 签到核心逻辑（从数据库读取奖励） ====================
+        async function fetchCheckinReward(streak) {
+            // 查询 checkin_config 表，根据 day_num 获取奖励
+            const { data, error } = await supabaseClient
+                .from('checkin_config')
+                .select('candy, rainbow, active')
+                .eq('day_num', streak)
+                .maybeSingle();
+
+            // 如果未找到，则使用 day_num = 9999 的默认配置
+            if (!data) {
+                const { data: defaultData, error: defaultErr } = await supabaseClient
+                    .from('checkin_config')
+                    .select('candy, rainbow, active')
+                    .eq('day_num', 9999)
+                    .maybeSingle();
+                if (defaultErr || !defaultData) {
+                    // 极端情况：数据库无配置，返回保守值
+                    return { candy: 0, rainbow: 0, active: 0 };
+                }
+                return defaultData;
+            }
+            return data;
         }
 
-        async function performCheckin() {
+        async function executeCheckin(autoTriggered = false) {
             if (!currentUser) {
                 showNotification('请先登录', 'error');
                 return false;
             }
-            let { data: stats, error: statsErr } = await supabaseClient
-                .from('user_stats')
-                .select('candy_crumbles, rainbow_lollipops, active_points, last_checkin_date, checkin_streak')
-                .eq('user_id', currentUser.id)
-                .single();
-            if (statsErr && statsErr.code === 'PGRST116') {
-                const { data: newStats } = await supabaseClient
-                    .from('user_stats')
-                    .insert({ user_id: currentUser.id, candy_crumbles: 100, rainbow_lollipops: 5, active_points: 0, last_checkin_date: null, checkin_streak: 0 })
-                    .select()
-                    .single();
-                stats = newStats;
-            } else if (statsErr) {
-                showNotification('签到失败', 'error');
+            const today = getLocalDateString();
+            if (userStats.last_checkin_date === today) {
+                if (!autoTriggered) showNotification('您今天已经签到过了亲，请明天再来吧ღ( ´･ᴗ･ )比心。', 'warning');
                 return false;
             }
-            let today = getLocalDateString();
-            let last = stats.last_checkin_date;
+
+            // 计算新的连续签到天数
             let newStreak = 1;
+            const last = userStats.last_checkin_date;
             if (last) {
-                let yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
-                let yesterdayStr = getLocalDateString(yesterday);
-                if (last === yesterdayStr) newStreak = (stats.checkin_streak || 0) + 1;
-                else if (last !== today) newStreak = 1;
-                else {
-                    showNotification('您今天已经签到过了亲，请明天再来吧ღ( ´･ᴗ･ )比心。', 'warning');
-                    return false;
-                }
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = getLocalDateString(yesterday);
+                if (last === yesterdayStr) newStreak = (userStats.checkin_streak || 0) + 1;
             }
-            let rewards = getCheckinRewards(newStreak);
-            let newCandy = (stats.candy_crumbles || 0) + rewards.candy;
-            let newRainbow = (stats.rainbow_lollipops || 0) + rewards.rainbow;
-            let newActive = (stats.active_points || 0) + rewards.active;
-            let { error: updateErr } = await supabaseClient
+
+            // 获取奖励配置
+            const rewards = await fetchCheckinReward(newStreak);
+            if (!rewards) {
+                showNotification('签到奖励配置错误', 'error');
+                return false;
+            }
+
+            const newCandy = (userStats.candy_crumbles || 0) + rewards.candy;
+            const newRainbow = (userStats.rainbow_lollipops || 0) + rewards.rainbow;
+            const newActive = (userStats.active_points || 0) + rewards.active;
+
+            const { error: updateErr } = await supabaseClient
                 .from('user_stats')
                 .update({
                     candy_crumbles: newCandy,
@@ -548,20 +551,51 @@
                     checkin_streak: newStreak
                 })
                 .eq('user_id', currentUser.id);
+
             if (updateErr) {
                 showNotification('签到失败', 'error');
                 return false;
             }
-            if (userStats) {
-                userStats.candy_crumbles = newCandy;
-                userStats.rainbow_lollipops = newRainbow;
-                userStats.active_points = newActive;
-                userStats.last_checkin_date = today;
-                userStats.checkin_streak = newStreak;
-                localStorage.setItem('cachedUserStats', JSON.stringify(userStats));
-            }
-            showNotification(`签到成功！获得 ${rewards.candy}🍬 ${rewards.rainbow>0?`+${rewards.rainbow}🌈 `:''}+${rewards.active}⚡ 明天记得再来！`, 'success');
+
+            // 更新本地缓存
+            userStats.candy_crumbles = newCandy;
+            userStats.rainbow_lollipops = newRainbow;
+            userStats.active_points = newActive;
+            userStats.last_checkin_date = today;
+            userStats.checkin_streak = newStreak;
+            localStorage.setItem('cachedUserStats', JSON.stringify(userStats));
+
+            const rewardMsg = `+${rewards.candy.toLocaleString()}🍬 ${rewards.rainbow>0?`+${rewards.rainbow}🌈 `:''}+${rewards.active}⚡`;
+            showNotification(autoTriggered ? `✨ 自动签到卡已为您签到 ${rewardMsg}` : `签到成功！获得 ${rewardMsg} 明天记得再来！`, 'success');
             return true;
+        }
+
+        // 供手动签到调用
+        async function performCheckin() {
+            await executeCheckin(false);
+        }
+
+        // ==================== 自动签到卡功能 ====================
+        async function loadAutoSignCardStatus() {
+            if (!supabaseClient || !currentUser) return false;
+            const { data, error } = await supabaseClient
+                .from('user_auto_sign_card')
+                .select('owned')
+                .eq('user_id', currentUser.id)
+                .maybeSingle();
+            if (error && error.code !== 'PGRST116') return false;
+            return data?.owned === true;
+        }
+
+        async function tryAutoSign() {
+            if (!currentUser || !userStats || autoSignAttempted) return;
+            autoSignAttempted = true;
+            const today = getLocalDateString();
+            hasAutoSignCard = await loadAutoSignCardStatus();
+            if (hasAutoSignCard && userStats.last_checkin_date !== today) {
+                showNotification('🃏 检测到自动签到卡，正在自动签到...', 'info');
+                await executeCheckin(true);
+            }
         }
 
         // ==================== 用户认证和下拉菜单 ====================
@@ -606,6 +640,10 @@
             try {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 await refreshUserState();
+                // 用户加载完成后尝试自动签到
+                if (currentUser && userStats) {
+                    await tryAutoSign();
+                }
             } catch (error) {
                 console.error('用户初始化失败:', error);
                 currentUser = null;
@@ -713,15 +751,17 @@
             const cancelLogout = document.getElementById('cancelLogoutBtn');
 
             if (signinItem) {
-                signinItem.onclick = (e) => {
+                signinItem.onclick = async (e) => {
                     e.stopPropagation();
                     document.getElementById('userDropdown').classList.remove('show');
                     if (!currentUser) {
                         showNotification('请先登录', 'error');
                         return;
                     }
-                    const rewardPreview = getCheckinRewards((userStats?.checkin_streak || 0) + 1);
-                    const previewText = `签到可获得 🍬${rewardPreview.candy} ${rewardPreview.rainbow>0?`🌈+${rewardPreview.rainbow} `:''}⚡+${rewardPreview.active}`;
+                    // 获取下一天的奖励预览（基于当前连续签到天数 + 1）
+                    const nextStreak = (userStats?.checkin_streak || 0) + 1;
+                    const reward = await fetchCheckinReward(nextStreak);
+                    const previewText = `签到可获得 🍬${reward.candy.toLocaleString()} ${reward.rainbow>0?`🌈${reward.rainbow} `:''}⚡${reward.active.toLocaleString()}`;
                     document.getElementById('signinRewardPreview').innerHTML = previewText;
                     signinModal.classList.add('active');
                 };
@@ -923,7 +963,7 @@
         async function initializePage() {
             document.getElementById('year').textContent = new Date().getFullYear();
             
-            // ★★★ 读取本地存储恢复主题（与糖果碎/超级棒糖共用 wiki_theme） ★★★
+            // 读取本地存储恢复主题
             const savedTheme = localStorage.getItem('wiki_theme');
             if (savedTheme === 'night') {
                 document.body.classList.add('night-mode');
@@ -932,7 +972,7 @@
             initializeSiteAge();
             initializeSearch();
             initializeNavigation();
-            await initializeUserProfile();
+            await initializeUserProfile(); // 内部会调用 tryAutoSign
             await loadAndRenderAll();
             setupCrossTabSync();
             setupLoginMessageListener();
@@ -977,7 +1017,7 @@
                 });
             }
 
-            // ★★★ 站长想说的话 ★★★
+            // 站长想说的话
             const ownerMsgItem = document.getElementById('menuOwnerMessage');
             if (ownerMsgItem) {
                 ownerMsgItem.addEventListener('click', function(e) {
@@ -987,13 +1027,12 @@
                 });
             }
 
-            // ★★★ 汉堡菜单里的黑夜/白天模式切换 ★★★
+            // 汉堡菜单里的黑夜/白天模式切换
             const menuNightToggle = document.getElementById('menuNightToggle');
             if (menuNightToggle) {
                 const menuIcon = document.getElementById('menuNightIcon');
                 const menuLabel = document.getElementById('menuNightLabel');
                 
-                // 同步当前状态
                 if (document.body.classList.contains('night-mode')) {
                     menuIcon.className = 'fas fa-sun';
                     menuLabel.textContent = '白天模式';
@@ -1022,7 +1061,7 @@
             const defaultMenuItem = document.querySelector('.menu-item[data-section="character"]');
             if (defaultMenuItem) defaultMenuItem.classList.add('active');
 
-            // ★★★ 横幅关闭与本地存储逻辑 ★★★
+            // 横幅关闭与本地存储
             const banner = document.getElementById('disclaimerBanner');
             const closeBtn = document.getElementById('closeDisclaimer');
             if (banner && closeBtn) {
@@ -1035,7 +1074,7 @@
                 });
             }
 
-            // ★★★ 站长留言模态框点击遮罩关闭 ★★★
+            // 站长留言模态框点击遮罩关闭
             const ownerModal = document.getElementById('ownerMessageModal');
             if (ownerModal) {
                 ownerModal.addEventListener('click', function(e) {
