@@ -750,6 +750,7 @@
             const confirmLogout = document.getElementById('confirmLogoutBtn');
             const cancelLogout = document.getElementById('cancelLogoutBtn');
 
+            // ★★★ 修改：每日签到点击事件，增加已签到按钮状态 ★★★
             if (signinItem) {
                 signinItem.onclick = async (e) => {
                     e.stopPropagation();
@@ -763,6 +764,21 @@
                     const reward = await fetchCheckinReward(nextStreak);
                     const previewText = `签到可获得 🍬${reward.candy.toLocaleString()} ${reward.rainbow>0?`🌈${reward.rainbow} `:''}⚡${reward.active.toLocaleString()}`;
                     document.getElementById('signinRewardPreview').innerHTML = previewText;
+
+                    // 判断今日是否已签到，设置按钮样式（不 disabled，仅视觉变化）
+                    const today = getLocalDateString();
+                    const alreadyChecked = userStats?.last_checkin_date === today;
+                    if (alreadyChecked) {
+                        confirmSignin.textContent = '今日已签到';
+                        confirmSignin.style.background = '#6b7280';
+                        confirmSignin.style.cursor = 'default';
+                        confirmSignin.style.opacity = '0.8';
+                    } else {
+                        confirmSignin.textContent = '签到';
+                        confirmSignin.style.background = ''; // 恢复默认（由css控制）
+                        confirmSignin.style.cursor = 'pointer';
+                        confirmSignin.style.opacity = '1';
+                    }
                     signinModal.classList.add('active');
                 };
             }
@@ -770,6 +786,7 @@
                 confirmSignin.onclick = async () => {
                     signinModal.classList.remove('active');
                     await performCheckin();
+                    // 签到后无需额外操作，但用户再次打开会重新判断状态
                 };
             }
             if (cancelSignin) {
