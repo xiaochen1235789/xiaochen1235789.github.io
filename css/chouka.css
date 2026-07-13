@@ -1,4 +1,4 @@
-/* ========== 抽卡模拟器完整样式 ========== */
+/* ========== 崩铁全屏沉浸式抽卡UI ========== */
 * {
     margin: 0;
     padding: 0;
@@ -19,7 +19,7 @@ body {
     touch-action: pan-x pan-y;
 }
 
-/* 星空背景 */
+/* ===== 星空背景（保留，放在立绘下层） ===== */
 .star-bg {
     position: fixed;
     top: 0;
@@ -67,176 +67,206 @@ body {
     100% { transform: translateX(300px) translateY(300px) rotate(45deg); opacity: 0; }
 }
 
-/* 主布局 - 横屏优先，但也支持竖屏（简化） */
+/* ===== 主容器：全屏重叠 ===== */
 .landscape-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1;
+    padding: 0 !important;
+    gap: 0 !important;
+    background: transparent;
+}
+
+/* ===== 右侧面板 ===== */
+.right-panel {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vw !important;
+    height: 100vh !important;
+    flex: none !important;
+    z-index: 1;
+    padding: 0 !important;
+    background: transparent;
+}
+
+.character-splash {
     position: relative;
-    z-index: 2;
     width: 100%;
     height: 100%;
-    display: flex;
-    flex-direction: row;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+}
+
+/* ----- 全屏立绘（崩铁核心） ----- */
+.splash-img-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    flex: none !important;
+    aspect-ratio: auto !important;
+    border-radius: 0 !important;
     overflow: hidden;
-    padding: 16px 20px;
-    gap: 20px;
-    backdrop-filter: blur(8px);
+    background: #0a0515;
+    z-index: 0;
 }
 
-@media (max-aspect-ratio: 1/1) {
-    .landscape-wrapper {
-        flex-direction: column;
-        padding: 12px;
-        gap: 12px;
-    }
-    .left-panel, .right-panel {
-        width: 100%;
-        height: auto;
-        min-height: 40vh;
-    }
-    .character-splash {
-        padding: 12px;
-    }
-    .splash-img {
-        max-height: 30vh;
-    }
+.splash-img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;        /* 铺满全屏，自动裁剪多余部分 */
+    object-position: center 30% !important; /* 焦点上移，确保头部显示 */
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #0a0515;
 }
 
-/* 左侧面板 */
-.left-panel {
-    flex: 3;
-    min-width: 240px;
-    background: rgba(8, 6, 24, 0.65);
-    backdrop-filter: blur(16px);
-    border-radius: 48px;
-    border: 1px solid rgba(210, 180, 255, 0.4);
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 20px 35px rgba(0, 0, 0, 0.5);
+/* 立绘暗角遮罩（让UI文字更清晰） */
+.splash-img-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
     height: 100%;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.5) 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* ===== 左侧面板 ===== */
+.left-panel {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    flex: none !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    z-index: 10;
+    pointer-events: none;  /* 让点击穿透，子元素可点 */
 }
 
 .left-panel-scroll {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px 16px;
-    scrollbar-width: thin;
-    -webkit-overflow-scrolling: touch;
-    contain: content;
+    overflow: visible !important;
+    padding: 20px 24px !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;  /* 上下两端对齐 */
+    height: 100%;
+    width: 100%;
+    pointer-events: none;
+    scrollbar-width: none;
 }
 
-/* UID 徽章 */
-.uid-badge {
-    margin: 0 16px 16px 16px;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    padding: 6px 12px;
-    border-radius: 30px;
-    font-size: 0.7rem;
-    color: #ffcf8a;
-    font-family: monospace;
-    border: 1px solid rgba(255, 200, 100, 0.3);
-    text-align: center;
+.left-panel-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.left-panel-scroll > * {
+    pointer-events: auto;  /* 所有子元素恢复点击 */
+}
+
+/* ===== 顶部区域 ===== */
+.top-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
     flex-shrink: 0;
-    width: calc(100% - 32px);
-    align-self: center;
 }
 
-/* 卡池信息 */
+/* --- 左上：卡池名称 & UP --- */
 .card-pool {
-    text-align: center;
-    margin-bottom: 20px;
+    text-align: left;
+    margin: 0;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(8px);
+    padding: 12px 20px;
+    border-radius: 24px;
+    border: 1px solid rgba(255, 215, 0, 0.15);
 }
 
 .pool-name {
-    font-size: 1.6rem;
+    font-size: 1.8rem;
     font-weight: bold;
     background: linear-gradient(135deg, #FFE6B0, #FFB347);
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
     letter-spacing: 2px;
-    margin-bottom: 8px;
+    text-shadow: 0 0 30px rgba(255, 200, 100, 0.3);
+    margin-bottom: 4px;
 }
 
 .pool-sub {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: #b9a9e0;
-    border-top: 1px dashed rgba(255, 200, 100, 0.4);
-    display: inline-block;
-    padding-top: 6px;
+    opacity: 0.8;
 }
 
-/* UP 角色 */
 .up-char {
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 32px;
-    padding: 12px;
-    margin: 15px 0;
-    text-align: center;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    padding: 8px 16px;
+    margin-top: 8px;
+    border: 1px solid rgba(255, 215, 0, 0.1);
+    text-align: left;
+    display: inline-block;
 }
 
 .up-char span {
     color: #ffcf8a;
     font-weight: bold;
-    font-size: 1rem;
+    font-size: 0.95rem;
 }
 
 .up-char small {
     color: #cbbaff;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
 }
 
-/* 倒计时 */
-.countdown-box {
-    background: rgba(0, 0, 0, 0.6);
-    border-radius: 28px;
-    padding: 10px;
-    margin: 12px 0;
-    text-align: center;
-    border: 1px solid rgba(255, 200, 100, 0.5);
+/* --- 右上：资源 & 功能按钮 --- */
+.right-top-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
 }
 
-.countdown-title {
-    font-size: 0.7rem;
-    color: #ffcf9a;
-    letter-spacing: 1px;
-}
-
-.countdown-time {
-    font-size: 1rem;
-    font-weight: bold;
-    color: #ffbc6e;
-    font-family: monospace;
-    margin-top: 4px;
-}
-
-.disabled-notice {
-    color: #ff8888;
-    font-size: 0.7rem;
-    margin-top: 8px;
-}
-
-/* 资源栏 */
 .resources {
-    background: linear-gradient(135deg, #1e1a2f, #0f0b1c);
-    border-radius: 40px;
-    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 60px;
+    padding: 8px 20px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin: 8px 0 12px 0;
-    border: 1px solid rgba(255, 200, 100, 0.4);
+    gap: 16px;
+    margin: 0;
+    flex-shrink: 0;
 }
 
 .jade-left {
-    flex: 1;
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 6px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 32px;
-    padding: 4px 8px;
-    min-width: 0;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 40px;
+    padding: 4px 14px 4px 8px;
 }
 
 .jade-icon {
@@ -249,25 +279,21 @@ body {
 }
 
 .jade-amount {
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 800;
     background: linear-gradient(135deg, #FFE6B0, #FFB347);
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
-    white-space: nowrap;
 }
 
 .ticket-right {
-    flex: 1;
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 6px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 32px;
-    padding: 4px 8px;
-    min-width: 0;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 40px;
+    padding: 4px 14px 4px 8px;
 }
 
 .ticket-img {
@@ -279,27 +305,125 @@ body {
 }
 
 .ticket-amount {
-    font-size: 0.95rem;
+    font-size: 1.05rem;
     font-weight: bold;
     color: #ffdfaa;
-    white-space: nowrap;
 }
 
-/* 保底卡片 */
+/* 功能按钮（右上） */
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(12px);
+    padding: 6px 14px;
+    border-radius: 60px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.action-btn {
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 188, 110, 0.2);
+    border-radius: 40px;
+    padding: 4px 14px;
+    font-size: 0.75rem;
+    color: #ffdfaa;
+    cursor: pointer;
+    transition: 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.action-btn:active {
+    transform: scale(0.92);
+}
+
+.info-btn, .settings-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 188, 110, 0.2);
+    color: #ffdfaa;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: 0.15s;
+}
+
+.info-btn:active, .settings-btn:active {
+    transform: scale(0.92);
+}
+
+/* ===== 底部区域 ===== */
+.bottom-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    width: 100%;
+    flex-shrink: 0;
+}
+
+/* --- 左下：倒计时 & 保底 --- */
+.bottom-left-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.countdown-box {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 200, 100, 0.15);
+    border-radius: 28px;
+    padding: 8px 18px;
+    text-align: left;
+    margin: 0;
+}
+
+.countdown-title {
+    font-size: 0.6rem;
+    color: #ffcf9a;
+    letter-spacing: 1px;
+}
+
+.countdown-time {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #ffbc6e;
+    font-family: monospace;
+    margin-top: 2px;
+}
+
+.disabled-notice {
+    color: #ff8888;
+    font-size: 0.65rem;
+    margin-top: 4px;
+}
+
 .pity-card {
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 32px;
-    padding: 14px;
-    margin: 12px 0;
-    text-align: center;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 215, 0, 0.08);
+    border-radius: 24px;
+    padding: 10px 18px;
+    margin: 0;
+    text-align: left;
+    min-width: 160px;
 }
 
 .pity-item {
     display: flex;
     justify-content: space-between;
-    margin: 8px 0;
+    margin: 4px 0;
     color: #cdd9ff;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
 }
 
 .pity-value {
@@ -308,16 +432,15 @@ body {
 }
 
 .pity-enhanced {
-    margin-top: 12px;
-    border-top: 1px dashed rgba(210, 180, 140, 0.4);
-    padding-top: 10px;
-    font-size: 0.75rem;
+    margin-top: 6px;
+    border-top: 1px dashed rgba(210, 180, 140, 0.2);
+    padding-top: 6px;
+    font-size: 0.65rem;
     color: #ffddb0;
-    text-align: left;
 }
 
 .pity-enhanced div {
-    margin: 6px 0;
+    margin: 3px 0;
     display: flex;
     justify-content: space-between;
 }
@@ -332,136 +455,42 @@ body {
 }
 
 .dynamic-rate-badge {
-    background: #1e1a2f;
-    border-radius: 24px;
-    padding: 8px;
-    font-size: 0.7rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.6rem;
     text-align: center;
     color: #ffcf9a;
-    margin-top: 12px;
+    margin-top: 6px;
+    display: inline-block;
 }
 
-/* 右侧区域 */
-.right-panel {
-    flex: 7;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    height: 100%;
-}
-
-.character-splash {
-    background: rgba(3, 2, 15, 0.5);
-    border-radius: 48px;
-    border: 1px solid rgba(210, 180, 255, 0.4);
-    backdrop-filter: blur(4px);
-    display: flex;
-    flex-direction: column;
-    padding: 16px 18px;
-    gap: 12px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-    height: 100%;
-    max-height: 100%;
-}
-
-/* 按钮区域 */
-.action-buttons {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    flex-shrink: 0;
-    align-items: center;
-}
-
-.action-btn {
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
-    border: 1px solid #ffbc6e;
-    border-radius: 40px;
-    padding: 6px 16px;
-    font-size: 0.85rem;
-    color: #ffdfaa;
-    cursor: pointer;
-    transition: 0.1s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.action-btn:active {
-    transform: scale(0.96);
-}
-
-.info-btn, .settings-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
-    border: 1px solid #ffbc6e;
-    color: #ffdfaa;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    transition: 0.1s;
-}
-
-.info-btn:active, .settings-btn:active {
-    transform: scale(0.96);
-}
-
-/* ========== 【核心修改】统一立绘比例 ========== */
-.splash-img-container {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 0;
-    overflow: hidden;
-    width: 100%;                /* 占满容器宽度 */
-    aspect-ratio: 9 / 16;       /* 固定为 9:16 竖屏比例（崩铁常用） */
-}
-
-.splash-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;          /* 铺满并裁剪多余部分，不变形 */
-    object-position: center top; /* 优先显示角色头部（靠上居中） */
-    border-radius: 36px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-    background: #0b0719;
-}
-/* ========== 修改结束 ========== */
-
-.splash-caption {
-    text-align: center;
-    color: #ffd9a5;
-    font-size: 0.85rem;
-    letter-spacing: 1px;
-    font-weight: 500;
-    flex-shrink: 0;
-}
-
-/* 抽卡按钮 */
+/* ===== 抽卡按钮（底部居中） ===== */
 .gacha-buttons {
+    position: fixed;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
     display: flex;
-    gap: 18px;
+    gap: 30px;
     justify-content: center;
-    flex-shrink: 0;
+    align-items: center;
+    pointer-events: auto;
+    background: none;
+    padding: 0;
 }
 
 .gacha-btn {
-    flex: 1;
-    padding: 12px 0;
-    font-size: 1rem;
+    flex: none;
+    padding: 16px 48px !important;
+    font-size: 1.2rem !important;
     font-weight: bold;
     border: none;
     border-radius: 60px;
     background: linear-gradient(105deg, #382a5c, #1f173f);
     color: #ffe6b3;
-    box-shadow: 0 6px 0 #0a0620;
+    box-shadow: 0 8px 0 #0a0620, 0 0 40px rgba(255, 215, 0, 0.1);
     transition: transform 0.08s, box-shadow 0.1s;
     cursor: pointer;
     font-family: inherit;
@@ -469,71 +498,71 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    will-change: transform;
-    transform: translateZ(0);
+    gap: 10px;
     position: relative;
     overflow: hidden;
+    min-width: 180px;
 }
 
-.gacha-btn::after {
+.gacha-btn::before {
     content: '';
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    transition: width 0.3s, height 0.3s;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent 30%, rgba(255,215,0,0.08) 50%, transparent 70%);
+    animation: shimmer 3s infinite linear;
 }
 
-.gacha-btn:active::after {
-    width: 200px;
-    height: 200px;
+@keyframes shimmer {
+    0% { transform: translateX(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) rotate(45deg); }
 }
 
 .gacha-btn img {
-    width: 28px;
-    height: 28px;
-    filter: drop-shadow(0 0 2px gold);
+    width: 32px;
+    height: 32px;
+    filter: drop-shadow(0 0 4px gold);
 }
 
 .gacha-btn:active {
-    transform: translateY(3px);
-    box-shadow: 0 2px 0 #0a0620;
+    transform: translateY(4px);
+    box-shadow: 0 4px 0 #0a0620;
 }
 
 .gacha-btn.disabled, .gacha-btn:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     transform: none;
     cursor: not-allowed;
     pointer-events: none;
+    box-shadow: 0 4px 0 #0a0620;
 }
 
 .special-btn {
     background: linear-gradient(105deg, #9b4d96, #5e2a5c);
-    box-shadow: 0 6px 0 #2e1a2c;
+    box-shadow: 0 8px 0 #2e1a2c, 0 0 40px rgba(155, 77, 150, 0.2);
 }
 
-/* 抽卡结果弹窗动画 */
-.result-dialog.active .dialog-container {
-    animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+/* ===== UID（极小，放左下角底部） ===== */
+.uid-badge {
+    position: fixed;
+    bottom: 12px;
+    left: 24px;
+    z-index: 15;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-size: 0.55rem;
+    color: rgba(255, 207, 138, 0.5);
+    font-family: monospace;
+    border: 1px solid rgba(255, 200, 100, 0.08);
+    text-align: center;
+    pointer-events: none;
 }
 
-@keyframes popIn {
-    from {
-        opacity: 0;
-        transform: scale(0.8);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-/* 模态框通用 */
+/* ===== 弹窗/模态框（保持原样，只微调） ===== */
 .modal-mask {
     position: fixed;
     top: 0;
@@ -566,7 +595,6 @@ body {
     box-shadow: 0 25px 45px black;
 }
 
-/* 统计弹窗特殊处理 */
 #statsModal .modal-content {
     max-height: 85vh;
     display: flex;
@@ -619,7 +647,6 @@ body {
     color: #ffdfaa;
 }
 
-/* 统计卡片 */
 .stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -686,7 +713,6 @@ body {
     font-weight: bold;
 }
 
-/* 兑换弹窗 */
 .exchange-input {
     display: flex;
     align-items: center;
@@ -736,7 +762,6 @@ body {
     color: #ffdfaa;
 }
 
-/* 历史记录弹窗 */
 .record-modal {
     width: 90%;
     max-width: 700px;
@@ -808,14 +833,13 @@ body {
     padding: 30px;
 }
 
-/* 抽卡结果弹窗 */
 .result-dialog {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(20px);
     z-index: 1100;
     display: flex;
@@ -829,6 +853,15 @@ body {
 .result-dialog.active {
     visibility: visible;
     opacity: 1;
+}
+
+.result-dialog.active .dialog-container {
+    animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes popIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
 }
 
 .dialog-container {
@@ -885,8 +918,6 @@ body {
     font-weight: 500;
     border-left: 6px solid;
     animation: fadeInUp 0.2s ease;
-    will-change: transform;
-    transform: translateZ(0);
 }
 
 .dialog-star5 {
@@ -914,27 +945,21 @@ body {
 }
 
 @keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/* 提示通知 */
 .toast-notice {
     position: fixed;
     top: 20px;
-    right: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 1200;
     background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(12px);
     border: 1px solid #ffbc6e;
     border-radius: 32px;
-    padding: 10px 20px;
+    padding: 10px 24px;
     color: #ffdfaa;
     font-size: 0.9rem;
     font-weight: 500;
@@ -949,26 +974,9 @@ body {
     opacity: 1;
 }
 
-/* 皮肤切换动画 */
-.skin-switch-animation {
-    animation: skinFlash 0.2s ease;
-}
-
-@keyframes skinFlash {
-    0% {
-        opacity: 0.7;
-        transform: scale(0.99);
-    }
-    100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-/* 滚动条样式 */
+/* ===== 滚动条（保留） ===== */
 .record-list::-webkit-scrollbar,
 .dialog-content::-webkit-scrollbar,
-.left-panel-scroll::-webkit-scrollbar,
 .constellation-section::-webkit-scrollbar,
 #statsModal .modal-body::-webkit-scrollbar {
     width: 4px;
@@ -976,7 +984,6 @@ body {
 
 .record-list::-webkit-scrollbar-track,
 .dialog-content::-webkit-scrollbar-track,
-.left-panel-scroll::-webkit-scrollbar-track,
 .constellation-section::-webkit-scrollbar-track,
 #statsModal .modal-body::-webkit-scrollbar-track {
     background: rgba(255, 255, 200, 0.1);
@@ -984,14 +991,13 @@ body {
 
 .record-list::-webkit-scrollbar-thumb,
 .dialog-content::-webkit-scrollbar-thumb,
-.left-panel-scroll::-webkit-scrollbar-thumb,
 .constellation-section::-webkit-scrollbar-thumb,
 #statsModal .modal-body::-webkit-scrollbar-thumb {
     background: #ffbc6e;
     border-radius: 10px;
 }
 
-/* 横屏提示（改为弹窗可选，默认隐藏） */
+/* ===== 横屏提示 ===== */
 .orientation-tip {
     position: fixed;
     top: 0;
@@ -1017,85 +1023,7 @@ body {
     }
 }
 
-/* 登录加载遮罩 */
-.login-loading {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.9);
-    backdrop-filter: blur(12px);
-    z-index: 2000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    color: #ffdfaa;
-    font-size: 1.2rem;
-    gap: 20px;
-}
-
-.login-loading .spinner {
-    width: 50px;
-    height: 50px;
-    border: 4px solid rgba(255, 200, 100, 0.3);
-    border-top-color: #ffbc6e;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* 介绍弹窗内容 */
-.info-content {
-    text-align: left;
-    line-height: 1.6;
-}
-
-.info-content p {
-    margin: 12px 0;
-}
-
-.info-content .highlight-gold {
-    color: gold;
-    font-weight: bold;
-}
-
-.info-content ul {
-    margin-left: 20px;
-}
-
-.info-content li {
-    margin: 8px 0;
-}
-
-/* ========== 性能优化：低端设备减少星星数量 ========== */
-@media (max-width: 480px) {
-    .star, .shooting-star {
-        opacity: 0.4;
-    }
-}
-
-/* 用户偏好减少动画时，关闭所有动画 */
-@media (prefers-reduced-motion: reduce) {
-    .star, .shooting-star, .gacha-btn, .dialog-item {
-        animation: none !important;
-        transition: none !important;
-    }
-    .star {
-        opacity: 0.5;
-    }
-    .shooting-star {
-        display: none;
-    }
-}
-
-/* 命座列表颜色：五星淡金色，四星淡紫色 */
+/* ===== 命座颜色 ===== */
 .constellation-five .constellation-name,
 .constellation-five .constellation-level {
     color: #ffd966 !important;
@@ -1105,64 +1033,159 @@ body {
     color: #c084fc !important;
 }
 
-/* 增强滚动区域的惯性滑动 */
-.left-panel-scroll,
-.record-list,
-.dialog-content,
-.constellation-section,
-#statsModal .modal-body {
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
+/* ===== 响应式适配（平板/手机） ===== */
+@media (max-width: 1024px) {
+    .left-panel-scroll {
+        padding: 16px 18px !important;
+    }
+    .pool-name {
+        font-size: 1.4rem;
+    }
+    .gacha-btn {
+        padding: 14px 32px !important;
+        font-size: 1rem !important;
+        min-width: 140px;
+    }
+    .gacha-buttons {
+        gap: 20px;
+        bottom: 40px;
+    }
+    .resources {
+        padding: 6px 14px;
+        gap: 10px;
+    }
+    .jade-amount, .ticket-amount {
+        font-size: 0.95rem;
+    }
+    .action-btn {
+        font-size: 0.65rem;
+        padding: 3px 10px;
+    }
+    .info-btn, .settings-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 0.85rem;
+    }
+    .pity-card {
+        min-width: 120px;
+        padding: 8px 14px;
+    }
+    .countdown-box {
+        padding: 6px 14px;
+    }
+    .countdown-time {
+        font-size: 0.75rem;
+    }
+    .uid-badge {
+        display: none;
+    }
 }
 
-/* 响应式适配 */
-@media (max-width: 800px) {
-    .landscape-wrapper {
-        padding: 12px;
-        gap: 12px;
-    }
+@media (max-width: 768px) {
     .left-panel-scroll {
-        padding: 12px;
+        padding: 12px 14px !important;
+    }
+    .top-section {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    .right-top-group {
+        align-items: flex-start;
+        width: 100%;
+    }
+    .resources {
+        width: 100%;
+        justify-content: center;
+    }
+    .action-buttons {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .bottom-section {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .bottom-left-group {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
     }
     .pool-name {
         font-size: 1.2rem;
     }
-    .jade-amount {
-        font-size: 0.9rem;
-    }
-    .ticket-amount {
-        font-size: 0.85rem;
-    }
     .gacha-btn {
-        font-size: 0.85rem;
-        padding: 8px 0;
+        padding: 12px 20px !important;
+        font-size: 0.9rem !important;
+        min-width: 100px;
     }
-    .toast-notice {
-        font-size: 0.75rem;
-        padding: 6px 12px;
-        white-space: normal;
-        max-width: 70%;
+    .gacha-buttons {
+        gap: 14px;
+        bottom: 30px;
     }
-    .action-btn {
-        font-size: 0.7rem;
-        padding: 4px 12px;
+    .pity-card {
+        min-width: auto;
+        flex: 1;
     }
-    .info-btn, .settings-btn {
-        width: 30px;
-        height: 30px;
-        font-size: 1rem;
-    }
-    .splash-img {
-        max-height: 35vh;
+    .countdown-box {
+        flex: 1;
     }
     .uid-badge {
-        font-size: 0.6rem;
-        margin-bottom: 12px;
+        display: none;
     }
-    .stats-grid {
-        grid-template-columns: 1fr;
+}
+
+@media (max-aspect-ratio: 1/1) {
+    .gacha-buttons {
+        bottom: 20px;
+        gap: 12px;
+        flex-wrap: wrap;
     }
-    .constellation-section {
-        max-height: 180px;
+    .gacha-btn {
+        padding: 10px 16px !important;
+        font-size: 0.8rem !important;
+        min-width: 80px;
     }
+    .gacha-btn img {
+        width: 22px;
+        height: 22px;
+    }
+    .splash-img {
+        object-position: center 40% !important;
+    }
+    .action-buttons {
+        gap: 6px;
+        padding: 4px 10px;
+    }
+    .action-btn {
+        font-size: 0.55rem;
+        padding: 2px 8px;
+    }
+    .resources {
+        padding: 4px 10px;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .jade-amount, .ticket-amount {
+        font-size: 0.8rem;
+    }
+    .pool-name {
+        font-size: 1rem;
+    }
+    .pity-item {
+        font-size: 0.65rem;
+    }
+}
+
+/* ===== 低端设备性能 ===== */
+@media (prefers-reduced-motion: reduce) {
+    .star, .shooting-star, .gacha-btn, .dialog-item, .gacha-btn::before {
+        animation: none !important;
+        transition: none !important;
+    }
+    .star { opacity: 0.4; }
+    .shooting-star { display: none; }
 }
