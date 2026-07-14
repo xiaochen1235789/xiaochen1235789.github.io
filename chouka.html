@@ -108,6 +108,11 @@
             </div>
             <div class="modal-body">
                 <div class="stats-grid" id="statsGrid"></div>
+                <!-- 评价区域 -->
+                <div class="stat-card" id="ratingDisplay" style="margin-top:12px; text-align:center; background:rgba(0,0,0,0.6);">
+                    <div class="stat-label">🌟 抽卡评价</div>
+                    <div class="stat-number" id="ratingText" style="font-size:1.6rem;">--</div>
+                </div>
                 <div class="constellation-section">
                     <div class="constellation-title">✨ 已获角色命座 ✨</div>
                     <div id="constellationList" class="constellation-grid"></div>
@@ -237,19 +242,16 @@
     <script>
         // ================================================================
         //  完整优化版抽卡模拟器
-        //  包含：卡片翻转动画、星星开关、保底进度、缓存、批量保存
-        //  修复：按钮事件提前绑定，确保未登录时按钮仍可点
+        //  修复命座显示，增加抽卡评价
         // ================================================================
         (function() {
             'use strict';
 
-            // --- 配置 ---
             var SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
             var SUPABASE_KEY =
                 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
             var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-            // --- DOM ---
             var dom = {
                 jade: document.getElementById('jadeAmount'),
                 tickets: document.getElementById('ticketAmount'),
@@ -279,10 +281,10 @@
                 pityProgress5: document.getElementById('pityProgress5'),
                 pityProgress4: document.getElementById('pityProgress4'),
                 skipBtn: document.getElementById('skipFlipBtn'),
-                confirmBtn: document.getElementById('confirmResultBtn')
+                confirmBtn: document.getElementById('confirmResultBtn'),
+                ratingText: document.getElementById('ratingText')
             };
 
-            // --- 状态 ---
             var state = {
                 user: null,
                 currentBanner: null,
@@ -317,7 +319,6 @@
                 isDrawing: false
             };
 
-            // --- 缓存工具 ---
             var CACHE_TTL = 3600000;
 
             function getCached(key) {
@@ -337,14 +338,12 @@
                 localStorage.setItem(key, JSON.stringify({ data: data, timestamp: Date.now() }));
             }
 
-            // --- 超时 ---
             function withTimeout(promise, ms) {
                 ms = ms || 10000;
                 return Promise.race([promise, new Promise(function(_, reject) { setTimeout(function() { reject(
                         new Error('Request timeout')); }, ms); })]);
             }
 
-            // --- 辅助 ---
             var historyPageSize = 50;
             var historyCurrentPage = 1;
             var historyTotal = 0;
@@ -364,7 +363,6 @@
                 setTimeout(function() { dom.toast.classList.remove('show'); }, 3000);
             }
 
-            // --- 概率 ---
             function getCurrentFiveStarRate(pity) {
                 if (pity >= state.pity5Max - 1) return 1.0;
                 if (pity < state.softPityStart) return 0.006;
@@ -373,7 +371,6 @@
                 return Math.min(0.006 + (1.0 - 0.006) * (step / maxStep), 1.0);
             }
 
-            // --- UI更新 ---
             function updateUI() {
                 dom.jade.innerText = state.starJade;
                 dom.tickets.innerText = state.tickets;
@@ -392,7 +389,6 @@
                 dom.pityProgress4.style.width = Math.min((state.fourStarPity / state.pity4Max) * 100, 100) + '%';
             }
 
-            // --- 倒计时 ---
             function updateCountdown() {
                 if (!state.bannerStart || !state.bannerEnd) {
                     dom.countdownTimer.innerText = '卡池未加载';
@@ -445,7 +441,6 @@
                 }
             }
 
-            // --- 星空 ---
             function initStars() {
                 var starContainer = document.getElementById('starBg');
                 if (!starContainer) return;
@@ -484,7 +479,6 @@
                 }
             }
 
-            // --- 卡片翻转动画 ---
             function showCardAnimation(results) {
                 if (!results || results.length === 0) return;
                 var container = dom.dialogContent;
@@ -582,7 +576,6 @@
                 showCardAnimation(results);
             }
 
-            // --- 历史记录 ---
             function renderHistoryModal() {
                 if (!dom.recordList) return;
                 if (state.gachaHistory.length === 0) {
@@ -626,7 +619,21 @@
                 }
             }
 
-            // --- 统计 ---
+            // --- 获取抽卡评价 ---
+            function getRating() {
+                if (state.totalPulls === 0) return '尚未抽卡';
+                if (state.fiveStarCount === 0) return '绝对的非酋';
+                var avg = state.totalPulls / state.fiveStarCount;
+                if (avg < 30) return '绝对的欧皇';
+                else if (avg < 40) return '欧皇';
+                else if (avg < 50) return '小欧皇';
+                else if (avg < 65) return '正常人';
+                else if (avg < 75) return '小非酋';
+                else if (avg < 85) return '非酋';
+                else return '绝对的非酋';
+            }
+
+            // --- 统计（修复命座遍历，增加评价） ---
             function updateStatsModalContent() {
                 var avg = state.fiveStarCount === 0 ? '--' : (state.totalPulls / state.fiveStarCount).toFixed(1);
                 var best = state.fiveStarDistances.length ? Math.min.apply(null, state.fiveStarDistances) : '--';
@@ -651,35 +658,34 @@
                     '<div class="stat-card"><div class="stat-label">🎯 UP命中率</div><div class="stat-number">' +
                     upRate + '</div></div>';
 
-                var limited = [],
-                    permanent = [],
-                    four = [];
-                var entries = state.constellations.entries();
-                for (var _i = 0; _i < entries.length; _i++) {
-                    var entry = entries[_i];
-                    var name = entry[0];
-                    var lv = entry[1];
-                    if (name === state.upFiveStar) limited.push({ name: name, lv: lv });
-                    else if (state.permanentFiveStar.indexOf(name) !== -1) permanent.push({ name: name, lv: lv });
-                    else four.push({ name: name, lv: lv });
-                }
-                limited.sort(function(a, b) { return a.name.localeCompare(b.name); });
-                permanent.sort(function(a, b) { return a.name.localeCompare(b.name); });
-                four.sort(function(a, b) { return a.name.localeCompare(b.name); });
+                // 评价
+                var rating = getRating();
+                dom.ratingText.innerText = rating;
+
+                // 命座列表（修复遍历）
                 var constHtml = '';
-                var allItems = limited.concat(permanent).concat(four);
-                for (var j2 = 0; j2 < allItems.length; j2++) {
-                    var item = allItems[j2];
-                    var cls = (item.name === state.upFiveStar || state.permanentFiveStar.indexOf(item.name) !== -1) ?
-                        'constellation-five' : 'constellation-four';
-                    constHtml += '<div class="constellation-item ' + cls +
-                        '"><span class="constellation-name">' + escapeHtml(item.name) +
-                        '</span><span class="constellation-level">(' + item.lv + '/6)</span></div>';
+                if (state.constellations.size === 0) {
+                    constHtml = '<div style="color:#aab9de;">暂无角色命座信息</div>';
+                } else {
+                    // 按角色名排序
+                    var sorted = Array.from(state.constellations.entries()).sort(function(a, b) {
+                        return a[0].localeCompare(b[0]);
+                    });
+                    for (var _i = 0; _i < sorted.length; _i++) {
+                        var entry = sorted[_i];
+                        var name = entry[0];
+                        var lv = entry[1];
+                        var cls = (name === state.upFiveStar || state.permanentFiveStar.indexOf(name) !== -1) ?
+                            'constellation-five' : 'constellation-four';
+                        constHtml += '<div class="constellation-item ' + cls +
+                            '"><span class="constellation-name">' + escapeHtml(name) +
+                            '</span><span class="constellation-level">(' + lv + '/6)</span></div>';
+                    }
                 }
-                dom.constellationList.innerHTML = constHtml || '<div style="color:#aab9de;">暂无角色命座信息</div>';
+                dom.constellationList.innerHTML = constHtml;
             }
 
-            // --- 数据库 ---
+            // --- 数据库操作 ---
             async function saveConstellation(name, level) {
                 if (!state.user) return;
                 await supabase.from('user_constellations').upsert({
@@ -1069,11 +1075,8 @@
                 updateStatsModalContent();
             }
 
-            // ================================================================
-            //  事件绑定（提前执行，不依赖登录）
-            // ================================================================
+            // --- 事件绑定 ---
             function bindEvents() {
-                // 抽卡按钮
                 dom.singleBtn.addEventListener('click', function() {
                     if (!state.user) { showTip('请先登录'); return; }
                     singlePull();
@@ -1083,7 +1086,6 @@
                     tenPull();
                 });
 
-                // 兑换
                 document.getElementById('exchangeBtn').onclick = function() {
                     if (!state.user) { showTip('请先登录'); return; }
                     document.getElementById('exchangeModal').classList.add('active');
@@ -1118,7 +1120,6 @@
                         .exchangeRate) + ' 星琼';
                 });
 
-                // 历史记录
                 document.getElementById('openRecordBtn').onclick = function() {
                     if (!state.user) { showTip('请先登录'); return; }
                     renderHistoryModal();
@@ -1127,7 +1128,6 @@
                 document.getElementById('closeModalBtn').onclick = function() { document.getElementById('recordModal')
                         .classList.remove('active'); };
 
-                // 统计
                 document.getElementById('statsBtn').onclick = function() {
                     if (!state.user) { showTip('请先登录'); return; }
                     updateStatsModalContent();
@@ -1136,14 +1136,12 @@
                 document.getElementById('closeStatsBtn').onclick = function() { document.getElementById('statsModal')
                         .classList.remove('active'); };
 
-                // 规则说明
                 document.getElementById('infoBtn').onclick = function() {
                     document.getElementById('infoModal').classList.add('active');
                 };
                 document.getElementById('closeInfoBtn').onclick = function() { document.getElementById('infoModal')
                         .classList.remove('active'); };
 
-                // 设置
                 document.getElementById('settingsBtn').onclick = function() {
                     if (!state.user) { showTip('请先登录'); return; }
                     document.getElementById('settingsModal').classList.add('active');
@@ -1151,7 +1149,6 @@
                 document.getElementById('closeSettingsBtn').onclick = function() { document.getElementById(
                         'settingsModal').classList.remove('active'); };
 
-                // 增加星琼
                 document.getElementById('confirmAddJadeBtn').onclick = async function() {
                     if (!state.user) return;
                     var add = parseInt(document.getElementById('addJadeAmount').value);
@@ -1163,8 +1160,6 @@
                         showTip('增加了 ' + add + ' 星琼');
                     }
                 };
-
-                // 增加专票
                 document.getElementById('confirmAddTicketBtn').onclick = async function() {
                     if (!state.user) return;
                     var add = parseInt(document.getElementById('addTicketAmount').value);
@@ -1176,8 +1171,6 @@
                         showTip('增加了 ' + add + ' 张星轨专票');
                     }
                 };
-
-                // 重置命座
                 document.getElementById('resetConstellationsBtn').onclick = async function() {
                     if (!state.user) return;
                     if (confirm('确定清空所有命座吗？')) {
@@ -1187,8 +1180,6 @@
                         showTip('命座已重置');
                     }
                 };
-
-                // 重置历史
                 document.getElementById('resetHistoryBtn').onclick = async function() {
                     if (!state.user) return;
                     if (confirm('确定清空抽卡记录和统计吗？')) {
@@ -1207,13 +1198,11 @@
                     }
                 };
 
-                // 点击模态背景关闭
                 document.querySelectorAll('.modal-mask').forEach(function(m) {
                     m.addEventListener('click', function(e) { if (e.target === m) m.classList.remove(
                         'active'); });
                 });
 
-                // ESC关闭
                 document.addEventListener('keydown', function(e) {
                     if (e.key === 'Escape') {
                         document.querySelectorAll('.modal-mask.active, .result-dialog.active').forEach(function(
@@ -1221,7 +1210,6 @@
                     }
                 });
 
-                // 星星开关
                 var starToggle = document.getElementById('starToggle');
                 starToggle.addEventListener('change', function() {
                     var val = this.checked;
@@ -1236,27 +1224,21 @@
                 });
             }
 
-            // ================================================================
-            //  初始化
-            // ================================================================
+            // --- 初始化 ---
             async function init() {
-                // 星星状态恢复
                 var stored = localStorage.getItem('star_render_enabled');
                 if (stored === null) localStorage.setItem('star_render_enabled', 'true');
                 var toggle = document.getElementById('starToggle');
                 toggle.checked = localStorage.getItem('star_render_enabled') !== 'false';
 
                 initStars();
-
                 var ignoreBtn = document.getElementById('ignoreOrientationBtn');
                 if (ignoreBtn) ignoreBtn.onclick = function() { document.getElementById('orientationTip').style
                         .display = 'none'; };
                 dom.mainContent.style.display = 'flex';
 
-                // ========== 关键修复：先绑定事件，让按钮立刻可点 ==========
                 bindEvents();
 
-                // 加载公共数据
                 try {
                     await Promise.all([fetchCurrentBanner(), fetchGachaPools(), fetchGachaConfig()]);
                 } catch (e) {
@@ -1264,7 +1246,6 @@
                     showTip('卡池信息加载失败，请刷新');
                 }
 
-                // 登录检查
                 var _ref7 = await supabase.auth.getUser();
                 var user = _ref7.data.user,
                     error = _ref7.error;
@@ -1274,7 +1255,6 @@
                 }
                 state.user = user;
 
-                // 加载用户数据
                 try {
                     await loadUserData();
                 } catch (e) {
@@ -1287,7 +1267,6 @@
                     updateButtonsState(); }, 1000);
             }
 
-            // 启动
             init();
         })();
     </script>
