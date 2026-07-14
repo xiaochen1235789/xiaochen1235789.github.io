@@ -1,4 +1,4 @@
-/* ========== 抽卡模拟器完整样式（原始视觉，代码优化） ========== */
+/* ========== 抽卡模拟器完整样式（含卡片翻转动画） ========== */
 * {
     margin: 0;
     padding: 0;
@@ -30,7 +30,6 @@ body {
     background: radial-gradient(ellipse at 40% 50%, #0e0a2a, #020008);
     overflow: hidden;
 }
-
 .star {
     position: absolute;
     background: #fff;
@@ -41,12 +40,10 @@ body {
     transform: translateZ(0);
     backface-visibility: hidden;
 }
-
 @keyframes twinkle {
     0% { opacity: 0.2; transform: scale(1); }
     100% { opacity: 1; transform: scale(1.2); }
 }
-
 .shooting-star {
     position: absolute;
     width: 2px;
@@ -59,12 +56,16 @@ body {
     will-change: transform, opacity;
     transform: translateZ(0);
 }
-
 @keyframes shoot {
     0% { transform: translateX(0) translateY(0) rotate(45deg); opacity: 0; }
     10% { opacity: 1; }
     90% { opacity: 1; }
     100% { transform: translateX(300px) translateY(300px) rotate(45deg); opacity: 0; }
+}
+
+.star-bg.hidden .star,
+.star-bg.hidden .shooting-star {
+    display: none !important;
 }
 
 /* ===== 主布局 ===== */
@@ -80,12 +81,12 @@ body {
     gap: 20px;
     backdrop-filter: blur(8px);
 }
-
 @media (max-aspect-ratio: 1/1) {
     .landscape-wrapper {
         flex-direction: column;
         padding: 12px;
         gap: 12px;
+        backdrop-filter: none;
     }
     .left-panel, .right-panel {
         width: 100%;
@@ -113,17 +114,13 @@ body {
     box-shadow: 0 20px 35px rgba(0, 0, 0, 0.5);
     height: 100%;
 }
-
 .left-panel-scroll {
     flex: 1;
     overflow-y: auto;
     padding: 20px 16px;
     scrollbar-width: thin;
     -webkit-overflow-scrolling: touch;
-    contain: content;
 }
-
-/* UID 徽章 */
 .uid-badge {
     margin: 0 16px 16px 16px;
     background: rgba(0, 0, 0, 0.6);
@@ -136,16 +133,11 @@ body {
     border: 1px solid rgba(255, 200, 100, 0.3);
     text-align: center;
     flex-shrink: 0;
-    width: calc(100% - 32px);
-    align-self: center;
 }
-
-/* 卡池信息 */
 .card-pool {
     text-align: center;
     margin-bottom: 20px;
 }
-
 .pool-name {
     font-size: 1.6rem;
     font-weight: bold;
@@ -154,9 +146,7 @@ body {
     background-clip: text;
     color: transparent;
     letter-spacing: 2px;
-    margin-bottom: 8px;
 }
-
 .pool-sub {
     font-size: 0.75rem;
     color: #b9a9e0;
@@ -164,8 +154,6 @@ body {
     display: inline-block;
     padding-top: 6px;
 }
-
-/* UP 角色 */
 .up-char {
     background: rgba(0, 0, 0, 0.5);
     border-radius: 32px;
@@ -182,8 +170,6 @@ body {
     color: #cbbaff;
     font-size: 0.7rem;
 }
-
-/* 倒计时 */
 .countdown-box {
     background: rgba(0, 0, 0, 0.6);
     border-radius: 28px;
@@ -209,8 +195,6 @@ body {
     font-size: 0.7rem;
     margin-top: 8px;
 }
-
-/* 资源栏 */
 .resources {
     background: linear-gradient(135deg, #1e1a2f, #0f0b1c);
     border-radius: 40px;
@@ -221,7 +205,6 @@ body {
     margin: 8px 0 12px 0;
     border: 1px solid rgba(255, 200, 100, 0.4);
 }
-
 .jade-left {
     flex: 1;
     display: flex;
@@ -231,7 +214,6 @@ body {
     background: rgba(0, 0, 0, 0.3);
     border-radius: 32px;
     padding: 4px 8px;
-    min-width: 0;
 }
 .jade-icon {
     width: 24px;
@@ -248,9 +230,7 @@ body {
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    white-space: nowrap;
 }
-
 .ticket-right {
     flex: 1;
     display: flex;
@@ -260,7 +240,6 @@ body {
     background: rgba(0, 0, 0, 0.3);
     border-radius: 32px;
     padding: 4px 8px;
-    min-width: 0;
 }
 .ticket-img {
     width: 28px;
@@ -273,10 +252,7 @@ body {
     font-size: 0.95rem;
     font-weight: bold;
     color: #ffdfaa;
-    white-space: nowrap;
 }
-
-/* 保底卡片 */
 .pity-card {
     background: rgba(0, 0, 0, 0.5);
     border-radius: 32px;
@@ -290,10 +266,25 @@ body {
     margin: 8px 0;
     color: #cdd9ff;
     font-size: 0.85rem;
+    align-items: center;
 }
 .pity-value {
     color: #ffbc6e;
     font-weight: bold;
+}
+.pity-progress {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    margin: 4px 0 8px 0;
+    overflow: hidden;
+}
+.pity-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #ffbc6e, #ff8a5c);
+    border-radius: 10px;
+    transition: width 0.3s ease;
 }
 .pity-enhanced {
     margin-top: 12px;
@@ -333,7 +324,6 @@ body {
     min-width: 0;
     height: 100%;
 }
-
 .character-splash {
     background: rgba(3, 2, 15, 0.5);
     border-radius: 48px;
@@ -345,10 +335,7 @@ body {
     gap: 12px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
     height: 100%;
-    max-height: 100%;
 }
-
-/* 按钮区域 */
 .action-buttons {
     display: flex;
     justify-content: flex-end;
@@ -370,9 +357,7 @@ body {
     align-items: center;
     gap: 6px;
 }
-.action-btn:active {
-    transform: scale(0.96);
-}
+.action-btn:active { transform: scale(0.96); }
 .info-btn, .settings-btn {
     width: 36px;
     height: 36px;
@@ -386,13 +371,8 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 1.2rem;
-    transition: 0.1s;
 }
-.info-btn:active, .settings-btn:active {
-    transform: scale(0.96);
-}
-
-/* 立绘容器 */
+.info-btn:active, .settings-btn:active { transform: scale(0.96); }
 .splash-img-container {
     flex: 1;
     display: flex;
@@ -411,7 +391,6 @@ body {
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     background: #0b0719;
 }
-
 .splash-caption {
     text-align: center;
     color: #ffd9a5;
@@ -420,8 +399,6 @@ body {
     font-weight: 500;
     flex-shrink: 0;
 }
-
-/* 抽卡按钮 */
 .gacha-buttons {
     display: flex;
     gap: 18px;
@@ -508,7 +485,6 @@ body {
     visibility: visible;
     opacity: 1;
 }
-
 .modal-content {
     width: 85%;
     max-width: 550px;
@@ -537,7 +513,6 @@ body {
     border-top: 1px solid rgba(255, 200, 100, 0.3);
     padding-top: 12px;
 }
-
 .modal-header {
     padding: 18px 20px;
     background: #1f1938;
@@ -595,7 +570,6 @@ body {
     font-size: 0.7rem;
     color: #cbbaff;
 }
-
 .constellation-title {
     font-size: 0.85rem;
     margin-bottom: 8px;
@@ -623,8 +597,16 @@ body {
     color: #ffbc6e;
     font-weight: bold;
 }
+.constellation-five .constellation-name,
+.constellation-five .constellation-level {
+    color: #ffd966 !important;
+}
+.constellation-four .constellation-name,
+.constellation-four .constellation-level {
+    color: #c084fc !important;
+}
 
-/* 兑换弹窗 */
+/* 兑换 */
 .exchange-input {
     display: flex;
     align-items: center;
@@ -668,7 +650,7 @@ body {
     color: #ffdfaa;
 }
 
-/* 历史记录弹窗 */
+/* 历史记录 */
 .record-modal {
     width: 90%;
     max-width: 700px;
@@ -687,7 +669,6 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    contain: content;
 }
 .record-item {
     background: rgba(0, 0, 0, 0.5);
@@ -720,11 +701,9 @@ body {
     color: #ffbc6e;
     border-left: none;
     font-weight: bold;
-    transition: background 0.2s;
 }
 .load-more-btn:hover {
     background: rgba(0, 0, 0, 0.9);
-    transform: translateY(-1px);
 }
 .empty-history {
     text-align: center;
@@ -732,14 +711,14 @@ body {
     padding: 30px;
 }
 
-/* 抽卡结果弹窗 */
+/* ===== 卡片翻转动画（抽卡结果） ===== */
 .result-dialog {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(20px);
     z-index: 1100;
     display: flex;
@@ -753,31 +732,26 @@ body {
     visibility: visible;
     opacity: 1;
 }
-.result-dialog.active .dialog-container {
-    animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-@keyframes popIn {
-    from { opacity: 0; transform: scale(0.8); }
-    to { opacity: 1; transform: scale(1); }
-}
 .dialog-container {
-    width: 85%;
-    max-width: 500px;
-    max-height: 70%;
+    width: 90%;
+    max-width: 700px;
+    max-height: 85vh;
     background: #120e28;
-    border-radius: 56px;
+    border-radius: 48px;
     border: 2px solid rgba(255, 200, 100, 0.6);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
 }
 .dialog-header {
-    padding: 18px 20px;
+    padding: 16px 20px;
     background: #1f1938;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid rgba(255, 215, 150, 0.4);
+    flex-shrink: 0;
 }
 .dialog-header h3 {
     color: #ffe3a3;
@@ -790,52 +764,166 @@ body {
     color: #ffbc6e;
     cursor: pointer;
 }
+
 .dialog-content {
     flex: 1;
     overflow-y: auto;
     padding: 20px;
     display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-.dialog-item {
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 40px;
-    padding: 12px 18px;
-    display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
-    font-size: 1rem;
-    font-weight: 500;
-    border-left: 6px solid;
-    animation: fadeInUp 0.2s ease;
-}
-.dialog-star5 {
-    border-left-color: #ffb347;
-    background: linear-gradient(90deg, #2a1e3a, #0f0b1c);
-    color: #ffd966;
-}
-.dialog-star4 {
-    border-left-color: #c084fc;
-    color: #d9aaff;
-}
-.dialog-star3 {
-    border-left-color: #5f7f9e;
-    color: #bbccdd;
-}
-.dialog-star-label {
-    font-weight: bold;
-    background: rgba(0, 0, 0, 0.4);
-    padding: 2px 12px;
-    border-radius: 30px;
-    font-size: 0.8rem;
-}
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    min-height: 200px;
 }
 
-/* 提示通知 */
+/* 卡片网格 */
+.card-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    padding: 10px 0;
+}
+.card-grid-single .card-wrapper {
+    width: 70%;
+    max-width: 350px;
+    aspect-ratio: 3 / 2;
+}
+.card-grid-ten .card-wrapper {
+    width: 18%;
+    min-width: 80px;
+    aspect-ratio: 3 / 4;
+}
+
+.card-wrapper {
+    perspective: 800px;
+    cursor: pointer;
+}
+.card {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+}
+.card.flipped {
+    transform: rotateY(180deg);
+}
+
+.card-face {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 8px;
+    box-sizing: border-box;
+    border: 3px solid;
+    background: #1a1430;
+    overflow: hidden;
+}
+.card-back {
+    background: radial-gradient(circle at 30% 30%, #2a1f4a, #0b0719);
+    border-color: #6a5a8a;
+    transform: rotateY(0deg);
+}
+.card-back-icon {
+    font-size: 3rem;
+    color: #ffbc6e;
+    opacity: 0.6;
+    text-shadow: 0 0 20px #ffbc6e;
+}
+.card-front {
+    transform: rotateY(180deg);
+    background: linear-gradient(145deg, #1f1838, #0f0a20);
+    border-color: #ffbc6e; /* 默认由 JS 覆盖 */
+}
+.card-front .card-name {
+    font-weight: bold;
+    font-size: 1rem;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(0,0,0,0.8);
+    text-align: center;
+    margin-top: 4px;
+}
+.card-front .card-star-label {
+    font-size: 1rem;
+    color: #ffd966;
+    letter-spacing: 2px;
+}
+.card-front .card-extra {
+    font-size: 0.6rem;
+    color: #cbbaff;
+    margin-top: 4px;
+}
+.card-front .card-splash-img {
+    width: 100%;
+    height: auto;
+    max-height: 70%;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #0b0719;
+}
+
+/* 十连时卡片小尺寸 */
+.card-grid-ten .card-front .card-name {
+    font-size: 0.6rem;
+}
+.card-grid-ten .card-front .card-star-label {
+    font-size: 0.6rem;
+}
+.card-grid-ten .card-front .card-splash-img {
+    max-height: 50%;
+}
+
+/* 跳过按钮 */
+.skip-flip-btn {
+    position: absolute;
+    top: 16px;
+    right: 60px;
+    background: rgba(255, 188, 110, 0.9);
+    border: none;
+    border-radius: 30px;
+    padding: 6px 16px;
+    font-weight: bold;
+    color: #1a132e;
+    cursor: pointer;
+    z-index: 10;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+.skip-flip-btn:hover {
+    background: #ffbc6e;
+}
+
+/* 底部确认按钮 */
+.dialog-footer {
+    padding: 12px 20px 20px 20px;
+    display: flex;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.dialog-footer .btn-confirm {
+    padding: 10px 40px;
+    border-radius: 40px;
+    border: none;
+    background: #ffbc6e;
+    color: #1a132e;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+/* ===== Toast ===== */
 .toast-notice {
     position: fixed;
     top: 20px;
@@ -859,31 +947,56 @@ body {
     opacity: 1;
 }
 
-/* 滚动条美化 */
-.record-list::-webkit-scrollbar,
-.dialog-content::-webkit-scrollbar,
-.left-panel-scroll::-webkit-scrollbar,
-.constellation-section::-webkit-scrollbar,
-#statsModal .modal-body::-webkit-scrollbar {
-    width: 4px;
+/* ===== 设置弹窗中的开关 ===== */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+    flex-shrink: 0;
 }
-.record-list::-webkit-scrollbar-track,
-.dialog-content::-webkit-scrollbar-track,
-.left-panel-scroll::-webkit-scrollbar-track,
-.constellation-section::-webkit-scrollbar-track,
-#statsModal .modal-body::-webkit-scrollbar-track {
-    background: rgba(255, 255, 200, 0.1);
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
 }
-.record-list::-webkit-scrollbar-thumb,
-.dialog-content::-webkit-scrollbar-thumb,
-.left-panel-scroll::-webkit-scrollbar-thumb,
-.constellation-section::-webkit-scrollbar-thumb,
-#statsModal .modal-body::-webkit-scrollbar-thumb {
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #3a2f4a;
+    transition: .2s;
+    border-radius: 26px;
+}
+.slider::before {
+    content: "";
+    position: absolute;
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background: #ffdfaa;
+    transition: .2s;
+    border-radius: 50%;
+}
+.switch input:checked + .slider {
     background: #ffbc6e;
-    border-radius: 10px;
+}
+.switch input:checked + .slider::before {
+    transform: translateX(22px);
+    background: #1a132e;
+}
+.slider.round {
+    border-radius: 26px;
+}
+.slider.round::before {
+    border-radius: 50%;
 }
 
-/* 横屏提示（默认隐藏，仅在竖屏显示） */
+/* ===== 横屏提示 ===== */
 .orientation-tip {
     position: fixed;
     top: 0;
@@ -908,7 +1021,31 @@ body {
     }
 }
 
-/* 登录加载遮罩 */
+/* ===== 滚动条美化 ===== */
+.record-list::-webkit-scrollbar,
+.dialog-content::-webkit-scrollbar,
+.left-panel-scroll::-webkit-scrollbar,
+.constellation-section::-webkit-scrollbar,
+#statsModal .modal-body::-webkit-scrollbar {
+    width: 4px;
+}
+.record-list::-webkit-scrollbar-track,
+.dialog-content::-webkit-scrollbar-track,
+.left-panel-scroll::-webkit-scrollbar-track,
+.constellation-section::-webkit-scrollbar-track,
+#statsModal .modal-body::-webkit-scrollbar-track {
+    background: rgba(255, 255, 200, 0.1);
+}
+.record-list::-webkit-scrollbar-thumb,
+.dialog-content::-webkit-scrollbar-thumb,
+.left-panel-scroll::-webkit-scrollbar-thumb,
+.constellation-section::-webkit-scrollbar-thumb,
+#statsModal .modal-body::-webkit-scrollbar-thumb {
+    background: #ffbc6e;
+    border-radius: 10px;
+}
+
+/* ===== 登录加载遮罩 ===== */
 .login-loading {
     position: fixed;
     top: 0;
@@ -938,7 +1075,7 @@ body {
     to { transform: rotate(360deg); }
 }
 
-/* 介绍弹窗内容 */
+/* ===== 信息内容 ===== */
 .info-content {
     text-align: left;
     line-height: 1.6;
@@ -957,42 +1094,7 @@ body {
     margin: 8px 0;
 }
 
-/* 命座颜色 */
-.constellation-five .constellation-name,
-.constellation-five .constellation-level {
-    color: #ffd966 !important;
-}
-.constellation-four .constellation-name,
-.constellation-four .constellation-level {
-    color: #c084fc !important;
-}
-
-/* 性能优化：低端设备减少星星数量 */
-@media (max-width: 480px) {
-    .star, .shooting-star {
-        opacity: 0.4;
-    }
-}
-@media (prefers-reduced-motion: reduce) {
-    .star, .shooting-star, .gacha-btn, .dialog-item {
-        animation: none !important;
-        transition: none !important;
-    }
-    .star { opacity: 0.5; }
-    .shooting-star { display: none; }
-}
-
-/* 惯性滚动 */
-.left-panel-scroll,
-.record-list,
-.dialog-content,
-.constellation-section,
-#statsModal .modal-body {
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-}
-
-/* 响应式适配 */
+/* ===== 响应式 ===== */
 @media (max-width: 800px) {
     .landscape-wrapper {
         padding: 12px;
@@ -1042,80 +1144,24 @@ body {
     .constellation-section {
         max-height: 180px;
     }
-    /* ========== 在原有样式末尾追加 ========== */
-
-/* ---- 星星开关（切换开关） ---- */
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 48px;
-    height: 26px;
-    flex-shrink: 0;
+    .dialog-container {
+        width: 95%;
+        max-height: 90vh;
+    }
+    .card-grid-ten .card-wrapper {
+        width: 16%;
+        min-width: 60px;
+    }
+    .card-grid-single .card-wrapper {
+        width: 80%;
+    }
+    .skip-flip-btn {
+        top: 10px;
+        right: 50px;
+        font-size: 0.7rem;
+        padding: 4px 12px;
+    }
 }
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: #3a2f4a;
-    transition: .2s;
-    border-radius: 26px;
-}
-.slider::before {
-    content: "";
-    position: absolute;
-    height: 20px;
-    width: 20px;
-    left: 3px;
-    bottom: 3px;
-    background: #ffdfaa;
-    transition: .2s;
-    border-radius: 50%;
-}
-.switch input:checked + .slider {
-    background: #ffbc6e;
-}
-.switch input:checked + .slider::before {
-    transform: translateX(22px);
-    background: #1a132e;
-}
-.slider.round {
-    border-radius: 26px;
-}
-.slider.round::before {
-    border-radius: 50%;
-}
-
-/* ---- 星星隐藏（由 JS 控制 class） ---- */
-.star-bg.hidden .star,
-.star-bg.hidden .shooting-star {
-    display: none !important;
-}
-
-/* ---- 保底进度条 ---- */
-.pity-progress {
-    width: 100%;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    margin: 4px 0 8px 0;
-    overflow: hidden;
-}
-.pity-progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, #ffbc6e, #ff8a5c);
-    border-radius: 10px;
-    transition: width 0.3s ease;
-}
-
-/* ---- 响应式微调 ---- */
 @media (max-width: 600px) {
     .switch {
         width: 40px;
@@ -1130,5 +1176,4 @@ body {
     .switch input:checked + .slider::before {
         transform: translateX(18px);
     }
-}
 }
