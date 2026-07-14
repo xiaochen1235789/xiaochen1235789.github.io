@@ -8,7 +8,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>卡池 - 六哥荣耀WIKI (优化版)</title>
     <link rel="stylesheet" href="./css/chouka.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+    </script>
 </head>
 <body>
     <!-- 星空背景 -->
@@ -237,17 +238,19 @@
         // ================================================================
         //  完整优化版抽卡模拟器
         //  包含：卡片翻转动画、星星开关、保底进度、缓存、批量保存
+        //  修复：按钮事件提前绑定，确保未登录时按钮仍可点
         // ================================================================
         (function() {
             'use strict';
 
             // --- 配置 ---
-            const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
-            const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            var SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
+            var SUPABASE_KEY =
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
+            var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
             // --- DOM ---
-            const dom = {
+            var dom = {
                 jade: document.getElementById('jadeAmount'),
                 tickets: document.getElementById('ticketAmount'),
                 pity5: document.getElementById('pityCounter'),
@@ -280,7 +283,7 @@
             };
 
             // --- 状态 ---
-            let state = {
+            var state = {
                 user: null,
                 currentBanner: null,
                 bannerStart: null,
@@ -315,35 +318,41 @@
             };
 
             // --- 缓存工具 ---
-            const CACHE_TTL = 3600000;
+            var CACHE_TTL = 3600000;
 
             function getCached(key) {
-                const item = localStorage.getItem(key);
+                var item = localStorage.getItem(key);
                 if (!item) return null;
                 try {
-                    const { data, timestamp } = JSON.parse(item);
-                    if (Date.now() - timestamp > CACHE_TTL) {
+                    var parsed = JSON.parse(item);
+                    if (Date.now() - parsed.timestamp > CACHE_TTL) {
                         localStorage.removeItem(key);
                         return null;
                     }
-                    return data;
+                    return parsed.data;
                 } catch { return null; }
             }
 
             function setCached(key, data) {
-                localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
+                localStorage.setItem(key, JSON.stringify({ data: data, timestamp: Date.now() }));
             }
 
             // --- 超时 ---
-            function withTimeout(promise, ms) { ms = ms || 10000; return Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms))]); }
+            function withTimeout(promise, ms) {
+                ms = ms || 10000;
+                return Promise.race([promise, new Promise(function(_, reject) { setTimeout(function() { reject(
+                        new Error('Request timeout')); }, ms); })]);
+            }
 
             // --- 辅助 ---
-            let historyPageSize = 50;
-            let historyCurrentPage = 1;
-            let historyTotal = 0;
+            var historyPageSize = 50;
+            var historyCurrentPage = 1;
+            var historyTotal = 0;
 
             function escapeHtml(str) {
-                return str.replace(/[&<>]/g, function(m) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' } [m]); });
+                return str.replace(/[&<>]/g, function(m) {
+                    return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' } [m]);
+                });
             }
 
             function showTip(msg) { showNotification(msg, 'info'); }
@@ -569,7 +578,6 @@
                 dom.skipBtn.style.display = 'none';
             };
 
-            // 兼容旧调用
             function showResultDialog(results) {
                 showCardAnimation(results);
             }
@@ -646,11 +654,11 @@
                 var limited = [],
                     permanent = [],
                     four = [];
-                for (var _iterator = state.constellations.entries(), _step; !(_iterator = _iterator.next())
-                    .done;) {
-                    var _step$value = _step.value,
-                        name = _step$value[0],
-                        lv = _step$value[1];
+                var entries = state.constellations.entries();
+                for (var _i = 0; _i < entries.length; _i++) {
+                    var entry = entries[_i];
+                    var name = entry[0];
+                    var lv = entry[1];
                     if (name === state.upFiveStar) limited.push({ name: name, lv: lv });
                     else if (state.permanentFiveStar.indexOf(name) !== -1) permanent.push({ name: name, lv: lv });
                     else four.push({ name: name, lv: lv });
@@ -835,6 +843,7 @@
 
             async function singlePull() {
                 if (state.isDrawing) return showTip('跃迁进行中...');
+                if (!state.user) { showTip('请先登录'); return; }
                 state.isDrawing = true;
                 dom.singleBtn.disabled = true;
                 dom.tenBtn.disabled = true;
@@ -845,8 +854,10 @@
                         return res;
                     });
                     await saveAfterDraw(result ? [result] : []);
-                } catch (e) { console.error(e);
-                    showTip('抽卡出错'); } finally {
+                } catch (e) {
+                    console.error(e);
+                    showTip('抽卡出错');
+                } finally {
                     state.isDrawing = false;
                     dom.singleBtn.disabled = false;
                     dom.tenBtn.disabled = false;
@@ -855,6 +866,7 @@
 
             async function tenPull() {
                 if (state.isDrawing) return showTip('跃迁中...');
+                if (!state.user) { showTip('请先登录'); return; }
                 state.isDrawing = true;
                 dom.singleBtn.disabled = true;
                 dom.tenBtn.disabled = true;
@@ -871,8 +883,10 @@
                         return resList;
                     });
                     await saveAfterDraw(results || []);
-                } catch (e) { console.error(e);
-                    showTip('十连抽卡出错'); } finally {
+                } catch (e) {
+                    console.error(e);
+                    showTip('十连抽卡出错');
+                } finally {
                     state.isDrawing = false;
                     dom.singleBtn.disabled = false;
                     dom.tenBtn.disabled = false;
@@ -1055,22 +1069,23 @@
                 updateStatsModalContent();
             }
 
-            // --- 事件绑定 ---
+            // ================================================================
+            //  事件绑定（提前执行，不依赖登录）
+            // ================================================================
             function bindEvents() {
+                // 抽卡按钮
                 dom.singleBtn.addEventListener('click', function() {
-                    if (!state.user) { showTip('请先登录');
-                        setTimeout(function() { window.location.href = 'login-real.html'; }, 1500); return; }
+                    if (!state.user) { showTip('请先登录'); return; }
                     singlePull();
                 });
                 dom.tenBtn.addEventListener('click', function() {
-                    if (!state.user) { showTip('请先登录');
-                        setTimeout(function() { window.location.href = 'login-real.html'; }, 1500); return; }
+                    if (!state.user) { showTip('请先登录'); return; }
                     tenPull();
                 });
 
+                // 兑换
                 document.getElementById('exchangeBtn').onclick = function() {
-                    if (!state.user) { showTip('请先登录');
-                        setTimeout(function() { window.location.href = 'login-real.html'; }, 1500); return; }
+                    if (!state.user) { showTip('请先登录'); return; }
                     document.getElementById('exchangeModal').classList.add('active');
                 };
                 document.getElementById('closeExchangeBtn').onclick = function() { document.getElementById(
@@ -1103,25 +1118,40 @@
                         .exchangeRate) + ' 星琼';
                 });
 
-                document.getElementById('openRecordBtn').onclick = function() { renderHistoryModal();
-                    document.getElementById('recordModal').classList.add('active'); };
+                // 历史记录
+                document.getElementById('openRecordBtn').onclick = function() {
+                    if (!state.user) { showTip('请先登录'); return; }
+                    renderHistoryModal();
+                    document.getElementById('recordModal').classList.add('active');
+                };
                 document.getElementById('closeModalBtn').onclick = function() { document.getElementById('recordModal')
                         .classList.remove('active'); };
-                document.getElementById('statsBtn').onclick = function() { updateStatsModalContent();
-                    document.getElementById('statsModal').classList.add('active'); };
+
+                // 统计
+                document.getElementById('statsBtn').onclick = function() {
+                    if (!state.user) { showTip('请先登录'); return; }
+                    updateStatsModalContent();
+                    document.getElementById('statsModal').classList.add('active');
+                };
                 document.getElementById('closeStatsBtn').onclick = function() { document.getElementById('statsModal')
                         .classList.remove('active'); };
-                document.getElementById('infoBtn').onclick = function() { document.getElementById('infoModal')
-                        .classList.add('active'); };
+
+                // 规则说明
+                document.getElementById('infoBtn').onclick = function() {
+                    document.getElementById('infoModal').classList.add('active');
+                };
                 document.getElementById('closeInfoBtn').onclick = function() { document.getElementById('infoModal')
                         .classList.remove('active'); };
+
+                // 设置
                 document.getElementById('settingsBtn').onclick = function() {
-                    if (!state.user) { showTip('请先登录');
-                        setTimeout(function() { window.location.href = 'login-real.html'; }, 1500); return; }
+                    if (!state.user) { showTip('请先登录'); return; }
                     document.getElementById('settingsModal').classList.add('active');
                 };
                 document.getElementById('closeSettingsBtn').onclick = function() { document.getElementById(
                         'settingsModal').classList.remove('active'); };
+
+                // 增加星琼
                 document.getElementById('confirmAddJadeBtn').onclick = async function() {
                     if (!state.user) return;
                     var add = parseInt(document.getElementById('addJadeAmount').value);
@@ -1133,6 +1163,8 @@
                         showTip('增加了 ' + add + ' 星琼');
                     }
                 };
+
+                // 增加专票
                 document.getElementById('confirmAddTicketBtn').onclick = async function() {
                     if (!state.user) return;
                     var add = parseInt(document.getElementById('addTicketAmount').value);
@@ -1144,6 +1176,8 @@
                         showTip('增加了 ' + add + ' 张星轨专票');
                     }
                 };
+
+                // 重置命座
                 document.getElementById('resetConstellationsBtn').onclick = async function() {
                     if (!state.user) return;
                     if (confirm('确定清空所有命座吗？')) {
@@ -1153,6 +1187,8 @@
                         showTip('命座已重置');
                     }
                 };
+
+                // 重置历史
                 document.getElementById('resetHistoryBtn').onclick = async function() {
                     if (!state.user) return;
                     if (confirm('确定清空抽卡记录和统计吗？')) {
@@ -1171,11 +1207,13 @@
                     }
                 };
 
+                // 点击模态背景关闭
                 document.querySelectorAll('.modal-mask').forEach(function(m) {
                     m.addEventListener('click', function(e) { if (e.target === m) m.classList.remove(
                         'active'); });
                 });
 
+                // ESC关闭
                 document.addEventListener('keydown', function(e) {
                     if (e.key === 'Escape') {
                         document.querySelectorAll('.modal-mask.active, .result-dialog.active').forEach(function(
@@ -1183,6 +1221,7 @@
                     }
                 });
 
+                // 星星开关
                 var starToggle = document.getElementById('starToggle');
                 starToggle.addEventListener('change', function() {
                     var val = this.checked;
@@ -1197,21 +1236,35 @@
                 });
             }
 
-            // --- 初始化 ---
+            // ================================================================
+            //  初始化
+            // ================================================================
             async function init() {
+                // 星星状态恢复
                 var stored = localStorage.getItem('star_render_enabled');
                 if (stored === null) localStorage.setItem('star_render_enabled', 'true');
                 var toggle = document.getElementById('starToggle');
                 toggle.checked = localStorage.getItem('star_render_enabled') !== 'false';
 
                 initStars();
+
                 var ignoreBtn = document.getElementById('ignoreOrientationBtn');
                 if (ignoreBtn) ignoreBtn.onclick = function() { document.getElementById('orientationTip').style
                         .display = 'none'; };
                 dom.mainContent.style.display = 'flex';
 
-                await Promise.all([fetchCurrentBanner(), fetchGachaPools(), fetchGachaConfig()]);
+                // ========== 关键修复：先绑定事件，让按钮立刻可点 ==========
+                bindEvents();
 
+                // 加载公共数据
+                try {
+                    await Promise.all([fetchCurrentBanner(), fetchGachaPools(), fetchGachaConfig()]);
+                } catch (e) {
+                    console.warn('公共数据加载失败', e);
+                    showTip('卡池信息加载失败，请刷新');
+                }
+
+                // 登录检查
                 var _ref7 = await supabase.auth.getUser();
                 var user = _ref7.data.user,
                     error = _ref7.error;
@@ -1220,12 +1273,21 @@
                     return;
                 }
                 state.user = user;
-                await loadUserData();
-                bindEvents();
+
+                // 加载用户数据
+                try {
+                    await loadUserData();
+                } catch (e) {
+                    console.error('用户数据加载失败', e);
+                    showTip('用户数据加载失败，部分功能可能不可用');
+                }
+
                 updateButtonsState();
                 setInterval(function() { updateCountdown();
                     updateButtonsState(); }, 1000);
             }
+
+            // 启动
             init();
         })();
     </script>
