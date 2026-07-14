@@ -7,35 +7,33 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>卡池 - 六哥荣耀WIKI</title>
-    <!-- 使用您原来的远程 CSS 路径 -->
-    <link rel="stylesheet" href="https://xiaochen1235789.github.io/css/chouka.css">
-    <!-- 依赖库 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js">
-    </script>
+    <link rel="stylesheet" href="https://xiaochen1235789.github.io/css/chouka.css">
+   
+    <style>
+        /* 临时内联兼容旧样式，但我们会全部移到外部CSS */
+    </style>
 </head>
 <body>
-    <!-- 星空背景 -->
     <div class="star-bg" id="starBg"></div>
-
-    <!-- 主布局 -->
-    <div class="landscape-wrapper" id="mainContent">
+    <div id="orientationTip" class="orientation-tip">
+        <span>🔄</span> 请将设备旋转至横屏模式<br><small>获得最佳抽卡体验</small><br>
+        <button id="ignoreOrientationBtn" style="margin-top:20px;padding:8px 16px;background:#ffbc6e;color:#1a132e;border:none;border-radius:30px;cursor:pointer;">继续竖屏使用</button>
+    </div>
+    <div class="landscape-wrapper" id="mainContent" style="display:flex;">
         <!-- 左侧面板 -->
         <div class="left-panel">
             <div class="left-panel-scroll">
-                <!-- 卡池信息 -->
                 <div class="card-pool">
                     <div class="pool-name" id="poolName">✨ 加载中... ✨</div>
                     <div class="pool-sub" id="poolSub">「--」</div>
                 </div>
-                <!-- UP 角色 -->
                 <div class="up-char">
                     <span>⭐ 当期UP ⭐</span><br>
                     <span id="upCharName">🌟 -- 🌟</span><br>
                     <small>5星限定角色 · 50%概率UP</small>
                 </div>
-                <!-- 资源 -->
                 <div class="resources">
                     <div class="jade-left">
                         <span class="jade-icon"></span>
@@ -46,29 +44,17 @@
                         <span class="ticket-amount" id="ticketAmount">--</span>
                     </div>
                 </div>
-                <!-- 倒计时 -->
-                <div class="countdown-box" id="countdownBox">
+                <div class="countdown-box">
                     <div class="countdown-title">⏳ 卡池剩余时间</div>
                     <div class="countdown-time" id="countdownTimer">--天 --时 --分 --秒</div>
-                    <div class="disabled-notice" id="disabledNotice" style="display: none;">⚠️ 卡池已关闭，无法跃迁</div>
+                    <div class="disabled-notice" id="disabledNotice" style="display:none;">⚠️ 卡池已关闭，无法跃迁</div>
                 </div>
-                <!-- 保底 -->
                 <div class="pity-card">
-                    <div class="pity-item">
-                        <span>🌟 5星保底计数</span>
-                        <span class="pity-value" id="pityCounter">0</span><span> / 90</span>
-                    </div>
-                    <div class="pity-progress">
-                        <div class="pity-progress-bar" id="pityProgress5" style="width:0%;"></div>
-                    </div>
-                    <div class="pity-item">
-                        <span>🎴 4星保底计数</span>
-                        <span class="pity-value" id="fourPityCounter">0</span><span> / 10</span>
-                    </div>
-                    <div class="pity-progress">
-                        <div class="pity-progress-bar" id="pityProgress4" style="width:0%;"></div>
-                    </div>
-                    <div class="pity-enhanced" id="enhancedPityHint">
+                    <div class="pity-item"><span>🌟 5星保底计数</span><span class="pity-value" id="pityCounter">0</span><span> / 90</span></div>
+                    <div class="pity-progress"><div class="pity-progress-bar" id="pityProgress5" style="width:0%;"></div></div>
+                    <div class="pity-item"><span>🎴 4星保底计数</span><span class="pity-value" id="fourPityCounter">0</span><span> / 10</span></div>
+                    <div class="pity-progress"><div class="pity-progress-bar" id="pityProgress4" style="width:0%;"></div></div>
+                    <div class="pity-enhanced">
                         <div><span class="label">🔍 软保底剩余：</span><span class="value" id="softPityRemain">--</span></div>
                         <div><span class="label">🎯 下次五星类型：</span><span class="value" id="nextFiveType">--</span></div>
                         <div><span class="label">🎴 四星保底剩余：</span><span class="value" id="fourPityRemain">--</span></div>
@@ -83,14 +69,14 @@
         <div class="right-panel">
             <div class="character-splash">
                 <div class="action-buttons">
-                    <div class="info-btn" id="infoBtn" role="button" tabindex="0" aria-label="规则说明">?</div>
-                    <div class="settings-btn" id="settingsBtn" role="button" tabindex="0" aria-label="设置">⚙️</div>
+                    <div class="info-btn" id="infoBtn">?</div>
+                    <div class="settings-btn" id="settingsBtn">⚙️</div>
                     <div class="action-btn" id="statsBtn">📊 统计</div>
                     <div class="action-btn" id="exchangeBtn">🎫 兑换</div>
                     <div class="action-btn" id="openRecordBtn">📜 记录</div>
                 </div>
                 <div class="splash-img-container">
-                    <img id="charSplash" class="splash-img" src="" alt="角色立绘">
+                    <img id="charSplash" class="splash-img" src="" alt="立绘">
                 </div>
                 <div class="splash-caption" id="splashCaption">--</div>
                 <div class="gacha-buttons">
@@ -105,14 +91,11 @@
         </div>
     </div>
 
-    <!-- ===== 各弹窗 ===== -->
+    <!-- ===== 弹窗 ===== -->
     <!-- 统计 -->
-    <div id="statsModal" class="modal-mask" role="dialog" aria-modal="true">
+    <div id="statsModal" class="modal-mask">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>📊 抽卡统计报告 & 角色命座</h3>
-                <button class="close-modal" id="closeStatsBtn" aria-label="关闭">✖</button>
-            </div>
+            <div class="modal-header"><h3>📊 抽卡统计报告 & 角色命座</h3><button class="close-modal" id="closeStatsBtn">✖</button></div>
             <div class="modal-body">
                 <div class="stats-grid" id="statsGrid"></div>
                 <div class="constellation-section">
@@ -124,17 +107,14 @@
     </div>
 
     <!-- 兑换 -->
-    <div id="exchangeModal" class="modal-mask" role="dialog" aria-modal="true">
+    <div id="exchangeModal" class="modal-mask">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>🎫 星轨专票兑换</h3>
-                <button class="close-modal" id="closeExchangeBtn" aria-label="关闭">✖</button>
-            </div>
+            <div class="modal-header"><h3>🎫 星轨专票兑换</h3><button class="close-modal" id="closeExchangeBtn">✖</button></div>
             <div class="modal-body">
                 <div class="exchange-info">✨ 160星琼 = 1张星轨专票 ✨</div>
                 <div class="exchange-input">
                     <span>兑换数量：</span>
-                    <input type="number" id="exchangeAmount" value="1" min="1" max="1000" step="1" aria-label="兑换数量">
+                    <input type="number" id="exchangeAmount" value="1" min="1" max="1000" step="1">
                     <span>张</span>
                 </div>
                 <div class="exchange-info" id="exchangePreview">需要消耗 160 星琼</div>
@@ -147,68 +127,66 @@
     </div>
 
     <!-- 历史记录 -->
-    <div id="recordModal" class="modal-mask" role="dialog" aria-modal="true">
+    <div id="recordModal" class="modal-mask">
         <div class="record-modal">
-            <div class="modal-header">
-                <span>📜 跃迁记录 (最多2000条)</span>
-                <button class="close-modal" id="closeModalBtn" aria-label="关闭">✖</button>
-            </div>
-            <div id="recordList" class="record-list">
-                <div class="empty-history">暂无抽卡记录</div>
-            </div>
+            <div class="modal-header"><span>📜 跃迁记录 (最多2000条)</span><button class="close-modal" id="closeModalBtn">✖</button></div>
+            <div id="recordList" class="record-list"><div class="empty-history">暂无抽卡记录</div></div>
         </div>
     </div>
 
-    <!-- 抽卡结果 -->
-    <div id="resultDialog" class="result-dialog" role="dialog" aria-modal="true">
+    <!-- ===== 抽卡结果动画（卡片翻转） ===== -->
+    <div id="resultDialog" class="result-dialog">
         <div class="dialog-container">
             <div class="dialog-header">
                 <h3>✨ 本次跃迁结果 ✨</h3>
-                <button class="close-dialog-btn" onclick="window.closeResultDialogGlobal()" aria-label="关闭">✖</button>
+                <button class="close-dialog-btn" onclick="window.closeResultDialogGlobal()">✖</button>
             </div>
+            <!-- 卡片容器 -->
             <div id="dialogContent" class="dialog-content"></div>
+            <!-- 跳过按钮（十连时显示） -->
+            <button id="skipFlipBtn" class="skip-flip-btn" style="display:none;">⏩ 跳过</button>
+            <!-- 底部确认按钮（点击关闭） -->
+            <div class="dialog-footer">
+                <button id="confirmResultBtn" class="btn-confirm" style="display:none;">确定</button>
+            </div>
         </div>
     </div>
 
-    <!-- 设置 -->
-    <div id="settingsModal" class="modal-mask" role="dialog" aria-modal="true">
+    <!-- 设置弹窗 -->
+    <div id="settingsModal" class="modal-mask">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>⚙️ 设置</h3>
-                <button class="close-modal" id="closeSettingsBtn" aria-label="关闭">✖</button>
-            </div>
+            <div class="modal-header"><h3>⚙️ 设置</h3><button class="close-modal" id="closeSettingsBtn">✖</button></div>
             <div class="modal-body">
-                <div style="display: flex; flex-direction: column; gap: 20px;">
+                <div style="display:flex;flex-direction:column;gap:20px;">
                     <!-- 星星渲染开关 -->
-                    <div style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px; display: flex; align-items: center; justify-content: space-between;">
-                        <span style="color: #ffdfaa;">✨ 星星渲染</span>
+                    <div style="background:rgba(0,0,0,0.4);border-radius:32px;padding:12px;display:flex;align-items:center;justify-content:space-between;">
+                        <span style="color:#ffdfaa;">✨ 星星渲染</span>
                         <label class="switch">
                             <input type="checkbox" id="starToggle" checked>
                             <span class="slider round"></span>
                         </label>
                     </div>
-                    <!-- 增加资源 -->
-                    <div style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px;">
-                        <div style="margin-bottom: 8px;">✨ 增加星琼</div>
-                        <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
-                            <input type="number" id="addJadeAmount" value="1000" min="1" max="999999" step="100" style="width: 120px; padding: 6px; border-radius: 30px; border: 1px solid #ffbc6e; background: rgba(0,0,0,0.6); color: #ffdfaa; text-align: center;">
-                            <button id="confirmAddJadeBtn" class="btn-confirm" style="padding: 6px 16px;">增加</button>
+                    <div style="background:rgba(0,0,0,0.4);border-radius:32px;padding:12px;">
+                        <div style="margin-bottom:8px;">✨ 增加星琼</div>
+                        <div style="display:flex;gap:8px;justify-content:center;align-items:center;">
+                            <input type="number" id="addJadeAmount" value="1000" min="1" max="999999" step="100" style="width:120px;padding:6px;border-radius:30px;border:1px solid #ffbc6e;background:rgba(0,0,0,0.6);color:#ffdfaa;text-align:center;">
+                            <button id="confirmAddJadeBtn" class="btn-confirm" style="padding:6px 16px;">增加</button>
                         </div>
                     </div>
-                    <div style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px;">
-                        <div style="margin-bottom: 8px;">🎫 增加星轨专票</div>
-                        <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
-                            <input type="number" id="addTicketAmount" value="10" min="1" max="9999" step="1" style="width: 120px; padding: 6px; border-radius: 30px; border: 1px solid #ffbc6e; background: rgba(0,0,0,0.6); color: #ffdfaa; text-align: center;">
-                            <button id="confirmAddTicketBtn" class="btn-confirm" style="padding: 6px 16px;">增加</button>
+                    <div style="background:rgba(0,0,0,0.4);border-radius:32px;padding:12px;">
+                        <div style="margin-bottom:8px;">🎫 增加星轨专票</div>
+                        <div style="display:flex;gap:8px;justify-content:center;align-items:center;">
+                            <input type="number" id="addTicketAmount" value="10" min="1" max="9999" step="1" style="width:120px;padding:6px;border-radius:30px;border:1px solid #ffbc6e;background:rgba(0,0,0,0.6);color:#ffdfaa;text-align:center;">
+                            <button id="confirmAddTicketBtn" class="btn-confirm" style="padding:6px 16px;">增加</button>
                         </div>
                     </div>
-                    <div style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px;">
-                        <div style="margin-bottom: 8px;">🔄 重置命座</div>
-                        <button id="resetConstellationsBtn" class="btn-confirm" style="background: #ff8888; color: #1a132e;">清空所有命座</button>
+                    <div style="background:rgba(0,0,0,0.4);border-radius:32px;padding:12px;">
+                        <div style="margin-bottom:8px;">🔄 重置命座</div>
+                        <button id="resetConstellationsBtn" class="btn-confirm" style="background:#ff8888;color:#1a132e;">清空所有命座</button>
                     </div>
-                    <div style="background: rgba(0,0,0,0.4); border-radius: 32px; padding: 12px;">
-                        <div style="margin-bottom: 8px;">🗑️ 重置历史记录</div>
-                        <button id="resetHistoryBtn" class="btn-confirm" style="background: #ff8888; color: #1a132e;">清空抽卡记录</button>
+                    <div style="background:rgba(0,0,0,0.4);border-radius:32px;padding:12px;">
+                        <div style="margin-bottom:8px;">🗑️ 重置历史记录</div>
+                        <button id="resetHistoryBtn" class="btn-confirm" style="background:#ff8888;color:#1a132e;">清空抽卡记录</button>
                     </div>
                 </div>
             </div>
@@ -216,12 +194,9 @@
     </div>
 
     <!-- 规则说明 -->
-    <div id="infoModal" class="modal-mask" role="dialog" aria-modal="true">
+    <div id="infoModal" class="modal-mask">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>❓ 抽卡规则说明</h3>
-                <button class="close-modal" id="closeInfoBtn" aria-label="关闭">✖</button>
-            </div>
+            <div class="modal-header"><h3>❓ 抽卡规则说明</h3><button class="close-modal" id="closeInfoBtn">✖</button></div>
             <div class="modal-body">
                 <div class="info-content">
                     <p><span class="highlight-gold">✨ 统计页面说明 ✨</span><br>
@@ -232,121 +207,27 @@
                         • 重复获得角色（未满命）→ 命座+1，无补偿。<br>
                         • 满命后重复获得五星角色 → 补偿 <span style="color:orange;">800</span> 星琼<br>
                         • 满命后重复获得四星角色 → 补偿 <span style="color:orange;">160</span> 星琼</p>
-                    <p style="margin-top: 16px; text-align: center;">💡 祝您欧气满满，每抽都出金！</p>
+                    <p style="margin-top:16px;text-align:center;">💡 祝您欧气满满，每抽都出金！</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Toast 提示 -->
     <div id="toastNotice" class="toast-notice"></div>
 
-    <!-- ============================================================ -->
-    <!-- 完整 JavaScript（包含所有优化，且动态注入新增样式）           -->
-    <!-- ============================================================ -->
     <script>
+        // ================================================================
+        //  完整优化版抽卡模拟器（含卡片翻转动画）
+        // ================================================================
         (function() {
             'use strict';
 
-            // ======================== 动态注入新增样式 ========================
-            // 因为远程 CSS 中没有星星开关、进度条等样式，这里运行时注入
-            const style = document.createElement('style');
-            style.textContent = `
-                /* ---- 星星开关（切换开关） ---- */
-                .switch {
-                    position: relative;
-                    display: inline-block;
-                    width: 48px;
-                    height: 26px;
-                    flex-shrink: 0;
-                }
-                .switch input {
-                    opacity: 0;
-                    width: 0;
-                    height: 0;
-                }
-                .slider {
-                    position: absolute;
-                    cursor: pointer;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: #3a2f4a;
-                    transition: .2s;
-                    border-radius: 26px;
-                }
-                .slider::before {
-                    content: "";
-                    position: absolute;
-                    height: 20px;
-                    width: 20px;
-                    left: 3px;
-                    bottom: 3px;
-                    background: #ffdfaa;
-                    transition: .2s;
-                    border-radius: 50%;
-                }
-                .switch input:checked + .slider {
-                    background: #ffbc6e;
-                }
-                .switch input:checked + .slider::before {
-                    transform: translateX(22px);
-                    background: #1a132e;
-                }
-                .slider.round {
-                    border-radius: 26px;
-                }
-                .slider.round::before {
-                    border-radius: 50%;
-                }
-
-                /* ---- 星星隐藏（由 JS 控制 class） ---- */
-                .star-bg.hidden .star,
-                .star-bg.hidden .shooting-star {
-                    display: none !important;
-                }
-
-                /* ---- 保底进度条 ---- */
-                .pity-progress {
-                    width: 100%;
-                    height: 6px;
-                    background: rgba(255, 255, 255, 0.1);
-                    border-radius: 10px;
-                    margin: 4px 0 8px 0;
-                    overflow: hidden;
-                }
-                .pity-progress-bar {
-                    height: 100%;
-                    background: linear-gradient(90deg, #ffbc6e, #ff8a5c);
-                    border-radius: 10px;
-                    transition: width 0.3s ease;
-                }
-
-                @media (max-width: 600px) {
-                    .switch {
-                        width: 40px;
-                        height: 22px;
-                    }
-                    .slider::before {
-                        height: 16px;
-                        width: 16px;
-                        left: 3px;
-                        bottom: 3px;
-                    }
-                    .switch input:checked + .slider::before {
-                        transform: translateX(18px);
-                    }
-                }
-            `;
-            document.head.appendChild(style);
-
-            // ======================== 配置 ========================
+            // --- 配置 ---
             const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
             const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
             const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-            // ======================== DOM 引用 ========================
+            // --- DOM ---
             const dom = {
                 jade: document.getElementById('jadeAmount'),
                 tickets: document.getElementById('ticketAmount'),
@@ -375,9 +256,11 @@
                 mainContent: document.getElementById('mainContent'),
                 pityProgress5: document.getElementById('pityProgress5'),
                 pityProgress4: document.getElementById('pityProgress4'),
+                skipBtn: document.getElementById('skipFlipBtn'),
+                confirmBtn: document.getElementById('confirmResultBtn')
             };
 
-            // ======================== 状态 ========================
+            // --- 状态 ---
             let state = {
                 user: null,
                 currentBanner: null,
@@ -412,21 +295,49 @@
                 isDrawing: false
             };
 
-            // ======================== 工具函数 ========================
-            function showTip(msg) { showNotification(msg, 'info'); }
-
-            function showNotification(msg, type) {
-                dom.toast.textContent = msg;
-                dom.toast.className = 'toast-notice ' + (type || '');
-                setTimeout(() => dom.toast.classList.add('show'), 10);
-                setTimeout(() => dom.toast.classList.remove('show'), 3000);
+            // --- 缓存工具 ---
+            const CACHE_TTL = 3600000;
+            function getCached(key) {
+                const item = localStorage.getItem(key);
+                if (!item) return null;
+                try {
+                    const { data, timestamp } = JSON.parse(item);
+                    if (Date.now() - timestamp > CACHE_TTL) {
+                        localStorage.removeItem(key);
+                        return null;
+                    }
+                    return data;
+                } catch { return null; }
             }
+            function setCached(key, data) {
+                localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
+            }
+
+            // --- 超时 ---
+            function withTimeout(promise, ms = 10000) {
+                return Promise.race([
+                    promise,
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms))
+                ]);
+            }
+
+            // --- 辅助 ---
+            let historyPageSize = 50;
+            let historyCurrentPage = 1;
+            let historyTotal = 0;
 
             function escapeHtml(str) {
                 return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' } [m]));
             }
+            function showTip(msg) { showNotification(msg, 'info'); }
+            function showNotification(msg, type = 'info') {
+                dom.toast.textContent = msg;
+                dom.toast.className = `toast-notice ${type}`;
+                setTimeout(() => dom.toast.classList.add('show'), 10);
+                setTimeout(() => dom.toast.classList.remove('show'), 3000);
+            }
 
-            // ======================== 概率计算 ========================
+            // --- 概率 ---
             function getCurrentFiveStarRate(pity) {
                 if (pity >= state.pity5Max - 1) return 1.0;
                 if (pity < state.softPityStart) return 0.006;
@@ -435,28 +346,26 @@
                 return Math.min(0.006 + (1.0 - 0.006) * (step / maxStep), 1.0);
             }
 
-            // ======================== UI 更新 ========================
+            // --- UI 更新 ---
             function updateUI() {
                 dom.jade.innerText = state.starJade;
                 dom.tickets.innerText = state.tickets;
                 dom.pity5.innerText = state.fiveStarPity;
                 dom.pity4.innerText = state.fourStarPity;
                 let rate = getCurrentFiveStarRate(state.fiveStarPity);
-                dom.rate.innerText = '当前5星概率: ' + (rate * 100).toFixed(2) + '%';
-                // 软保底
+                dom.rate.innerText = `当前5星概率: ${(rate * 100).toFixed(2)}%`;
                 if (state.fiveStarPity < state.softPityStart) {
-                    dom.softRemain.innerText = (state.softPityStart - state.fiveStarPity) + ' 抽后进入软保底区';
+                    dom.softRemain.innerText = `${state.softPityStart - state.fiveStarPity} 抽后进入软保底区`;
                 } else {
-                    dom.softRemain.innerText = '已进入软保底区 (' + state.fiveStarPity + '/' + state.pity5Max + ')';
+                    dom.softRemain.innerText = `已进入软保底区 (${state.fiveStarPity}/${state.pity5Max})`;
                 }
-                dom.nextType.innerText = state.guaranteedUp ? '大保底（必得UP）' : '小保底（50%概率UP）';
-                dom.fourRemain.innerText = (state.pity4Max - state.fourStarPity) + ' 抽后必出四星';
-                // 进度条
+                dom.nextType.innerText = state.guaranteedUp ? "大保底（必得UP）" : "小保底（50%概率UP）";
+                dom.fourRemain.innerText = `${state.pity4Max - state.fourStarPity} 抽后必出四星`;
                 dom.pityProgress5.style.width = Math.min((state.fiveStarPity / state.pity5Max) * 100, 100) + '%';
                 dom.pityProgress4.style.width = Math.min((state.fourStarPity / state.pity4Max) * 100, 100) + '%';
             }
 
-            // ======================== 倒计时 & 按钮状态 ========================
+            // --- 倒计时 ---
             function updateCountdown() {
                 if (!state.bannerStart || !state.bannerEnd) {
                     dom.countdownTimer.innerText = '卡池未加载';
@@ -473,7 +382,7 @@
                     const hours = Math.floor((diff % 86400000) / 3600000);
                     const mins = Math.floor((diff % 3600000) / 60000);
                     const secs = Math.floor((diff % 60000) / 1000);
-                    dom.countdownTimer.innerText = '距离开启 ' + days + '天 ' + hours + '时 ' + mins + '分 ' + secs + '秒';
+                    dom.countdownTimer.innerText = `距离开启 ${days}天 ${hours}时 ${mins}分 ${secs}秒`;
                     return;
                 }
                 const diff = state.bannerEnd - now;
@@ -481,7 +390,7 @@
                 const hours = Math.floor((diff % 86400000) / 3600000);
                 const mins = Math.floor((diff % 3600000) / 60000);
                 const secs = Math.floor((diff % 60000) / 1000);
-                dom.countdownTimer.innerText = days + '天 ' + hours + '时 ' + mins + '分 ' + secs + '秒';
+                dom.countdownTimer.innerText = `${days}天 ${hours}时 ${mins}分 ${secs}秒`;
             }
 
             function updateButtonsState() {
@@ -509,12 +418,11 @@
                 }
             }
 
-            // ======================== 星空（带开关） ========================
+            // --- 星空 ---
             function initStars() {
                 const starContainer = document.getElementById('starBg');
                 if (!starContainer) return;
                 starContainer.innerHTML = '';
-                // 检查开关状态
                 const enabled = localStorage.getItem('star_render_enabled');
                 if (enabled === 'false') {
                     starContainer.classList.add('hidden');
@@ -524,7 +432,6 @@
                 const w = window.innerWidth;
                 let starCount = w <= 480 ? 60 : (w <= 768 ? 100 : 180);
                 let meteorCount = w <= 480 ? 2 : (w <= 768 ? 3 : 4);
-                // 低端设备减半
                 if (window.navigator.hardwareConcurrency && window.navigator.hardwareConcurrency < 4) {
                     starCount = Math.floor(starCount / 2);
                     meteorCount = Math.floor(meteorCount / 2);
@@ -550,55 +457,140 @@
                 }
             }
 
-            // ======================== 星星开关事件 ========================
-            (function starToggleInit() {
-                const STORAGE_KEY = 'star_render_enabled';
-                const toggle = document.getElementById('starToggle');
-                let stored = localStorage.getItem(STORAGE_KEY);
-                if (stored === null) {
-                    localStorage.setItem(STORAGE_KEY, 'true');
-                    stored = 'true';
-                }
-                toggle.checked = stored === 'true';
-                toggle.addEventListener('change', function() {
-                    const val = this.checked;
-                    localStorage.setItem(STORAGE_KEY, String(val));
-                    const bg = document.getElementById('starBg');
-                    if (val) {
-                        bg.classList.remove('hidden');
-                        if (bg.children.length === 0) initStars();
-                    } else {
-                        bg.classList.add('hidden');
+            // ======================== 卡片翻转动画 ========================
+            let flipResolve = null; // 用于控制关闭
+            let skipAll = false;
+
+            function showCardAnimation(results) {
+                if (!results || results.length === 0) return;
+                const container = dom.dialogContent;
+                container.innerHTML = '';
+                dom.skipBtn.style.display = results.length > 1 ? 'block' : 'none';
+                dom.confirmBtn.style.display = 'none'; // 初始隐藏，翻完后显示
+
+                // 生成卡片
+                const isSingle = results.length === 1;
+                const gridClass = isSingle ? 'card-grid-single' : 'card-grid-ten';
+
+                const grid = document.createElement('div');
+                grid.className = `card-grid ${gridClass}`;
+
+                results.forEach((item, index) => {
+                    const cardWrap = document.createElement('div');
+                    cardWrap.className = 'card-wrapper';
+
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    // 正面
+                    const front = document.createElement('div');
+                    front.className = 'card-face card-front';
+                    // 根据星级设置边框颜色
+                    let starColor = '';
+                    if (item.star === 5) starColor = 'gold';
+                    else if (item.star === 4) starColor = 'purple';
+                    else starColor = 'blue';
+                    front.style.borderColor = starColor;
+
+                    let contentHtml = '';
+                    // 如果是五星限定且是UP角色，显示立绘图片
+                    if (item.star === 5 && item.name === state.upFiveStar) {
+                        const splashUrl = state.currentBanner?.splash_url || '';
+                        contentHtml = `<img src="${splashUrl}" alt="${escapeHtml(item.name)}" class="card-splash-img">`;
+                    }
+                    contentHtml += `<div class="card-name">${escapeHtml(item.name)}</div>`;
+                    contentHtml += `<div class="card-star-label">${'★'.repeat(item.star)}</div>`;
+                    if (item.constellationMsg) {
+                        contentHtml += `<div class="card-extra">${escapeHtml(item.constellationMsg)}</div>`;
+                    }
+                    front.innerHTML = contentHtml;
+
+                    // 背面
+                    const back = document.createElement('div');
+                    back.className = 'card-face card-back';
+                    back.innerHTML = '<span class="card-back-icon">✦</span>';
+
+                    card.appendChild(front);
+                    card.appendChild(back);
+                    cardWrap.appendChild(card);
+                    grid.appendChild(cardWrap);
+                });
+
+                container.appendChild(grid);
+
+                // 显示弹窗
+                dom.resultDialog.classList.add('active');
+                skipAll = false;
+
+                // 绑定点击翻转（点击卡片翻转）
+                const cards = container.querySelectorAll('.card');
+                cards.forEach((card, idx) => {
+                    card.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        if (!this.classList.contains('flipped')) {
+                            this.classList.add('flipped');
+                            // 如果是最后一张翻转且不是跳过触发，检查是否全部翻开
+                            checkAllFlipped();
+                        }
+                    });
+                });
+
+                // 跳过按钮
+                dom.skipBtn.onclick = function() {
+                    skipAll = true;
+                    cards.forEach(card => card.classList.add('flipped'));
+                    dom.skipBtn.style.display = 'none';
+                    checkAllFlipped();
+                };
+
+                // 确定按钮（关闭）
+                dom.confirmBtn.onclick = function() {
+                    dom.resultDialog.classList.remove('active');
+                    dom.confirmBtn.style.display = 'none';
+                    dom.skipBtn.style.display = 'none';
+                    if (flipResolve) {
+                        flipResolve();
+                        flipResolve = null;
+                    }
+                };
+
+                // 点击弹窗背景关闭（但仅在全部翻开后）
+                dom.resultDialog.addEventListener('click', function(e) {
+                    if (e.target === this && dom.confirmBtn.style.display !== 'none') {
+                        dom.confirmBtn.click();
                     }
                 });
-            })();
 
-            // ======================== 结果弹窗 ========================
-            function showResultDialog(results) {
-                if (!results || results.length === 0) return;
-                const fragment = document.createDocumentFragment();
-                for (let item of results) {
-                    const starClass = item.star === 5 ? 'dialog-star5' : (item.star === 4 ? 'dialog-star4' : 'dialog-star3');
-                    const starLabel = item.star === 5 ? '五星' : (item.star === 4 ? '四星' : '三星');
-                    let extra = item.constellationMsg ? '<span style="margin-left:8px; font-size:0.7rem;">' + item
-                        .constellationMsg + '</span>' : '';
-                    const div = document.createElement('div');
-                    div.className = 'dialog-item ' + starClass;
-                    div.innerHTML = '<span>' + escapeHtml(item.name) + '</span><span class="dialog-star-label">' +
-                        starLabel + extra + '</span>';
-                    fragment.appendChild(div);
+                // 初始检查（如果是单抽，可自动翻转？但用户要求点击卡牌翻转，所以不自动）
+                // 但若十连，部分用户可能想逐个点击，保留。
+                // 若全部已翻开（比如跳过触发），显示确定按钮
+                function checkAllFlipped() {
+                    const all = container.querySelectorAll('.card');
+                    const flipped = container.querySelectorAll('.card.flipped');
+                    if (all.length === flipped.length) {
+                        dom.confirmBtn.style.display = 'block';
+                        dom.skipBtn.style.display = 'none';
+                    }
                 }
-                dom.dialogContent.innerHTML = '';
-                dom.dialogContent.appendChild(fragment);
-                dom.resultDialog.classList.add('active');
             }
-            window.closeResultDialogGlobal = function() { dom.resultDialog.classList.remove('active'); };
 
-            // ======================== 历史记录（虚拟滚动） ========================
-            let historyPageSize = 50;
-            let historyCurrentPage = 1;
-            let historyTotal = 0;
+            // 关闭全局函数（兼容旧调用）
+            window.closeResultDialogGlobal = function() {
+                dom.resultDialog.classList.remove('active');
+                dom.confirmBtn.style.display = 'none';
+                dom.skipBtn.style.display = 'none';
+                if (flipResolve) {
+                    flipResolve();
+                    flipResolve = null;
+                }
+            };
 
+            // --- 替代原来的 showResultDialog ---
+            function showResultDialog(results) {
+                // 使用卡片动画
+                showCardAnimation(results);
+            }
+
+            // --- 历史记录 ---
             function renderHistoryModal() {
                 if (!dom.recordList) return;
                 if (state.gachaHistory.length === 0) {
@@ -620,35 +612,31 @@
                     if (rec.star === 5) stars = '<span class="star-gold">★★★★★</span>';
                     else if (rec.star === 4) stars = '<span class="star-purple">★★★★</span>';
                     else stars = '<span class="star-gray">★★★</span>';
-                    html += '<div class="record-item record-star' + rec.star + '"><span>' + escapeHtml(rec.name) +
-                        '</span>' + stars + '</div>';
+                    html += `<div class="record-item record-star${rec.star}"><span>${escapeHtml(rec.name)}</span>${stars}</div>`;
                 }
                 if (historyTotal > end) {
-                    html +=
-                        '<div class="record-item load-more-btn" style="text-align:center; justify-content:center; cursor:pointer;">加载更多 (' +
-                        end + '/' + historyTotal + ')</div>';
+                    html += `<div class="record-item load-more-btn" style="text-align:center;justify-content:center;cursor:pointer;">加载更多 (${end}/${historyTotal})</div>`;
                 }
                 dom.recordList.innerHTML = html;
                 const loadMore = dom.recordList.querySelector('.load-more-btn');
                 if (loadMore) {
-                    loadMore.addEventListener('click', function() {
+                    loadMore.addEventListener('click', () => {
                         if ((historyCurrentPage + 1) * historyPageSize <= historyTotal) {
                             historyCurrentPage++;
                             _renderHistoryPage();
                         } else {
-                            this.remove();
+                            loadMore.remove();
                         }
                     });
                 }
             }
 
-            // ======================== 统计 ========================
+            // --- 统计 ---
             function updateStatsModalContent() {
                 let avg = state.fiveStarCount === 0 ? '--' : (state.totalPulls / state.fiveStarCount).toFixed(1);
                 let best = state.fiveStarDistances.length ? Math.min(...state.fiveStarDistances) : '--';
                 let worst = state.fiveStarDistances.length ? Math.max(...state.fiveStarDistances) : '--';
-                let upRate = state.fiveStarCount === 0 ? '--' : ((state.upFiveStarCount / state.fiveStarCount) * 100)
-                    .toFixed(1) + '%';
+                let upRate = state.fiveStarCount === 0 ? '--' : ((state.upFiveStarCount / state.fiveStarCount) * 100).toFixed(1) + '%';
                 dom.statsGrid.innerHTML = `
                     <div class="stat-card"><div class="stat-label">🎲 总抽数</div><div class="stat-number">${state.totalPulls}</div></div>
                     <div class="stat-card"><div class="stat-label">⭐ 五星数量</div><div class="stat-number">${state.fiveStarCount}</div></div>
@@ -659,29 +647,24 @@
                     <div class="stat-card"><div class="stat-label">💀 最非记录</div><div class="stat-number">${worst}</div><div class="stat-unit"> 抽出五星</div></div>
                     <div class="stat-card"><div class="stat-label">🎯 UP命中率</div><div class="stat-number">${upRate}</div></div>
                 `;
-                let limited = [],
-                    permanent = [],
-                    four = [];
+                let limited = [], permanent = [], four = [];
                 for (let [name, lv] of state.constellations.entries()) {
                     if (name === state.upFiveStar) limited.push({ name, lv });
                     else if (state.permanentFiveStar.includes(name)) permanent.push({ name, lv });
                     else four.push({ name, lv });
                 }
-                limited.sort((a, b) => a.name.localeCompare(b.name));
-                permanent.sort((a, b) => a.name.localeCompare(b.name));
-                four.sort((a, b) => a.name.localeCompare(b.name));
+                limited.sort((a,b)=>a.name.localeCompare(b.name));
+                permanent.sort((a,b)=>a.name.localeCompare(b.name));
+                four.sort((a,b)=>a.name.localeCompare(b.name));
                 let constHtml = '';
                 for (let item of [...limited, ...permanent, ...four]) {
-                    let cls = (item.name === state.upFiveStar || state.permanentFiveStar.includes(item.name)) ?
-                        'constellation-five' : 'constellation-four';
-                    constHtml +=
-                        '<div class="constellation-item ' + cls + '"><span class="constellation-name">' + escapeHtml(
-                            item.name) + '</span><span class="constellation-level">(' + item.lv + '/6)</span></div>';
+                    let cls = (item.name === state.upFiveStar || state.permanentFiveStar.includes(item.name)) ? 'constellation-five' : 'constellation-four';
+                    constHtml += `<div class="constellation-item ${cls}"><span class="constellation-name">${escapeHtml(item.name)}</span><span class="constellation-level">(${item.lv}/6)</span></div>`;
                 }
                 dom.constellationList.innerHTML = constHtml || '<div style="color:#aab9de;">暂无角色命座信息</div>';
             }
 
-            // ======================== 数据库：保存命座 ========================
+            // --- 数据库操作 ---
             async function saveConstellation(name, level) {
                 if (!state.user) return;
                 await supabase.from('user_constellations').upsert({
@@ -692,20 +675,19 @@
                 }, { onConflict: 'user_id, character_name' });
             }
 
-            // ======================== 数据库：处理角色获取 ========================
             async function processCharacterObtain(name, starLevel) {
                 let current = state.constellations.get(name) ?? 0;
                 if (current < 6) {
                     if (current === 0 && !state.constellations.has(name)) {
                         state.constellations.set(name, 0);
                         await saveConstellation(name, 0);
-                        showTip('✨ 首次获得 ' + name + ' ✨');
+                        showTip(`✨ 首次获得 ${name} ✨`);
                         return { action: 'first', newLevel: 0 };
                     } else {
                         let newLevel = current + 1;
                         state.constellations.set(name, newLevel);
                         await saveConstellation(name, newLevel);
-                        showTip(name + ' 命座提升至 ' + newLevel + ' 阶！');
+                        showTip(`${name} 命座提升至 ${newLevel} 阶！`);
                         return { action: 'constellation', newLevel };
                     }
                 } else {
@@ -713,18 +695,15 @@
                     state.starJade += compensation;
                     updateUI();
                     await saveAfterDraw([]);
-                    showTip('✨ ' + name + ' 已满命，转换为 ' + compensation + ' 星琼 ✨');
+                    showTip(`✨ ${name} 已满命，转换为 ${compensation} 星琼 ✨`);
                     return { action: 'overflow', compensation };
                 }
             }
 
-            // ======================== 数据库：保存抽卡后数据（批量） ========================
             async function saveAfterDraw(resultList) {
                 if (!state.user) return;
-                const updates = {};
-                updates.star_jade = state.starJade;
-                updates.tickets = state.tickets;
-                await supabase.from('user_resources').update(updates).eq('user_id', state.user.id);
+                await supabase.from('user_resources').update({ star_jade: state.starJade, tickets: state.tickets })
+                    .eq('user_id', state.user.id);
                 await supabase.from('user_gacha_state').update({
                     five_star_pity: state.fiveStarPity,
                     four_star_pity: state.fourStarPity,
@@ -741,7 +720,7 @@
                 }
             }
 
-            // ======================== 抽卡核心 ========================
+            // --- 抽卡核心 ---
             async function performSingleDrawWithConstellation() {
                 let isFiveStar = false;
                 if (state.fiveStarPity + 1 >= state.pity5Max) {
@@ -760,8 +739,7 @@
                         if (Math.random() < 0.5) {
                             selected = state.upFiveStar;
                         } else {
-                            selected = state.permanentFiveStar[Math.floor(Math.random() * state.permanentFiveStar
-                            .length)];
+                            selected = state.permanentFiveStar[Math.floor(Math.random() * state.permanentFiveStar.length)];
                             state.guaranteedUp = true;
                         }
                     }
@@ -789,8 +767,8 @@
                 if (resultStar >= 4) {
                     let res = await processCharacterObtain(resultName, resultStar);
                     if (res.action === 'first') constellationMsg = '首次获得';
-                    else if (res.action === 'constellation') constellationMsg = '命座 ' + res.newLevel;
-                    else if (res.action === 'overflow') constellationMsg = '满命转化 ' + res.compensation + '星琼';
+                    else if (res.action === 'constellation') constellationMsg = `命座 ${res.newLevel}`;
+                    else if (res.action === 'overflow') constellationMsg = `满命转化 ${res.compensation}星琼`;
                 }
                 return { name: resultName, star: resultStar, constellationMsg };
             }
@@ -803,7 +781,6 @@
                     state.gachaHistory.unshift({ name: result.name, star: result.star });
                     while (state.gachaHistory.length > 2000) state.gachaHistory.pop();
                     renderHistoryModal();
-                    // 更新统计
                     state.totalPulls++;
                     if (result.star === 5) {
                         state.fiveStarCount++;
@@ -819,7 +796,6 @@
                         state.threeStarCount++;
                     }
                     updateStatsModalContent();
-                    // 五星时震动反馈
                     if (result.star === 5 && navigator.vibrate) navigator.vibrate(30);
                     return result;
                 }
@@ -829,16 +805,16 @@
             async function attemptDraw(needTickets, cost, drawFunc) {
                 if (state.tickets >= needTickets) return await drawFunc();
                 return new Promise((resolve) => {
-                    let msg = '星轨专票数量不足，是否用 ' + cost + ' 星琼兑换 ' + needTickets + ' 张星轨专票？';
+                    let msg = `星轨专票数量不足，是否用 ${cost} 星琼兑换 ${needTickets} 张星轨专票？`;
                     if (confirm(msg)) {
                         if (state.starJade >= cost) {
                             state.starJade -= cost;
                             state.tickets += needTickets;
                             updateUI();
-                            showTip('兑换成功！获得 ' + needTickets + ' 张星轨专票');
+                            showTip(`兑换成功！获得 ${needTickets} 张星轨专票`);
                             drawFunc().then(resolve);
                         } else {
-                            showTip('星琼不足，无法兑换！需要 ' + cost + ' 星琼');
+                            showTip(`星琼不足，无法兑换！需要 ${cost} 星琼`);
                             resolve(false);
                         }
                     } else {
@@ -859,8 +835,7 @@
                         return res;
                     });
                     await saveAfterDraw(result ? [result] : []);
-                } catch (e) { console.error(e);
-                    showTip('抽卡出错'); } finally {
+                } catch (e) { console.error(e); showTip('抽卡出错'); } finally {
                     state.isDrawing = false;
                     dom.singleBtn.disabled = false;
                     dom.tenBtn.disabled = false;
@@ -885,41 +860,14 @@
                         return resList;
                     });
                     await saveAfterDraw(results || []);
-                } catch (e) { console.error(e);
-                    showTip('十连抽卡出错'); } finally {
+                } catch (e) { console.error(e); showTip('十连抽卡出错'); } finally {
                     state.isDrawing = false;
                     dom.singleBtn.disabled = false;
                     dom.tenBtn.disabled = false;
                 }
             }
 
-            // ======================== 数据加载（优化：缓存 + 并行） ========================
-            const CACHE_TTL = 3600000;
-
-            function getCached(key) {
-                const item = localStorage.getItem(key);
-                if (!item) return null;
-                try {
-                    const { data, timestamp } = JSON.parse(item);
-                    if (Date.now() - timestamp > CACHE_TTL) {
-                        localStorage.removeItem(key);
-                        return null;
-                    }
-                    return data;
-                } catch { return null; }
-            }
-
-            function setCached(key, data) {
-                localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
-            }
-
-            function withTimeout(promise, ms = 10000) {
-                return Promise.race([
-                    promise,
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms))
-                ]);
-            }
-
+            // --- 数据加载 ---
             async function fetchCurrentBanner() {
                 const now = new Date().toISOString();
                 try {
@@ -937,10 +885,9 @@
                         state.upFiveStar = data.up_five_star;
                         dom.poolName.innerText = data.name;
                         dom.poolSub.innerText = data.sub_name || '';
-                        dom.upCharName.innerHTML = '🌟 ' + data.up_five_star + ' 🌟';
+                        dom.upCharName.innerHTML = `🌟 ${data.up_five_star} 🌟`;
                         dom.splashImg.src = data.splash_url;
-                        dom.splashImg.onerror = () => dom.splashImg.src =
-                            'https://xiaochen1235789.github.io/images/changjinglu.webp';
+                        dom.splashImg.onerror = () => dom.splashImg.src = "https://xiaochen1235789.github.io/images/changjinglu.webp";
                         dom.splashCaption.innerText = data.caption || '';
                         dom.disabledNotice.style.display = 'none';
                     } else {
@@ -1019,19 +966,15 @@
                     resConstellations
                 ] = await Promise.all([
                     supabase.from('user_resources').select('star_jade, tickets').eq('user_id', userId).maybeSingle(),
-                    supabase.from('user_gacha_state').select('five_star_pity, four_star_pity, guaranteed_up').eq(
-                        'user_id', userId).maybeSingle(),
-                    supabase.from('gacha_history').select('item_name, star_level').eq('user_id', userId).order(
-                        'created_at', { ascending: false }).limit(2000),
+                    supabase.from('user_gacha_state').select('five_star_pity, four_star_pity, guaranteed_up').eq('user_id', userId).maybeSingle(),
+                    supabase.from('gacha_history').select('item_name, star_level').eq('user_id', userId).order('created_at', { ascending: false }).limit(2000),
                     supabase.from('user_profiles').select('user_number').eq('id', userId).maybeSingle(),
-                    supabase.from('user_constellations').select('character_name, constellation_level').eq('user_id',
-                        userId)
+                    supabase.from('user_constellations').select('character_name, constellation_level').eq('user_id', userId)
                 ]);
 
                 let res = resResources.data;
                 if (!res) {
-                    const { data: newRes } = await supabase.from('user_resources').insert({ user_id: userId,
-                        star_jade: 1599840, tickets: 100 }).select('star_jade, tickets').single();
+                    const { data: newRes } = await supabase.from('user_resources').insert({ user_id: userId, star_jade: 1599840, tickets: 100 }).select('star_jade, tickets').single();
                     res = newRes;
                 }
                 state.starJade = res.star_jade;
@@ -1039,9 +982,7 @@
 
                 let gs = resGachaState.data;
                 if (!gs) {
-                    const { data: newGs } = await supabase.from('user_gacha_state').insert({ user_id: userId,
-                        five_star_pity: 0, four_star_pity: 0, guaranteed_up: false }).select(
-                        'five_star_pity, four_star_pity, guaranteed_up').single();
+                    const { data: newGs } = await supabase.from('user_gacha_state').insert({ user_id: userId, five_star_pity: 0, four_star_pity: 0, guaranteed_up: false }).select('five_star_pity, four_star_pity, guaranteed_up').single();
                     gs = newGs;
                 }
                 state.fiveStarPity = gs.five_star_pity;
@@ -1053,7 +994,7 @@
 
                 const prof = resProfile.data;
                 state.userNumber = prof?.user_number || null;
-                dom.uidBadge.innerText = state.userNumber ? 'UID: ' + state.userNumber : 'UID: --';
+                dom.uidBadge.innerText = state.userNumber ? `UID: ${state.userNumber}` : 'UID: --';
 
                 const constData = resConstellations.data || [];
                 state.constellations.clear();
@@ -1064,7 +1005,6 @@
                 updateUI();
                 renderHistoryModal();
 
-                // 重建统计
                 state.totalPulls = 0;
                 state.fiveStarCount = 0;
                 state.fourStarCount = 0;
@@ -1091,27 +1031,23 @@
                 updateStatsModalContent();
             }
 
-            // ======================== 事件绑定 ========================
+            // --- 事件绑定 ---
             function bindEvents() {
                 dom.singleBtn.addEventListener('click', () => {
-                    if (!state.user) { showTip('请先登录');
-                        setTimeout(() => window.location.href = 'login-real.html', 1500); return; }
+                    if (!state.user) { showTip('请先登录'); setTimeout(() => window.location.href = 'login-real.html', 1500); return; }
                     singlePull();
                 });
                 dom.tenBtn.addEventListener('click', () => {
-                    if (!state.user) { showTip('请先登录');
-                        setTimeout(() => window.location.href = 'login-real.html', 1500); return; }
+                    if (!state.user) { showTip('请先登录'); setTimeout(() => window.location.href = 'login-real.html', 1500); return; }
                     tenPull();
                 });
+
                 document.getElementById('exchangeBtn').onclick = () => {
-                    if (!state.user) { showTip('请先登录');
-                        setTimeout(() => window.location.href = 'login-real.html', 1500); return; }
+                    if (!state.user) { showTip('请先登录'); setTimeout(() => window.location.href = 'login-real.html', 1500); return; }
                     document.getElementById('exchangeModal').classList.add('active');
                 };
-                document.getElementById('closeExchangeBtn').onclick = () => document.getElementById('exchangeModal')
-                    .classList.remove('active');
-                document.getElementById('cancelExchangeBtn').onclick = () => document.getElementById('exchangeModal')
-                    .classList.remove('active');
+                document.getElementById('closeExchangeBtn').onclick = () => document.getElementById('exchangeModal').classList.remove('active');
+                document.getElementById('cancelExchangeBtn').onclick = () => document.getElementById('exchangeModal').classList.remove('active');
                 document.getElementById('confirmExchangeBtn').onclick = async () => {
                     if (!state.user) return;
                     let amount = parseInt(document.getElementById('exchangeAmount').value);
@@ -1121,12 +1057,11 @@
                         state.starJade -= cost;
                         state.tickets += amount;
                         updateUI();
-                        await supabase.from('user_resources').update({ star_jade: state.starJade, tickets: state
-                                .tickets }).eq('user_id', state.user.id);
-                        showTip('成功兑换 ' + amount + ' 张星轨专票');
+                        await supabase.from('user_resources').update({ star_jade: state.starJade, tickets: state.tickets }).eq('user_id', state.user.id);
+                        showTip(`成功兑换 ${amount} 张星轨专票`);
                         document.getElementById('exchangeModal').classList.remove('active');
                     } else {
-                        showTip('星琼不足，需要 ' + cost + ' 星琼');
+                        showTip(`星琼不足，需要 ${cost} 星琼`);
                     }
                 };
                 document.getElementById('exchangeAmount').addEventListener('input', function() {
@@ -1134,37 +1069,28 @@
                     if (a < 1) a = 1;
                     if (a > 1000) a = 1000;
                     this.value = a;
-                    document.getElementById('exchangePreview').innerText = '需要消耗 ' + (a * state.exchangeRate) +
-                        ' 星琼';
+                    document.getElementById('exchangePreview').innerText = `需要消耗 ${a * state.exchangeRate} 星琼`;
                 });
-                document.getElementById('openRecordBtn').onclick = () => { renderHistoryModal();
-                    document.getElementById('recordModal').classList.add('active'); };
-                document.getElementById('closeModalBtn').onclick = () => document.getElementById('recordModal')
-                    .classList.remove('active');
-                document.getElementById('statsBtn').onclick = () => { updateStatsModalContent();
-                    document.getElementById('statsModal').classList.add('active'); };
-                document.getElementById('closeStatsBtn').onclick = () => document.getElementById('statsModal')
-                    .classList.remove('active');
-                document.getElementById('infoBtn').onclick = () => document.getElementById('infoModal').classList.add(
-                    'active');
-                document.getElementById('closeInfoBtn').onclick = () => document.getElementById('infoModal').classList
-                    .remove('active');
+
+                document.getElementById('openRecordBtn').onclick = () => { renderHistoryModal(); document.getElementById('recordModal').classList.add('active'); };
+                document.getElementById('closeModalBtn').onclick = () => document.getElementById('recordModal').classList.remove('active');
+                document.getElementById('statsBtn').onclick = () => { updateStatsModalContent(); document.getElementById('statsModal').classList.add('active'); };
+                document.getElementById('closeStatsBtn').onclick = () => document.getElementById('statsModal').classList.remove('active');
+                document.getElementById('infoBtn').onclick = () => document.getElementById('infoModal').classList.add('active');
+                document.getElementById('closeInfoBtn').onclick = () => document.getElementById('infoModal').classList.remove('active');
                 document.getElementById('settingsBtn').onclick = () => {
-                    if (!state.user) { showTip('请先登录');
-                        setTimeout(() => window.location.href = 'login-real.html', 1500); return; }
+                    if (!state.user) { showTip('请先登录'); setTimeout(() => window.location.href = 'login-real.html', 1500); return; }
                     document.getElementById('settingsModal').classList.add('active');
                 };
-                document.getElementById('closeSettingsBtn').onclick = () => document.getElementById('settingsModal')
-                    .classList.remove('active');
+                document.getElementById('closeSettingsBtn').onclick = () => document.getElementById('settingsModal').classList.remove('active');
                 document.getElementById('confirmAddJadeBtn').onclick = async () => {
                     if (!state.user) return;
                     let add = parseInt(document.getElementById('addJadeAmount').value);
                     if (add > 0) {
                         state.starJade += add;
                         updateUI();
-                        await supabase.from('user_resources').update({ star_jade: state.starJade }).eq('user_id',
-                            state.user.id);
-                        showTip('增加了 ' + add + ' 星琼');
+                        await supabase.from('user_resources').update({ star_jade: state.starJade }).eq('user_id', state.user.id);
+                        showTip(`增加了 ${add} 星琼`);
                     }
                 };
                 document.getElementById('confirmAddTicketBtn').onclick = async () => {
@@ -1173,9 +1099,8 @@
                     if (add > 0) {
                         state.tickets += add;
                         updateUI();
-                        await supabase.from('user_resources').update({ tickets: state.tickets }).eq('user_id', state
-                            .user.id);
-                        showTip('增加了 ' + add + ' 张星轨专票');
+                        await supabase.from('user_resources').update({ tickets: state.tickets }).eq('user_id', state.user.id);
+                        showTip(`增加了 ${add} 张星轨专票`);
                     }
                 };
                 document.getElementById('resetConstellationsBtn').onclick = async () => {
@@ -1204,24 +1129,46 @@
                         showTip('历史记录已清空');
                     }
                 };
+
                 document.querySelectorAll('.modal-mask').forEach(m => {
                     m.addEventListener('click', (e) => { if (e.target === m) m.classList.remove('active'); });
                 });
-                // ESC 关闭弹窗
+
+                // ESC关闭
                 document.addEventListener('keydown', (e) => {
                     if (e.key === 'Escape') {
-                        document.querySelectorAll('.modal-mask.active, .result-dialog.active').forEach(el => el
-                            .classList.remove('active'));
+                        document.querySelectorAll('.modal-mask.active, .result-dialog.active').forEach(el => el.classList.remove('active'));
+                    }
+                });
+
+                // 星星开关
+                const starToggle = document.getElementById('starToggle');
+                starToggle.addEventListener('change', function() {
+                    const val = this.checked;
+                    localStorage.setItem('star_render_enabled', String(val));
+                    const bg = document.getElementById('starBg');
+                    if (val) {
+                        bg.classList.remove('hidden');
+                        if (bg.children.length === 0) initStars();
+                    } else {
+                        bg.classList.add('hidden');
                     }
                 });
             }
 
-            // ======================== 初始化 ========================
+            // --- 初始化 ---
             async function init() {
+                // 读取星星状态
+                const stored = localStorage.getItem('star_render_enabled');
+                if (stored === null) localStorage.setItem('star_render_enabled', 'true');
+                const toggle = document.getElementById('starToggle');
+                toggle.checked = localStorage.getItem('star_render_enabled') !== 'false';
+
                 initStars();
+                const ignoreBtn = document.getElementById('ignoreOrientationBtn');
+                if (ignoreBtn) ignoreBtn.onclick = () => document.getElementById('orientationTip').style.display = 'none';
                 dom.mainContent.style.display = 'flex';
 
-                // 并行加载公共数据
                 await Promise.all([fetchCurrentBanner(), fetchGachaPools(), fetchGachaConfig()]);
 
                 const { data: { user }, error } = await supabase.auth.getUser();
@@ -1233,8 +1180,7 @@
                 await loadUserData();
                 bindEvents();
                 updateButtonsState();
-                setInterval(() => { updateCountdown();
-                    updateButtonsState(); }, 1000);
+                setInterval(() => { updateCountdown(); updateButtonsState(); }, 1000);
             }
             init();
         })();
