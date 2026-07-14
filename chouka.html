@@ -60,7 +60,7 @@
         <!-- 右侧面板 -->
         <div class="right-panel">
             <div class="character-splash">
-                <!-- 顶部行：资源 + 功能按钮 -->
+                <!-- 顶部行：修复为左右两端布局，资源在左，功能按钮在右 -->
                 <div class="action-buttons">
                     <div class="resource-display">
                         <span class="jade-left">
@@ -144,12 +144,11 @@
         </div>
     </div>
 
-    <!-- ===== 历史记录弹窗（新增分页结构） ===== -->
+    <!-- ===== 历史记录弹窗（分页结构） ===== -->
     <div id="recordModal" class="modal-mask">
         <div class="record-modal">
             <div class="modal-header">
                 <span class="header-title">📜 跃迁记录</span>
-                <!-- 分页控制区 -->
                 <div class="pagination-controls">
                     <button id="historyPrevBtn">‹</button>
                     <span class="page-info" id="historyPageInfo">0/0</span>
@@ -163,12 +162,11 @@
         </div>
     </div>
 
-    <!-- ===== 抽卡结果弹窗（卡片翻转） ===== -->
+    <!-- ===== 抽卡结果弹窗（卡片翻转带战报） ===== -->
     <div id="resultDialog" class="result-dialog">
         <div class="dialog-container">
             <div class="dialog-header">
                 <h3>✨ 本次跃迁结果 ✨</h3>
-                <!-- 新战报位置 -->
                 <div class="result-summary" id="resultSummary">
                     <span class="s5">⭐5星 x0</span>
                     <span class="s4">✨4星 x0</span>
@@ -253,7 +251,7 @@
 
     <script>
         // ================================================================
-        //  完整优化版抽卡模拟器（含战报与5条分页）
+        //  完整优化版抽卡模拟器（含战报、背面色阶、5条分页、左右布局）
         // ================================================================
         (function() {
             'use strict';
@@ -294,7 +292,6 @@
                 skipBtn: document.getElementById('skipFlipBtn'),
                 confirmBtn: document.getElementById('confirmResultBtn'),
                 ratingText: document.getElementById('ratingText'),
-                // 新节点
                 resultSummary: document.getElementById('resultSummary'),
                 historyPageInfo: document.getElementById('historyPageInfo'),
                 historyPrevBtn: document.getElementById('historyPrevBtn'),
@@ -335,8 +332,7 @@
                 isDrawing: false
             };
 
-            // 新的分页状态变量
-            var historyPageSize = 5; // 调整为每页5条
+            var historyPageSize = 5;
             var historyCurrentPage = 1;
             var historyTotal = 0;
 
@@ -497,7 +493,7 @@
             }
 
             // ===============================================================
-            //  核心更新 1：带战报的卡片翻转动画
+            //  卡片翻转动画（带战报统计和卡背颜色分级）
             // ===============================================================
             function showCardAnimation(results) {
                 if (!results || results.length === 0) return;
@@ -506,7 +502,6 @@
                 dom.skipBtn.style.display = results.length > 1 ? 'block' : 'none';
                 dom.confirmBtn.style.display = 'none';
 
-                // 1. 生成战报
                 var c5 = 0, c4 = 0, c3 = 0;
                 for (var i = 0; i < results.length; i++) {
                     if (results[i].star === 5) c5++;
@@ -529,7 +524,6 @@
                     var card = document.createElement('div');
                     card.className = 'card';
                     
-                    // 正面生成
                     var front = document.createElement('div');
                     front.className = 'card-face card-front';
                     var starColor = item.star === 5 ? '#ffb347' : (item.star === 4 ? '#c084fc' : '#5f7f9e');
@@ -550,9 +544,7 @@
                     }
                     front.innerHTML = contentHtml;
 
-                    // 背面生成及颜色分级
                     var back = document.createElement('div');
-                    // 根据星级赋予背景类和图标颜色
                     var backClass = 'card-face card-back';
                     if (item.star === 5) backClass += ' card-back-gold';
                     else if (item.star === 4) backClass += ' card-back-purple';
@@ -619,7 +611,7 @@
             }
 
             // ===============================================================
-            //  核心更新 2：每页5条的上下翻页
+            //  历史记录：每页5条上下翻页
             // ===============================================================
             function renderHistoryModal() {
                 if (state.gachaHistory.length === 0) {
@@ -630,9 +622,7 @@
                     return;
                 }
                 historyTotal = state.gachaHistory.length;
-                // 计算总页数
                 var totalPages = Math.ceil(historyTotal / historyPageSize);
-                // 确保当前页不越界
                 if (historyCurrentPage < 1) historyCurrentPage = 1;
                 if (historyCurrentPage > totalPages) historyCurrentPage = totalPages;
 
@@ -648,9 +638,8 @@
                 var end = start + historyPageSize;
                 var visible = state.gachaHistory.slice(start, end);
                 var html = '';
-
-                // 如果本页不满5条，依然占位固定高度，防止闪跳
                 var fillCount = historyPageSize - visible.length;
+                
                 for (var i = 0; i < visible.length; i++) {
                     var rec = visible[i];
                     var stars = '';
@@ -661,7 +650,6 @@
                         '</span>' + stars + '</div>';
                 }
                 
-                // 填充空行保持高度一致
                 for (var f = 0; f < fillCount; f++) {
                     html += '<div class="record-item" style="opacity: 0.2; background: transparent; border-left: 6px solid transparent;">&nbsp;</div>';
                 }
@@ -1166,7 +1154,6 @@
                         .exchangeRate) + ' 星琼';
                 });
 
-                // 历史记录分页事件
                 document.getElementById('openRecordBtn').onclick = function() {
                     if (!state.user) { showTip('请先登录'); return; }
                     historyCurrentPage = 1;
