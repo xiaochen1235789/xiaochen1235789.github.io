@@ -7,6 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>卡池 - 六哥荣耀WIKI (优化版)</title>
+    <!-- 外链CSS -->
     <link rel="stylesheet" href="./css/chouka.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
     </script>
@@ -108,7 +109,6 @@
             </div>
             <div class="modal-body">
                 <div class="stats-grid" id="statsGrid"></div>
-                <!-- 评价区域 -->
                 <div class="stat-card" id="ratingDisplay" style="margin-top:12px; text-align:center; background:rgba(0,0,0,0.6);">
                     <div class="stat-label">🌟 抽卡评价</div>
                     <div class="stat-number" id="ratingText" style="font-size:1.6rem;">--</div>
@@ -144,11 +144,17 @@
         </div>
     </div>
 
-    <!-- ===== 历史记录弹窗 ===== -->
+    <!-- ===== 历史记录弹窗（新增分页结构） ===== -->
     <div id="recordModal" class="modal-mask">
         <div class="record-modal">
             <div class="modal-header">
-                <span>📜 跃迁记录 (最多2000条)</span>
+                <span class="header-title">📜 跃迁记录</span>
+                <!-- 分页控制区 -->
+                <div class="pagination-controls">
+                    <button id="historyPrevBtn">‹</button>
+                    <span class="page-info" id="historyPageInfo">0/0</span>
+                    <button id="historyNextBtn">›</button>
+                </div>
                 <button class="close-modal" id="closeModalBtn">✖</button>
             </div>
             <div id="recordList" class="record-list">
@@ -162,6 +168,12 @@
         <div class="dialog-container">
             <div class="dialog-header">
                 <h3>✨ 本次跃迁结果 ✨</h3>
+                <!-- 新战报位置 -->
+                <div class="result-summary" id="resultSummary">
+                    <span class="s5">⭐5星 x0</span>
+                    <span class="s4">✨4星 x0</span>
+                    <span class="s3">💧3星 x0</span>
+                </div>
                 <button class="close-dialog-btn" onclick="window.closeResultDialogGlobal()">✖</button>
             </div>
             <div id="dialogContent" class="dialog-content"></div>
@@ -241,8 +253,7 @@
 
     <script>
         // ================================================================
-        //  完整优化版抽卡模拟器
-        //  修复命座显示，增加抽卡评价
+        //  完整优化版抽卡模拟器（含战报与5条分页）
         // ================================================================
         (function() {
             'use strict';
@@ -282,7 +293,12 @@
                 pityProgress4: document.getElementById('pityProgress4'),
                 skipBtn: document.getElementById('skipFlipBtn'),
                 confirmBtn: document.getElementById('confirmResultBtn'),
-                ratingText: document.getElementById('ratingText')
+                ratingText: document.getElementById('ratingText'),
+                // 新节点
+                resultSummary: document.getElementById('resultSummary'),
+                historyPageInfo: document.getElementById('historyPageInfo'),
+                historyPrevBtn: document.getElementById('historyPrevBtn'),
+                historyNextBtn: document.getElementById('historyNextBtn')
             };
 
             var state = {
@@ -319,6 +335,11 @@
                 isDrawing: false
             };
 
+            // 新的分页状态变量
+            var historyPageSize = 5; // 调整为每页5条
+            var historyCurrentPage = 1;
+            var historyTotal = 0;
+
             var CACHE_TTL = 3600000;
 
             function getCached(key) {
@@ -343,10 +364,6 @@
                 return Promise.race([promise, new Promise(function(_, reject) { setTimeout(function() { reject(
                         new Error('Request timeout')); }, ms); })]);
             }
-
-            var historyPageSize = 50;
-            var historyCurrentPage = 1;
-            var historyTotal = 0;
 
             function escapeHtml(str) {
                 return str.replace(/[&<>]/g, function(m) {
@@ -479,12 +496,27 @@
                 }
             }
 
+            // ===============================================================
+            //  核心更新 1：带战报的卡片翻转动画
+            // ===============================================================
             function showCardAnimation(results) {
                 if (!results || results.length === 0) return;
                 var container = dom.dialogContent;
                 container.innerHTML = '';
                 dom.skipBtn.style.display = results.length > 1 ? 'block' : 'none';
                 dom.confirmBtn.style.display = 'none';
+
+                // 1. 生成战报
+                var c5 = 0, c4 = 0, c3 = 0;
+                for (var i = 0; i < results.length; i++) {
+                    if (results[i].star === 5) c5++;
+                    else if (results[i].star === 4) c4++;
+                    else c3++;
+                }
+                dom.resultSummary.innerHTML = 
+                    '<span class="s5">⭐5星 x' + c5 + '</span> ' +
+                    '<span class="s4">✨4星 x' + c4 + '</span> ' +
+                    '<span class="s3">💧3星 x' + c3 + '</span>';
 
                 var isSingle = results.length === 1;
                 var gridClass = isSingle ? 'card-grid-single' : 'card-grid-ten';
@@ -496,6 +528,8 @@
                     cardWrap.className = 'card-wrapper';
                     var card = document.createElement('div');
                     card.className = 'card';
+                    
+                    // 正面生成
                     var front = document.createElement('div');
                     front.className = 'card-face card-front';
                     var starColor = item.star === 5 ? '#ffb347' : (item.star === 4 ? '#c084fc' : '#5f7f9e');
@@ -515,9 +549,17 @@
                         contentHtml += '<div class="card-extra">' + escapeHtml(item.constellationMsg) + '</div>';
                     }
                     front.innerHTML = contentHtml;
+
+                    // 背面生成及颜色分级
                     var back = document.createElement('div');
-                    back.className = 'card-face card-back';
+                    // 根据星级赋予背景类和图标颜色
+                    var backClass = 'card-face card-back';
+                    if (item.star === 5) backClass += ' card-back-gold';
+                    else if (item.star === 4) backClass += ' card-back-purple';
+                    else backClass += ' card-back-blue';
+                    back.className = backClass;
                     back.innerHTML = '<span class="card-back-icon">✦</span>';
+
                     card.appendChild(front);
                     card.appendChild(back);
                     cardWrap.appendChild(card);
@@ -576,22 +618,39 @@
                 showCardAnimation(results);
             }
 
+            // ===============================================================
+            //  核心更新 2：每页5条的上下翻页
+            // ===============================================================
             function renderHistoryModal() {
-                if (!dom.recordList) return;
                 if (state.gachaHistory.length === 0) {
                     dom.recordList.innerHTML = '<div class="empty-history">暂无抽卡记录</div>';
+                    dom.historyPageInfo.innerText = '0/0';
+                    dom.historyPrevBtn.disabled = true;
+                    dom.historyNextBtn.disabled = true;
                     return;
                 }
                 historyTotal = state.gachaHistory.length;
-                historyCurrentPage = 1;
+                // 计算总页数
+                var totalPages = Math.ceil(historyTotal / historyPageSize);
+                // 确保当前页不越界
+                if (historyCurrentPage < 1) historyCurrentPage = 1;
+                if (historyCurrentPage > totalPages) historyCurrentPage = totalPages;
+
+                dom.historyPageInfo.innerText = historyCurrentPage + '/' + totalPages;
+                dom.historyPrevBtn.disabled = (historyCurrentPage === 1);
+                dom.historyNextBtn.disabled = (historyCurrentPage === totalPages);
+
                 _renderHistoryPage();
             }
 
             function _renderHistoryPage() {
-                var start = 0;
-                var end = historyCurrentPage * historyPageSize;
+                var start = (historyCurrentPage - 1) * historyPageSize;
+                var end = start + historyPageSize;
                 var visible = state.gachaHistory.slice(start, end);
                 var html = '';
+
+                // 如果本页不满5条，依然占位固定高度，防止闪跳
+                var fillCount = historyPageSize - visible.length;
                 for (var i = 0; i < visible.length; i++) {
                     var rec = visible[i];
                     var stars = '';
@@ -601,22 +660,12 @@
                     html += '<div class="record-item record-star' + rec.star + '"><span>' + escapeHtml(rec.name) +
                         '</span>' + stars + '</div>';
                 }
-                if (historyTotal > end) {
-                    html += '<div class="record-item load-more-btn" style="text-align:center;justify-content:center;cursor:pointer;">加载更多 (' +
-                        end + '/' + historyTotal + ')</div>';
+                
+                // 填充空行保持高度一致
+                for (var f = 0; f < fillCount; f++) {
+                    html += '<div class="record-item" style="opacity: 0.2; background: transparent; border-left: 6px solid transparent;">&nbsp;</div>';
                 }
                 dom.recordList.innerHTML = html;
-                var loadMore = dom.recordList.querySelector('.load-more-btn');
-                if (loadMore) {
-                    loadMore.addEventListener('click', function() {
-                        if ((historyCurrentPage + 1) * historyPageSize <= historyTotal) {
-                            historyCurrentPage++;
-                            _renderHistoryPage();
-                        } else {
-                            this.remove();
-                        }
-                    });
-                }
             }
 
             // --- 获取抽卡评价 ---
@@ -633,7 +682,7 @@
                 else return '绝对的非酋';
             }
 
-            // --- 统计（修复命座遍历，增加评价） ---
+            // --- 统计面板 ---
             function updateStatsModalContent() {
                 var avg = state.fiveStarCount === 0 ? '--' : (state.totalPulls / state.fiveStarCount).toFixed(1);
                 var best = state.fiveStarDistances.length ? Math.min.apply(null, state.fiveStarDistances) : '--';
@@ -658,16 +707,13 @@
                     '<div class="stat-card"><div class="stat-label">🎯 UP命中率</div><div class="stat-number">' +
                     upRate + '</div></div>';
 
-                // 评价
                 var rating = getRating();
                 dom.ratingText.innerText = rating;
 
-                // 命座列表（修复遍历）
                 var constHtml = '';
                 if (state.constellations.size === 0) {
                     constHtml = '<div style="color:#aab9de;">暂无角色命座信息</div>';
                 } else {
-                    // 按角色名排序
                     var sorted = Array.from(state.constellations.entries()).sort(function(a, b) {
                         return a[0].localeCompare(b[0]);
                     });
@@ -1120,13 +1166,29 @@
                         .exchangeRate) + ' 星琼';
                 });
 
+                // 历史记录分页事件
                 document.getElementById('openRecordBtn').onclick = function() {
                     if (!state.user) { showTip('请先登录'); return; }
+                    historyCurrentPage = 1;
                     renderHistoryModal();
                     document.getElementById('recordModal').classList.add('active');
                 };
                 document.getElementById('closeModalBtn').onclick = function() { document.getElementById('recordModal')
                         .classList.remove('active'); };
+                
+                dom.historyPrevBtn.addEventListener('click', function() {
+                    if (historyCurrentPage > 1) {
+                        historyCurrentPage--;
+                        renderHistoryModal();
+                    }
+                });
+                dom.historyNextBtn.addEventListener('click', function() {
+                    var totalPages = Math.ceil(historyTotal / historyPageSize);
+                    if (historyCurrentPage < totalPages) {
+                        historyCurrentPage++;
+                        renderHistoryModal();
+                    }
+                });
 
                 document.getElementById('statsBtn').onclick = function() {
                     if (!state.user) { showTip('请先登录'); return; }
