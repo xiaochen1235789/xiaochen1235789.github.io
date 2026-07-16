@@ -7,8 +7,21 @@
     <meta name="description" content="鹿管技能等级调节器 + 基础属性滑动 + 晋级材料（下一阶段+累计消耗）">
     <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <link rel="preconnect" href="https://xiaochen1235789.github.io">
-    <!-- ★ 唯一样式来源：外链 tongyi.css ★ -->
     <link rel="stylesheet" href="https://xiaochen1235789.github.io/css/tongyi.css">
+
+    <!-- 覆盖数值颜色为淡金色 -->
+    <style>
+        .const-val {
+            color: #E8C96B !important;
+        }
+        .skill-val,
+        .attr-value {
+            color: #E8C96B;
+        }
+        .highlight-text {
+            color: #E8C96B;
+        }
+    </style>
 </head>
 <body>
 
@@ -71,12 +84,12 @@
 <!-- 2. 晋级材料 -->
 <section class="card promotion-card" id="promotion-card" data-group="base">
     <div class="skill-header">
-        <div class="skill-name">📦 晋级材料统计</div>
+        <div class="skill-name">📦 晋级材料</div>
     </div>
     <div class="skill-content">
         <div class="promotion-materials" id="promotion-materials"></div>
         <div class="promotion-next" id="promotion-next"></div>
-        <div class="consumed-title">📜 已累计消耗材料 (1级 → 当前等级)</div>
+        <div class="consumed-title" id="consumed-title">📜 已消耗材料（Lv.1 → Lv.90）</div>
         <div class="consumed-materials" id="consumed-materials"></div>
     </div>
 </section>
@@ -97,7 +110,7 @@
         对敌方单体造成等同于 <span id="normal-val1" class="skill-val">50%</span> 攻击力的风属性伤害。
         <table class="data-table"><thead><tr><th>隐藏数值</th><th>数值</th></tr></thead><tbody><tr><td>削韧</td><td>单体10点</td></tr>
             <tr><td>战技点</td><td>+1</td></tr>
-            <tr><td>能量</td><td>+20</td></tr>
+            <tr><td>能量变化</td><td>+20</td></tr>
         </tbody></table>
     </div>
 </section>
@@ -137,6 +150,7 @@
         <table class="data-table"><thead><tr><th>隐藏数值</th><th>数值</th></tr></thead><tbody>
             <tr><td>削韧</td><td>单体30点</td></tr>
             <tr><td>能量变化</td><td>-120</td></tr>
+            <tr><td>施放终结技之后的能量</td><td>+15点</td></tr>
         </tbody></table>
     </div>
 </section>
@@ -161,7 +175,7 @@
 <section class="card" id="trace-bonus" data-group="skill">
     <div class="section-title">行迹加成(总)</div>
     <div class="attr-row">
-        <div class="attr-icon"><img src="https://xiaochen1235789.github.io/attribute_image/IconCriticalDamage.webp" alt="暴伤加成"><div class="attr-value">41.05%</div><div class="attr-label">暴击伤害</div></div>
+        <div class="attr-icon"><img src="https://xiaochen1235789.github.io/attribute_image/IconCriticalDamage.webp" alt="暴伤加成"><div class="attr-value">36%</div><div class="attr-label">暴击伤害</div></div>
         <div class="attr-icon"><img src="https://xiaochen1235789.github.io/attribute_image/ATK.webp" alt="攻击力"><div class="attr-value">19.8%</div><div class="attr-label">攻击力</div></div>
         <div class="attr-icon"><img src="https://xiaochen1235789.github.io/attribute_image/SPD.webp" alt="速度加成"><div class="attr-value">11</div><div class="attr-label">速度</div></div>
     </div>
@@ -181,12 +195,36 @@
     <table class="constellation-table">
         <thead><tr><th>层数</th><th>名称</th><th>效果</th></tr></thead>
         <tbody>
-            <tr><td>1命</td><td>疾风追影</td><td>攻击敌方目标时，若敌方目标生命≥<span class="highlight-text">20%</span>，受到来自鹿馆的伤害提高<span class="const-val">50%</span></td></tr>
-            <tr><td>2命</td><td>旋刃狩魂</td><td>对拥有负面效果的敌方目标造成的暴击率提高<span class="const-val">18%</span>，攻击的敌方目标每拥有1个负面效果受到攻击的暴击伤害提高<span class="const-val">24%</span>，最多叠加至<span class="const-val">144%</span></td></tr>
-            <tr><td>3命</td><td>裂空破障</td><td>普攻等级+<span class="const-val">1</span>，最多不超过<span class="const-val">10</span>级；天赋等级+<span class="const-val">2</span>，最多不超过<span class="const-val">15</span>级</td></tr>
-            <tr><td>4命</td><td>破晓狩风</td><td>消灭敌方目标时，自身恢复<span class="const-val">20</span>点能量并立即获得1个<span class="highlight-text">额外回合</span><br><span style="color:orange;">(额外回合：无法插入终结技)</span></td></tr>
-            <tr><td>5命</td><td>风狩铭纹</td><td>战技等级+<span class="const-val">2</span>，最多不超过<span class="const-val">15</span>级；终结技等级+<span class="const-val">2</span>，最多不超过<span class="const-val">15</span>级</td></tr>
-            <tr><td>6命</td><td>逐影风刃</td><td>天赋所有效果进入战斗后立即生效并不再需要速度和行动次数，并且造成伤害时无视敌方目标<span class="const-val">24%</span>防御力</td></tr>
+            <tr>
+                <td>1命</td>
+                <td>疾风追影</td>
+                <td>攻击敌方目标时，若该敌方目标当前生命值≥当前生命上限的<span class="const-val">20%</span>，则该敌方目标受到的伤害提高<span class="const-val">50%</span>。</td>
+            </tr>
+            <tr>
+                <td>2命</td>
+                <td>旋刃狩魂</td>
+                <td>鹿将军的风属性抗性穿透提高<span class="const-val">20%</span>，攻击的敌方目标每拥有1个负面效果，则受到鹿将军攻击的暴击伤害提高<span class="const-val">48%</span>，最多提高<span class="const-val">144%</span>。</td>
+            </tr>
+            <tr>
+                <td>3命</td>
+                <td>裂空破障</td>
+                <td>普攻等级+<span class="const-val">1</span>，最多不超过<span class="const-val">10</span>级；天赋等级+<span class="const-val">2</span>，最多不超过<span class="const-val">15</span>级。</td>
+            </tr>
+            <tr>
+                <td>4命</td>
+                <td>破晓狩风</td>
+                <td>消灭敌方目标时，鹿将军额外恢复<span class="const-val">20</span>点能量，并获得1个额外回合，额外回合消灭敌方目标时不会获得额外回合。</td>
+            </tr>
+            <tr>
+                <td>5命</td>
+                <td>风狩铭纹</td>
+                <td>战技等级+<span class="const-val">2</span>，最多不超过<span class="const-val">15</span>级；终结技等级+<span class="const-val">2</span>，最多不超过<span class="const-val">15</span>级。</td>
+            </tr>
+            <tr>
+                <td>6命</td>
+                <td>逐影风刃</td>
+                <td>天赋的所有效果进入战斗后立即叠加至满值，天赋新增效果：速度提高<span class="const-val">30%</span>，造成的伤害无视敌方目标<span class="const-val">24%</span>防御。</td>
+            </tr>
         </tbody>
     </table>
 </section>
@@ -357,15 +395,81 @@
 <!-- ============================================================ -->
 <!-- ===== JavaScript ===== -->
 <script>
+    // ========== 材料定义（方案一：集中管理） ==========
+    const MATERIALS = {
+        sugar: {
+            name: "糖果碎",
+            img: "https://xiaochen1235789.github.io/images/Crushed_sugar.webp"
+        },
+        wind_shard: {
+            name: "清风碎片",
+            img: "https://xiaochen1235789.github.io/materials/清风碎片.webp"
+        },
+        wind_chip: {
+            name: "御风晶片",
+            img: "https://xiaochen1235789.github.io/materials/御风晶片.webp"
+        },
+        wind_core: {
+            name: "万风核心",
+            img: "https://xiaochen1235789.github.io/materials/万风核心.webp"
+        },
+        candy: {
+            name: "超级棒糖",
+            img: "https://xiaochen1235789.github.io/images/Super_Sweet.webp"
+        },
+        crystal: {
+            name: "纯白祈愿结晶",
+            img: "https://xiaochen1235789.github.io/materials/纯白祈愿结晶.webp"
+        }
+    };
+
+    // ========== 晋级材料数据（引用 MATERIALS） ==========
+    const promotionStages = [
+        { targetLevel: 20, materials: [
+            { key: "sugar", count: 4000 },
+            { key: "wind_shard", count: 5 }
+        ] },
+        { targetLevel: 30, materials: [
+            { key: "sugar", count: 8000 },
+            { key: "wind_shard", count: 10 }
+        ] },
+        { targetLevel: 40, materials: [
+            { key: "sugar", count: 16000 },
+            { key: "wind_chip", count: 10 },
+            { key: "candy", count: 2 }
+        ] },
+        { targetLevel: 50, materials: [
+            { key: "sugar", count: 32000 },
+            { key: "wind_chip", count: 20 },
+            { key: "candy", count: 4 }
+        ] },
+        { targetLevel: 60, materials: [
+            { key: "sugar", count: 64000 },
+            { key: "wind_core", count: 20 },
+            { key: "candy", count: 8 }
+        ] },
+        { targetLevel: 70, materials: [
+            { key: "sugar", count: 128000 },
+            { key: "wind_core", count: 30 },
+            { key: "candy", count: 16 }
+        ] },
+        { targetLevel: 80, materials: [
+            { key: "sugar", count: 256000 },
+            { key: "wind_core", count: 40 },
+            { key: "candy", count: 32 },
+            { key: "crystal", count: 1 }
+        ] }
+    ];
+
     // ========== 技能配置 ==========
     const skillConfig = {
-        normal: { level: 1, maxLevel: 7, values: [ { id: 'normal-val1', base: 50, step: 10 } ] },
-        skill: { level: 1, maxLevel: 12, values: [ { id: 'skill-val1', base: 150, step: 20 } ] },
-        ultimate: { level: 1, maxLevel: 12, values: [
+        normal: { level: 1, maxLevel: 10, values: [ { id: 'normal-val1', base: 50, step: 10 } ] },
+        skill: { level: 1, maxLevel: 15, values: [ { id: 'skill-val1', base: 150, step: 20 } ] },
+        ultimate: { level: 1, maxLevel: 15, values: [
                 { id: 'ultimate-val1', base: 300, step: 36 },
                 { id: 'ultimate-val2', base: 100, step: 10 }
             ] },
-        talent: { level: 1, maxLevel: 12, values: [
+        talent: { level: 1, maxLevel: 15, values: [
                 { id: 'talent-val1', base: 10, step: 2 },
                 { id: 'talent-val2', base: 20, step: 5 }
             ] }
@@ -381,48 +485,9 @@
         60:  { hp: 753, atk: 518, def: 294 },
         70:  { hp: 868, atk: 596, def: 339 },
         80:  { hp: 931, atk: 640, def: 363 },
-        90:  { hp: 1117, atk: 768, def: 582 }
+        90:  { hp: 1024.1, atk: 704, def: 399.3 }
     };
-
     const state = { skills: JSON.parse(JSON.stringify(skillConfig)), baseLevel: 90 };
-
-    // 晋级材料
-    const promotionStages = [
-        { targetLevel: 20, materials: [
-                { name: "糖果碎", count: 4, img: "https://xiaochen1235789.github.io/images/Crushed_sugar.webp" },
-                { name: "清风碎片", count: 5, img: "https://xiaochen1235789.github.io/materials/清风碎片.webp" }
-            ] },
-        { targetLevel: 30, materials: [
-                { name: "糖果碎", count: 8, img: "https://xiaochen1235789.github.io/images/Crushed_sugar.webp" },
-                { name: "清风碎片", count: 10, img: "https://xiaochen1235789.github.io/materials/清风碎片.webp" }
-            ] },
-        { targetLevel: 40, materials: [
-                { name: "糖果碎", count: 16, img: "https://xiaochen1235789.github.io/images/Crushed_sugar.webp" },
-                { name: "御风晶片", count: 6, img: "https://xiaochen1235789.github.io/materials/御风晶片.webp" },
-                { name: "超级棒糖", count: 3, img: "https://xiaochen1235789.github.io/images/Super_Sweet.webp" }
-            ] },
-        { targetLevel: 50, materials: [
-                { name: "糖果碎", count: 40, img: "https://xiaochen1235789.github.io/images/Crushed_sugar.webp" },
-                { name: "御风晶片", count: 9, img: "https://xiaochen1235789.github.io/materials/御风晶片.webp" },
-                { name: "超级棒糖", count: 7, img: "https://xiaochen1235789.github.io/images/Super_Sweet.webp" }
-            ] },
-        { targetLevel: 60, materials: [
-                { name: "糖果碎", count: 80, img: "https://xiaochen1235789.github.io/images/Crushed_sugar.webp" },
-                { name: "万风核心", count: 6, img: "https://xiaochen1235789.github.io/materials/万风核心.webp" },
-                { name: "超级棒糖", count: 20, img: "https://xiaochen1235789.github.io/images/Super_Sweet.webp" }
-            ] },
-        { targetLevel: 70, materials: [
-                { name: "糖果碎", count: 160, img: "https://xiaochen1235789.github.io/images/Crushed_sugar.webp" },
-                { name: "万风核心", count: 9, img: "https://xiaochen1235789.github.io/materials/万风核心.webp" },
-                { name: "超级棒糖", count: 35, img: "https://xiaochen1235789.github.io/images/Super_Sweet.webp" }
-            ] },
-        { targetLevel: 80, materials: [
-                { name: "糖果碎", count: 320, img: "https://xiaochen1235789.github.io/images/Crushed_sugar.webp" },
-                { name: "万风核心", count: 18, img: "https://xiaochen1235789.github.io/materials/万风核心.webp" },
-                { name: "超级棒糖", count: 50, img: "https://xiaochen1235789.github.io/images/Super_Sweet.webp" },
-                { name: "纯白祈愿结晶", count: 1, img: "https://xiaochen1235789.github.io/materials/纯白祈愿结晶.webp" }
-            ] }
-    ];
 
     // ========== 核心函数 ==========
     function interpolateStats(level) {
@@ -505,65 +570,85 @@
         return promotionStages.filter(stage => stage.targetLevel <= currentLevel);
     }
 
+    // 根据 key 获取材料完整信息
+    function getMaterialByKey(key) {
+        return MATERIALS[key] || { name: key, img: '' };
+    }
+
     function updatePromotionMaterials(currentLevel) {
         const container = document.getElementById('promotion-materials');
         const nextText = document.getElementById('promotion-next');
         if (!container) return;
         const nextStage = getNextPromotionStage(currentLevel);
         if (!nextStage) {
-            container.innerHTML = '<div style="text-align:center; padding:20px;">✨ 已满级，无需晋级 ✨</div>';
+            container.innerHTML = '<div style="text-align:center; padding:20px;">✨ 所有晋级已完成 ✨</div>';
             nextText.innerHTML = '';
         } else {
             let materialsHtml = '';
             for (let mat of nextStage.materials) {
+                const material = getMaterialByKey(mat.key);
                 let imgHtml = '';
-                if (mat.img) {
-                    imgHtml = `<img src="${mat.img}" alt="${mat.name}" onerror="this.parentNode.innerHTML='❓'">`;
+                if (material.img) {
+                    imgHtml = `<img src="${material.img}" alt="${material.name}" onerror="this.parentNode.innerHTML='❓'">`;
                 } else {
                     imgHtml = '<span style="font-size:28px;">💎</span>';
                 }
                 materialsHtml += `
                     <div class="material-item">
                         <div class="material-img">${imgHtml}</div>
-                        <div class="material-name">${mat.name}</div>
+                        <div class="material-name">${material.name}</div>
                         <div class="material-count">× ${mat.count}</div>
                     </div>
                 `;
             }
             container.innerHTML = materialsHtml;
-            nextText.innerHTML = `🔓 晋级后等级上限提升至 ${nextStage.targetLevel} 级`;
+            nextText.innerHTML = `⬆ 等级上限提高至 Lv.${nextStage.targetLevel} 所需材料`;
         }
     }
 
     function updateConsumedMaterials(currentLevel) {
         const container = document.getElementById('consumed-materials');
+        const titleEl = document.getElementById('consumed-title');
         if (!container) return;
+
         const consumedStages = getConsumedStages(currentLevel);
-        if (consumedStages.length === 0) {
-            container.innerHTML = '<div style="text-align:center; padding:20px;">暂无消耗，当前等级未达到任何晋级门槛</div>';
+
+        // 情况1：当前等级为1级，无消耗
+        if (currentLevel === 1 || consumedStages.length === 0) {
+            if (titleEl) {
+                titleEl.textContent = '📜 已消耗材料（Lv.1）';
+            }
+            container.innerHTML = '<div style="text-align:center; padding:20px;">暂无消耗</div>';
             return;
         }
+
+        // 情况2：有消耗（Lv.20 ~ Lv.80）
+        if (titleEl) {
+            titleEl.textContent = `📜 已消耗材料（Lv.1 → Lv.${currentLevel}）`;
+        }
+
         const total = {};
         for (let stage of consumedStages) {
             for (let mat of stage.materials) {
-                if (!total[mat.name]) {
-                    total[mat.name] = { count: 0, img: mat.img };
+                if (!total[mat.key]) {
+                    total[mat.key] = { count: 0, key: mat.key };
                 }
-                total[mat.name].count += mat.count;
+                total[mat.key].count += mat.count;
             }
         }
         let materialsHtml = '';
-        for (let [name, info] of Object.entries(total)) {
+        for (let [key, info] of Object.entries(total)) {
+            const material = getMaterialByKey(key);
             let imgHtml = '';
-            if (info.img) {
-                imgHtml = `<img src="${info.img}" alt="${name}" onerror="this.parentNode.innerHTML='❓'">`;
+            if (material.img) {
+                imgHtml = `<img src="${material.img}" alt="${material.name}" onerror="this.parentNode.innerHTML='❓'">`;
             } else {
                 imgHtml = '<span style="font-size:28px;">💎</span>';
             }
             materialsHtml += `
                 <div class="material-item">
                     <div class="material-img">${imgHtml}</div>
-                    <div class="material-name">${name}</div>
+                    <div class="material-name">${material.name}</div>
                     <div class="material-count">× ${info.count}</div>
                 </div>
             `;
