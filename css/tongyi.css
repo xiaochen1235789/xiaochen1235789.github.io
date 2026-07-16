@@ -1,4 +1,10 @@
-/* ========== 角色详情页统一模板样式 ========== */
+/* ===================================================================
+   角色详情页统一模板样式 (完整版)
+   整合了：基础布局 / 立绘卡片 / 黑底白字标题 / 导航菜单 /
+   配队模块 / 材料统计 / 技能星魂 / 响应式适配
+   =================================================================== */
+
+/* ========== 1. CSS 变量 & 重置 ========== */
 :root {
   --bg: #121212;
   --surface: #1a1a1a;
@@ -17,9 +23,13 @@
   --button-disabled: #1f2e28;
   --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   --legend-gradient: linear-gradient(45deg, #d3af37, #e8c96b);
+  --nav-bg: rgba(18, 28, 30, 0.92);
+  --hero-height: 340px;
 }
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -28,10 +38,13 @@ body {
   padding-bottom: 30px;
   -webkit-font-smoothing: antialiased;
 }
+
 a { color: var(--secondary); text-decoration: none; transition: color var(--transition); }
 a:hover { color: var(--primary-light); }
 img { max-width: 100%; height: auto; display: block; }
 
+
+/* ========== 2. 顶部栏 ========== */
 .top-bar {
   display: flex;
   align-items: center;
@@ -52,10 +65,26 @@ img { max-width: 100%; height: auto; display: block; }
   color: var(--primary-light);
 }
 
+
+/* ========== 3. 立绘卡片（背景式，仿远坂凛风格） ========== */
 .hero-section {
   position: relative;
-  background: linear-gradient(135deg, #1a2f1a 0%, #0f1f0f 100%);
+  background-image: url('https://xiaochen1235789.github.io/images/changjinglu.webp');
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  border-radius: var(--radius);
+  margin: 16px 16px 0;
+  height: var(--hero-height, 340px);
   overflow: hidden;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+/* 如果页面使用 <img> 标签，自动切换为图片模式 */
+.hero-section:has(.hero-image) {
+  background-image: none !important;
+  background: linear-gradient(135deg, #1a2f1a 0%, #0f1f0f 100%);
 }
 .hero-image {
   width: 100%;
@@ -64,16 +93,18 @@ img { max-width: 100%; height: auto; display: block; }
   opacity: 0.95;
   display: block;
 }
+
 .hero-overlay {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 20px 16px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+  padding: 20px 24px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
+  text-align: left;
 }
 .hero-name {
-  font-size: 1.8rem;
+  font-size: 2rem;
   font-weight: 700;
   color: #fff;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
@@ -85,11 +116,24 @@ img { max-width: 100%; height: auto; display: block; }
   color: var(--primary);
   padding: 4px 12px;
   border-radius: 20px;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   border: 1px solid rgba(211, 175, 55, 0.3);
   backdrop-filter: blur(4px);
 }
 
+/* 移动端立绘适配 */
+@media (max-width: 600px) {
+  .hero-section {
+    height: 220px;
+    margin: 12px 12px 0;
+    background-position: center 20%;
+  }
+  .hero-name { font-size: 1.6rem; }
+  .hero-overlay { padding: 16px; }
+}
+
+
+/* ========== 4. 卡片通用 ========== */
 .card {
   background: var(--card);
   margin: 12px 16px;
@@ -103,6 +147,37 @@ img { max-width: 100%; height: auto; display: block; }
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
+
+
+/* ========== 5. 标题黑底白字（与卡片背景一致 #202020） ========== */
+.skill-name,
+.section-title {
+  background: var(--card, #202020);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 8px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* .skill-name 在 flex 容器中的特殊处理 */
+.skill-header .skill-name {
+  flex-shrink: 0;
+}
+
+/* 移动端标题缩放 */
+@media (max-width: 600px) {
+  .skill-name,
+  .section-title {
+    font-size: 0.95rem;
+    padding: 3px 10px;
+  }
+}
+
+
+/* ========== 6. 技能头部布局 ========== */
 .skill-header {
   display: flex;
   flex-wrap: wrap;
@@ -113,12 +188,7 @@ img { max-width: 100%; height: auto; display: block; }
   border-bottom: 1px solid var(--line);
   gap: 12px;
 }
-.skill-name {
-  font-weight: 600;
-  font-size: 1.15rem;
-  color: #ffffff;  /* 改为白色 */
-  flex-grow: 1;
-}
+
 .level-controls {
   display: flex;
   align-items: center;
@@ -180,8 +250,8 @@ img { max-width: 100%; height: auto; display: block; }
   background: var(--primary);
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 0 8px rgba(211,175,55,0.6);
-  border: 1px solid rgba(255,255,255,0.3);
+  box-shadow: 0 0 8px rgba(211, 175, 55, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   transition: 0.1s;
 }
 .base-slider::-webkit-slider-thumb:hover { transform: scale(1.15); background: var(--primary-light); }
@@ -192,10 +262,16 @@ img { max-width: 100%; height: auto; display: block; }
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 0 8px rgba(211,175,55,0.6);
+  box-shadow: 0 0 8px rgba(211, 175, 55, 0.6);
 }
 
-.skill-content { font-size: 0.95rem; color: var(--sub-text); line-height: 1.6; }
+
+/* ========== 7. 技能内容 ========== */
+.skill-content {
+  font-size: 0.95rem;
+  color: var(--sub-text);
+  line-height: 1.6;
+}
 .skill-val {
   color: var(--primary);
   font-weight: 700;
@@ -214,8 +290,15 @@ img { max-width: 100%; height: auto; display: block; }
 .special-text { color: #ffae70; font-weight: 600; }
 .energy-text { color: #66ccff; font-weight: 600; }
 
+
+/* ========== 8. 属性图标 ========== */
 .attr-container { margin-bottom: 20px; }
-.attr-row { display: flex; gap: 12px; margin-bottom: 15px; flex-wrap: wrap; }
+.attr-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
 .attr-icon {
   background: var(--card);
   border-radius: 4px;
@@ -227,12 +310,27 @@ img { max-width: 100%; height: auto; display: block; }
   min-width: 60px;
   flex: 1;
   max-width: 100px;
-  border: 1px solid rgba(211,175,55,0.1);
+  border: 1px solid rgba(211, 175, 55, 0.1);
 }
 .attr-icon img { width: 32px; height: 32px; margin-bottom: 4px; object-fit: contain; }
-.attr-value { color: white; font-size: 14px; font-weight: 600; text-align: center; line-height: 1.2; word-break: break-word; }
-.attr-label { color: var(--sub-text); font-size: 12px; text-align: center; line-height: 1.2; margin-top: 2px; }
+.attr-value {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+  word-break: break-word;
+}
+.attr-label {
+  color: var(--sub-text);
+  font-size: 12px;
+  text-align: center;
+  line-height: 1.2;
+  margin-top: 2px;
+}
 
+
+/* ========== 9. 数据表格 ========== */
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -241,56 +339,431 @@ img { max-width: 100%; height: auto; display: block; }
   border-radius: var(--radius);
   overflow: hidden;
 }
-.data-table th, .data-table td {
+.data-table th,
+.data-table td {
   padding: 8px 12px;
   text-align: left;
   border-bottom: 1px solid var(--line);
 }
-.data-table th { background-color: rgba(255, 255, 255, 0.05); color: var(--primary); font-weight: 600; }
-
-.section-title {
-  font-size: 1.2rem;
-  color: var(--secondary);
-  margin-bottom: 15px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--line);
+.data-table th {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--primary);
+  font-weight: 600;
 }
-.ability-item { margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--line); }
-.ability-item:last-child { border-bottom: none; }
-.ability-name { color: var(--primary); font-weight: 600; margin-bottom: 6px; font-size: 1rem; }
 
-.constellation-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-.constellation-table th, .constellation-table td {
+
+/* ========== 10. 额外能力 ========== */
+.ability-item {
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--line);
+}
+.ability-item:last-child { border-bottom: none; }
+.ability-name {
+  color: var(--primary);
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 1rem;
+}
+
+
+/* ========== 11. 星魂 / 命之座（黑底白字名称） ========== */
+.constellation-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+.constellation-table th,
+.constellation-table td {
   padding: 12px 8px;
   text-align: left;
   vertical-align: top;
   border-bottom: 1px solid var(--line);
 }
-.constellation-table th { color: #ffffff; font-weight: 600; }  /* 改为白色 */
-.constellation-table td:first-child { color: var(--primary); font-weight: 700; min-width: 60px; }
-.constellation-table td:nth-child(2) { color: var(--secondary); min-width: 80px; font-weight: 600; }
+.constellation-table th {
+  color: var(--primary);
+  font-weight: 600;
+}
+/* 层数列：金色 */
+.constellation-table td:first-child {
+  color: var(--primary);
+  font-weight: 700;
+  min-width: 60px;
+}
+/* ★ 星魂名称列：黑底白字，与卡片背景一致 ★ */
+.constellation-table td:nth-child(2) {
+  background: var(--card, #202020);
+  color: #fff;
+  min-width: 80px;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 4px 8px;
+  display: inline-block;
+  /* 模拟黑底标签效果 */
+}
+/* 效果列保持原样 */
+.constellation-table td:nth-child(3) {
+  color: var(--text);
+}
+
 .const-val {
   color: var(--primary);
   font-weight: 700;
-  text-shadow: 0 0 4px rgba(211,175,55,0.3);
+  text-shadow: 0 0 4px rgba(211, 175, 55, 0.3);
   transition: all var(--transition);
   display: inline-block;
 }
-.const-val:hover { text-shadow: 0 0 12px rgba(211,175,55,0.7); transform: scale(1.05); }
+.const-val:hover {
+  text-shadow: 0 0 12px rgba(211, 175, 55, 0.7);
+  transform: scale(1.05);
+}
 
+
+/* ========== 12. 材料统计卡片 ========== */
+.promotion-card .skill-content { padding: 0 8px; }
+.promotion-materials,
+.consumed-materials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+  justify-content: flex-start;
+}
+.material-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  padding: 6px;
+  min-width: 70px;
+}
+.material-img {
+  width: 40px;
+  height: 40px;
+  background: #2a3a35;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.material-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.material-name {
+  font-size: 0.7rem;
+  color: var(--sub-text);
+  margin-bottom: 2px;
+  text-align: center;
+}
+.material-count {
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: var(--primary);
+}
+.promotion-next {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: #ffaa7a;
+  text-align: center;
+  border-top: 1px dashed var(--line);
+  padding-top: 10px;
+}
+.consumed-title {
+  margin-top: 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--secondary);
+  border-top: 1px dashed var(--line);
+  padding-top: 10px;
+}
+
+
+/* ========== 13. 粘性导航菜单（选项卡） ========== */
+.sticky-nav {
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  background: var(--nav-bg, rgba(18, 28, 30, 0.92));
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line, #3a4a4a);
+  padding: 6px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  transition: box-shadow 0.3s;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+.sticky-nav.scrolled {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+.sticky-nav .nav-item {
+  color: var(--sub-text, #9aa8a8);
+  font-size: 0.85rem;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-decoration: none;
+  white-space: nowrap;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+}
+.sticky-nav .nav-item:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+.sticky-nav .nav-item.active {
+  color: #ffcc88;
+  background: rgba(255, 204, 136, 0.15);
+  box-shadow: inset 0 0 0 1px rgba(255, 204, 136, 0.2);
+}
+.sticky-nav .nav-divider {
+  color: var(--line, #3a4a4a);
+  font-size: 0.6rem;
+  user-select: none;
+}
+
+/* 移动端导航 */
+@media (max-width: 600px) {
+  .sticky-nav {
+    padding: 4px 8px;
+    gap: 2px 6px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sticky-nav .nav-item {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    flex-shrink: 0;
+  }
+  .sticky-nav .nav-divider { display: none; }
+}
+
+
+/* ========== 14. 配队模块 ========== */
+.team-section { margin-top: 20px; }
+
+.team-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line, #3a4a4a);
+  padding-bottom: 8px;
+}
+.team-tabs .tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--sub-text, #9aa8a8);
+  padding: 6px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  font-family: inherit;
+  letter-spacing: 0.3px;
+}
+.team-tabs .tab-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+.team-tabs .tab-btn.active {
+  color: #ffcc88;
+  background: rgba(255, 204, 136, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 204, 136, 0.15);
+}
+
+.team-panels { position: relative; }
+.team-panel {
+  display: none;
+  animation: fadeSlide 0.3s ease;
+}
+.team-panel.active { display: block; }
+@keyframes fadeSlide {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.team-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  justify-content: center;
+  margin: 12px 0 16px;
+}
+.team-role {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 70px;
+}
+.team-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #1e2d2a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  border: 2px solid var(--line, #3a4a4a);
+  transition: border-color 0.3s, box-shadow 0.3s;
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  user-select: none;
+}
+.team-avatar .avatar-char {
+  font-size: 22px;
+  font-weight: 700;
+  color: #c8b08a;
+  line-height: 1;
+}
+.team-avatar .avatar-label {
+  font-size: 8px;
+  color: #6a7a7a;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 0 6px;
+  border-radius: 8px;
+  margin-top: 2px;
+  letter-spacing: 0.5px;
+}
+.team-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+.team-avatar img ~ .avatar-char,
+.team-avatar img ~ .avatar-label { display: none; }
+.team-role .role-name {
+  font-size: 0.75rem;
+  color: var(--sub-text, #9aa8a8);
+  font-weight: 500;
+  text-align: center;
+}
+
+.team-desc {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin: 8px 0 4px;
+  font-size: 0.88rem;
+  color: var(--text, #d0dcdc);
+  line-height: 1.6;
+  border-left: 3px solid #ffaa7a;
+}
+.team-desc strong { color: #ffcc88; }
+.team-desc .tag {
+  display: inline-block;
+  background: rgba(255, 204, 136, 0.12);
+  color: #ffcc88;
+  font-size: 0.7rem;
+  padding: 0 10px;
+  border-radius: 12px;
+  margin-right: 4px;
+  font-weight: 500;
+}
+
+.team-gear {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--sub-text, #889999);
+}
+.team-gear span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.team-gear .gear-label {
+  color: #aabb88;
+  font-weight: 500;
+}
+
+/* 配队响应式 */
 @media (max-width: 480px) {
-  .hero-name { font-size: 1.5rem; }
-  .card { margin: 10px 12px; padding: 16px; }
-  .skill-header { flex-direction: column; align-items: flex-start; }
-  .level-controls { align-self: stretch; justify-content: center; flex-wrap: wrap; }
-  .base-slider { width: 100%; max-width: 200px; }
-  .attr-icon { min-width: calc(50% - 6px); flex: 0 0 calc(50% - 6px); }
+  .team-avatar {
+    width: 60px;
+    height: 60px;
+  }
+  .team-avatar .avatar-char { font-size: 18px; }
+  .team-roles { gap: 12px 16px; }
+  .team-desc { font-size: 0.8rem; padding: 10px 12px; }
+  .team-tabs .tab-btn { font-size: 0.75rem; padding: 4px 12px; }
 }
-@media (min-width: 481px) and (max-width: 768px) {
-  .attr-icon { min-width: calc(33.333% - 8px); flex: 0 0 calc(33.333% - 8px); }
-}
-@media (min-width: 769px) { .attr-icon { min-width: 80px; } }
 
+
+/* ========== 15. 卡片切换过渡 ========== */
+section.card {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+section.card[style*="display: none"] {
+  opacity: 0;
+  transform: scale(0.98);
+  pointer-events: none;
+}
+section.card:not([style*="display: none"]) {
+  opacity: 1;
+  transform: scale(1);
+}
+
+
+/* ========== 16. 回到顶部 ========== */
+.back-top {
+  position: fixed;
+  bottom: 24px;
+  right: 20px;
+  z-index: 1000;
+  background: rgba(30, 50, 45, 0.85);
+  backdrop-filter: blur(6px);
+  color: var(--primary, #ffcc88);
+  border: 1px solid var(--line, #3a4a4a);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  font-family: inherit;
+}
+.back-top:hover {
+  background: rgba(50, 80, 70, 0.9);
+  transform: scale(1.05);
+  border-color: #ffaa7a;
+}
+.back-top.visible { display: flex; }
+@media (max-width: 600px) {
+  .back-top {
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
+    bottom: 16px;
+    right: 14px;
+  }
+}
+
+
+/* ========== 17. 页脚 ========== */
 .wiki-footer {
   text-align: center;
   margin-top: 20px;
@@ -305,3 +778,39 @@ img { max-width: 100%; height: auto; display: block; }
   width: 100%;
 }
 .wiki-footer a { color: #8FBC8F; text-decoration: none; }
+
+
+/* ========== 18. 响应式增强 ========== */
+@media (max-width: 480px) {
+  .hero-name { font-size: 1.5rem; }
+  .card {
+    margin: 10px 12px;
+    padding: 16px;
+  }
+  .skill-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .level-controls {
+    align-self: stretch;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .base-slider {
+    width: 100%;
+    max-width: 200px;
+  }
+  .attr-icon {
+    min-width: calc(50% - 6px);
+    flex: 0 0 calc(50% - 6px);
+  }
+}
+@media (min-width: 481px) and (max-width: 768px) {
+  .attr-icon {
+    min-width: calc(33.333% - 8px);
+    flex: 0 0 calc(33.333% - 8px);
+  }
+}
+@media (min-width: 769px) {
+  .attr-icon { min-width: 80px; }
+}
