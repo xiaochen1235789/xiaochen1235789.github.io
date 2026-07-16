@@ -206,7 +206,7 @@ body {
     border: 1px solid rgba(255, 200, 100, 0.4);
 }
 .jade-left {
-    flex: 0 1 auto; /* 修复拉伸 */
+    flex: 0 1 auto;
     min-width: 60px;
     display: flex;
     align-items: center;
@@ -233,7 +233,7 @@ body {
     color: transparent;
 }
 .ticket-right {
-    flex: 0 1 auto; /* 修复拉伸 */
+    flex: 0 1 auto;
     min-width: 60px;
     display: flex;
     align-items: center;
@@ -339,15 +339,15 @@ body {
     height: 100%;
 }
 
-/* ========== ★★★ 顶部功能栏（已根据要求修复左右分配） ★★★ ========== */
+/* ===== 顶部功能栏 ===== */
 .action-buttons {
     display: flex;
-    justify-content: space-between; /* 关键：资源居左，按钮居右，横向拉开 */
+    justify-content: space-between;
     align-items: center;
-    width: 100%;                  /* 占满右侧面板宽度 */
+    width: 100%;
     gap: 12px;
     flex-shrink: 0;
-    flex-wrap: wrap;              /* 极端小屏下防止挤压 */
+    flex-wrap: wrap;
 }
 .resource-display {
     display: flex;
@@ -508,30 +508,14 @@ body {
 .modal-content {
     width: 85%;
     max-width: 550px;
+    max-height: 85vh;
     background: #120e28;
     border-radius: 56px;
     border: 2px solid #ffbc6e;
     overflow: hidden;
     box-shadow: 0 25px 45px black;
-}
-#statsModal .modal-content {
-    max-height: 85vh;
     display: flex;
     flex-direction: column;
-}
-#statsModal .modal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 24px;
-    scrollbar-width: thin;
-    -webkit-overflow-scrolling: touch;
-}
-.constellation-section {
-    max-height: 220px;
-    overflow-y: auto;
-    margin-top: 16px;
-    border-top: 1px solid rgba(255, 200, 100, 0.3);
-    padding-top: 12px;
 }
 .modal-header {
     padding: 18px 20px;
@@ -540,6 +524,7 @@ body {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid rgba(255, 215, 150, 0.4);
+    flex-shrink: 0;
 }
 .modal-header h3 {
     color: #ffe3a3;
@@ -556,11 +541,18 @@ body {
 }
 .modal-body {
     padding: 24px;
+    overflow-y: auto;
+    flex: 1;
     text-align: center;
     color: #ffdfaa;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
 }
 
-/* 统计卡片 */
+/* 统计弹窗特殊处理 */
+#statsModal .modal-body {
+    padding: 24px;
+}
 .stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -670,11 +662,11 @@ body {
     color: #ffdfaa;
 }
 
-/* ===== 历史记录优化（新分页） ===== */
+/* ===== 历史记录 ===== */
 .record-modal {
     width: 90%;
     max-width: 700px;
-    height: 60%;
+    max-height: 75vh;
     background: #0f0b20;
     border-radius: 48px;
     border: 1px solid #ffbc6e;
@@ -687,6 +679,7 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
+    flex-shrink: 0;
 }
 #recordModal .modal-header .header-title {
     font-size: 1rem;
@@ -727,6 +720,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
 }
 .record-item {
     background: rgba(0, 0, 0, 0.5);
@@ -761,7 +756,7 @@ body {
     padding: 30px;
 }
 
-/* ===== 卡片翻转动画（抽卡结果） ===== */
+/* ===== 卡片翻转动画 ===== */
 .result-dialog {
     position: fixed;
     top: 0;
@@ -835,6 +830,8 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 200px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
 }
 
 /* 卡片网格 */
@@ -969,7 +966,36 @@ body {
     max-height: 50%;
 }
 
-/* 跳过按钮 */
+/* ===== 五星卡片高亮（不带自发光，只保留放大和星标旋转） ===== */
+.card-five-star {
+    transform: scale(1.05);
+    z-index: 10;
+    animation: legendary-pulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes legendary-pulse {
+    0% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1.12);
+    }
+}
+.card-five-star .card-front::before {
+    content: "★";
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    font-size: 1.8rem;
+    color: gold;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+    animation: spin-star 4s linear infinite;
+}
+@keyframes spin-star {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ===== 跳过按钮 ===== */
 .skip-flip-btn {
     position: absolute;
     top: 12px;
@@ -1110,21 +1136,24 @@ body {
 .dialog-content::-webkit-scrollbar,
 .left-panel-scroll::-webkit-scrollbar,
 .constellation-section::-webkit-scrollbar,
-#statsModal .modal-body::-webkit-scrollbar {
+#statsModal .modal-body::-webkit-scrollbar,
+.modal-body::-webkit-scrollbar {
     width: 4px;
 }
 .record-list::-webkit-scrollbar-track,
 .dialog-content::-webkit-scrollbar-track,
 .left-panel-scroll::-webkit-scrollbar-track,
 .constellation-section::-webkit-scrollbar-track,
-#statsModal .modal-body::-webkit-scrollbar-track {
+#statsModal .modal-body::-webkit-scrollbar-track,
+.modal-body::-webkit-scrollbar-track {
     background: rgba(255, 255, 200, 0.1);
 }
 .record-list::-webkit-scrollbar-thumb,
 .dialog-content::-webkit-scrollbar-thumb,
 .left-panel-scroll::-webkit-scrollbar-thumb,
 .constellation-section::-webkit-scrollbar-thumb,
-#statsModal .modal-body::-webkit-scrollbar-thumb {
+#statsModal .modal-body::-webkit-scrollbar-thumb,
+.modal-body::-webkit-scrollbar-thumb {
     background: #ffbc6e;
     border-radius: 10px;
 }
