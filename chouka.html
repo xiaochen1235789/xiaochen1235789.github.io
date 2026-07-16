@@ -7,7 +7,6 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>卡池 - 六哥荣耀WIKI (优化版)</title>
-    <!-- 外链CSS -->
     <link rel="stylesheet" href="./css/chouka.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
     </script>
@@ -60,7 +59,7 @@
         <!-- 右侧面板 -->
         <div class="right-panel">
             <div class="character-splash">
-                <!-- 顶部行：修复为左右两端布局，资源在左，功能按钮在右 -->
+                <!-- 顶部行 -->
                 <div class="action-buttons">
                     <div class="resource-display">
                         <span class="jade-left">
@@ -217,6 +216,11 @@
                     </div>
                     <div style="background:rgba(0,0,0,0.4);border-radius:32px;padding:12px;">
                         <button id="resetHistoryBtn" class="btn-confirm" style="background:#ff8888;color:#1a132e;width:100%;padding:8px;">清空抽卡记录</button>
+                    </div>
+                    <!-- 新增：重置所有数据 -->
+                    <div style="background:rgba(0,0,0,0.4);border-radius:32px;padding:12px;">
+                        <button id="resetAllBtn" class="btn-confirm" style="background:#ff4444;color:#fff;width:100%;padding:8px;font-weight:bold;">⚠️ 重置所有抽卡数据</button>
+                        <div style="font-size:0.7rem;color:#ff8888;margin-top:6px;">（清空历史、命座、保底计数、大小保底状态）</div>
                     </div>
                 </div>
             </div>
@@ -521,6 +525,10 @@
                 results.forEach(function(item, index) {
                     var cardWrap = document.createElement('div');
                     cardWrap.className = 'card-wrapper';
+                    // 五星高亮（不带自发光，只加放大和星标动画）
+                    if (item.star === 5) {
+                        cardWrap.classList.add('card-five-star');
+                    }
                     var card = document.createElement('div');
                     card.className = 'card';
                     
@@ -796,9 +804,15 @@
                         if (Math.random() < 0.5) {
                             selected = state.upFiveStar;
                         } else {
-                            selected = state.permanentFiveStar[Math.floor(Math.random() * state.permanentFiveStar
-                            .length)];
-                            state.guaranteedUp = true;
+                            // 常驻五星池非空检查
+                            if (state.permanentFiveStar.length === 0) {
+                                selected = state.upFiveStar;
+                                console.warn('常驻五星池为空，默认返回UP角色');
+                            } else {
+                                selected = state.permanentFiveStar[Math.floor(Math.random() * state.permanentFiveStar
+                                .length)];
+                                state.guaranteedUp = true;
+                            }
                         }
                     }
                     resultName = selected;
@@ -813,6 +827,7 @@
                         resultName = state.fourStarChars[Math.floor(Math.random() * state.fourStarChars.length)];
                         resultStar = 4;
                         state.fourStarPity = 0;
+                        // 修复：四星抽取时五星保底计数+1
                         state.fiveStarPity++;
                     } else {
                         resultName = state.threeStarItems[Math.floor(Math.random() * state.threeStarItems.length)];
@@ -1109,6 +1124,47 @@
                 updateStatsModalContent();
             }
 
+            // --- 重置所有数据 ---
+            async function resetAllData() {
+                if (!state.user) return;
+                if (!confirm('⚠️ 确定重置所有抽卡数据吗？\n此操作将清空：\n- 抽卡历史记录\n- 所有角色命座\n- 五星保底计数\n- 四星保底计数\n- 大小保底状态\n\n此操作不可恢复！')) return;
+                try {
+                    // 清空历史
+                    await supabase.from('gacha_history').delete().eq('user_id', state.user.id);
+                    // 清空命座
+                    await supabase.from('user_constellations').delete().eq('user_id', state.user.id);
+                    // 重置保底状态
+                    state.fiveStarPity = 0;
+                    state.fourStarPity = 0;
+                    state.guaranteedUp = false;
+                    await supabase.from('user_gacha_state').update({
+                        five_star_pity: 0,
+                        four_star_pity: 0,
+                        guaranteed_up: false
+                    }).eq('user_id', state.user.id);
+                    
+                    // 清空内存数据
+                    state.gachaHistory = [];
+                    state.constellations.clear();
+                    state.totalPulls = 0;
+                    state.fiveStarCount = 0;
+                    state.fourStarCount = 0;
+                    state.threeStarCount = 0;
+                    state.upFiveStarCount = 0;
+                    state.fiveStarDistances = [];
+                    state.lastFiveStarPullIndex = 0;
+                    
+                    // 更新界面
+                    renderHistoryModal();
+                    updateStatsModalContent();
+                    updateUI();
+                    showTip('✅ 所有抽卡数据已重置');
+                } catch (e) {
+                    console.error(e);
+                    showTip('重置失败，请稍后重试');
+                }
+            }
+
             // --- 事件绑定 ---
             function bindEvents() {
                 dom.singleBtn.addEventListener('click', function() {
@@ -1246,6 +1302,9 @@
                         showTip('历史记录已清空');
                     }
                 };
+
+                // 重置所有数据
+                document.getElementById('resetAllBtn').onclick = resetAllData;
 
                 document.querySelectorAll('.modal-mask').forEach(function(m) {
                     m.addEventListener('click', function(e) { if (e.target === m) m.classList.remove(
