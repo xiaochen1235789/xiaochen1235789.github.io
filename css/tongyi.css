@@ -1,7 +1,6 @@
 /* ===================================================================
-   角色详情页统一模板样式 (完整版)
-   整合了：基础布局 / 立绘卡片 / 黑底白字标题 / 导航菜单 /
-   配队模块 / 材料统计 / 技能星魂 / 响应式适配
+   角色详情页统一模板样式 (优化版)
+   修复：星魂表格布局、颜色变量化、触控区域增大、可访问性增强
    =================================================================== */
 
 /* ========== 1. CSS 变量 & 重置 ========== */
@@ -13,6 +12,7 @@
   --primary-light: #e8c96b;
   --primary-dark: #b8941a;
   --secondary: #81c784;
+  --highlight-color: #ffaa70;      /* 新增高亮色变量，可被覆盖 */
   --text: #e0e0e0;
   --sub-text: #99aabb;
   --line: #333;
@@ -66,12 +66,10 @@ img { max-width: 100%; height: auto; display: block; }
 }
 
 
-/* ========== 3. 立绘卡片（背景式，仿远坂凛风格） ========== */
+/* ========== 3. 立绘卡片 ========== */
 .hero-section {
   position: relative;
-  background-size: cover;
-  background-position: center top;
-  background-repeat: no-repeat;
+  background: #1a1a1a;              /* 深色纯背景回退 */
   border-radius: var(--radius);
   margin: 16px 16px 0;
   height: var(--hero-height, 340px);
@@ -80,10 +78,8 @@ img { max-width: 100%; height: auto; display: block; }
   box-shadow: var(--shadow);
 }
 
-/* 如果页面使用 <img> 标签，自动切换为图片模式 */
 .hero-section:has(.hero-image) {
-  background-image: none !important;
-  background: linear-gradient(135deg, #1a2f1a 0%, #0f1f0f 100%);
+  background: #1a1a1a;              /* 有图片时统一背景色 */
 }
 .hero-image {
   width: 100%;
@@ -91,6 +87,7 @@ img { max-width: 100%; height: auto; display: block; }
   object-fit: cover;
   opacity: 0.95;
   display: block;
+  background-color: #1a1a1a;        /* 图片加载前占位 */
 }
 
 .hero-overlay {
@@ -120,12 +117,10 @@ img { max-width: 100%; height: auto; display: block; }
   backdrop-filter: blur(4px);
 }
 
-/* 移动端立绘适配 */
 @media (max-width: 600px) {
   .hero-section {
     height: 220px;
     margin: 12px 12px 0;
-    background-position: center 20%;
   }
   .hero-name { font-size: 1.6rem; }
   .hero-overlay { padding: 16px; }
@@ -148,7 +143,7 @@ img { max-width: 100%; height: auto; display: block; }
 }
 
 
-/* ========== 5. 标题黑底白字（与卡片背景一致 #202020） ========== */
+/* ========== 5. 标题黑底白字 ========== */
 .skill-name,
 .section-title {
   background: var(--card, #202020);
@@ -160,13 +155,9 @@ img { max-width: 100%; height: auto; display: block; }
   font-weight: 700;
   flex-shrink: 0;
 }
-
-/* .skill-name 在 flex 容器中的特殊处理 */
 .skill-header .skill-name {
   flex-shrink: 0;
 }
-
-/* 移动端标题缩放 */
 @media (max-width: 600px) {
   .skill-name,
   .section-title {
@@ -176,7 +167,7 @@ img { max-width: 100%; height: auto; display: block; }
 }
 
 
-/* ========== 6. 技能头部布局 ========== */
+/* ========== 6. 技能头部 ========== */
 .skill-header {
   display: flex;
   flex-wrap: wrap;
@@ -203,20 +194,21 @@ img { max-width: 100%; height: auto; display: block; }
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 .level-btn {
-  width: 36px;
-  height: 36px;
+  min-width: 44px;
+  min-height: 44px;
   border: none;
   border-radius: var(--radius);
   background: var(--button-bg);
   color: var(--text);
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: all var(--transition);
   user-select: none;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  padding: 0 8px;
 }
 .level-btn:hover:not(:disabled) {
   background: var(--button-hover);
@@ -285,7 +277,10 @@ img { max-width: 100%; height: auto; display: block; }
   color: transparent;
   font-weight: 800;
 }
-.highlight-text { color: orange; font-weight: 600; }
+.highlight-text {
+  color: var(--highlight-color, #ffaa70);  /* 使用变量 */
+  font-weight: 600;
+}
 .special-text { color: #ffae70; font-weight: 600; }
 .energy-text { color: #66ccff; font-weight: 600; }
 
@@ -366,7 +361,7 @@ img { max-width: 100%; height: auto; display: block; }
 }
 
 
-/* ========== 11. 星魂 / 命之座（黑底白字名称） ========== */
+/* ========== 11. 星魂 / 命之座（修复布局） ========== */
 .constellation-table {
   width: 100%;
   border-collapse: collapse;
@@ -389,16 +384,14 @@ img { max-width: 100%; height: auto; display: block; }
   font-weight: 700;
   min-width: 60px;
 }
-/* ★ 星魂名称列：黑底白字，与卡片背景一致 ★ */
+/* ★ 星魂名称列：保持 table-cell，用背景和内边距模拟黑底标签，不破坏布局 */
 .constellation-table td:nth-child(2) {
   background: var(--card, #202020);
   color: #fff;
-  min-width: 80px;
   font-weight: 600;
   border-radius: 4px;
   padding: 4px 8px;
-  display: inline-block;
-  /* 模拟黑底标签效果 */
+  /* 不再设置 display:inline-block */
 }
 /* 效果列保持原样 */
 .constellation-table td:nth-child(3) {
@@ -447,6 +440,8 @@ img { max-width: 100%; height: auto; display: block; }
   justify-content: center;
   overflow: hidden;
   margin-bottom: 6px;
+  font-size: 14px;          /* 图片加载失败时显示文字备用 */
+  color: #6a8a7a;
 }
 .material-img img {
   width: 100%;
@@ -482,7 +477,7 @@ img { max-width: 100%; height: auto; display: block; }
 }
 
 
-/* ========== 13. 粘性导航菜单（选项卡） ========== */
+/* ========== 13. 粘性导航菜单 ========== */
 .sticky-nav {
   position: sticky;
   top: 0;
@@ -531,7 +526,13 @@ img { max-width: 100%; height: auto; display: block; }
   user-select: none;
 }
 
-/* 移动端导航 */
+/* 键盘焦点可见 */
+.sticky-nav .nav-item:focus-visible {
+  outline: 2px solid var(--primary, #d3af37);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 @media (max-width: 600px) {
   .sticky-nav {
     padding: 4px 8px;
@@ -581,6 +582,10 @@ img { max-width: 100%; height: auto; display: block; }
   color: #ffcc88;
   background: rgba(255, 204, 136, 0.12);
   box-shadow: inset 0 0 0 1px rgba(255, 204, 136, 0.15);
+}
+.team-tabs .tab-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .team-panels { position: relative; }
@@ -695,7 +700,6 @@ img { max-width: 100%; height: auto; display: block; }
   font-weight: 500;
 }
 
-/* 配队响应式 */
 @media (max-width: 480px) {
   .team-avatar {
     width: 60px;
@@ -708,10 +712,12 @@ img { max-width: 100%; height: auto; display: block; }
 }
 
 
-/* ========== 15. 卡片切换过渡 ========== */
+/* ========== 15. 卡片切换过渡（配合JS控制显示） ========== */
 section.card {
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
+/* 注意：当 JS 使用 display:none 时，过渡不会生效。
+   若希望完美淡入淡出，请将 JS 中的切换改为 visibility + opacity + position:absolute 控制 */
 section.card[style*="display: none"] {
   opacity: 0;
   transform: scale(0.98);
@@ -749,6 +755,10 @@ section.card:not([style*="display: none"]) {
   background: rgba(50, 80, 70, 0.9);
   transform: scale(1.05);
   border-color: #ffaa7a;
+}
+.back-top:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 .back-top.visible { display: flex; }
 @media (max-width: 600px) {
