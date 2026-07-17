@@ -248,7 +248,7 @@
                     { label: '能量变化', value: '+20' }
                 ],
                 values: [
-                    { id: 'normal-val1', base: 50, step: 10 }
+                    { id: 'normal-val1', base: 50, step: 10, suffix: '%' }
                 ]
             },
             skill: {
@@ -261,7 +261,7 @@
                     { label: '能量变化', value: '+30' }
                 ],
                 values: [
-                    { id: 'skill-val1', base: 150, step: 20 }
+                    { id: 'skill-val1', base: 150, step: 20, suffix: '%' }
                 ]
             },
             ultimate: {
@@ -274,8 +274,8 @@
                     { label: '施放终结技之后的能量', value: '+15点' }
                 ],
                 values: [
-                    { id: 'ultimate-val1', base: 300, step: 36 },
-                    { id: 'ultimate-val2', base: 100, step: 10 }
+                    { id: 'ultimate-val1', base: 300, step: 36, suffix: '%' },
+                    { id: 'ultimate-val2', base: 100, step: 10, suffix: '%' }
                 ]
             },
             talent: {
@@ -286,8 +286,8 @@
                     { label: '/', value: '/' }
                 ],
                 values: [
-                    { id: 'talent-val1', base: 10, step: 2 },
-                    { id: 'talent-val2', base: 20, step: 5 }
+                    { id: 'talent-val1', base: 10, step: 2, suffix: '%' },
+                    { id: 'talent-val2', base: 20, step: 5, suffix: '%' }
                 ]
             }
         },
@@ -384,7 +384,7 @@
     };
 
     // ================================================================
-    // ★★★ 渲染引擎（通常不需要改动） ★★★
+    // ★★★ 渲染引擎 ★★★
     // ================================================================
 
     (function() {
@@ -547,7 +547,9 @@
             return promotionStages.filter(stage => stage.targetLevel <= currentLevel);
         }
 
-        // 技能更新
+        // =============================================================
+        // ★ 技能更新（suffix 方案）
+        // =============================================================
         function updateSkillDisplay(skillType) {
             const skill = state.skills[skillType];
             const levelElement = document.getElementById(`${skillType}-level`);
@@ -559,7 +561,16 @@
                     const element = document.getElementById(valueData.id);
                     if (!element) return;
                     const newVal = getSkillValue(valueData.base, valueData.step, skill.level);
-                    element.textContent = newVal + '%';
+                    const suffix = valueData.suffix || '';
+                    let displayVal;
+                    if (suffix === '%') {
+                        let numStr = Number.isInteger(newVal) ? newVal.toString() : newVal.toFixed(1);
+                        if (numStr.endsWith('.0')) numStr = numStr.slice(0, -2);
+                        displayVal = numStr + '%';
+                    } else {
+                        displayVal = Math.round(newVal).toString();
+                    }
+                    element.textContent = displayVal;
                     applyLevelColor(element, skill.level, skill.maxLevel);
                 });
             }
