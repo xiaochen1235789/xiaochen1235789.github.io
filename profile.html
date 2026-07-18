@@ -977,32 +977,26 @@
             return { ...profile, ...stats };
         }
 
-        // ★★★★★ 修复1：增加会话等待，确保客户端已从存储恢复会话 ★★★★★
-        async function loadUserProfileWithCache() {
-            // 1. 确保会话已从 localStorage 恢复
-            let session = null;
-            let attempts = 0;
-            const maxAttempts = 5;
-            while (attempts < maxAttempts) {
-                const { data, error } = await supabaseClient.auth.getSession();
-                if (!error && data.session) {
-                    session = data.session;
-                    break;
+        // ★★★★★ 修复版：使用 getUser() 并增加重试 ★★★★★
+        async function loadUserProfileWithCache(sessionUser) {
+            // 1. 如果传入了 sessionUser 则直接使用，否则通过 getUser 获取（备用）
+            let user = sessionUser;
+            if (!user) {
+                // 再尝试一次
+                const { data, error } = await supabaseClient.auth.getUser();
+                if (error || !data.user) {
+                    const redirect = encodeURIComponent(window.location.href);
+                    window.location.href = `login-real.html?redirect=${redirect}`;
+                    return;
                 }
-                attempts++;
-                await new Promise(r => setTimeout(r, 300)); // 等待 300ms 后重试
+                user = data.user;
             }
-            if (!session || !session.user) {
-                const redirect = encodeURIComponent(window.location.href);
-                window.location.href = `login-real.html?redirect=${redirect}`;
-                return;
-            }
-            currentUser = session.user;
+            currentUser = user;
 
-            // 2. 查看是否有其他用户ID
+            // 2. 查看是否有其他用户 ID（查看他人主页）
             const urlParams = new URLSearchParams(window.location.search);
             let uid = urlParams.get('uid');
-            if(uid && uid !== currentUser.id) {
+            if (uid && uid !== currentUser.id) {
                 isViewingSelf = false;
                 targetUserId = uid;
                 try {
@@ -1010,7 +1004,7 @@
                     userProfile = fullData;
                     userStats = fullData; // 兼容
                 } catch(e) {
-                    showNotification('用户不存在或已注销','error');
+                    showNotification('用户不存在或已注销', 'error');
                     setTimeout(() => window.location.href='index.html', 1500);
                     return;
                 }
@@ -1018,20 +1012,25 @@
                 isViewingSelf = true;
                 targetUserId = currentUser.id;
                 let fullData = getCachedProfile();
-                if(!fullData) {
+                if (!fullData) {
                     fullData = await fetchUserFullData(currentUser.id);
                     setCachedProfile(fullData);
                 }
                 userProfile = fullData;
                 userStats = fullData;
             }
-            // 3. 渲染
+
+            // 3. 渲染页面
             await renderProfile();
-            if(isViewingSelf && window.FrameSystem) {
+            if (isViewingSelf && window.FrameSystem) {
                 await window.FrameSystem.initFrameForUser(currentUser.id);
             }
-            if(isViewingSelf) {
-                await supabaseClient.from('user_stats').upsert({ user_id: currentUser.id, last_login: new Date().toISOString() }, { onConflict: 'user_id' });
+            if (isViewingSelf) {
+                // 更新最后登录时间
+                await supabaseClient.from('user_stats').upsert(
+                    { user_id: currentUser.id, last_login: new Date().toISOString() },
+                    { onConflict: 'user_id' }
+                );
                 safeSetText('lastLogin', new Date().toLocaleString());
             } else {
                 safeSetText('lastLogin', '--');
@@ -1129,46 +1128,45 @@
             window.openRewardInfoModal = openRewardInfoModal;
         }
 
-        // ========== ★★★★★ 初始化（已修复） ★★★★★ ==========
+        // ========== ★★★★★ 初始化（已修改） ★★★★★ ==========
         async function initializeProfile() {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             window.supabaseClient = supabaseClient;
 
-            // ★★★ 关键修复：显式等待客户端从存储恢复会话 ★★★
-            try {
-                let session = null;
-                let attempts = 0;
-                while (attempts < 3) {
-                    const { data, error } = await supabaseClient.auth.getSession();
-                    if (!error && data.session) {
-                        session = data.session;
+            // ✅ 用 getUser() 代替 getSession()，并增加重试（手机加载慢时更可靠）
+            let user = null;
+            for (let i = 0; i < 6; i++) {           // 重试 6 次，每次等待 500ms
+                try {
+                    const { data, error } = await supabaseClient.auth.getUser();
+                    if (!error && data.user) {
+                        user = data.user;
                         break;
                     }
-                    attempts++;
-                    await new Promise(resolve => setTimeout(resolve, 200));
+                } catch (e) {
+                    // 忽略异常继续重试
                 }
-                if (!session) {
-                    // 无会话，直接跳转登录页
-                    const redirect = encodeURIComponent(window.location.href);
-                    window.location.href = `login-real.html?redirect=${redirect}`;
-                    return;
-                }
-            } catch (err) {
-                console.warn('会话恢复异常:', err);
-                // 出错也跳转登录
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            if (!user) {
+                // 没有登录，跳转到登录页并保留当前页面作为 redirect 参数
                 const redirect = encodeURIComponent(window.location.href);
                 window.location.href = `login-real.html?redirect=${redirect}`;
                 return;
             }
 
-            // 现在加载用户资料
+            // 现在开始加载用户资料
             try {
-                await loadUserProfileWithCache();
+                await loadUserProfileWithCache(user);   // 把获取到的 user 传进去
                 bindEventListeners();
             } catch (err) {
                 console.error('初始化失败:', err);
-                showNotification('请先登录', 'error');
-                setTimeout(() => window.location.href = 'login-real.html', 1500);
+                showNotification('加载资料失败，请刷新重试', 'error');
+                // 如果加载资料失败，跳回登录页
+                setTimeout(() => {
+                    const redirect = encodeURIComponent(window.location.href);
+                    window.location.href = `login-real.html?redirect=${redirect}`;
+                }, 1500);
             }
         }
 
