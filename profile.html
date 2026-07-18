@@ -10,48 +10,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
-    <style>
-        /* 内联补充样式（与zhuye.css不冲突） */
-        #shopModal .modal #shopContentContainer { max-height: 60vh; overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
-        #shopModal .modal #shopContentContainer::-webkit-scrollbar { width: 6px; }
-        #shopModal .modal #shopContentContainer::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 3px; }
-        #shopModal .modal #shopContentContainer::-webkit-scrollbar-thumb { background: var(--text-highlight); border-radius: 3px; }
-        #avatarConfirmModal .modal { max-width: 280px; text-align: center; }
-        .confirm-buttons { justify-content: center; margin-top: 20px; }
-        .readonly-mode .username-edit, .readonly-mode .edit-bio, .readonly-mode .checkin-card, .readonly-mode .shop-button, .readonly-mode .settings-item .btn, .readonly-mode .danger-zone, .readonly-mode .my-title-btn { display: none !important; }
-        .readonly-mode .avatar-container { cursor: default; }
-        .shop-panel { width: 100%; }
-        .balance-row { display: flex; gap: 16px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
-        .balance-item { background: rgba(0,0,0,0.2); padding: 6px 16px; border-radius: 40px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 4px; }
-        .balance-item:hover { background: rgba(0,0,0,0.4); }
-        .shop-tabs { display: flex; gap: 12px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap; }
-        .shop-tabs .tab-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border-color, #3d725f); color: var(--text-main, #e0e0e0); padding: 8px 20px; border-radius: 40px; font-size: 0.9rem; cursor: pointer; transition: 0.2s; }
-        .shop-tabs .tab-btn.active { background: var(--text-highlight, #81c784); color: var(--bg, #121212); border-color: var(--text-highlight, #81c784); }
-        .shop-tabs .tab-btn:hover:not(.active) { background: var(--card-bg-hover, #284a3c); }
-        .shop-card.hide-card { display: none; }
-        .btn-buy, .btn-equip, .btn-owned { background: #f59e0b; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; color: white; }
-        .btn-owned { background: #6b7280; cursor: default; }
-        .card-note { font-size: 0.7rem; color: #fbbf24; margin-top: 4px; }
-        .user-title-row { margin-top: 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .title-badge { background: rgba(0,0,0,0.3); padding: 4px 12px; border-radius: 40px; display: inline-flex; align-items: center; gap: 6px; }
-        .title-item { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; }
-        .title-name { font-weight: bold; }
-        .title-desc { font-size: 0.7rem; opacity: 0.7; }
-        .title-condition { font-size: 0.65rem; color: #facc15; }
-        .help-section { margin-bottom: 20px; border-left: 3px solid #facc15; padding-left: 12px; }
-        .help-section h3 { font-size: 1rem; margin-bottom: 6px; color: #facc15; }
-        .help-section p { font-size: 0.85rem; line-height: 1.4; opacity: 0.9; }
-        .frame-item-wrap { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); gap: 12px; }
-        .frame-left-box { display: flex; align-items: center; gap: 12px; flex: 1; cursor: pointer; }
-        .frame-mini-preview.big { width: 80px; height: 80px; }
-        .frame-mini-preview.big .placeholder { font-size: 1.5rem; }
-        .backpack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 16px; padding: 8px 0; }
-        .backpack-item { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 12px 8px; text-align: center; cursor: pointer; transition: 0.2s; }
-        .backpack-item:hover { background: rgba(255,255,255,0.1); }
-        .backpack-item .item-icon { font-size: 2.5rem; height: 60px; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
-        .backpack-item .item-count { font-size: 0.85rem; color: #81c784; font-weight: bold; }
-        .backpack-empty { text-align: center; padding: 40px 0; color: #aaa; font-size: 1.1rem; line-height: 2; }
-    </style>
 </head>
 <body>
     <nav class="top-nav">
@@ -161,35 +119,181 @@
     <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fas fa-chevron-up"></i></button>
 
     <script>
-        // ========== 配置 ==========
-        const ROLE_CONFIG = { owner: { name: '站长', color: '#f97316' }, admin: { name: '管理员', color: '#60a5fa' }, user:  { name: '普通用户', color: '#9ca3af' } };
-        function getRoleDisplay(role) { return ROLE_CONFIG[role] || ROLE_CONFIG.user; }
+        // ========== 常量定义 ==========
+        const AUTO_CARD_PRICE = 100;
+        const AVATAR_SIZE = 500;
+        const LONG_PRESS_DELAY = 500;
+        const CACHE_TTL = 86400000; // 24小时
 
-        let supabaseClient = null, currentUser = null, targetUserId = null, userProfile = null, userStats = null;
-        let isViewingSelf = true;
-        let cropper = null, isUploading = false;
+        // ========== 配置 ==========
+        const ROLE_CONFIG = { owner: { name: '站长', color: '#f97316' }, admin: { name: '管理员', color: '#60a5fa' }, user: { name: '普通用户', color: '#9ca3af' } };
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
-        let allTitlesList = []; let userOwnedTitles = []; let equippedTitleObj = null;
+        function getRoleDisplay(role) { return ROLE_CONFIG[role] || ROLE_CONFIG.user; }
 
-        function refreshLocalCache() { if (!isViewingSelf) return; if (userProfile) localStorage.setItem('cachedUserProfile', JSON.stringify(userProfile)); if (userStats) localStorage.setItem('cachedUserStats', JSON.stringify(userStats)); localStorage.setItem('profileLastUpdated', Date.now()); }
-        function getLocalDateString(date = new Date()) { return date.toLocaleDateString('sv-SE'); }
+        // ========== 全局状态 ==========
+        let supabaseClient = null;
+        let currentUser = null;
+        let targetUserId = null;
+        let userProfile = null;
+        let userStats = null;
+        let isViewingSelf = true;
+        let cropper = null;
+        let isUploading = false;
+        let allTitlesList = [];
+        let userOwnedTitles = [];
+        let equippedTitleObj = null;
+        let hasAutoSignCard = false;
+        let autoSignAttempted = false;
+        let notificationTimeout = null;
+        let longPressTimer = null;
+        let isProcessing = false;
+
+        // ========== 工具函数 ==========
+        function escapeHtml(str) { if (!str) return ''; return String(str).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' } [m] || m)); }
+
+        function getLocalDateString(date) { return date.toLocaleDateString('sv-SE'); }
+
+        function safeSetText(id, text) { let e = document.getElementById(id); if (e) e.textContent = text || '--'; }
+
+        // ========== 统一通知系统 ==========
+        function showNotification(msg, type = 'info') {
+            let n = document.getElementById('notification');
+            if (!n) { n = document.createElement('div');
+                n.id = 'notification';
+                document.body.appendChild(n); }
+            n.textContent = msg;
+            n.className = 'notification ' + type;
+            n.classList.remove('show');
+            void n.offsetWidth;
+            n.classList.add('show');
+            if (notificationTimeout) clearTimeout(notificationTimeout);
+            notificationTimeout = setTimeout(() => { if (n) n.classList.remove('show'); }, 3000);
+        }
+
+        function showSyncNotice() { let sn = document.getElementById('syncNotice'); if (sn) { sn.classList.add('show');
+                setTimeout(() => sn.classList.remove('show'), 2000); } }
+
+        // ========== 缓存管理 ==========
+        function refreshLocalCache() {
+            if (!isViewingSelf) return;
+            if (userProfile) localStorage.setItem('cachedUserProfile', JSON.stringify(userProfile));
+            if (userStats) localStorage.setItem('cachedUserStats', JSON.stringify(userStats));
+            localStorage.setItem('profileLastUpdated', Date.now());
+        }
+
+        function cacheUserProfile(username, avatarUrl) {
+            if (!isViewingSelf) return;
+            if (username) localStorage.setItem('cachedUsername', username);
+            if (avatarUrl) localStorage.setItem('cachedAvatar', avatarUrl);
+            localStorage.setItem('profileLastUpdated', Date.now());
+            localStorage.setItem('forceRefreshUserState', Date.now().toString());
+            showSyncNotice();
+        }
+
+        // ========== 统一错误处理 ==========
+        async function safeCall(fn, errorMsg = '操作失败', showLoading = true) {
+            if (isProcessing) return;
+            isProcessing = true;
+            if (showLoading) showNotification('处理中...', 'info');
+            try {
+                const result = await fn();
+                return result;
+            } catch (err) {
+                console.error(errorMsg, err);
+                showNotification(errorMsg + ': ' + (err.message || '未知错误'), 'error');
+                return null;
+            } finally {
+                isProcessing = false;
+            }
+        }
+
+        // ========== 头像显示 ==========
+        function updateAvatarDisplay(imageUrl) {
+            const avatarDiv = document.getElementById('userAvatar');
+            if (!avatarDiv) return;
+            const currentFrameClass = Array.from(avatarDiv.classList).find(c => c.startsWith('frame-')) || '';
+            let initial = 'U';
+            if (userProfile?.username) initial = userProfile.username.charAt(0).toUpperCase();
+            else if (currentUser?.email) initial = currentUser.email.charAt(0).toUpperCase();
+            if (imageUrl) {
+                avatarDiv.innerHTML =
+                    `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="window.handleAvatarLoadError(this)">`;
+            } else {
+                avatarDiv.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
+            }
+            avatarDiv.classList.add('avatar');
+            if (currentFrameClass) avatarDiv.classList.add(currentFrameClass);
+            else if (isViewingSelf && window.FrameSystem && currentUser) {
+                window.FrameSystem.loadUserFrames(currentUser.id).then(({ equipped }) => {
+                    window.FrameSystem.applyFrameClassByFrameId(equipped);
+                });
+            }
+        }
+
+        window.handleAvatarLoadError = function(imgElement) {
+            imgElement.onerror = null;
+            imgElement.style.display = 'none';
+            const parent = imgElement.parentElement;
+            const initial = parent.getAttribute('data-initial') || 'U';
+            parent.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
+            const frameClass = Array.from(parent.classList).find(c => c.startsWith('frame-'));
+            if (frameClass) parent.classList.add(frameClass);
+        };
+
+        // ========== 导航栏 ==========
+        function updateNavbar() {
+            let navDiv = document.getElementById('userNavSection');
+            if (!navDiv) return;
+            if (!currentUser) { navDiv.innerHTML = '<a href="login-real.html">登录</a>'; return; }
+            if (!isViewingSelf) {
+                navDiv.innerHTML =
+                `<div style="display:flex;align-items:center;gap:8px;"><span style="color:#81c784;">🔍 查看对方主页中</span></div>`;
+            } else {
+                let username = userProfile?.username || currentUser?.email?.split('@')[0] || '用户';
+                let roleInfo = getRoleDisplay(userProfile?.role);
+                let avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
+                let avatarHtml = avatarUrl ?
+                    `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;">` :
+                    `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${username.charAt(0).toUpperCase()}</div>`;
+                navDiv.innerHTML =
+                    `<div style="display:flex;align-items:center;gap:8px;">${avatarHtml}<span style="color:${roleInfo.color};">${username} (${roleInfo.name})</span><button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:20px;cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
+                document.getElementById('logoutBtn')?.addEventListener('click', () => openModal('logoutConfirmModal'));
+            }
+            let adminLink = document.getElementById('adminLink');
+            if (adminLink && currentUser && (userProfile?.role === 'owner' || userProfile?.role === 'admin')) adminLink.style
+                .display = 'inline-block';
+            else if (adminLink) adminLink.style.display = 'none';
+        }
+
+        // ========== 模态框 ==========
+        function openModal(id) { let m = document.getElementById(id); if (m) m.classList.add('show');
+            document.body.style.overflow = 'hidden'; }
+
+        function closeModal(id) { let m = document.getElementById(id); if (m) m.classList.remove('show');
+            document.body.style.overflow = ''; }
 
         // ========== 头像框系统 ==========
         window.FrameSystem = (function() {
             const FRAMES = [
-                { id: 'nature', name: '默认头像框', description: '基础简洁边框', price_candy: 0, price_rainbow: 0, cssClass: '' },
-                { id: 'frame_gold', name: '黄金流光', description: '金边闪耀，流光溢彩', price_candy: 50, price_rainbow: 0, cssClass: 'frame-gold' },
-                { id: 'frame_rainbow', name: '彩虹炫光', description: '全彩渐变，绚丽夺目', price_candy: 30, price_rainbow: 3, cssClass: 'frame-rainbow' },
-                { id: 'frame_neon_blue', name: '霓虹蓝光', description: '赛博朋克风的蓝色霓虹光晕', price_candy: 60, price_rainbow: 2, cssClass: 'frame-neon-blue' },
-                { id: 'frame_pulse_purple', name: '紫色脉冲', description: '带有呼吸灯效果的紫色脉冲光环', price_candy: 80, price_rainbow: 5, cssClass: 'frame-pulse-purple' }
+                { id: 'nature', name: '默认头像框', description: '基础简洁边框', price_candy: 0, price_rainbow: 0,
+                cssClass: '' },
+                { id: 'frame_gold', name: '黄金流光', description: '金边闪耀，流光溢彩', price_candy: 50, price_rainbow: 0,
+                    cssClass: 'frame-gold' },
+                { id: 'frame_rainbow', name: '彩虹炫光', description: '全彩渐变，绚丽夺目', price_candy: 30, price_rainbow: 3,
+                    cssClass: 'frame-rainbow' },
+                { id: 'frame_neon_blue', name: '霓虹蓝光', description: '赛博朋克风的蓝色霓虹光晕', price_candy: 60, price_rainbow: 2,
+                    cssClass: 'frame-neon-blue' },
+                { id: 'frame_pulse_purple', name: '紫色脉冲', description: '带有呼吸灯效果的紫色脉冲光环', price_candy: 80,
+                    price_rainbow: 5, cssClass: 'frame-pulse-purple' }
             ];
 
             function getFrameById(id) { return FRAMES.find(f => f.id === id); }
 
             async function loadUserFrames(userId) {
-                const { data, error } = await supabaseClient.from('user_profiles').select('owned_frames, equipped_frame').eq('id', userId).single();
+                const { data, error } = await supabaseClient.from('user_profiles').select('owned_frames, equipped_frame')
+                    .eq('id', userId).single();
                 if (error || !data) return { owned: ['nature'], equipped: 'nature' };
                 let owned = data.owned_frames || ['nature'];
                 if (!owned.includes('nature')) owned.push('nature');
@@ -198,16 +302,19 @@
             }
 
             async function ensureUserFrameFields(userId) {
-                const { data: profile } = await supabaseClient.from('user_profiles').select('owned_frames, equipped_frame').eq('id', userId).single();
+                const { data: profile } = await supabaseClient.from('user_profiles').select('owned_frames, equipped_frame')
+                    .eq('id', userId).single();
                 let needUpdate = false;
                 let owned = profile?.owned_frames || ['nature'];
                 let equipped = profile?.equipped_frame || null;
-                if (!owned.includes('nature')) { owned.push('nature'); needUpdate = true; }
-                if (!equipped) { equipped = 'nature'; needUpdate = true; }
+                if (!owned.includes('nature')) { owned.push('nature');
+                    needUpdate = true; }
+                if (!equipped) { equipped = 'nature';
+                    needUpdate = true; }
                 if (needUpdate) {
-                    await supabaseClient.from('user_profiles').update({ owned_frames: owned, equipped_frame: equipped }).eq('id', userId);
-                    // 更新数据后立即缓存
-                    refreshLocalCache(); 
+                    await supabaseClient.from('user_profiles').update({ owned_frames: owned, equipped_frame: equipped })
+                        .eq('id', userId);
+                    refreshLocalCache();
                 }
             }
 
@@ -217,18 +324,22 @@
                 let { owned } = await loadUserFrames(currentUser.id);
                 if (owned.includes(frameId)) throw new Error('已拥有');
                 if (stats.candy_crumbles < frame.price_candy) throw new Error(`糖果碎不足，需 ${frame.price_candy.toLocaleString()}`);
-                if (stats.rainbow_lollipops < frame.price_rainbow) throw new Error(`超级棒糖不足，需 ${frame.price_rainbow.toLocaleString()}`);
+                if (stats.rainbow_lollipops < frame.price_rainbow) throw new Error(
+                `超级棒糖不足，需 ${frame.price_rainbow.toLocaleString()}`);
 
                 let newCandy = stats.candy_crumbles - frame.price_candy;
                 let newRainbow = stats.rainbow_lollipops - frame.price_rainbow;
-                await supabaseClient.from('user_stats').update({ candy_crumbles: newCandy, rainbow_lollipops: newRainbow }).eq('user_id', currentUser.id);
+                await supabaseClient.from('user_stats').update({ candy_crumbles: newCandy, rainbow_lollipops: newRainbow })
+                    .eq('user_id', currentUser.id);
 
-                const { data: profile } = await supabaseClient.from('user_profiles').select('owned_frames').eq('id', currentUser.id).single();
+                const { data: profile } = await supabaseClient.from('user_profiles').select('owned_frames').eq('id',
+                    currentUser.id).single();
                 let currentOwned = profile?.owned_frames || ['nature'];
                 if (!currentOwned.includes(frameId)) currentOwned.push(frameId);
                 await supabaseClient.from('user_profiles').update({ owned_frames: currentOwned }).eq('id', currentUser.id);
 
-                if (window.userStats) { window.userStats.candy_crumbles = newCandy; window.userStats.rainbow_lollipops = newRainbow; }
+                if (window.userStats) { window.userStats.candy_crumbles = newCandy;
+                    window.userStats.rainbow_lollipops = newRainbow; }
                 refreshLocalCache();
                 if (onSuccess) onSuccess(newCandy, newRainbow);
                 if (window.updateShopBalanceDisplay) window.updateShopBalanceDisplay();
@@ -239,7 +350,6 @@
                 if (!owned.includes(frameId)) throw new Error('未拥有');
                 await supabaseClient.from('user_profiles').update({ equipped_frame: frameId }).eq('id', currentUser.id);
                 await applyFrameClassByFrameId(frameId);
-                // 装备后立即缓存新数据
                 refreshLocalCache();
             }
 
@@ -262,95 +372,458 @@
                 await applyFrameClassByFrameId(equipped);
             }
 
-            return { FRAMES, getFrameById, loadUserFrames, purchaseFrame, equipFrame, initFrameForUser, applyFrameClassByFrameId };
+            return { FRAMES, getFrameById, loadUserFrames, purchaseFrame, equipFrame, initFrameForUser,
+                applyFrameClassByFrameId };
         })();
 
-        // ========== 通用辅助 ==========
-        function safeSetText(id, text) { let e = document.getElementById(id); if(e) e.textContent = text || '--'; }
-        let notificationTimeout = null;
-        function showNotification(msg, type = 'info') {
-            let n = document.getElementById('notification');
-            if (!n) { n = document.createElement('div'); n.id = 'notification'; document.body.appendChild(n); }
-            n.textContent = msg;
-            n.style.background = type === 'error' ? '#f87171' : (type === 'success' ? '#10b981' : '#3b82f6');
-            n.style.color = '#fff';
-            n.classList.remove('show'); void n.offsetWidth; n.classList.add('show');
-            if (notificationTimeout) clearTimeout(notificationTimeout);
-            notificationTimeout = setTimeout(() => { if (n) n.classList.remove('show'); }, 3000);
-        }
-        function showSyncNotice() { let sn = document.getElementById('syncNotice'); if(sn){ sn.classList.add('show'); setTimeout(()=>sn.classList.remove('show'),2000); } }
-        function cacheUserProfile(username, avatarUrl) { if(!isViewingSelf) return; if(username) localStorage.setItem('cachedUsername', username); if(avatarUrl) localStorage.setItem('cachedAvatar', avatarUrl); localStorage.setItem('profileLastUpdated', Date.now()); localStorage.setItem('forceRefreshUserState', Date.now().toString()); showSyncNotice(); }
+        // ========== 面板函数 ==========
+        function openUsernameModal() { if (!isViewingSelf) return;
+            document.getElementById('newUsername').value = userProfile?.username || '';
+            openModal('usernameModal'); }
 
-        function updateAvatarDisplay(imageUrl) {
-            const avatarDiv = document.getElementById('userAvatar'); if(!avatarDiv) return;
-            const currentFrameClass = Array.from(avatarDiv.classList).find(c => c.startsWith('frame-')) || '';
-            let initial = 'U';
-            if(userProfile?.username) initial = userProfile.username.charAt(0).toUpperCase();
-            else if(currentUser?.email) initial = currentUser.email.charAt(0).toUpperCase();
-            if(imageUrl) {
-                avatarDiv.innerHTML = `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="window.handleAvatarLoadError(this)">`;
-            } else {
-                avatarDiv.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
-            }
-            avatarDiv.classList.add('avatar');
-            if (currentFrameClass) avatarDiv.classList.add(currentFrameClass);
-            else if (isViewingSelf && window.FrameSystem && currentUser) {
-                window.FrameSystem.loadUserFrames(currentUser.id).then(({ equipped }) => {
-                    window.FrameSystem.applyFrameClassByFrameId(equipped);
-                });
-            }
+        function openBioModal() { if (!isViewingSelf) return;
+            document.getElementById('newBio').value = userProfile?.bio || '';
+            openModal('bioModal'); }
+
+        function openPasswordModal() { if (!isViewingSelf) return;
+            openModal('passwordModal'); }
+
+        function openDeleteAccountModal() { if (!isViewingSelf) return;
+            document.getElementById('confirmEmail').value = currentUser?.email || '';
+            openModal('deleteAccountModal'); }
+
+        function updateActivePointsDisplay() { let span = document.getElementById('activePointsValue'); if (span) span
+                .innerText = (userStats?.active_points || 0).toLocaleString(); }
+
+        function updateShopBalanceDisplay() {
+            if (!isViewingSelf) return;
+            let candySpan = document.getElementById('shopCandyBalance');
+            let rainSpan = document.getElementById('shopRainbowBalance');
+            let syrupSpan = document.getElementById('shopDreamySyrupBalance');
+            if (candySpan) candySpan.innerText = (userStats?.candy_crumbles || 0).toLocaleString();
+            if (rainSpan) rainSpan.innerText = (userStats?.rainbow_lollipops || 0).toLocaleString();
+            if (syrupSpan) syrupSpan.innerText = (userStats?.dreamy_syrup || 0).toLocaleString();
         }
 
-        window.handleAvatarLoadError = function(imgElement) {
-            imgElement.onerror = null; imgElement.style.display = 'none';
-            const parent = imgElement.parentElement; const initial = parent.getAttribute('data-initial') || 'U';
-            parent.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
-            const frameClass = Array.from(parent.classList).find(c => c.startsWith('frame-'));
-            if(frameClass) parent.classList.add(frameClass);
-        };
-
-        function updateNavbar() {
-            let navDiv = document.getElementById('userNavSection'); if(!navDiv) return;
-            if (!currentUser) { navDiv.innerHTML = '<a href="login-real.html">登录</a>'; return; }
-            if (!isViewingSelf) { navDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;"><span style="color:#81c784;">🔍 查看对方主页中</span></div>`; } else {
-                let username = userProfile?.username || currentUser?.email?.split('@')[0] || '用户';
-                let roleInfo = getRoleDisplay(userProfile?.role);
-                let avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
-                let avatarHtml = avatarUrl ? `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;">` : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${username.charAt(0).toUpperCase()}</div>`;
-                navDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px;">${avatarHtml}<span style="color:${roleInfo.color};">${username} (${roleInfo.name})</span><button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:20px;cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
-                document.getElementById('logoutBtn')?.addEventListener('click', () => openModal('logoutConfirmModal'));
-            }
-            let adminLink = document.getElementById('adminLink');
-            if(adminLink && currentUser && (userProfile?.role === 'owner' || userProfile?.role === 'admin')) adminLink.style.display = 'inline-block';
-            else if(adminLink) adminLink.style.display = 'none';
+        // ========== 长按头像 ==========
+        function onAvatarLongPressStart(e) {
+            if (!isViewingSelf) return;
+            e.preventDefault();
+            longPressTimer = setTimeout(() => { openModal('avatarConfirmModal');
+                longPressTimer = null; }, LONG_PRESS_DELAY);
         }
 
-        function openModal(id) { let m = document.getElementById(id); if(m) m.classList.add('show'); document.body.style.overflow = 'hidden'; }
-        function closeModal(id) { let m = document.getElementById(id); if(m) m.classList.remove('show'); document.body.style.overflow = ''; }
-        window.openUsernameModal = () => { if(!isViewingSelf) return; document.getElementById('newUsername').value = userProfile?.username || ''; openModal('usernameModal'); };
-        window.openBioModal = () => { if(!isViewingSelf) return; document.getElementById('newBio').value = userProfile?.bio || ''; openModal('bioModal'); };
-        window.openPasswordModal = () => { if(!isViewingSelf) return; openModal('passwordModal'); };
-        window.openDeleteAccountModal = () => { if(!isViewingSelf) return; document.getElementById('confirmEmail').value = currentUser?.email || ''; openModal('deleteAccountModal'); };
+        function onAvatarLongPressEnd(e) { if (longPressTimer) { clearTimeout(longPressTimer);
+                longPressTimer = null; } }
 
-        let longPressTimer = null;
-        function onAvatarLongPressStart(e) { if(!isViewingSelf) return; e.preventDefault(); longPressTimer = setTimeout(() => { openModal('avatarConfirmModal'); longPressTimer = null; }, 500); }
-        function onAvatarLongPressEnd(e) { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; } }
-        function attachLongPressToAvatar() { const avatarContainer = document.getElementById('avatarContainer'); if (!avatarContainer) return; avatarContainer.addEventListener('touchstart', onAvatarLongPressStart, { passive: false }); avatarContainer.addEventListener('touchend', onAvatarLongPressEnd); avatarContainer.addEventListener('touchcancel', onAvatarLongPressEnd); avatarContainer.addEventListener('mousedown', onAvatarLongPressStart); avatarContainer.addEventListener('mouseup', onAvatarLongPressEnd); avatarContainer.addEventListener('mouseleave', onAvatarLongPressEnd); }
+        function attachLongPressToAvatar() {
+            const avatarContainer = document.getElementById('avatarContainer');
+            if (!avatarContainer) return;
+            avatarContainer.addEventListener('touchstart', onAvatarLongPressStart, { passive: false });
+            avatarContainer.addEventListener('touchend', onAvatarLongPressEnd);
+            avatarContainer.addEventListener('touchcancel', onAvatarLongPressEnd);
+            avatarContainer.addEventListener('mousedown', onAvatarLongPressStart);
+            avatarContainer.addEventListener('mouseup', onAvatarLongPressEnd);
+            avatarContainer.addEventListener('mouseleave', onAvatarLongPressEnd);
+        }
 
-        window.openAvatarUpload = function() { if(!isViewingSelf) return; const oldInput = document.getElementById('tempFileInput'); if (oldInput) oldInput.remove(); const input = document.createElement('input'); input.id = 'tempFileInput'; input.type = 'file'; input.accept = 'image/jpeg,image/png'; input.style.cssText = 'position:fixed;top:-100px;left:-100px;opacity:0;pointer-events:none;'; document.body.appendChild(input); input.onchange = (e) => { const file = e.target.files[0]; if (file && file.size <= 5 * 1024 * 1024) initCropperModal(file); else if (file) showNotification('文件过大（最大5MB）', 'error'); input.remove(); }; input.click(); };
-        function confirmChangeAvatar() { closeModal('avatarConfirmModal'); openAvatarUpload(); }
+        function openAvatarUpload() {
+            if (!isViewingSelf) return;
+            const oldInput = document.getElementById('tempFileInput');
+            if (oldInput) oldInput.remove();
+            const input = document.createElement('input');
+            input.id = 'tempFileInput';
+            input.type = 'file';
+            input.accept = 'image/jpeg,image/png';
+            input.style.cssText = 'position:fixed;top:-100px;left:-100px;opacity:0;pointer-events:none;';
+            document.body.appendChild(input);
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file && file.size <= 5 * 1024 * 1024) initCropperModal(file);
+                else if (file) showNotification('文件过大（最大5MB）', 'error');
+                input.remove();
+            };
+            input.click();
+        }
+
+        function confirmChangeAvatar() { closeModal('avatarConfirmModal');
+            openAvatarUpload(); }
+
         function cancelChangeAvatar() { closeModal('avatarConfirmModal'); }
 
-        async function updateUsername() { if(!isViewingSelf) return; let newName = document.getElementById('newUsername').value.trim(); if(!newName || newName.length<2 || newName.length>20) return showNotification('用户名2-20字符','error'); await supabaseClient.from('user_profiles').update({ username: newName }).eq('id', currentUser.id); await supabaseClient.auth.updateUser({ data: { username: newName } }); userProfile.username = newName; let roleInfo = getRoleDisplay(userProfile.role); let usernameSpan = document.getElementById('displayUsername'); if(usernameSpan) usernameSpan.innerHTML = `${newName} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`; cacheUserProfile(newName, userProfile.avatar_url); refreshLocalCache(); updateNavbar(); closeModal('usernameModal'); showNotification('用户名已更新','success'); showSyncNotice(); }
-        async function updateBio() { if(!isViewingSelf) return; let newBio = document.getElementById('newBio').value.trim() || ''; await supabaseClient.from('user_profiles').update({ bio: newBio }).eq('id', currentUser.id); userProfile.bio = newBio; safeSetText('userBio', newBio); refreshLocalCache(); closeModal('bioModal'); showNotification('简介已更新','success'); showSyncNotice(); }
-        async function updatePassword() { if(!isViewingSelf) return; let cur = document.getElementById('currentPassword').value; let np = document.getElementById('newPassword').value; let cp = document.getElementById('confirmPassword').value; if(!cur || !np || !cp) return showNotification('请填写完整','error'); if(np.length<6) return showNotification('密码至少6位','error'); if(np!==cp) return showNotification('两次密码不一致','error'); let { error: signErr } = await supabaseClient.auth.signInWithPassword({ email: currentUser.email, password: cur }); if(signErr) return showNotification('当前密码错误','error'); let { error } = await supabaseClient.auth.updateUser({ password: np }); if(error) showNotification('修改失败: '+error.message,'error'); else { showNotification('密码已更新，请重新登录','success'); setTimeout(() => { supabaseClient.auth.signOut(); localStorage.clear(); window.location.href = 'login-real.html'; }, 1500); } closeModal('passwordModal'); }
-        async function deleteAccount() { if(!isViewingSelf) return; let confirmEmail = document.getElementById('confirmEmail').value; if(confirmEmail !== currentUser.email) return showNotification('邮箱不匹配','error'); showNotification('账号删除需联系管理员','warning'); closeModal('deleteAccountModal'); }
-        async function performLogout() { closeModal('logoutConfirmModal'); await supabaseClient.auth.signOut(); localStorage.clear(); window.location.href = 'index.html'; }
+        // ========== 头像裁剪 ==========
+        function initCropperModal(file) {
+            let img = document.getElementById('cropImage');
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                img.src = e.target.result;
+                if (cropper) cropper.destroy();
+                img.onload = () => {
+                    cropper = new Cropper(img, { aspectRatio: 1, viewMode: 1, autoCropArea: 0.8 });
+                    openModal('cropModal');
+                };
+            };
+            reader.readAsDataURL(file);
+        }
 
-        function updateActivePointsDisplay() { let span = document.getElementById('activePointsValue'); if(span) span.innerText = (userStats?.active_points || 0).toLocaleString(); }
-        function updateShopBalanceDisplay() { if(!isViewingSelf) return; let candySpan = document.getElementById('shopCandyBalance'); let rainSpan = document.getElementById('shopRainbowBalance'); let syrupSpan = document.getElementById('shopDreamySyrupBalance'); if(candySpan) candySpan.innerText = (userStats?.candy_crumbles || 0).toLocaleString(); if(rainSpan) rainSpan.innerText = (userStats?.rainbow_lollipops || 0).toLocaleString(); if(syrupSpan) syrupSpan.innerText = (userStats?.dreamy_syrup || 0).toLocaleString(); }
+        async function confirmCropAndUpload() {
+            if (!cropper) return;
+            let canvas = cropper.getCroppedCanvas({ width: AVATAR_SIZE, height: AVATAR_SIZE });
+            canvas.toBlob(async (blob) => {
+                if (blob) await uploadCroppedImage(blob);
+                closeModal('cropModal');
+                if (cropper) { cropper.destroy();
+                    cropper = null; }
+                document.getElementById('cropImage').removeAttribute('src');
+            }, 'image/png');
+        }
 
-        // ====== 签到奖励一览 ======
+        function cancelCrop() {
+            if (cropper) { cropper.destroy();
+                cropper = null; }
+            closeModal('cropModal');
+            document.getElementById('cropImage').removeAttribute('src');
+        }
+
+        async function uploadCroppedImage(blob) {
+            if (!isViewingSelf || !currentUser || isUploading) return false;
+            isUploading = true;
+            try {
+                let filePath = `${currentUser.id}/avatar.png`;
+                let { error: uploadErr } = await supabaseClient.storage.from('avatars').upload(filePath, blob, {
+                    contentType: 'image/png',
+                    upsert: true
+                });
+                if (uploadErr) throw uploadErr;
+                let { data: { publicUrl } } = supabaseClient.storage.from('avatars').getPublicUrl(filePath);
+                await supabaseClient.from('user_profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
+                if (userProfile) userProfile.avatar_url = publicUrl;
+                localStorage.setItem('userAvatar', publicUrl);
+                updateAvatarDisplay(publicUrl);
+                cacheUserProfile(userProfile?.username, publicUrl);
+                refreshLocalCache();
+                updateNavbar();
+                showNotification('头像已更新', 'success');
+                return true;
+            } catch (err) {
+                showNotification('上传失败: ' + err.message, 'error');
+                return false;
+            } finally {
+                isUploading = false;
+            }
+        }
+
+        // ========== 用户操作 ==========
+        async function updateUsername() {
+            if (!isViewingSelf) return;
+            let newName = document.getElementById('newUsername').value.trim();
+            if (!newName || newName.length < 2 || newName.length > 20) return showNotification('用户名2-20字符', 'error');
+            try {
+                await supabaseClient.from('user_profiles').update({ username: newName }).eq('id', currentUser.id);
+                await supabaseClient.auth.updateUser({ data: { username: newName } });
+                userProfile.username = newName;
+                let roleInfo = getRoleDisplay(userProfile.role);
+                let usernameSpan = document.getElementById('displayUsername');
+                if (usernameSpan) usernameSpan.innerHTML =
+                    `${newName} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
+                cacheUserProfile(newName, userProfile.avatar_url);
+                refreshLocalCache();
+                updateNavbar();
+                closeModal('usernameModal');
+                showNotification('用户名已更新', 'success');
+                showSyncNotice();
+            } catch (err) { showNotification('更新失败: ' + err.message, 'error'); }
+        }
+
+        async function updateBio() {
+            if (!isViewingSelf) return;
+            let newBio = document.getElementById('newBio').value.trim() || '';
+            try {
+                await supabaseClient.from('user_profiles').update({ bio: newBio }).eq('id', currentUser.id);
+                userProfile.bio = newBio;
+                safeSetText('userBio', newBio);
+                refreshLocalCache();
+                closeModal('bioModal');
+                showNotification('简介已更新', 'success');
+                showSyncNotice();
+            } catch (err) { showNotification('更新失败: ' + err.message, 'error'); }
+        }
+
+        async function updatePassword() {
+            if (!isViewingSelf) return;
+            let cur = document.getElementById('currentPassword').value;
+            let np = document.getElementById('newPassword').value;
+            let cp = document.getElementById('confirmPassword').value;
+            if (!cur || !np || !cp) return showNotification('请填写完整', 'error');
+            if (np.length < 6) return showNotification('密码至少6位', 'error');
+            if (np !== cp) return showNotification('两次密码不一致', 'error');
+            let { error: signErr } = await supabaseClient.auth.signInWithPassword({ email: currentUser.email,
+                password: cur });
+            if (signErr) return showNotification('当前密码错误', 'error');
+            let { error } = await supabaseClient.auth.updateUser({ password: np });
+            if (error) showNotification('修改失败: ' + error.message, 'error');
+            else {
+                showNotification('密码已更新，请重新登录', 'success');
+                setTimeout(() => { supabaseClient.auth.signOut();
+                    localStorage.clear();
+                    window.location.href = 'login-real.html'; }, 1500);
+            }
+            closeModal('passwordModal');
+        }
+
+        async function deleteAccount() {
+            if (!isViewingSelf) return;
+            let confirmEmail = document.getElementById('confirmEmail').value;
+            if (confirmEmail !== currentUser.email) return showNotification('邮箱不匹配', 'error');
+            showNotification('账号删除需联系管理员', 'warning');
+            closeModal('deleteAccountModal');
+        }
+
+        async function performLogout() {
+            closeModal('logoutConfirmModal');
+            await supabaseClient.auth.signOut();
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+
+        // ========== 签到系统 ==========
+        async function executeCheckin(autoTriggered = false) {
+            if (!isViewingSelf) return false;
+            const today = getLocalDateString();
+            if (userStats.last_checkin_date === today) {
+                if (!autoTriggered) showNotification('今日已签到', 'warning');
+                return false;
+            }
+            let newStreak = 1;
+            const last = userStats.last_checkin_date;
+            if (last) {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = getLocalDateString(yesterday);
+                if (last === yesterdayStr) newStreak = (userStats.checkin_streak || 0) + 1;
+            }
+
+            let { data, error } = await supabaseClient
+                .from('checkin_config')
+                .select('candy, rainbow, active')
+                .eq('day_num', newStreak)
+                .maybeSingle();
+
+            if (!data && !error) {
+                let { data: maxData } = await supabaseClient
+                    .from('checkin_config')
+                    .select('candy, rainbow, active')
+                    .eq('day_num', 9999)
+                    .single();
+                data = maxData;
+            }
+
+            let rewards = { candy: 80, rainbow: 15, active: 20 };
+            if (data) rewards = data;
+
+            const newCandy = userStats.candy_crumbles + rewards.candy;
+            const newRainbow = userStats.rainbow_lollipops + rewards.rainbow;
+            const newActive = userStats.active_points + rewards.active;
+
+            const { error: updateError } = await supabaseClient.from('user_stats').update({
+                candy_crumbles: newCandy,
+                rainbow_lollipops: newRainbow,
+                active_points: newActive,
+                last_checkin_date: today,
+                checkin_streak: newStreak
+            }).eq('user_id', currentUser.id);
+
+            if (updateError) { showNotification('签到失败', 'error'); return false; }
+
+            userStats = { ...userStats, candy_crumbles: newCandy, rainbow_lollipops: newRainbow,
+                active_points: newActive, last_checkin_date: today, checkin_streak: newStreak };
+            refreshLocalCache();
+            updateActivePointsDisplay();
+            updateShopBalanceDisplay();
+            document.getElementById('streakDays').innerText = newStreak.toLocaleString();
+
+            const btn = document.getElementById('checkinBtn');
+            if (btn) { btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> 已签到'; }
+            showNotification(autoTriggered ? `✨ 自动签到卡已为您签到 +${rewards.candy.toLocaleString()}🍬` :
+                `签到 +${rewards.candy.toLocaleString()}🍬`, 'success');
+            return true;
+        }
+
+        async function performCheckin() {
+            if (isProcessing) return;
+            await executeCheckin(false);
+        }
+
+        // ========== 自动签到卡 ==========
+        async function loadAutoSignCardStatus() {
+            if (!isViewingSelf) return false;
+            const { data, error } = await supabaseClient.from('user_auto_sign_card').select('owned').eq('user_id',
+                currentUser.id).maybeSingle();
+            if (error && error.code !== 'PGRST116') return false;
+            return data?.owned === true;
+        }
+
+        async function tryAutoSign() {
+            if (!isViewingSelf || autoSignAttempted) return;
+            autoSignAttempted = true;
+            const today = getLocalDateString();
+            if (hasAutoSignCard && userStats.last_checkin_date !== today) {
+                showNotification('🃏 检测到自动签到卡，正在自动签到...', 'info');
+                await executeCheckin(true);
+            }
+        }
+
+        // ========== 称号系统 ==========
+        async function loadAllTitles() {
+            const { data, error } = await supabaseClient.from('titles').select('*');
+            if (error) return [];
+            return data;
+        }
+
+        async function loadUserOwnedTitles(userId) {
+            const { data, error } = await supabaseClient.from('user_titles').select('title_id').eq('user_id', userId);
+            if (error) return [];
+            return data.map(item => item.title_id);
+        }
+
+        async function checkAndGrantOrdinaryTitles(allTitles, ownedIds) {
+            if (!isViewingSelf) return false;
+            let newGranted = [];
+            for (let title of allTitles) {
+                if (title.is_limited) continue;
+                if (ownedIds.includes(title.id)) continue;
+                let meets = true;
+                if (title.required_active_points > 0 && (userStats.active_points || 0) < title.required_active_points)
+                    meets = false;
+                if (title.required_streak > 0 && (userStats.checkin_streak || 0) < title.required_streak) meets = false;
+                if (title.required_candy > 0 && (userStats.candy_crumbles || 0) < title.required_candy) meets = false;
+                if (title.required_rainbow > 0 && (userStats.rainbow_lollipops || 0) < title.required_rainbow) meets =
+                    false;
+                if (meets) {
+                    const { error } = await supabaseClient.from('user_titles').insert({ user_id: currentUser.id,
+                        title_id: title.id });
+                    if (!error) { newGranted.push(title.name);
+                        ownedIds.push(title.id); }
+                }
+            }
+            if (newGranted.length > 0) { showNotification(`🎉 获得新称号：${newGranted.join(', ')}`, 'success'); return true; }
+            return false;
+        }
+
+        async function grantLimitedAdminTitles() {
+            if (!isViewingSelf) return;
+            const { data: limitedTitles } = await supabaseClient.from('titles').select('id, name').eq('is_limited', true);
+            if (!limitedTitles) return;
+            const ownedIds = await loadUserOwnedTitles(currentUser.id);
+            const role = userProfile.role;
+            let toGrant = [];
+            if (role === 'owner') {
+                const creator = limitedTitles.find(t => t.name.includes('创世神'));
+                const manager = limitedTitles.find(t => t.name.includes('管理神'));
+                if (creator && !ownedIds.includes(creator.id)) toGrant.push(creator.id);
+                if (manager && !ownedIds.includes(manager.id)) toGrant.push(manager.id);
+            } else if (role === 'admin') {
+                const manager = limitedTitles.find(t => t.name.includes('管理神'));
+                if (manager && !ownedIds.includes(manager.id)) toGrant.push(manager.id);
+            }
+            for (let tid of toGrant) {
+                await supabaseClient.from('user_titles').insert({ user_id: currentUser.id, title_id: tid });
+            }
+            if (toGrant.length > 0) showNotification('✨ 获得管理员限定称号', 'success');
+        }
+
+        async function refreshTitles() {
+            if (!isViewingSelf) return;
+            allTitlesList = await loadAllTitles();
+            userOwnedTitles = await loadUserOwnedTitles(currentUser.id);
+            await grantLimitedAdminTitles();
+            const changed = await checkAndGrantOrdinaryTitles(allTitlesList, userOwnedTitles.slice());
+            if (changed) userOwnedTitles = await loadUserOwnedTitles(currentUser.id);
+            if (userProfile.equipped_title_id) {
+                equippedTitleObj = allTitlesList.find(t => t.id === userProfile.equipped_title_id);
+            } else {
+                equippedTitleObj = null;
+            }
+            updateTitleDisplay();
+        }
+
+        function updateTitleDisplay() {
+            const container = document.getElementById('userTitleRow');
+            if (!container) return;
+            if (equippedTitleObj) {
+                let color = '#facc15';
+                if (equippedTitleObj.name.includes('创世神')) color = '#f39c12';
+                else if (equippedTitleObj.name.includes('管理神')) color = '#60a5fa';
+                container.innerHTML =
+                    `<div class="title-badge" style="border-left: 3px solid ${color};"><i class="fas fa-medal" style="color:${color};"></i> <span id="equippedTitleName" style="color:${color};">${equippedTitleObj.name}</span> <button id="unequipTitleBtn" style="background:none;border:none;color:#aaa;cursor:pointer;margin-left:6px;">[卸下]</button></div>`;
+                document.getElementById('unequipTitleBtn')?.addEventListener('click', unequipTitle);
+            } else {
+                container.innerHTML =
+                    `<div class="title-badge"><i class="fas fa-medal"></i> <span id="equippedTitleName">无称号</span> <button id="openTitlesFromBadgeBtn" style="background:none;border:none;color:#facc15;cursor:pointer;margin-left:6px;">[选择]</button></div>`;
+                document.getElementById('openTitlesFromBadgeBtn')?.addEventListener('click', openTitlesModal);
+            }
+        }
+
+        async function equipTitle(titleId) {
+            const { error } = await supabaseClient.from('user_profiles').update({ equipped_title_id: titleId }).eq('id',
+                currentUser.id);
+            if (error) { showNotification('装备失败', 'error'); return; }
+            userProfile.equipped_title_id = titleId;
+            equippedTitleObj = allTitlesList.find(t => t.id === titleId);
+            updateTitleDisplay();
+            showNotification(`已装备称号「${equippedTitleObj.name}」`, 'success');
+            refreshLocalCache();
+        }
+
+        async function unequipTitle() {
+            const { error } = await supabaseClient.from('user_profiles').update({ equipped_title_id: null }).eq('id',
+                currentUser.id);
+            if (error) { showNotification('卸下失败', 'error'); return; }
+            userProfile.equipped_title_id = null;
+            equippedTitleObj = null;
+            updateTitleDisplay();
+            showNotification('已卸下称号', 'success');
+            refreshLocalCache();
+        }
+
+        async function openTitlesModal() {
+            const container = document.getElementById('titlesListContainer');
+            if (!container) return;
+            const allTitles = await loadAllTitles();
+            const ownedIds = await loadUserOwnedTitles(currentUser.id);
+            let html = '';
+            for (let title of allTitles) {
+                const owned = ownedIds.includes(title.id);
+                const isEquipped = (userProfile.equipped_title_id === title.id);
+                let nameColor = '';
+                let extraIcon = '';
+                if (title.is_limited) {
+                    if (title.name.includes('创世神')) nameColor = '#f39c12';
+                    else if (title.name.includes('管理神')) nameColor = '#60a5fa';
+                    extraIcon = '✨ ';
+                }
+                let conditionText = [];
+                if (title.required_active_points > 0) conditionText.push(`活跃度≥${title.required_active_points.toLocaleString()}`);
+                if (title.required_streak > 0) conditionText.push(`连续签到≥${title.required_streak.toLocaleString()}`);
+                if (title.required_candy > 0) conditionText.push(`糖果碎≥${title.required_candy.toLocaleString()}`);
+                if (title.required_rainbow > 0) conditionText.push(`超级棒糖≥${title.required_rainbow.toLocaleString()}`);
+                const conditionHtml = conditionText.length ? `<div class="title-condition">${conditionText.join(' / ')}</div>` :
+                    '';
+                html += `<div class="title-item"><div><div class="title-name" style="color:${nameColor || '#fff'};">${extraIcon}${title.name}</div><div class="title-desc">${title.description || ''}</div>${conditionHtml}</div><div>${owned ? (isEquipped ? '<button class="btn-owned" disabled>已装备</button>' : `<button class="btn-equip-title" data-id="${title.id}">装备</button>`) : '<span style="color:#aaa;">未获得</span>'}</div></div>`;
+            }
+            container.innerHTML = html;
+            document.querySelectorAll('.btn-equip-title').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const tid = parseInt(btn.dataset.id);
+                    await equipTitle(tid);
+                    closeModal('titlesModal');
+                });
+            });
+            openModal('titlesModal');
+        }
+
+        // ========== 签到奖励一览 ==========
         async function openRewardInfoModal() {
             const { data: configData, error } = await supabaseClient
                 .from('checkin_config')
@@ -382,7 +855,8 @@
                 let isTomorrow = (dayNum === currentStreak + 1);
                 if (isTomorrow) { tomorrowReward = item; }
                 let displayDay = dayNum > 30 ? '30天以上' : `第${dayNum}天`;
-                html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05); ${isCurrent ? 'background:rgba(255,215,0,0.15);' : ''}">
+                html +=
+                    `<tr style="border-bottom:1px solid rgba(255,255,255,0.05); ${isCurrent ? 'background:rgba(255,215,0,0.15);' : ''}">
                     <td style="padding:8px 0; text-align:center; ${isCurrent ? 'color:#facc15;font-weight:bold;' : ''}">${displayDay}</td>
                     <td style="padding:8px 0; text-align:center;">${item.candy.toLocaleString()}</td>
                     <td style="padding:8px 0; text-align:center;">${item.rainbow.toLocaleString()}</td>
@@ -392,7 +866,8 @@
             html += '</tbody></table></div>';
 
             if (!tomorrowReward) { tomorrowReward = fallbackReward || { candy: 0, rainbow: 0, active: 0 }; }
-            let footerHtml = `
+            let footerHtml =
+                `
                 <div style="margin-top:16px; border-top:1px solid var(--border-color); padding-top:12px; text-align:center; font-size:0.95rem; background:rgba(0,0,0,0.2); border-radius:8px; padding:12px;">
                     <div style="color:var(--text-secondary); margin-bottom:4px;">
                         您已连续签到 <strong style="color:#facc15; font-size:1.1rem;">${currentStreak.toLocaleString()}</strong> 天
@@ -404,21 +879,26 @@
             `;
 
             const container = document.getElementById('rewardInfoContent');
-            if (container) { container.innerHTML = html + footerHtml; openModal('rewardInfoModal'); }
+            if (container) { container.innerHTML = html + footerHtml;
+                openModal('rewardInfoModal'); }
         }
 
-        // ====== 背包系统 ======
+        // ========== 背包系统 ==========
         const BACKPACK_ITEMS = [
-            { id: 'candy', name: '🍬 糖果碎', desc: '基础货币，可用于购买头像框、自动签到卡等道具。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp', isImg: true, type: 'currency' },
-            { id: 'rainbow', name: '🌈 超级棒糖', desc: '中级稀有货币，可用于兑换高级物品。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp', isImg: true, type: 'currency' },
-            { id: 'dreamy_syrup', name: '🌌 梦幻星河糖浆', desc: '终极顶级货币！甜梦镇的最高信仰，无法通过低级货币合成。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Dream_galaxy_syrup.webp', isImg: true, type: 'currency' },
-            { id: 'autocard', name: '📅 自动签到卡', desc: '永久有效，每天上午8点自动签到（北京时间）。', icon: 'fa-calendar-check', isImg: false, type: 'card' }
+            { id: 'candy', name: '🍬 糖果碎', desc: '基础货币，可用于购买头像框、自动签到卡等道具。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp',
+                isImg: true, type: 'currency' },
+            { id: 'rainbow', name: '🌈 超级棒糖', desc: '中级稀有货币，可用于兑换高级物品。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp',
+                isImg: true, type: 'currency' },
+            { id: 'dreamy_syrup', name: '🌌 梦幻星河糖浆', desc: '终极顶级货币！甜梦镇的最高信仰，无法通过低级货币合成。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Dream_galaxy_syrup.webp',
+                isImg: true, type: 'currency' },
+            { id: 'autocard', name: '📅 自动签到卡', desc: '永久有效，每天上午8点自动签到（北京时间）。', icon: 'fa-calendar-check',
+                isImg: false, type: 'card' }
         ];
 
         async function openBackpack() {
-            if(!isViewingSelf) return;
+            if (!isViewingSelf) return;
             let container = document.getElementById('backpackContent');
-            if(!container) return;
+            if (!container) return;
 
             let hasCard = await loadAutoSignCardStatus();
             let { owned } = await window.FrameSystem.loadUserFrames(currentUser.id);
@@ -431,15 +911,20 @@
                 { ...BACKPACK_ITEMS[2], count: userStats?.dreamy_syrup || 0 },
                 { ...BACKPACK_ITEMS[3], count: hasCard ? 1 : 0 }
             ];
-            
-            for(let frame of ownedFrames) {
+
+            for (let frame of ownedFrames) {
                 backpackData.push({
-                    id: frame.id, name: frame.name, desc: frame.description,
-                    icon: frame.cssClass || '', isImg: false, type: 'frame',
-                    count: 1, cssClass: frame.cssClass
+                    id: frame.id,
+                    name: frame.name,
+                    desc: frame.description,
+                    icon: frame.cssClass || '',
+                    isImg: false,
+                    type: 'frame',
+                    count: 1,
+                    cssClass: frame.cssClass
                 });
             }
-            
+
             let filteredItems = backpackData.filter(item => {
                 if (item.type === 'currency') return true;
                 return item.count > 0;
@@ -450,13 +935,15 @@
                 html = '<div class="backpack-empty">🎒 背包空空如也<br><span style="font-size:0.8rem;">去商店逛逛吧</span></div>';
             } else {
                 html = '<div class="backpack-grid">';
-                for(let item of filteredItems) {
+                for (let item of filteredItems) {
                     let iconHtml = '';
-                    let displayCount = item.count.toLocaleString(); 
+                    let displayCount = item.count.toLocaleString();
                     if (item.type === 'frame') {
-                        iconHtml = `<div class="frame-mini-preview ${item.cssClass || ''}" style="width:44px;height:44px;margin:0 auto;"><div class="placeholder" style="font-size:0.8rem;">P</div></div>`;
+                        iconHtml =
+                            `<div class="frame-mini-preview ${item.cssClass || ''}" style="width:44px;height:44px;margin:0 auto;"><div class="placeholder" style="font-size:0.8rem;">P</div></div>`;
                     } else if (item.isImg) {
-                        iconHtml = `<img src="${item.icon}" alt="${item.name}" style="width:40px;height:40px;object-fit:contain;">`;
+                        iconHtml =
+                        `<img src="${item.icon}" alt="${item.name}" style="width:40px;height:40px;object-fit:contain;">`;
                     } else {
                         iconHtml = `<i class="fas ${item.icon}"></i>`;
                     }
@@ -475,8 +962,9 @@
 
         function openBackpackItemDetail(itemId) {
             let frame = window.FrameSystem.getFrameById(itemId);
-            if(frame) {
-                let iconHtml = `<div class="frame-mini-preview big ${frame.cssClass || ''}" style="margin:0 auto;"><div class="placeholder" style="font-size:1.5rem;">P</div></div>`;
+            if (frame) {
+                let iconHtml =
+                    `<div class="frame-mini-preview big ${frame.cssClass || ''}" style="margin:0 auto;"><div class="placeholder" style="font-size:1.5rem;">P</div></div>`;
                 document.getElementById('bItemTitle').innerText = frame.name;
                 document.getElementById('bItemIcon').innerHTML = iconHtml;
                 document.getElementById('bItemDesc').innerText = frame.description;
@@ -485,8 +973,9 @@
                 return;
             }
             let item = BACKPACK_ITEMS.find(i => i.id === itemId);
-            if(!item) return;
-            let iconHtml = item.isImg ? `<img src="${item.icon}" style="width:80px;height:80px;object-fit:contain;">` : `<i class="fas ${item.icon}" style="font-size:4rem;"></i>`;
+            if (!item) return;
+            let iconHtml = item.isImg ? `<img src="${item.icon}" style="width:80px;height:80px;object-fit:contain;">` :
+                `<i class="fas ${item.icon}" style="font-size:4rem;"></i>`;
             document.getElementById('bItemTitle').innerText = item.name;
             document.getElementById('bItemIcon').innerHTML = iconHtml;
             document.getElementById('bItemDesc').innerText = item.desc;
@@ -494,85 +983,11 @@
             openModal('backpackItemModal');
         }
 
-        // ====== 执行签到 ======
-        async function executeCheckin(autoTriggered = false) {
-            if (!isViewingSelf) return false;
-            const today = getLocalDateString();
-            if (userStats.last_checkin_date === today) {
-                if (!autoTriggered) showNotification('今日已签到', 'warning');
-                return false;
-            }
-            let newStreak = 1;
-            const last = userStats.last_checkin_date;
-            if (last) {
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate()-1);
-                const yesterdayStr = getLocalDateString(yesterday);
-                if(last === yesterdayStr) newStreak = (userStats.checkin_streak||0)+1;
-            }
-
-            let { data, error } = await supabaseClient
-                .from('checkin_config')
-                .select('candy, rainbow, active')
-                .eq('day_num', newStreak)
-                .maybeSingle();
-            
-            if (!data && !error) {
-                let { data: maxData } = await supabaseClient
-                    .from('checkin_config')
-                    .select('candy, rainbow, active')
-                    .eq('day_num', 9999)
-                    .single();
-                data = maxData;
-            }
-            
-            let rewards = { candy: 80, rainbow: 15, active: 20 };
-            if (data) rewards = data;
-
-            const newCandy = userStats.candy_crumbles + rewards.candy;
-            const newRainbow = userStats.rainbow_lollipops + rewards.rainbow;
-            const newActive = userStats.active_points + rewards.active;
-
-            const { error: updateError } = await supabaseClient.from('user_stats').update({
-                candy_crumbles: newCandy, rainbow_lollipops: newRainbow, active_points: newActive,
-                last_checkin_date: today, checkin_streak: newStreak
-            }).eq('user_id', currentUser.id);
-
-            if(updateError) { showNotification('签到失败','error'); return false; }
-            
-            userStats = {...userStats, candy_crumbles:newCandy, rainbow_lollipops:newRainbow, active_points:newActive, last_checkin_date:today, checkin_streak:newStreak};
-            refreshLocalCache();
-            updateActivePointsDisplay();
-            updateShopBalanceDisplay();
-            document.getElementById('streakDays').innerText = newStreak.toLocaleString();
-            
-            const btn = document.getElementById('checkinBtn');
-            if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-check-circle"></i> 已签到'; }
-            showNotification(autoTriggered ? `✨ 自动签到卡已为您签到 +${rewards.candy.toLocaleString()}🍬` : `签到 +${rewards.candy.toLocaleString()}🍬`, 'success');
-            return true;
-        }
-
-        async function performCheckin() { await executeCheckin(false); }
-
-        let hasAutoSignCard = false; let autoSignAttempted = false;
-        async function loadAutoSignCardStatus() { if (!isViewingSelf) return false; const { data, error } = await supabaseClient.from('user_auto_sign_card').select('owned').eq('user_id', currentUser.id).maybeSingle(); if (error && error.code !== 'PGRST116') return false; return data?.owned === true; }
-        async function tryAutoSign() { if (!isViewingSelf || autoSignAttempted) return; autoSignAttempted = true; const today = getLocalDateString(); if (hasAutoSignCard && userStats.last_checkin_date !== today) { showNotification('🃏 检测到自动签到卡，正在自动签到...', 'info'); await executeCheckin(true); } }
-
-        async function loadAllTitles() { const { data, error } = await supabaseClient.from('titles').select('*'); if (error) return []; return data; }
-        async function loadUserOwnedTitles(userId) { const { data, error } = await supabaseClient.from('user_titles').select('title_id').eq('user_id', userId); if (error) return []; return data.map(item => item.title_id); }
-        async function checkAndGrantOrdinaryTitles(allTitles, ownedIds) { if (!isViewingSelf) return false; let newGranted = []; for (let title of allTitles) { if (title.is_limited) continue; if (ownedIds.includes(title.id)) continue; let meets = true; if (title.required_active_points > 0 && (userStats.active_points || 0) < title.required_active_points) meets = false; if (title.required_streak > 0 && (userStats.checkin_streak || 0) < title.required_streak) meets = false; if (title.required_candy > 0 && (userStats.candy_crumbles || 0) < title.required_candy) meets = false; if (title.required_rainbow > 0 && (userStats.rainbow_lollipops || 0) < title.required_rainbow) meets = false; if (meets) { const { error } = await supabaseClient.from('user_titles').insert({ user_id: currentUser.id, title_id: title.id }); if (!error) { newGranted.push(title.name); ownedIds.push(title.id); } } } if (newGranted.length > 0) { showNotification(`🎉 获得新称号：${newGranted.join(', ')}`, 'success'); return true; } return false; }
-        async function grantLimitedAdminTitles() { if (!isViewingSelf) return; const { data: limitedTitles } = await supabaseClient.from('titles').select('id, name').eq('is_limited', true); if (!limitedTitles) return; const ownedIds = await loadUserOwnedTitles(currentUser.id); const role = userProfile.role; let toGrant = []; if (role === 'owner') { const creator = limitedTitles.find(t => t.name.includes('创世神')); const manager = limitedTitles.find(t => t.name.includes('管理神')); if (creator && !ownedIds.includes(creator.id)) toGrant.push(creator.id); if (manager && !ownedIds.includes(manager.id)) toGrant.push(manager.id); } else if (role === 'admin') { const manager = limitedTitles.find(t => t.name.includes('管理神')); if (manager && !ownedIds.includes(manager.id)) toGrant.push(manager.id); } for (let tid of toGrant) { await supabaseClient.from('user_titles').insert({ user_id: currentUser.id, title_id: tid }); } if (toGrant.length > 0) showNotification('✨ 获得管理员限定称号', 'success'); }
-        async function refreshTitles() { if (!isViewingSelf) return; allTitlesList = await loadAllTitles(); userOwnedTitles = await loadUserOwnedTitles(currentUser.id); await grantLimitedAdminTitles(); const changed = await checkAndGrantOrdinaryTitles(allTitlesList, userOwnedTitles.slice()); if (changed) userOwnedTitles = await loadUserOwnedTitles(currentUser.id); if (userProfile.equipped_title_id) { equippedTitleObj = allTitlesList.find(t => t.id === userProfile.equipped_title_id); } else { equippedTitleObj = null; } updateTitleDisplay(); }
-        function updateTitleDisplay() { const container = document.getElementById('userTitleRow'); if (!container) return; if (equippedTitleObj) { let color = '#facc15'; if (equippedTitleObj.name.includes('创世神')) color = '#f39c12'; else if (equippedTitleObj.name.includes('管理神')) color = '#60a5fa'; container.innerHTML = `<div class="title-badge" style="border-left: 3px solid ${color};"><i class="fas fa-medal" style="color:${color};"></i> <span id="equippedTitleName" style="color:${color};">${equippedTitleObj.name}</span> <button id="unequipTitleBtn" style="background:none;border:none;color:#aaa;cursor:pointer;margin-left:6px;">[卸下]</button></div>`; document.getElementById('unequipTitleBtn')?.addEventListener('click', unequipTitle); } else { container.innerHTML = `<div class="title-badge"><i class="fas fa-medal"></i> <span id="equippedTitleName">无称号</span> <button id="openTitlesFromBadgeBtn" style="background:none;border:none;color:#facc15;cursor:pointer;margin-left:6px;">[选择]</button></div>`; document.getElementById('openTitlesFromBadgeBtn')?.addEventListener('click', openTitlesModal); } }
-        async function equipTitle(titleId) { const { error } = await supabaseClient.from('user_profiles').update({ equipped_title_id: titleId }).eq('id', currentUser.id); if (error) { showNotification('装备失败', 'error'); return; } userProfile.equipped_title_id = titleId; equippedTitleObj = allTitlesList.find(t => t.id === titleId); updateTitleDisplay(); showNotification(`已装备称号「${equippedTitleObj.name}」`, 'success'); refreshLocalCache(); }
-        async function unequipTitle() { const { error } = await supabaseClient.from('user_profiles').update({ equipped_title_id: null }).eq('id', currentUser.id); if (error) { showNotification('卸下失败', 'error'); return; } userProfile.equipped_title_id = null; equippedTitleObj = null; updateTitleDisplay(); showNotification('已卸下称号', 'success'); refreshLocalCache(); }
-        async function openTitlesModal() { const container = document.getElementById('titlesListContainer'); if (!container) return; const allTitles = await loadAllTitles(); const ownedIds = await loadUserOwnedTitles(currentUser.id); let html = ''; for (let title of allTitles) { const owned = ownedIds.includes(title.id); const isEquipped = (userProfile.equipped_title_id === title.id); let nameColor = ''; let extraIcon = ''; if (title.is_limited) { if (title.name.includes('创世神')) nameColor = '#f39c12'; else if (title.name.includes('管理神')) nameColor = '#60a5fa'; extraIcon = '✨ '; } let conditionText = []; if (title.required_active_points > 0) conditionText.push(`活跃度≥${title.required_active_points.toLocaleString()}`); if (title.required_streak > 0) conditionText.push(`连续签到≥${title.required_streak.toLocaleString()}`); if (title.required_candy > 0) conditionText.push(`糖果碎≥${title.required_candy.toLocaleString()}`); if (title.required_rainbow > 0) conditionText.push(`超级棒糖≥${title.required_rainbow.toLocaleString()}`); const conditionHtml = conditionText.length ? `<div class="title-condition">${conditionText.join(' / ')}</div>` : ''; html += `<div class="title-item"><div><div class="title-name" style="color:${nameColor || '#fff'};">${extraIcon}${title.name}</div><div class="title-desc">${title.description || ''}</div>${conditionHtml}</div><div>${owned ? (isEquipped ? '<button class="btn-owned" disabled>已装备</button>' : `<button class="btn-equip-title" data-id="${title.id}">装备</button>`) : '<span style="color:#aaa;">未获得</span>'}</div></div>`; } container.innerHTML = html; document.querySelectorAll('.btn-equip-title').forEach(btn => { btn.addEventListener('click', async (e) => { const tid = parseInt(btn.dataset.id); await equipTitle(tid); closeModal('titlesModal'); }); }); openModal('titlesModal'); }
-
-        // ====== 商店渲染（包含缺失的 loadFramesList 和 loadAutoSignCardUI） ======
+        // ========== 商店 ==========
         async function renderShop() {
-            if(!isViewingSelf) return; 
-            let container = document.getElementById('shopContentContainer'); 
-            if(!container) return;
+            if (!isViewingSelf) return;
+            let container = document.getElementById('shopContentContainer');
+            if (!container) return;
             container.innerHTML = `
                 <div class="shop-panel">
                     <div class="balance-row">
@@ -619,23 +1034,26 @@
                 </div>
             `;
 
-            // 点击余额查看提示
             document.querySelectorAll('.balance-item').forEach(el => {
                 el.addEventListener('click', () => {
                     let currency = el.dataset.currency;
-                    if(currency === 'candy') showNotification('🍬 糖果碎：基础货币，签到可获得', 'info');
-                    else if(currency === 'rainbow') showNotification('🌈 超级棒糖：中级货币，可用于购买商品', 'info');
-                    else if(currency === 'dreamy_syrup') showNotification('🌌 梦幻星河糖浆：最高级货币！无法通过低级合成，仅限活动获取。', 'info');
+                    if (currency === 'candy') showNotification('🍬 糖果碎：基础货币，签到可获得', 'info');
+                    else if (currency === 'rainbow') showNotification('🌈 超级棒糖：中级货币，可用于购买商品',
+                    'info');
+                    else if (currency === 'dreamy_syrup') showNotification(
+                        '🌌 梦幻星河糖浆：最高级货币！无法通过低级合成，仅限活动获取。', 'info');
                 });
             });
 
             updateShopBalanceDisplay();
-            
-            // 加载各选项卡内容
-            try { await loadAutoSignCardUI(); } catch(e) { console.warn('加载签到卡失败', e); document.getElementById('autoSignCardItem').innerHTML = '<div style="padding:20px;text-align:center;color:#f87171;">加载失败</div>'; }
-            try { await loadFramesList(); } catch(e) { console.warn('加载头像框失败', e); document.getElementById('framesList').innerHTML = '<div style="padding:20px;text-align:center;color:#f87171;">加载失败</div>'; }
 
-            // 标签切换
+            try { await loadAutoSignCardUI(); } catch (e) { console.warn('加载签到卡失败', e);
+                document.getElementById('autoSignCardItem').innerHTML =
+                    '<div style="padding:20px;text-align:center;color:#f87171;">加载失败</div>'; }
+            try { await loadFramesList(); } catch (e) { console.warn('加载头像框失败', e);
+                document.getElementById('framesList').innerHTML =
+                    '<div style="padding:20px;text-align:center;color:#f87171;">加载失败</div>'; }
+
             const shopTabs = document.querySelectorAll('.shop-tabs .tab-btn');
             const shopCards = document.querySelectorAll('.shop-card');
             shopTabs.forEach(tab => {
@@ -654,7 +1072,6 @@
             });
         }
 
-        // ========== 修复1：补充 loadFramesList 函数 ==========
         async function loadFramesList() {
             const container = document.getElementById('framesList');
             if (!container) return;
@@ -675,7 +1092,8 @@
                 } else if (isDefault) {
                     actionHtml = `<span style="color:#aaa;">默认</span>`;
                 } else {
-                    const priceText = `🍬${frame.price_candy.toLocaleString()} ${frame.price_rainbow > 0 ? `🌈${frame.price_rainbow.toLocaleString()}` : ''}`;
+                    const priceText =
+                        `🍬${frame.price_candy.toLocaleString()} ${frame.price_rainbow > 0 ? `🌈${frame.price_rainbow.toLocaleString()}` : ''}`;
                     actionHtml = `<button class="btn-buy" data-frame-id="${frame.id}">购买 (${priceText})</button>`;
                 }
 
@@ -696,9 +1114,9 @@
             }
             container.innerHTML = html;
 
-            // 绑定购买事件
             container.querySelectorAll('.btn-buy').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
+                    if (isProcessing) return;
                     const frameId = btn.dataset.frameId;
                     try {
                         await window.FrameSystem.purchaseFrame(frameId, userStats, (newCandy, newRainbow) => {
@@ -706,7 +1124,7 @@
                             userStats.rainbow_lollipops = newRainbow;
                             updateShopBalanceDisplay();
                             showNotification('🎉 购买成功！', 'success');
-                            loadFramesList(); // 刷新列表
+                            loadFramesList();
                         });
                     } catch (err) {
                         showNotification(err.message, 'error');
@@ -714,9 +1132,9 @@
                 });
             });
 
-            // 绑定装备事件
             container.querySelectorAll('.btn-equip').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
+                    if (isProcessing) return;
                     const frameId = btn.dataset.frameId;
                     try {
                         await window.FrameSystem.equipFrame(frameId);
@@ -730,14 +1148,12 @@
             });
         }
 
-        // ========== 修复2：补充 loadAutoSignCardUI 函数 ==========
         async function loadAutoSignCardUI() {
             const container = document.getElementById('autoSignCardItem');
             if (!container) return;
 
             const hasCard = await loadAutoSignCardStatus();
-            const price = 100; // 价格可自定义
-            const canBuy = (userStats.candy_crumbles || 0) >= price && !hasCard;
+            const canBuy = (userStats.candy_crumbles || 0) >= AUTO_CARD_PRICE && !hasCard;
 
             let html = `
                 <div class="frame-item-wrap" style="display:block; text-align:center; padding:20px;">
@@ -747,7 +1163,7 @@
                     <div style="margin-top:12px;">
                         ${hasCard 
                             ? `<span style="color:#81c784;">✅ 已拥有</span>`
-                            : `<button class="btn-buy" id="buyAutoCardBtn">购买 (🍬 ${price.toLocaleString()})</button>`
+                            : `<button class="btn-buy" id="buyAutoCardBtn">购买 (🍬 ${AUTO_CARD_PRICE.toLocaleString()})</button>`
                         }
                     </div>
                 </div>
@@ -757,31 +1173,25 @@
             const buyBtn = document.getElementById('buyAutoCardBtn');
             if (buyBtn) {
                 buyBtn.addEventListener('click', async () => {
+                    if (isProcessing) return;
                     if (!canBuy) {
-                        showNotification(`糖果碎不足，需要 ${price.toLocaleString()}`, 'error');
+                        showNotification(`糖果碎不足，需要 ${AUTO_CARD_PRICE.toLocaleString()}`, 'error');
                         return;
                     }
-                    // 原子操作：插入自动签到卡记录
-                    const { error: upsertError } = await supabaseClient.from('user_auto_sign_card').upsert(
-                        { user_id: currentUser.id, owned: true },
-                        { onConflict: 'user_id' }
-                    );
-                    if (upsertError) {
-                        showNotification('购买失败: ' + upsertError.message, 'error');
-                        return;
-                    }
-                    // 扣除糖果碎
-                    const newCandy = userStats.candy_crumbles - price;
+                    const { error: upsertError } = await supabaseClient.from('user_auto_sign_card').upsert({
+                        user_id: currentUser.id,
+                        owned: true
+                    }, { onConflict: 'user_id' });
+                    if (upsertError) { showNotification('购买失败: ' + upsertError.message, 'error'); return; }
+
+                    const newCandy = userStats.candy_crumbles - AUTO_CARD_PRICE;
                     const { error: updateError } = await supabaseClient.from('user_stats')
                         .update({ candy_crumbles: newCandy })
                         .eq('user_id', currentUser.id);
-                    
+
                     if (updateError) {
-                        // 回滚（简单处理，可以更完善）
-                        await supabaseClient.from('user_auto_sign_card').upsert(
-                            { user_id: currentUser.id, owned: false },
-                            { onConflict: 'user_id' }
-                        );
+                        await supabaseClient.from('user_auto_sign_card').upsert({ user_id: currentUser.id,
+                            owned: false }, { onConflict: 'user_id' });
                         showNotification('购买失败: ' + updateError.message, 'error');
                         return;
                     }
@@ -794,31 +1204,33 @@
             }
         }
 
-        // --- 前端兑换函数调用后端 RPC ---
+        // ========== 兑换 ==========
         async function doLowExchange(direction) {
             let amount = parseInt(document.getElementById('lowExchangeAmount').value);
             if (!amount || amount < 1) return showNotification('请输入正确数量', 'error');
-            
+            if (isProcessing) return;
+
             const { data, error } = await supabaseClient.rpc('exchange_low_level', {
-                p_user_id: currentUser.id, 
-                p_direction: direction, 
+                p_user_id: currentUser.id,
+                p_direction: direction,
                 p_amount: amount
             });
-            
+
             if (error) return showNotification('兑换失败: ' + error.message, 'error');
             if (!data) return showNotification('余额不足，无法兑换！', 'error');
-            
+
             showNotification('✅ 双向兑换成功！', 'success');
-            await refreshUserStats(); // 刷新余额
+            await refreshUserStats();
         }
 
         async function doSyrupExchange(direction) {
             let amount = parseInt(document.getElementById('syrupExchangeAmount').value);
             if (!amount || amount < 1) return showNotification('请输入正确数量', 'error');
+            if (isProcessing) return;
 
             const { data, error } = await supabaseClient.rpc('exchange_syrup_down', {
-                p_user_id: currentUser.id, 
-                p_target: direction, 
+                p_user_id: currentUser.id,
+                p_target: direction,
                 p_amount: amount
             });
 
@@ -826,10 +1238,9 @@
             if (!data) return showNotification('🌌 梦幻星河糖浆不足！', 'error');
 
             showNotification('✨ 高阶货币向下兑换成功！', 'success');
-            await refreshUserStats(); // 刷新余额
+            await refreshUserStats();
         }
 
-        // --- 刷新当前余额数据的辅助函数 ---
         async function refreshUserStats() {
             const { data, error } = await supabaseClient
                 .from('v_user_full_profile')
@@ -840,21 +1251,15 @@
                 userStats = data;
                 updateShopBalanceDisplay();
                 updateActivePointsDisplay();
-                // 同时刷新背包中的货币显示
-                let candySpan = document.getElementById('shopCandyBalance'); if(candySpan) candySpan.innerText = data.candy_crumbles.toLocaleString();
-                let rainSpan = document.getElementById('shopRainbowBalance'); if(rainSpan) rainSpan.innerText = data.rainbow_lollipops.toLocaleString();
-                let syrupSpan = document.getElementById('shopDreamySyrupBalance'); if(syrupSpan) syrupSpan.innerText = data.dreamy_syrup.toLocaleString();
-                
-                // 关键修改：立即缓存刷新后的新数据
-                refreshLocalCache(); 
+                let candySpan = document.getElementById('shopCandyBalance');
+                if (candySpan) candySpan.innerText = data.candy_crumbles.toLocaleString();
+                let rainSpan = document.getElementById('shopRainbowBalance');
+                if (rainSpan) rainSpan.innerText = data.rainbow_lollipops.toLocaleString();
+                let syrupSpan = document.getElementById('shopDreamySyrupBalance');
+                if (syrupSpan) syrupSpan.innerText = data.dreamy_syrup.toLocaleString();
+                refreshLocalCache();
             }
         }
-
-        // ========== 头像上传 ==========
-        async function uploadCroppedImage(blob) { if(!isViewingSelf || !currentUser || isUploading) return false; isUploading = true; try { let filePath = `${currentUser.id}/avatar.png`; let { error: uploadErr } = await supabaseClient.storage.from('avatars').upload(filePath, blob, { contentType: 'image/png', upsert: true }); if(uploadErr) throw uploadErr; let { data: { publicUrl } } = supabaseClient.storage.from('avatars').getPublicUrl(filePath); await supabaseClient.from('user_profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id); if(userProfile) userProfile.avatar_url = publicUrl; localStorage.setItem('userAvatar', publicUrl); updateAvatarDisplay(publicUrl); cacheUserProfile(userProfile?.username, publicUrl); refreshLocalCache(); updateNavbar(); showNotification('头像已更新','success'); return true; } catch(err) { showNotification('上传失败: '+err.message,'error'); return false; } finally { isUploading = false; } }
-        function initCropperModal(file) { let img = document.getElementById('cropImage'); let reader = new FileReader(); reader.onload = function(e) { img.src = e.target.result; if(cropper) cropper.destroy(); img.onload = () => { cropper = new Cropper(img, { aspectRatio:1, viewMode:1, autoCropArea:0.8 }); openModal('cropModal'); }; }; reader.readAsDataURL(file); }
-        async function confirmCropAndUpload() { if(!cropper) return; let canvas = cropper.getCroppedCanvas({ width:500, height:500 }); canvas.toBlob(async (blob)=> { if(blob) await uploadCroppedImage(blob); closeModal('cropModal'); if(cropper){ cropper.destroy(); cropper=null; } document.getElementById('cropImage').removeAttribute('src'); },'image/png'); }
-        function cancelCrop() { if(cropper){ cropper.destroy(); cropper=null; } closeModal('cropModal'); document.getElementById('cropImage').removeAttribute('src'); }
 
         // ========== 资料加载 ==========
         async function fetchUserFullData(userId) {
@@ -869,59 +1274,116 @@
 
         async function loadUserProfileWithCache() {
             const { data: { user }, error: userErr } = await supabaseClient.auth.getUser();
-            if(userErr || !user) { const redirectUrl = encodeURIComponent(window.location.href); window.location.href = `login-real.html?redirect=${redirectUrl}`; return; }
-            currentUser = user; const urlParams = new URLSearchParams(window.location.search); let uid = urlParams.get('uid');
-            
-            if (uid && uid !== currentUser.id) { 
-                isViewingSelf = false; targetUserId = uid; 
-                try { 
+            if (userErr || !user) {
+                const redirectUrl = encodeURIComponent(window.location.href);
+                window.location.href = `login-real.html?redirect=${redirectUrl}`;
+                return;
+            }
+            currentUser = user;
+            const urlParams = new URLSearchParams(window.location.search);
+            let uid = urlParams.get('uid');
+
+            if (uid && uid !== currentUser.id) {
+                isViewingSelf = false;
+                targetUserId = uid;
+                try {
                     const fullData = await fetchUserFullData(targetUserId);
                     userProfile = fullData;
-                    userStats = fullData; 
-                } catch(e) { 
-                    showNotification('用户不存在或已注销', 'error'); 
-                    setTimeout(() => window.location.href = 'index.html', 1500); return; 
-                } 
-            } else { 
-                isViewingSelf = true; targetUserId = currentUser.id; 
-                let cachedProfile = localStorage.getItem('cachedUserProfile'); 
-                let cachedStats = localStorage.getItem('cachedUserStats'); 
-                let lastUpdated = localStorage.getItem('profileLastUpdated'); 
-                if (cachedProfile && cachedStats && lastUpdated && (Date.now() - parseInt(lastUpdated) < 86400000)) { 
-                    userProfile = JSON.parse(cachedProfile); 
-                    userStats = JSON.parse(cachedStats); 
-                } else { 
+                    userStats = fullData;
+                } catch (e) {
+                    showNotification('用户不存在或已注销', 'error');
+                    setTimeout(() => window.location.href = 'index.html', 1500);
+                    return;
+                }
+            } else {
+                isViewingSelf = true;
+                targetUserId = currentUser.id;
+                let cachedProfile = localStorage.getItem('cachedUserProfile');
+                let cachedStats = localStorage.getItem('cachedUserStats');
+                let lastUpdated = localStorage.getItem('profileLastUpdated');
+                if (cachedProfile && cachedStats && lastUpdated && (Date.now() - parseInt(lastUpdated) < CACHE_TTL)) {
+                    userProfile = JSON.parse(cachedProfile);
+                    userStats = JSON.parse(cachedStats);
+                } else {
                     const fullData = await fetchUserFullData(currentUser.id);
                     userProfile = fullData;
-                    userStats = fullData; 
-                } 
+                    userStats = fullData;
+                }
             }
-            await renderProfile(); if (isViewingSelf && window.FrameSystem) { await window.FrameSystem.initFrameForUser(currentUser.id); }
-            if(isViewingSelf) { await supabaseClient.from('user_stats').upsert({ user_id: currentUser.id, last_login: new Date().toISOString() }, { onConflict: 'user_id' }); safeSetText('lastLogin', new Date().toLocaleString()); } else { safeSetText('lastLogin', '--'); }
-            document.getElementById('loading').style.display = 'none'; document.getElementById('profileContent').style.display = 'block';
+            await renderProfile();
+            if (isViewingSelf && window.FrameSystem) { await window.FrameSystem.initFrameForUser(currentUser.id); }
+            if (isViewingSelf) {
+                await supabaseClient.from('user_stats').upsert({ user_id: currentUser.id,
+                    last_login: new Date().toISOString() }, { onConflict: 'user_id' });
+                safeSetText('lastLogin', new Date().toLocaleString());
+            } else { safeSetText('lastLogin', '--'); }
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('profileContent').style.display = 'block';
         }
 
         async function renderProfile() {
             const container = document.getElementById('profileContent');
-            if (isViewingSelf) container.classList.remove('readonly-mode'); else container.classList.add('readonly-mode');
+            if (isViewingSelf) container.classList.remove('readonly-mode');
+            else container.classList.add('readonly-mode');
+
             let roleInfo = getRoleDisplay(userProfile.role);
-            let usernameSpan = document.getElementById('displayUsername'); if(usernameSpan) usernameSpan.innerHTML = `${userProfile.username} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
+            let usernameSpan = document.getElementById('displayUsername');
+            if (usernameSpan) usernameSpan.innerHTML =
+                `${userProfile.username} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
+
             safeSetText('userEmail', isViewingSelf ? currentUser.email : (userProfile.email || '未公开'));
-            safeSetText('userBio', userProfile.bio || ''); safeSetText('createdAt', new Date(userProfile.created_at || currentUser?.created_at).toLocaleString());
+            safeSetText('userBio', userProfile.bio || '');
+            safeSetText('createdAt', new Date(userProfile.created_at || currentUser?.created_at).toLocaleString());
+
             let days = Math.floor((new Date() - new Date(userProfile.created_at || currentUser?.created_at)) / 86400000);
             document.getElementById('userDaysText').innerText = `已来到 ${days.toLocaleString()} 天`;
-            if(userProfile.avatar_url) updateAvatarDisplay(userProfile.avatar_url); else updateAvatarDisplay(null);
-            let roleRow = document.getElementById('userRoleDisplay'); if(roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
-            if(userStats) {
-                updateActivePointsDisplay(); if(isViewingSelf) updateShopBalanceDisplay(); document.getElementById('streakDays').innerText = userStats.checkin_streak.toLocaleString();
-                let today = getLocalDateString(); let btn = document.getElementById('checkinBtn');
-                if(btn && isViewingSelf) { let checked = (userStats.last_checkin_date === today); btn.disabled = checked; btn.innerHTML = checked ? '<i class="fas fa-check-circle"></i> 已签到' : '<i class="fas fa-calendar-check"></i> 签到'; } else if(btn) btn.style.display = 'none';
+
+            if (userProfile.avatar_url) updateAvatarDisplay(userProfile.avatar_url);
+            else updateAvatarDisplay(null);
+
+            let roleRow = document.getElementById('userRoleDisplay');
+            if (roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
+
+            if (userStats) {
+                updateActivePointsDisplay();
+                if (isViewingSelf) updateShopBalanceDisplay();
+                document.getElementById('streakDays').innerText = userStats.checkin_streak.toLocaleString();
+
+                let today = getLocalDateString();
+                let btn = document.getElementById('checkinBtn');
+                if (btn && isViewingSelf) {
+                    let checked = (userStats.last_checkin_date === today);
+                    btn.disabled = checked;
+                    btn.innerHTML = checked ? '<i class="fas fa-check-circle"></i> 已签到' :
+                        '<i class="fas fa-calendar-check"></i> 签到';
+                } else if (btn) btn.style.display = 'none';
             }
-            if(isViewingSelf) { cacheUserProfile(userProfile.username, userProfile.avatar_url); refreshLocalCache(); }
-            updateNavbar(); if(isViewingSelf) { await refreshTitles(); } else { if (userProfile.equipped_title_id) { const allTitles = await loadAllTitles(); const equipped = allTitles.find(t => t.id === userProfile.equipped_title_id); if (equipped) { let color = '#facc15'; if (equipped.name.includes('创世神')) color = '#f39c12'; else if (equipped.name.includes('管理神')) color = '#60a5fa'; const container = document.getElementById('userTitleRow'); if (container) container.innerHTML = `<div class="title-badge" style="border-left: 3px solid ${color};"><i class="fas fa-medal" style="color:${color};"></i> <span style="color:${color};">${equipped.name}</span></div>`; } } }
-            if(isViewingSelf) { hasAutoSignCard = await loadAutoSignCardStatus(); await tryAutoSign(); }
+
+            if (isViewingSelf) { cacheUserProfile(userProfile.username, userProfile.avatar_url);
+                refreshLocalCache(); }
+
+            updateNavbar();
+
+            if (isViewingSelf) { await refreshTitles(); } else {
+                if (userProfile.equipped_title_id) {
+                    const allTitles = await loadAllTitles();
+                    const equipped = allTitles.find(t => t.id === userProfile.equipped_title_id);
+                    if (equipped) {
+                        let color = '#facc15';
+                        if (equipped.name.includes('创世神')) color = '#f39c12';
+                        else if (equipped.name.includes('管理神')) color = '#60a5fa';
+                        const container = document.getElementById('userTitleRow');
+                        if (container) container.innerHTML =
+                            `<div class="title-badge" style="border-left: 3px solid ${color};"><i class="fas fa-medal" style="color:${color};"></i> <span style="color:${color};">${equipped.name}</span></div>`;
+                    }
+                }
+            }
+
+            if (isViewingSelf) { hasAutoSignCard = await loadAutoSignCardStatus();
+                await tryAutoSign(); }
         }
 
+        // ========== 事件绑定 ==========
         function bindEventListeners() {
             document.getElementById('saveUsername')?.addEventListener('click', updateUsername);
             document.getElementById('saveBio')?.addEventListener('click', updateBio);
@@ -930,25 +1392,59 @@
             document.getElementById('confirmCropBtn')?.addEventListener('click', confirmCropAndUpload);
             document.getElementById('cancelCropBtn')?.addEventListener('click', cancelCrop);
             document.getElementById('closeCropModalBtn')?.addEventListener('click', cancelCrop);
-            document.getElementById('openShopBtn')?.addEventListener('click', async () => { await renderShop(); openModal('shopModal'); });
+
+            document.getElementById('openShopBtn')?.addEventListener('click', async () => {
+                if (isProcessing) return;
+                await renderShop();
+                openModal('shopModal');
+            });
+
             document.getElementById('openBackpackBtn')?.addEventListener('click', openBackpack);
             document.getElementById('openTitlesBtn')?.addEventListener('click', openTitlesModal);
             document.getElementById('openHelpBtn')?.addEventListener('click', () => openModal('helpModal'));
+
             document.getElementById('closeShopModalBtn')?.addEventListener('click', () => closeModal('shopModal'));
-            document.getElementById('closeLogoutModalBtn')?.addEventListener('click', () => closeModal('logoutConfirmModal'));
+            document.getElementById('closeLogoutModalBtn')?.addEventListener('click', () => closeModal(
+            'logoutConfirmModal'));
             document.getElementById('cancelLogoutBtn')?.addEventListener('click', () => closeModal('logoutConfirmModal'));
             document.getElementById('confirmLogoutBtn')?.addEventListener('click', performLogout);
+
             document.getElementById('closeAvatarConfirmBtn')?.addEventListener('click', cancelChangeAvatar);
             document.getElementById('cancelAvatarBtn')?.addEventListener('click', cancelChangeAvatar);
             document.getElementById('confirmAvatarBtn')?.addEventListener('click', confirmChangeAvatar);
-            document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', (e) => { let mid = btn.getAttribute('data-modal'); if(mid) closeModal(mid); }));
-            document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.addEventListener('click', function(e) { if(e.target === this) closeModal(this.id); }));
+
+            document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', (e) => {
+                let mid = btn.getAttribute('data-modal');
+                if (mid) closeModal(mid);
+            }));
+
+            document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.addEventListener('click', function(e) {
+                if (e.target === this) closeModal(this.id);
+            }));
+
             document.getElementById('checkinBtn')?.addEventListener('click', performCheckin);
-            window.addEventListener('scroll', () => { let btn = document.querySelector('.back-to-top'); if(btn) btn.style.display = window.scrollY>300?'flex':'none'; });
+
+            window.addEventListener('scroll', () => {
+                let btn = document.querySelector('.back-to-top');
+                if (btn) btn.style.display = window.scrollY > 300 ? 'flex' : 'none';
+            });
+
             attachLongPressToAvatar();
         }
 
-        async function initializeProfile() { supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); window.supabaseClient = supabaseClient; try { await loadUserProfileWithCache(); bindEventListeners(); } catch(err) { showNotification('请先登录','error'); setTimeout(()=>window.location.href='login-real.html',1500); } }
+        // ========== 初始化 ==========
+        async function initializeProfile() {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            window.supabaseClient = supabaseClient;
+            try {
+                await loadUserProfileWithCache();
+                bindEventListeners();
+            } catch (err) {
+                showNotification('请先登录', 'error');
+                setTimeout(() => window.location.href = 'login-real.html', 1500);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => setTimeout(initializeProfile, 100));
     </script>
 </body>
