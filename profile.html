@@ -157,25 +157,33 @@
         function openModal(id) { let m = document.getElementById(id); if(m) m.classList.add('show'); document.body.style.overflow = 'hidden'; }
         function closeModal(id) { let m = document.getElementById(id); if(m) m.classList.remove('show'); document.body.style.overflow = ''; }
 
-        // ========== 头像显示 ==========
+        // ========== 头像显示（加固版） ==========
         function updateAvatarDisplay(imageUrl) {
             const avatarDiv = document.getElementById('userAvatar');
-            if(!avatarDiv) return;
-            const currentFrameClass = Array.from(avatarDiv.classList).find(c => c.startsWith('frame-')) || '';
-            let initial = 'U';
-            if(userProfile?.username) initial = userProfile.username.charAt(0).toUpperCase();
-            else if(currentUser?.email) initial = currentUser.email.charAt(0).toUpperCase();
-            if(imageUrl) {
-                avatarDiv.innerHTML = `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="window.handleAvatarLoadError(this)">`;
-            } else {
-                avatarDiv.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
-            }
-            avatarDiv.classList.add('avatar');
-            if(currentFrameClass) avatarDiv.classList.add(currentFrameClass);
-            else if(isViewingSelf && window.FrameSystem && currentUser) {
-                window.FrameSystem.loadUserFrames(currentUser.id).then(({ equipped }) => {
-                    window.FrameSystem.applyFrameClassByFrameId(equipped);
-                });
+            if (!avatarDiv) return;
+            try {
+                const oldClasses = avatarDiv.className.split(' ').filter(c => c !== 'avatar' && !c.startsWith('frame-'));
+                avatarDiv.className = oldClasses.join(' ');
+                let initial = 'U';
+                if (userProfile?.username) initial = userProfile.username.charAt(0).toUpperCase();
+                else if (currentUser?.email) initial = currentUser.email.charAt(0).toUpperCase();
+                if (imageUrl) {
+                    avatarDiv.innerHTML = `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="window.handleAvatarLoadError(this)">`;
+                } else {
+                    avatarDiv.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
+                }
+                avatarDiv.classList.add('avatar');
+                if (isViewingSelf && window.FrameSystem && currentUser) {
+                    window.FrameSystem.loadUserFrames(currentUser.id)
+                        .then(({ equipped }) => {
+                            window.FrameSystem.applyFrameClassByFrameId(equipped);
+                        })
+                        .catch(err => console.warn('头像框加载失败:', err));
+                }
+            } catch (err) {
+                console.warn('updateAvatarDisplay 出错:', err);
+                avatarDiv.innerHTML = `<div class="avatar-placeholder">U</div>`;
+                avatarDiv.classList.add('avatar');
             }
         }
         window.handleAvatarLoadError = function(imgElement) {
@@ -1073,63 +1081,119 @@
             }
         }
 
-        // ========== renderProfile（全部加容错） ==========
+        // ========== renderProfile（完全容错） ==========
         async function renderProfile() {
-            const container = document.getElementById('profileContent');
-            if(isViewingSelf) container.classList.remove('readonly-mode');
-            else container.classList.add('readonly-mode');
+            try {
+                const container = document.getElementById('profileContent');
+                if (!container) throw new Error('页面容器不存在');
+                if (isViewingSelf) container.classList.remove('readonly-mode');
+                else container.classList.add('readonly-mode');
 
-            const roleInfo = getRoleDisplay(userProfile?.role);
-            const usernameSpan = document.getElementById('displayUsername');
-            if(usernameSpan) {
+                const roleInfo = getRoleDisplay(userProfile?.role || 'user');
                 const uname = userProfile?.username || '未知用户';
-                usernameSpan.innerHTML = `${uname} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
-            }
-            safeSetText('userEmail', isViewingSelf ? currentUser?.email || '未登录' : (userProfile?.email || '未公开'));
-            safeSetText('userBio', userProfile?.bio || '');
-            const createdTime = userProfile?.created_at || currentUser?.created_at;
-            safeSetText('createdAt', createdTime ? new Date(createdTime).toLocaleString() : '--');
-            let days = createdTime ? Math.floor((new Date() - new Date(createdTime)) / 86400000) : 0;
-            document.getElementById('userDaysText').innerText = `已来到 ${days.toLocaleString()} 天`;
-            if(userProfile?.avatar_url) updateAvatarDisplay(userProfile.avatar_url);
-            else updateAvatarDisplay(null);
+                const usernameSpan = document.getElementById('displayUsername');
+                if (usernameSpan) {
+                    usernameSpan.innerHTML = `${uname} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
+                }
 
-            const roleRow = document.getElementById('userRoleDisplay');
-            if(roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
+                safeSetText('userEmail', isViewingSelf ? (currentUser?.email || '未登录') : (userProfile?.email || '未公开'));
+                safeSetText('userBio', userProfile?.bio || '');
+                const createdTime = userProfile?.created_at || currentUser?.created_at;
+                safeSetText('createdAt', createdTime ? new Date(createdTime).toLocaleString() : '--');
+                let days = createdTime ? Math.floor((new Date() - new Date(createdTime)) / 86400000) : 0;
+                const daysEl = document.getElementById('userDaysText');
+                if (daysEl) daysEl.innerText = `已来到 ${days.toLocaleString()} 天`;
 
-            if(userStats) {
-                updateActivePointsDisplay();
-                if(isViewingSelf) updateShopBalanceDisplay();
-                document.getElementById('streakDays').innerText = (userStats.checkin_streak || 0).toLocaleString();
-                let today = getLocalDateString();
-                let btn = document.getElementById('checkinBtn');
-                if(btn && isViewingSelf) {
-                    let checked = (userStats.last_checkin_date === today);
-                    btn.disabled = checked;
-                    btn.innerHTML = checked ? '<i class="fas fa-check-circle"></i> 已签到' : '<i class="fas fa-calendar-check"></i> 签到';
-                } else if(btn) btn.style.display = 'none';
-            }
-
-            if(isViewingSelf) {
-                updateNavbar();
-                await refreshTitles();
-            } else {
-                if(userProfile?.equipped_title_id) {
-                    const allTitles = await loadAllTitles();
-                    const equipped = allTitles.find(t => t.id === userProfile.equipped_title_id);
-                    if(equipped) {
-                        let color = '#facc15';
-                        if(equipped.name.includes('创世神')) color = '#f39c12';
-                        else if(equipped.name.includes('管理神')) color = '#60a5fa';
-                        const container = document.getElementById('userTitleRow');
-                        if(container) container.innerHTML = `<div class="title-badge" style="border-left: 3px solid ${color};"><i class="fas fa-medal" style="color:${color};"></i> <span style="color:${color};">${equipped.name}</span></div>`;
+                // 头像
+                try {
+                    if (userProfile?.avatar_url) updateAvatarDisplay(userProfile.avatar_url);
+                    else updateAvatarDisplay(null);
+                } catch (avatarErr) {
+                    console.warn('头像显示失败:', avatarErr);
+                    const avatarDiv = document.getElementById('userAvatar');
+                    if (avatarDiv) {
+                        const initial = (userProfile?.username || 'U').charAt(0).toUpperCase();
+                        avatarDiv.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
+                        avatarDiv.classList.add('avatar');
                     }
                 }
-                updateNavbar();
-            }
-            if(isViewingSelf) {
-                hasAutoSignCard = await loadAutoSignCardStatus();
-                await tryAutoSign();
+
+                const roleRow = document.getElementById('userRoleDisplay');
+                if (roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
+
+                if (userStats) {
+                    try {
+                        updateActivePointsDisplay();
+                        if (isViewingSelf) updateShopBalanceDisplay();
+                        const streakEl = document.getElementById('streakDays');
+                        if (streakEl) streakEl.innerText = (userStats.checkin_streak || 0).toLocaleString();
+                        const today = getLocalDateString();
+                        const btn = document.getElementById('checkinBtn');
+                        if (btn && isViewingSelf) {
+                            const checked = (userStats.last_checkin_date === today);
+                            btn.disabled = checked;
+                            btn.innerHTML = checked ? '<i class="fas fa-check-circle"></i> 已签到' : '<i class="fas fa-calendar-check"></i> 签到';
+                        } else if (btn) btn.style.display = 'none';
+                    } catch (statsErr) {
+                        console.warn('统计数据显示失败:', statsErr);
+                    }
+                }
+
+                if (isViewingSelf) {
+                    try {
+                        updateNavbar();
+                        await refreshTitles();
+                    } catch (titleErr) {
+                        console.warn('称号/导航更新失败:', titleErr);
+                    }
+                } else {
+                    try {
+                        if (userProfile?.equipped_title_id) {
+                            const allTitles = await loadAllTitles();
+                            const equipped = allTitles.find(t => t.id === userProfile.equipped_title_id);
+                            if (equipped) {
+                                let color = '#facc15';
+                                if (equipped.name.includes('创世神')) color = '#f39c12';
+                                else if (equipped.name.includes('管理神')) color = '#60a5fa';
+                                const titleRow = document.getElementById('userTitleRow');
+                                if (titleRow) {
+                                    titleRow.innerHTML = `<div class="title-badge" style="border-left: 3px solid ${color};"><i class="fas fa-medal" style="color:${color};"></i> <span style="color:${color};">${equipped.name}</span></div>`;
+                                }
+                            }
+                        }
+                        updateNavbar();
+                    } catch (otherErr) {
+                        console.warn('查看他人信息失败:', otherErr);
+                    }
+                }
+
+                if (isViewingSelf) {
+                    try {
+                        hasAutoSignCard = await loadAutoSignCardStatus();
+                        await tryAutoSign();
+                    } catch (autoErr) {
+                        console.warn('自动签到卡处理失败:', autoErr);
+                    }
+                }
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('profileContent').style.display = 'block';
+
+            } catch (err) {
+                console.error('渲染页面整体失败:', err);
+                const loadingDiv = document.getElementById('loading');
+                if (loadingDiv) {
+                    loadingDiv.innerHTML = `
+                        <div style="color: #f87171; padding: 20px; background: rgba(248,113,113,0.1); border-radius: 12px;">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 2rem;"></i>
+                            <p style="margin-top: 10px; font-weight: bold;">页面渲染出错</p>
+                            <p style="font-size: 0.9rem; color: #fca5a5;">错误信息：${escapeHtml(err.message || '未知错误')}</p>
+                            <button onclick="location.reload()" style="margin-top: 12px; padding: 6px 20px; background: #3b82f6; color: white; border: none; border-radius: 20px; cursor: pointer;">刷新重试</button>
+                        </div>
+                    `;
+                    loadingDiv.style.display = 'block';
+                }
+                showNotification('渲染出错：' + (err.message || '未知错误'), 'error');
             }
         }
 
@@ -1210,7 +1274,6 @@
             } catch (err) {
                 console.error('初始化失败:', err);
                 showNotification('加载资料失败，请刷新重试', 'error');
-                // 不跳转，留在当前页让用户可重试
             }
         }
 
