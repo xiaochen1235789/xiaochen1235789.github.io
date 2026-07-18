@@ -206,6 +206,8 @@
                 if (!equipped) { equipped = 'nature'; needUpdate = true; }
                 if (needUpdate) {
                     await supabaseClient.from('user_profiles').update({ owned_frames: owned, equipped_frame: equipped }).eq('id', userId);
+                    // 更新数据后立即缓存
+                    refreshLocalCache(); 
                 }
             }
 
@@ -237,6 +239,8 @@
                 if (!owned.includes(frameId)) throw new Error('未拥有');
                 await supabaseClient.from('user_profiles').update({ equipped_frame: frameId }).eq('id', currentUser.id);
                 await applyFrameClassByFrameId(frameId);
+                // 装备后立即缓存新数据
+                refreshLocalCache();
             }
 
             async function applyFrameClassByFrameId(frameId) {
@@ -836,11 +840,13 @@
                 userStats = data;
                 updateShopBalanceDisplay();
                 updateActivePointsDisplay();
-                refreshLocalCache();
                 // 同时刷新背包中的货币显示
                 let candySpan = document.getElementById('shopCandyBalance'); if(candySpan) candySpan.innerText = data.candy_crumbles.toLocaleString();
                 let rainSpan = document.getElementById('shopRainbowBalance'); if(rainSpan) rainSpan.innerText = data.rainbow_lollipops.toLocaleString();
                 let syrupSpan = document.getElementById('shopDreamySyrupBalance'); if(syrupSpan) syrupSpan.innerText = data.dreamy_syrup.toLocaleString();
+                
+                // 关键修改：立即缓存刷新后的新数据
+                refreshLocalCache(); 
             }
         }
 
