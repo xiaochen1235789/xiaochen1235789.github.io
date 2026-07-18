@@ -476,7 +476,7 @@
             window.location.href = 'index.html';
         }
 
-        // ========== ★★★ 登录函数（已修复） ★★★ ==========
+        // ========== ★★★ 登录（已修复） ★★★ ==========
         async function handleLogin() {
             if (!initSuccess) { showMessage('系统未就绪，请等待初始化或点击"重新连接"', 'error'); return; }
             if (currentLoading) return;
@@ -494,18 +494,7 @@
                     options: { persistSession: persist }
                 });
                 if (error) throw error;
-
-                // ★★★ 关键修复：手动存 session 到 localStorage ★★★
-                if (data.session) {
-                    localStorage.setItem('sb-auth-token', JSON.stringify(data.session));
-                    localStorage.setItem('sb-user', JSON.stringify(data.user));
-                    if (data.user) {
-                        const username = data.user.user_metadata?.username || email.split('@')[0];
-                        localStorage.setItem('cachedUsername', username);
-                        localStorage.setItem('forceRefreshUserState', Date.now().toString());
-                    }
-                }
-
+                // 登录成功，Supabase 自动存储会话，无需手动操作 localStorage
                 showMessage('登录成功！正在跳转...', 'success');
                 updateStatus('登录成功 ✓', true);
                 setTimeout(() => redirectToHome(), 1000);
@@ -519,7 +508,7 @@
             }
         }
 
-        // ========== 注册函数 ==========
+        // ========== 注册 ==========
         async function handleRegister() {
             if (!initSuccess) { showMessage('系统未就绪，请等待初始化或点击"重新连接"', 'error'); return; }
             if (currentLoading) return;
