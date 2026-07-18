@@ -70,7 +70,7 @@
         </div>
     </div>
 
-    <!-- 所有模态框（完整） -->
+    <!-- 所有模态框 -->
     <div class="modal-overlay" id="cropModal"><div class="modal"><div class="modal-header"><div class="modal-title">裁剪头像</div><button class="modal-close" id="closeCropModalBtn">&times;</button></div><div><img id="cropImage" style="max-width:100%;"></div><div class="crop-buttons"><button class="btn-cancel" id="cancelCropBtn">取消</button><button class="btn-primary" id="confirmCropBtn">确认上传</button></div></div></div>
     <div class="modal-overlay" id="shopModal"><div class="modal"><div class="modal-header"><div class="modal-title">商店</div><button class="modal-close" id="closeShopModalBtn">&times;</button></div><div id="shopContentContainer"><div style="text-align:center;padding:20px;">加载中...</div></div></div></div>
     <div class="modal-overlay" id="usernameModal"><div class="modal"><div class="modal-header"><div class="modal-title">修改用户名</div><button class="modal-close close-modal-btn" data-modal="usernameModal">&times;</button></div><div class="form-group"><input type="text" class="form-input" id="newUsername" maxlength="20" placeholder="新用户名"></div><div class="form-actions"><button class="btn-cancel close-modal-btn" data-modal="usernameModal">取消</button><button class="btn-primary" id="saveUsername">保存</button></div></div></div>
@@ -94,7 +94,7 @@
         const AUTO_CARD_PRICE = 100;
         const AVATAR_SIZE = 500;
         const LONG_PRESS_DELAY = 500;
-        const CACHE_TTL = 3600000; // 1小时
+        const CACHE_TTL = 3600000;
 
         const ROLE_CONFIG = { owner: { name: '站长', color: '#f97316' }, admin: { name: '管理员', color: '#60a5fa' }, user: { name: '普通用户', color: '#9ca3af' } };
         function getRoleDisplay(role) { return ROLE_CONFIG[role] || ROLE_CONFIG.user; }
@@ -103,8 +103,8 @@
         let supabaseClient = null;
         let currentUser = null;
         let targetUserId = null;
-        let userProfile = null;      // 合并后的数据
-        let userStats = null;        // 兼容旧代码
+        let userProfile = null;
+        let userStats = null;
         let isViewingSelf = true;
         let cropper = null;
         let isUploading = false;
@@ -222,7 +222,7 @@
             ];
             function getFrameById(id) { return FRAMES.find(f=>f.id===id); }
             async function loadUserFrames(userId) {
-                const { data, error } = await supabaseClient.from('user_profiles').select('owned_frames, equipped_frame').eq('id', userId).single();
+                const { data, error } = await supabaseClient.from('user_profiles').select('owned_frames, equipped_frame').eq('id', userId).maybeSingle();
                 if(error || !data) return { owned:['nature'], equipped:'nature' };
                 let owned = data.owned_frames || ['nature'];
                 if(!owned.includes('nature')) owned.push('nature');
@@ -230,7 +230,7 @@
                 return { owned, equipped };
             }
             async function ensureUserFrameFields(userId) {
-                const { data: profile } = await supabaseClient.from('user_profiles').select('owned_frames, equipped_frame').eq('id', userId).single();
+                const { data: profile } = await supabaseClient.from('user_profiles').select('owned_frames, equipped_frame').eq('id', userId).maybeSingle();
                 let needUpdate = false;
                 let owned = profile?.owned_frames || ['nature'];
                 let equipped = profile?.equipped_frame || null;
@@ -250,7 +250,7 @@
                 let newCandy = stats.candy_crumbles - frame.price_candy;
                 let newRainbow = stats.rainbow_lollipops - frame.price_rainbow;
                 await supabaseClient.from('user_stats').update({ candy_crumbles: newCandy, rainbow_lollipops: newRainbow }).eq('user_id', currentUser.id);
-                const { data: profile } = await supabaseClient.from('user_profiles').select('owned_frames').eq('id', currentUser.id).single();
+                const { data: profile } = await supabaseClient.from('user_profiles').select('owned_frames').eq('id', currentUser.id).maybeSingle();
                 let currentOwned = profile?.owned_frames || ['nature'];
                 if(!currentOwned.includes(frameId)) currentOwned.push(frameId);
                 await supabaseClient.from('user_profiles').update({ owned_frames: currentOwned }).eq('id', currentUser.id);
@@ -460,12 +460,12 @@
         async function executeCheckin(autoTriggered = false) {
             if(!isViewingSelf) return false;
             const today = getLocalDateString();
-            if(userStats.last_checkin_date === today) {
+            if(userStats?.last_checkin_date === today) {
                 if(!autoTriggered) showNotification('今日已签到','warning');
                 return false;
             }
             let newStreak = 1;
-            const last = userStats.last_checkin_date;
+            const last = userStats?.last_checkin_date;
             if(last) {
                 const yesterday = new Date();
                 yesterday.setDate(yesterday.getDate()-1);
@@ -479,9 +479,9 @@
             }
             let rewards = { candy:80, rainbow:15, active:20 };
             if(data) rewards = data;
-            const newCandy = userStats.candy_crumbles + rewards.candy;
-            const newRainbow = userStats.rainbow_lollipops + rewards.rainbow;
-            const newActive = userStats.active_points + rewards.active;
+            const newCandy = (userStats?.candy_crumbles || 0) + rewards.candy;
+            const newRainbow = (userStats?.rainbow_lollipops || 0) + rewards.rainbow;
+            const newActive = (userStats?.active_points || 0) + rewards.active;
             const { error: updateError } = await supabaseClient.from('user_stats').update({
                 candy_crumbles: newCandy,
                 rainbow_lollipops: newRainbow,
@@ -490,7 +490,7 @@
                 checkin_streak: newStreak
             }).eq('user_id', currentUser.id);
             if(updateError) { showNotification('签到失败','error'); return false; }
-            userStats = { ...userStats, candy_crumbles: newCandy, rainbow_lollipops: newRainbow, active_points: newActive, last_checkin_date: today, checkin_streak: newStreak };
+            userStats = { ...(userStats||{}), candy_crumbles: newCandy, rainbow_lollipops: newRainbow, active_points: newActive, last_checkin_date: today, checkin_streak: newStreak };
             clearProfileCache();
             setCachedProfile(userStats);
             updateActivePointsDisplay();
@@ -514,7 +514,7 @@
             if(!isViewingSelf || autoSignAttempted) return;
             autoSignAttempted = true;
             const today = getLocalDateString();
-            if(hasAutoSignCard && userStats.last_checkin_date !== today) {
+            if(hasAutoSignCard && userStats?.last_checkin_date !== today) {
                 showNotification('🃏 检测到自动签到卡，正在自动签到...', 'info');
                 await executeCheckin(true);
             }
@@ -538,10 +538,10 @@
                 if(title.is_limited) continue;
                 if(ownedIds.includes(title.id)) continue;
                 let meets = true;
-                if(title.required_active_points > 0 && (userStats.active_points || 0) < title.required_active_points) meets = false;
-                if(title.required_streak > 0 && (userStats.checkin_streak || 0) < title.required_streak) meets = false;
-                if(title.required_candy > 0 && (userStats.candy_crumbles || 0) < title.required_candy) meets = false;
-                if(title.required_rainbow > 0 && (userStats.rainbow_lollipops || 0) < title.required_rainbow) meets = false;
+                if(title.required_active_points > 0 && (userStats?.active_points || 0) < title.required_active_points) meets = false;
+                if(title.required_streak > 0 && (userStats?.checkin_streak || 0) < title.required_streak) meets = false;
+                if(title.required_candy > 0 && (userStats?.candy_crumbles || 0) < title.required_candy) meets = false;
+                if(title.required_rainbow > 0 && (userStats?.rainbow_lollipops || 0) < title.required_rainbow) meets = false;
                 if(meets) {
                     const { error } = await supabaseClient.from('user_titles').insert({ user_id: currentUser.id, title_id: title.id });
                     if(!error) { newGranted.push(title.name); ownedIds.push(title.id); }
@@ -555,7 +555,7 @@
             const { data: limitedTitles } = await supabaseClient.from('titles').select('id, name').eq('is_limited', true);
             if(!limitedTitles) return;
             const ownedIds = await loadUserOwnedTitles(currentUser.id);
-            const role = userProfile.role;
+            const role = userProfile?.role;
             let toGrant = [];
             if(role === 'owner') {
                 const creator = limitedTitles.find(t => t.name.includes('创世神'));
@@ -578,7 +578,7 @@
             await grantLimitedAdminTitles();
             const changed = await checkAndGrantOrdinaryTitles(allTitlesList, userOwnedTitles.slice());
             if(changed) userOwnedTitles = await loadUserOwnedTitles(currentUser.id);
-            if(userProfile.equipped_title_id) {
+            if(userProfile?.equipped_title_id) {
                 equippedTitleObj = allTitlesList.find(t => t.id === userProfile.equipped_title_id);
             } else {
                 equippedTitleObj = null;
@@ -629,7 +629,7 @@
             let html = '';
             for(let title of allTitles) {
                 const owned = ownedIds.includes(title.id);
-                const isEquipped = (userProfile.equipped_title_id === title.id);
+                const isEquipped = (userProfile?.equipped_title_id === title.id);
                 let nameColor = '';
                 let extraIcon = '';
                 if(title.is_limited) {
@@ -886,7 +886,7 @@
             const container = document.getElementById('autoSignCardItem');
             if(!container) return;
             const hasCard = await loadAutoSignCardStatus();
-            const canBuy = (userStats.candy_crumbles || 0) >= AUTO_CARD_PRICE && !hasCard;
+            const canBuy = (userStats?.candy_crumbles || 0) >= AUTO_CARD_PRICE && !hasCard;
             let html = `
                 <div class="frame-item-wrap" style="display:block; text-align:center; padding:20px;">
                     <div style="font-size:2rem;">📅</div>
@@ -905,7 +905,7 @@
                     if(!canBuy) { showNotification(`糖果碎不足，需要 ${AUTO_CARD_PRICE.toLocaleString()}`,'error'); return; }
                     const { error: upsertError } = await supabaseClient.from('user_auto_sign_card').upsert({ user_id: currentUser.id, owned: true }, { onConflict: 'user_id' });
                     if(upsertError) { showNotification('购买失败: '+upsertError.message,'error'); return; }
-                    const newCandy = userStats.candy_crumbles - AUTO_CARD_PRICE;
+                    const newCandy = (userStats?.candy_crumbles || 0) - AUTO_CARD_PRICE;
                     const { error: updateError } = await supabaseClient.from('user_stats').update({ candy_crumbles: newCandy }).eq('user_id', currentUser.id);
                     if(updateError) {
                         await supabaseClient.from('user_auto_sign_card').upsert({ user_id: currentUser.id, owned: false }, { onConflict: 'user_id' });
@@ -944,16 +944,15 @@
             await refreshUserStats();
         }
         async function refreshUserStats() {
-            // 改为分别查询两张表
             const [profileRes, statsRes] = await Promise.all([
-                supabaseClient.from('user_profiles').select('*').eq('id', currentUser.id).single(),
-                supabaseClient.from('user_stats').select('*').eq('user_id', currentUser.id).single()
+                supabaseClient.from('user_profiles').select('*').eq('id', currentUser.id).maybeSingle(),
+                supabaseClient.from('user_stats').select('*').eq('user_id', currentUser.id).maybeSingle()
             ]);
-            if (!profileRes.error) {
-                userProfile = { ...userProfile, ...profileRes.data };
+            if (!profileRes.error && profileRes.data) {
+                userProfile = { ...(userProfile||{}), ...profileRes.data };
             }
             if (!statsRes.error && statsRes.data) {
-                userStats = { ...userStats, ...statsRes.data };
+                userStats = { ...(userStats||{}), ...statsRes.data };
                 updateShopBalanceDisplay();
                 updateActivePointsDisplay();
                 clearProfileCache();
@@ -961,39 +960,65 @@
             }
         }
 
-        // ========== ★★★ 核心：加载用户资料（直接查询两张表，不依赖视图） ★★★ ==========
+        // ========== ★★★ 核心：加载用户资料（使用 maybeSingle + 默认值） ★★★ ==========
         async function fetchUserFullData(userId) {
-            // 并行查询两张表
             const [profileRes, statsRes] = await Promise.all([
-                supabaseClient.from('user_profiles').select('*').eq('id', userId).single(),
-                supabaseClient.from('user_stats').select('*').eq('user_id', userId).single()
+                supabaseClient.from('user_profiles').select('*').eq('id', userId).maybeSingle(),
+                supabaseClient.from('user_stats').select('*').eq('user_id', userId).maybeSingle()
             ]);
-            if (profileRes.error) throw profileRes.error;
-            // stats 可能不存在（新用户），允许为空
-            if (statsRes.error && statsRes.error.code !== 'PGRST116') throw statsRes.error;
-            const profile = profileRes.data;
-            const stats = statsRes.data || {};
-            // 合并数据
+
+            let profile = profileRes.data;
+            if (!profile) {
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                profile = {
+                    id: userId,
+                    username: user?.email?.split('@')[0] || '用户',
+                    bio: '',
+                    avatar_url: null,
+                    role: 'user',
+                    created_at: user?.created_at || new Date().toISOString(),
+                    owned_frames: ['nature'],
+                    equipped_frame: 'nature',
+                    equipped_title_id: null
+                };
+            }
+
+            let stats = statsRes.data;
+            if (!stats) {
+                stats = {
+                    user_id: userId,
+                    candy_crumbles: 0,
+                    rainbow_lollipops: 0,
+                    dreamy_syrup: 0,
+                    active_points: 0,
+                    checkin_streak: 0,
+                    last_checkin_date: null,
+                    last_login: null
+                };
+            }
             return { ...profile, ...stats };
         }
 
-        // ★★★★★ 修复版：使用 getUser() 并增加重试 ★★★★★
-        async function loadUserProfileWithCache(sessionUser) {
-            // 1. 如果传入了 sessionUser 则直接使用，否则通过 getUser 获取（备用）
-            let user = sessionUser;
-            if (!user) {
-                // 再尝试一次
-                const { data, error } = await supabaseClient.auth.getUser();
-                if (error || !data.user) {
-                    const redirect = encodeURIComponent(window.location.href);
-                    window.location.href = `login-real.html?redirect=${redirect}`;
-                    return;
+        // ★★★★★ 加载用户资料（增强容错） ★★★★★
+        async function loadUserProfileWithCache() {
+            let session = null;
+            let attempts = 0;
+            while (attempts < 5) {
+                const { data, error } = await supabaseClient.auth.getSession();
+                if (!error && data.session) {
+                    session = data.session;
+                    break;
                 }
-                user = data.user;
+                attempts++;
+                await new Promise(r => setTimeout(r, 300));
             }
-            currentUser = user;
+            if (!session || !session.user) {
+                const redirect = encodeURIComponent(window.location.href);
+                window.location.href = `login-real.html?redirect=${redirect}`;
+                return;
+            }
+            currentUser = session.user;
 
-            // 2. 查看是否有其他用户 ID（查看他人主页）
             const urlParams = new URLSearchParams(window.location.search);
             let uid = urlParams.get('uid');
             if (uid && uid !== currentUser.id) {
@@ -1002,9 +1027,9 @@
                 try {
                     const fullData = await fetchUserFullData(targetUserId);
                     userProfile = fullData;
-                    userStats = fullData; // 兼容
-                } catch(e) {
-                    showNotification('用户不存在或已注销', 'error');
+                    userStats = fullData;
+                } catch (e) {
+                    showNotification('用户不存在或已注销','error');
                     setTimeout(() => window.location.href='index.html', 1500);
                     return;
                 }
@@ -1013,54 +1038,69 @@
                 targetUserId = currentUser.id;
                 let fullData = getCachedProfile();
                 if (!fullData) {
-                    fullData = await fetchUserFullData(currentUser.id);
-                    setCachedProfile(fullData);
+                    try {
+                        fullData = await fetchUserFullData(currentUser.id);
+                        setCachedProfile(fullData);
+                    } catch (e) {
+                        showNotification('加载资料失败，请刷新重试', 'error');
+                        return;
+                    }
                 }
                 userProfile = fullData;
                 userStats = fullData;
             }
 
-            // 3. 渲染页面
-            await renderProfile();
-            if (isViewingSelf && window.FrameSystem) {
-                await window.FrameSystem.initFrameForUser(currentUser.id);
+            try {
+                await renderProfile();
+                if (isViewingSelf && window.FrameSystem) {
+                    try {
+                        await window.FrameSystem.initFrameForUser(currentUser.id);
+                    } catch (frameErr) {
+                        console.warn('头像框初始化失败（不影响主流程）');
+                    }
+                }
+                if (isViewingSelf) {
+                    await supabaseClient.from('user_stats').upsert({ user_id: currentUser.id, last_login: new Date().toISOString() }, { onConflict: 'user_id' });
+                    safeSetText('lastLogin', new Date().toLocaleString());
+                } else {
+                    safeSetText('lastLogin', '--');
+                }
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('profileContent').style.display = 'block';
+            } catch (renderErr) {
+                console.error('渲染界面失败:', renderErr);
+                showNotification('页面渲染出错，请刷新重试', 'error');
             }
-            if (isViewingSelf) {
-                // 更新最后登录时间
-                await supabaseClient.from('user_stats').upsert(
-                    { user_id: currentUser.id, last_login: new Date().toISOString() },
-                    { onConflict: 'user_id' }
-                );
-                safeSetText('lastLogin', new Date().toLocaleString());
-            } else {
-                safeSetText('lastLogin', '--');
-            }
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('profileContent').style.display = 'block';
         }
 
-        // ========== renderProfile ==========
+        // ========== renderProfile（全部加容错） ==========
         async function renderProfile() {
             const container = document.getElementById('profileContent');
             if(isViewingSelf) container.classList.remove('readonly-mode');
             else container.classList.add('readonly-mode');
-            let roleInfo = getRoleDisplay(userProfile.role);
-            let usernameSpan = document.getElementById('displayUsername');
-            if(usernameSpan) usernameSpan.innerHTML = `${userProfile.username} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
-            // email 从 currentUser 取
-            safeSetText('userEmail', isViewingSelf ? currentUser.email : (userProfile.email || '未公开'));
-            safeSetText('userBio', userProfile.bio || '');
-            safeSetText('createdAt', new Date(userProfile.created_at || currentUser?.created_at).toLocaleString());
-            let days = Math.floor((new Date() - new Date(userProfile.created_at || currentUser?.created_at)) / 86400000);
+
+            const roleInfo = getRoleDisplay(userProfile?.role);
+            const usernameSpan = document.getElementById('displayUsername');
+            if(usernameSpan) {
+                const uname = userProfile?.username || '未知用户';
+                usernameSpan.innerHTML = `${uname} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
+            }
+            safeSetText('userEmail', isViewingSelf ? currentUser?.email || '未登录' : (userProfile?.email || '未公开'));
+            safeSetText('userBio', userProfile?.bio || '');
+            const createdTime = userProfile?.created_at || currentUser?.created_at;
+            safeSetText('createdAt', createdTime ? new Date(createdTime).toLocaleString() : '--');
+            let days = createdTime ? Math.floor((new Date() - new Date(createdTime)) / 86400000) : 0;
             document.getElementById('userDaysText').innerText = `已来到 ${days.toLocaleString()} 天`;
-            if(userProfile.avatar_url) updateAvatarDisplay(userProfile.avatar_url);
+            if(userProfile?.avatar_url) updateAvatarDisplay(userProfile.avatar_url);
             else updateAvatarDisplay(null);
-            let roleRow = document.getElementById('userRoleDisplay');
+
+            const roleRow = document.getElementById('userRoleDisplay');
             if(roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
+
             if(userStats) {
                 updateActivePointsDisplay();
                 if(isViewingSelf) updateShopBalanceDisplay();
-                document.getElementById('streakDays').innerText = userStats.checkin_streak.toLocaleString();
+                document.getElementById('streakDays').innerText = (userStats.checkin_streak || 0).toLocaleString();
                 let today = getLocalDateString();
                 let btn = document.getElementById('checkinBtn');
                 if(btn && isViewingSelf) {
@@ -1069,8 +1109,12 @@
                     btn.innerHTML = checked ? '<i class="fas fa-check-circle"></i> 已签到' : '<i class="fas fa-calendar-check"></i> 签到';
                 } else if(btn) btn.style.display = 'none';
             }
-            if(isViewingSelf) { updateNavbar(); await refreshTitles(); } else {
-                if(userProfile.equipped_title_id) {
+
+            if(isViewingSelf) {
+                updateNavbar();
+                await refreshTitles();
+            } else {
+                if(userProfile?.equipped_title_id) {
                     const allTitles = await loadAllTitles();
                     const equipped = allTitles.find(t => t.id === userProfile.equipped_title_id);
                     if(equipped) {
@@ -1083,7 +1127,10 @@
                 }
                 updateNavbar();
             }
-            if(isViewingSelf) { hasAutoSignCard = await loadAutoSignCardStatus(); await tryAutoSign(); }
+            if(isViewingSelf) {
+                hasAutoSignCard = await loadAutoSignCardStatus();
+                await tryAutoSign();
+            }
         }
 
         // ========== 事件绑定 ==========
@@ -1128,45 +1175,42 @@
             window.openRewardInfoModal = openRewardInfoModal;
         }
 
-        // ========== ★★★★★ 初始化（已修改） ★★★★★ ==========
+        // ========== ★★★★★ 初始化（已完全修复） ★★★★★ ==========
         async function initializeProfile() {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             window.supabaseClient = supabaseClient;
 
-            // ✅ 用 getUser() 代替 getSession()，并增加重试（手机加载慢时更可靠）
-            let user = null;
-            for (let i = 0; i < 6; i++) {           // 重试 6 次，每次等待 500ms
-                try {
-                    const { data, error } = await supabaseClient.auth.getUser();
-                    if (!error && data.user) {
-                        user = data.user;
+            try {
+                let session = null;
+                let attempts = 0;
+                while (attempts < 3) {
+                    const { data, error } = await supabaseClient.auth.getSession();
+                    if (!error && data.session) {
+                        session = data.session;
                         break;
                     }
-                } catch (e) {
-                    // 忽略异常继续重试
+                    attempts++;
+                    await new Promise(resolve => setTimeout(resolve, 200));
                 }
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-
-            if (!user) {
-                // 没有登录，跳转到登录页并保留当前页面作为 redirect 参数
+                if (!session) {
+                    const redirect = encodeURIComponent(window.location.href);
+                    window.location.href = `login-real.html?redirect=${redirect}`;
+                    return;
+                }
+            } catch (err) {
+                console.warn('会话恢复异常:', err);
                 const redirect = encodeURIComponent(window.location.href);
                 window.location.href = `login-real.html?redirect=${redirect}`;
                 return;
             }
 
-            // 现在开始加载用户资料
             try {
-                await loadUserProfileWithCache(user);   // 把获取到的 user 传进去
+                await loadUserProfileWithCache();
                 bindEventListeners();
             } catch (err) {
                 console.error('初始化失败:', err);
                 showNotification('加载资料失败，请刷新重试', 'error');
-                // 如果加载资料失败，跳回登录页
-                setTimeout(() => {
-                    const redirect = encodeURIComponent(window.location.href);
-                    window.location.href = `login-real.html?redirect=${redirect}`;
-                }, 1500);
+                // 不跳转，留在当前页让用户可重试
             }
         }
 
