@@ -977,15 +977,28 @@
             return { ...profile, ...stats };
         }
 
+        // ★★★★★ 修复1：增加会话等待，确保客户端已从存储恢复会话 ★★★★★
         async function loadUserProfileWithCache() {
-            // 1. 获取真实会话
-            const { data: { session }, error: sessionErr } = await supabaseClient.auth.getSession();
-            if(sessionErr || !session || !session.user) {
+            // 1. 确保会话已从 localStorage 恢复
+            let session = null;
+            let attempts = 0;
+            const maxAttempts = 5;
+            while (attempts < maxAttempts) {
+                const { data, error } = await supabaseClient.auth.getSession();
+                if (!error && data.session) {
+                    session = data.session;
+                    break;
+                }
+                attempts++;
+                await new Promise(r => setTimeout(r, 300)); // 等待 300ms 后重试
+            }
+            if (!session || !session.user) {
                 const redirect = encodeURIComponent(window.location.href);
                 window.location.href = `login-real.html?redirect=${redirect}`;
                 return;
             }
             currentUser = session.user;
+
             // 2. 查看是否有其他用户ID
             const urlParams = new URLSearchParams(window.location.search);
             let uid = urlParams.get('uid');
@@ -1116,20 +1129,49 @@
             window.openRewardInfoModal = openRewardInfoModal;
         }
 
-        // ========== 初始化 ==========
+        // ========== ★★★★★ 初始化（已修复） ★★★★★ ==========
         async function initializeProfile() {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             window.supabaseClient = supabaseClient;
+
+            // ★★★ 关键修复：显式等待客户端从存储恢复会话 ★★★
+            try {
+                let session = null;
+                let attempts = 0;
+                while (attempts < 3) {
+                    const { data, error } = await supabaseClient.auth.getSession();
+                    if (!error && data.session) {
+                        session = data.session;
+                        break;
+                    }
+                    attempts++;
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
+                if (!session) {
+                    // 无会话，直接跳转登录页
+                    const redirect = encodeURIComponent(window.location.href);
+                    window.location.href = `login-real.html?redirect=${redirect}`;
+                    return;
+                }
+            } catch (err) {
+                console.warn('会话恢复异常:', err);
+                // 出错也跳转登录
+                const redirect = encodeURIComponent(window.location.href);
+                window.location.href = `login-real.html?redirect=${redirect}`;
+                return;
+            }
+
+            // 现在加载用户资料
             try {
                 await loadUserProfileWithCache();
                 bindEventListeners();
-            } catch(err) {
-                // 如果出错，显示错误并跳转登录
+            } catch (err) {
                 console.error('初始化失败:', err);
                 showNotification('请先登录', 'error');
-                setTimeout(() => window.location.href='login-real.html', 1500);
+                setTimeout(() => window.location.href = 'login-real.html', 1500);
             }
         }
+
         document.addEventListener('DOMContentLoaded', () => setTimeout(initializeProfile, 100));
     </script>
 </body>
