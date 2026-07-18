@@ -103,8 +103,8 @@
         let supabaseClient = null;
         let currentUser = null;
         let targetUserId = null;
-        let userProfile = null;
-        let userStats = null;
+        let userProfile = null;      // 合并后的数据
+        let userStats = null;        // 兼容旧代码
         let isViewingSelf = true;
         let cropper = null;
         let isUploading = false;
@@ -944,22 +944,39 @@
             await refreshUserStats();
         }
         async function refreshUserStats() {
-            const { data, error } = await supabaseClient.from('v_user_full_profile').select('*').eq('id', currentUser.id).single();
-            if(!error && data) {
-                userStats = data;
+            // 改为分别查询两张表
+            const [profileRes, statsRes] = await Promise.all([
+                supabaseClient.from('user_profiles').select('*').eq('id', currentUser.id).single(),
+                supabaseClient.from('user_stats').select('*').eq('user_id', currentUser.id).single()
+            ]);
+            if (!profileRes.error) {
+                userProfile = { ...userProfile, ...profileRes.data };
+            }
+            if (!statsRes.error && statsRes.data) {
+                userStats = { ...userStats, ...statsRes.data };
                 updateShopBalanceDisplay();
                 updateActivePointsDisplay();
                 clearProfileCache();
-                setCachedProfile(data);
+                setCachedProfile(userStats);
             }
         }
 
-        // ========== ★★★ 核心修复：加载用户资料（使用 getSession + 缓存） ★★★ ==========
+        // ========== ★★★ 核心：加载用户资料（直接查询两张表，不依赖视图） ★★★ ==========
         async function fetchUserFullData(userId) {
-            const { data, error } = await supabaseClient.from('v_user_full_profile').select('*').eq('id', userId).single();
-            if(error) throw error;
-            return data;
+            // 并行查询两张表
+            const [profileRes, statsRes] = await Promise.all([
+                supabaseClient.from('user_profiles').select('*').eq('id', userId).single(),
+                supabaseClient.from('user_stats').select('*').eq('user_id', userId).single()
+            ]);
+            if (profileRes.error) throw profileRes.error;
+            // stats 可能不存在（新用户），允许为空
+            if (statsRes.error && statsRes.error.code !== 'PGRST116') throw statsRes.error;
+            const profile = profileRes.data;
+            const stats = statsRes.data || {};
+            // 合并数据
+            return { ...profile, ...stats };
         }
+
         async function loadUserProfileWithCache() {
             // 1. 获取真实会话
             const { data: { session }, error: sessionErr } = await supabaseClient.auth.getSession();
@@ -978,7 +995,7 @@
                 try {
                     const fullData = await fetchUserFullData(targetUserId);
                     userProfile = fullData;
-                    userStats = fullData;
+                    userStats = fullData; // 兼容
                 } catch(e) {
                     showNotification('用户不存在或已注销','error');
                     setTimeout(() => window.location.href='index.html', 1500);
@@ -1018,6 +1035,7 @@
             let roleInfo = getRoleDisplay(userProfile.role);
             let usernameSpan = document.getElementById('displayUsername');
             if(usernameSpan) usernameSpan.innerHTML = `${userProfile.username} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
+            // email 从 currentUser 取
             safeSetText('userEmail', isViewingSelf ? currentUser.email : (userProfile.email || '未公开'));
             safeSetText('userBio', userProfile.bio || '');
             safeSetText('createdAt', new Date(userProfile.created_at || currentUser?.created_at).toLocaleString());
@@ -1106,7 +1124,9 @@
                 await loadUserProfileWithCache();
                 bindEventListeners();
             } catch(err) {
-                showNotification('请先登录','error');
+                // 如果出错，显示错误并跳转登录
+                console.error('初始化失败:', err);
+                showNotification('请先登录', 'error');
                 setTimeout(() => window.location.href='login-real.html', 1500);
             }
         }
