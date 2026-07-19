@@ -10,12 +10,13 @@ import {
     loadAllTitles, loadUserOwnedTitles, grantTitle,
     loadUserFrames, updateUserProfile, updateUserStats
 } from './api.js';
+import { getSupabase } from './api.js';  // ★ 新增
 import {
     getFrameById, purchaseFrame, equipFrame, applyFrameClassByFrameId,
     initFrameForUser
 } from './frame-system.js';
 
-// ========== 状态引用（由 app.js 注入） ==========
+// ========== 状态引用 ==========
 let state = {};
 
 export function setAppState(appState) {
@@ -37,7 +38,6 @@ export function updateShopBalanceDisplay() {
     if (syrupSpan) syrupSpan.innerText = (state.userStats?.dreamy_syrup || 0).toLocaleString();
 }
 
-// ========== 更新签到按钮状态 ==========
 export function updateCheckinButtonState() {
     const btn = document.getElementById('checkinBtn');
     if (!btn) return;
@@ -47,7 +47,6 @@ export function updateCheckinButtonState() {
     btn.innerHTML = checked ? '<i class="fas fa-check-circle"></i> 已签到' : '<i class="fas fa-calendar-check"></i> 签到';
 }
 
-// ========== 头像显示（含头像框） ==========
 export function updateAvatarDisplay(imageUrl) {
     const avatarDiv = document.getElementById('userAvatar');
     if (!avatarDiv) return;
@@ -62,7 +61,6 @@ export function updateAvatarDisplay(imageUrl) {
         } else {
             avatarDiv.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
         }
-        // 重新插入头像框图片
         const frameImg = document.createElement('img');
         frameImg.className = 'avatar-frame-img';
         frameImg.id = 'avatarFrameImg';
@@ -95,7 +93,7 @@ export async function renderProfile() {
     try {
         const container = document.getElementById('profileContent');
         if (!container) throw new Error('页面容器不存在');
-        container.classList.remove('readonly-mode'); // 永远为自己
+        container.classList.remove('readonly-mode');
 
         const roleInfo = getRoleDisplay(state.userProfile?.role || 'user');
         const uname = state.userProfile?.username || '未知用户';
@@ -112,7 +110,6 @@ export async function renderProfile() {
         const daysEl = document.getElementById('userDaysText');
         if (daysEl) daysEl.innerText = `已来到 ${days.toLocaleString()} 天`;
 
-        // 头像
         try {
             if (state.userProfile?.avatar_url) updateAvatarDisplay(state.userProfile.avatar_url);
             else updateAvatarDisplay(null);
@@ -147,9 +144,6 @@ export async function renderProfile() {
                 console.warn('统计数据显示失败:', statsErr);
             }
         }
-
-        // 导航栏由 app.js 负责更新
-        // 称号由 app.js 刷新
 
         document.getElementById('loading').style.display = 'none';
         document.getElementById('profileContent').style.display = 'block';
@@ -329,12 +323,14 @@ async function loadAutoSignCardUI() {
         buyBtn.addEventListener('click', async () => {
             if (window.isProcessing) return;
             if (!canBuy) { showNotification(`糖果碎不足，需要 ${CONFIG.AUTO_CARD_PRICE.toLocaleString()}`, 'error'); return; }
-            const { error: upsertError } = await supabaseClient.from('user_auto_sign_card').upsert({ user_id: state.currentUser.id, owned: true }, { onConflict: 'user_id' });
+            // ★ 使用 getSupabase()
+            const sb = getSupabase();
+            const { error: upsertError } = await sb.from('user_auto_sign_card').upsert({ user_id: state.currentUser.id, owned: true }, { onConflict: 'user_id' });
             if (upsertError) { showNotification('购买失败: ' + upsertError.message, 'error'); return; }
             const newCandy = (state.userStats?.candy_crumbles || 0) - CONFIG.AUTO_CARD_PRICE;
-            const { error: updateError } = await supabaseClient.from('user_stats').update({ candy_crumbles: newCandy }).eq('user_id', state.currentUser.id);
+            const { error: updateError } = await sb.from('user_stats').update({ candy_crumbles: newCandy }).eq('user_id', state.currentUser.id);
             if (updateError) {
-                await supabaseClient.from('user_auto_sign_card').upsert({ user_id: state.currentUser.id, owned: false }, { onConflict: 'user_id' });
+                await sb.from('user_auto_sign_card').upsert({ user_id: state.currentUser.id, owned: false }, { onConflict: 'user_id' });
                 showNotification('购买失败: ' + updateError.message, 'error');
                 return;
             }
@@ -471,7 +467,8 @@ export async function renderTitlesModal() {
 
 // ========== 签到奖励预览 ==========
 export async function openRewardInfoModal() {
-    const { data: configData, error } = await supabaseClient.from('checkin_config').select('*').order('day_num', { ascending: true });
+    const sb = getSupabase();  // ★ 使用 getSupabase
+    const { data: configData, error } = await sb.from('checkin_config').select('*').order('day_num', { ascending: true });
     if (error) { showNotification('获取奖励信息失败', 'error'); return; }
     let html = '<div style="max-height:50vh; overflow-y:auto; padding-right:8px;"><table style="width:100%; border-collapse:collapse; font-size:0.9rem;"><thead><tr style="border-bottom:2px solid var(--border-color); color:var(--text-highlight);"><th style="padding:8px 0; text-align:center;">签到天数</th><th style="padding:8px 0; text-align:center;">🍬 糖果</th><th style="padding:8px 0; text-align:center;">🌈 棒糖</th><th style="padding:8px 0; text-align:center;">⚡ 活跃</th></tr></thead><tbody>';
     let currentStreak = state.userStats?.checkin_streak || 0;
