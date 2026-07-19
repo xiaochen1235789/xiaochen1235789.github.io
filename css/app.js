@@ -2,8 +2,9 @@
 import { CONFIG, getRoleDisplay } from './config.js';
 import {
     showNotification, openModal, closeModal,
-    getLocalDateString, clearProfileCache, setCachedProfile,
-    safeSetText
+    getLocalDateString, getCachedProfile,   // ← 新增
+    clearProfileCache, setCachedProfile,
+    safeSetText, escapeHtml                // ← 新增
 } from './utils.js';
 import {
     initSupabase, getSupabase, fetchUserFullData,
