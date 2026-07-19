@@ -2,9 +2,9 @@
 import { CONFIG, getRoleDisplay } from './config.js';
 import {
     showNotification, openModal, closeModal,
-    getLocalDateString, getCachedProfile,   // ← 新增
+    getLocalDateString, getCachedProfile,
     clearProfileCache, setCachedProfile,
-    safeSetText, escapeHtml                // ← 新增
+    safeSetText, escapeHtml
 } from './utils.js';
 import {
     initSupabase, getSupabase, fetchUserFullData,
@@ -158,7 +158,7 @@ async function unequipTitle() {
 
 // ========== 签到执行 ==========
 async function executeCheckin(autoTriggered = false) {
-    const today = getLocalDateString();
+    const today = getLocalDateString(); // 现在不需要传参，因为有了默认值
     if (userStats?.last_checkin_date === today) {
         if (!autoTriggered) showNotification('今日已签到', 'warning');
         updateCheckinButtonState();
@@ -188,7 +188,7 @@ async function executeCheckin(autoTriggered = false) {
     if (updateError) { showNotification('签到失败', 'error'); return false; }
 
     userStats = { ...(userStats || {}), candy_crumbles: newCandy, rainbow_lollipops: newRainbow, active_points: newActive, last_checkin_date: today, checkin_streak: newStreak };
-    updateAppState();  // ★ 同步状态
+    updateAppState();
     updateActivePointsDisplay();
     updateShopBalanceDisplay();
     document.getElementById('streakDays').innerText = newStreak.toLocaleString();
@@ -208,7 +208,7 @@ async function performCheckin() {
 async function tryAutoSign() {
     if (autoSignAttempted) return;
     autoSignAttempted = true;
-    const today = getLocalDateString();
+    const today = getLocalDateString(); // 已修复
     if (hasAutoSignCard && userStats?.last_checkin_date !== today) {
         showNotification('🃏 检测到自动签到卡，正在自动签到...', 'info');
         await executeCheckin(true);
@@ -371,7 +371,7 @@ async function loadUserProfile() {
     }
     userProfile = fullData;
     userStats = fullData;
-    updateAppState();  // ★ 初次加载同步
+    updateAppState();
 
     // 渲染界面
     await renderProfile();
