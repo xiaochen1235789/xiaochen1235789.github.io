@@ -4,23 +4,23 @@ import {
     showNotification, openModal, closeModal,
     getLocalDateString, clearProfileCache, setCachedProfile,
     safeSetText
-} from './utils.js';
+} from './css/utils.js';
 import {
     initSupabase, getSupabase, fetchUserFullData,
     updateUserProfile, updateUserStats, getCheckinConfig,
     loadAutoSignCardStatus, loadAllTitles, loadUserOwnedTitles,
     grantTitle, loadUserFrames
-} from './api.js';
+} from './css/api.js';
 import {
     getFrameById, purchaseFrame, equipFrame, applyFrameClassByFrameId,
     initFrameForUser
-} from './frame-system.js';
+} from './css/frame-system.js';
 import {
     setAppState, renderProfile, updateAvatarDisplay,
     updateCheckinButtonState, updateActivePointsDisplay,
     updateShopBalanceDisplay, renderShop, renderBackpack,
     renderTitlesModal, openBackpackItemDetail, openRewardInfoModal
-} from './ui-renderer.js';
+} from './css/ui-renderer.js';
 
 // ========== 全局状态 ==========
 let currentUser = null;
