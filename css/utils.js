@@ -4,7 +4,8 @@ export function escapeHtml(str) {
     return String(str).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
 }
 
-export function getLocalDateString(date) {
+// ★ 修复：添加默认参数，调用时不传参则使用当前日期
+export function getLocalDateString(date = new Date()) {
     return date.toLocaleDateString('sv-SE');
 }
 
