@@ -15,9 +15,9 @@ export const CONFIG = {
         user: { name: '普通用户', color: '#9ca3af' }
     },
     
-    // 头像框列表（只保留两个）
+    // 头像框列表
     FRAMES: [
-        { id: 'nature', name: '默认', description: '无头像框', price_candy: 0, price_rainbow: 0, imageUrl: '' },
+        { id: 'nature', name: '默认', description: '无头像框', price_candy: 0, price_rainbow: 0, imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_putong.webp' },
         { id: 'frame_huanbao', name: '环保光环', description: '绿色环保主题头像框', price_candy: 30, price_rainbow: 0, imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_huanbao.webp' }
     ],
     
