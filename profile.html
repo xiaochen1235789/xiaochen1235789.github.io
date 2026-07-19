@@ -5,23 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>个人主页 - 六哥荣耀WIKI</title>
     <link rel="icon" href="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/wangzhantupian.png" type="image/png">
-    <link rel="stylesheet" href="/css/zhuye.css">
+    <link rel="stylesheet" href="./css/zhuye.css">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
 </head>
 <body>
-    <!-- 导航栏 -->
+    <!-- ====== 顶部导航 ====== -->
     <nav class="top-nav">
         <div class="nav-title">六哥荣耀WIKI</div>
         <a href="./admin.html" id="adminLink" class="nav-link" style="display: none;">管理后台</a>
         <div class="user-nav-section" id="userNavSection"></div>
     </nav>
+
+    <!-- ====== 同步通知 ====== -->
     <div class="sync-notice" id="syncNotice"><i class="fas fa-sync-alt"></i><span>已同步</span></div>
+
+    <!-- ====== 主容器 ====== -->
     <div class="profile-container">
-        <div class="loading" id="loading"><div class="loading-spinner"></div><p>加载个人资料中...</p></div>
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p>加载个人资料中...</p>
+        </div>
+
         <div id="profileContent" style="display: none;">
+            <!-- ====== 个人资料横幅 ====== -->
             <div class="profile-banner">
                 <div class="banner-overlay"></div>
                 <div class="banner-content">
@@ -36,7 +45,7 @@
                     <div class="user-info">
                         <div class="username-wrapper">
                             <span class="username" id="displayUsername">加载中...</span>
-                            <button class="username-edit" onclick="openUsernameModal()"><i class="fas fa-edit"></i></button>
+                            <button class="username-edit" onclick="window.openUsernameModal()"><i class="fas fa-edit"></i></button>
                             <div class="register-days"><i class="fas fa-calendar-alt"></i><span id="userDaysText">已来到 0 天</span></div>
                             <div class="active-points"><i class="fas fa-bolt"></i>活跃度: <span id="activePointsValue">0</span></div>
                             <button class="shop-button" id="openBackpackBtn" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6);"><i class="fas fa-shopping-bag"></i> 背包</button>
@@ -45,7 +54,7 @@
                             <button class="shop-button my-title-btn" id="openHelpBtn" style="margin-left: 8px;"><i class="fas fa-question-circle"></i> 帮助</button>
                         </div>
                         <div class="user-email" id="userEmail">加载中...</div>
-                        <div class="user-bio"><span id="userBio"></span><button class="edit-bio" onclick="openBioModal()">编辑</button></div>
+                        <div class="user-bio"><span id="userBio"></span><button class="edit-bio" onclick="window.openBioModal()">编辑</button></div>
                         <div class="user-title-row" id="userTitleRow">
                             <div class="title-badge" id="titleBadge">
                                 <i class="fas fa-medal"></i> <span id="equippedTitleName">无称号</span>
@@ -55,1190 +64,246 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ====== 签到卡片 ====== -->
             <div class="checkin-card">
                 <div class="checkin-info">
-                    <div class="streak-box"><div class="streak-number" id="streakDays">0</div><div class="streak-label">连续签到</div></div>
-                    <div class="reward-preview" id="rewardInfoBtn" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px;" onclick="openRewardInfoModal()">
+                    <div class="streak-box">
+                        <div class="streak-number" id="streakDays">0</div>
+                        <div class="streak-label">连续签到</div>
+                    </div>
+                    <div class="reward-preview" id="rewardInfoBtn" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px;" onclick="window.openRewardInfoModal()">
                         <i class="fas fa-question-circle"></i> <span>奖励预览</span>
                     </div>
                 </div>
                 <button class="checkin-btn" id="checkinBtn"><i class="fas fa-calendar-check"></i> 签到</button>
             </div>
-            <div class="section-header"><div class="section-title"><i class="fas fa-cog"></i>账号设置</div></div>
+
+            <!-- ====== 账号设置 ====== -->
+            <div class="section-header">
+                <div class="section-title"><i class="fas fa-cog"></i>账号设置</div>
+            </div>
             <div class="settings-section">
-                <div class="settings-item"><div><div class="settings-label">修改密码</div><div class="settings-desc">提高安全性</div></div><button class="btn" onclick="openPasswordModal()"><i class="fas fa-key"></i>修改密码</button></div>
-                <div class="settings-item"><div><div class="settings-label">账号创建时间</div><div class="settings-desc" id="createdAt">--</div></div></div>
-                <div class="settings-item"><div><div class="settings-label">最后登录时间</div><div class="settings-desc" id="lastLogin">--</div></div></div>
-                <div class="danger-zone"><div class="danger-title"><i class="fas fa-exclamation-triangle"></i>危险操作</div><button class="danger-btn" onclick="openDeleteAccountModal()"><i class="fas fa-trash"></i>注销账号</button><div class="danger-note">不可逆操作</div></div>
+                <div class="settings-item">
+                    <div>
+                        <div class="settings-label">修改密码</div>
+                        <div class="settings-desc">提高安全性</div>
+                    </div>
+                    <button class="btn" onclick="window.openPasswordModal()"><i class="fas fa-key"></i>修改密码</button>
+                </div>
+                <div class="settings-item">
+                    <div>
+                        <div class="settings-label">账号创建时间</div>
+                        <div class="settings-desc" id="createdAt">--</div>
+                    </div>
+                </div>
+                <div class="settings-item">
+                    <div>
+                        <div class="settings-label">最后登录时间</div>
+                        <div class="settings-desc" id="lastLogin">--</div>
+                    </div>
+                </div>
+                <div class="danger-zone">
+                    <div class="danger-title"><i class="fas fa-exclamation-triangle"></i>危险操作</div>
+                    <button class="danger-btn" onclick="window.openDeleteAccountModal()"><i class="fas fa-trash"></i>注销账号</button>
+                    <div class="danger-note">不可逆操作</div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 所有模态框 -->
-    <div class="modal-overlay" id="cropModal"><div class="modal"><div class="modal-header"><div class="modal-title">裁剪头像</div><button class="modal-close" id="closeCropModalBtn">&times;</button></div><div><img id="cropImage" style="max-width:100%;"></div><div class="crop-buttons"><button class="btn-cancel" id="cancelCropBtn">取消</button><button class="btn-primary" id="confirmCropBtn">确认上传</button></div></div></div>
-    <div class="modal-overlay" id="shopModal"><div class="modal"><div class="modal-header"><div class="modal-title">商店</div><button class="modal-close" id="closeShopModalBtn">&times;</button></div><div id="shopContentContainer"><div style="text-align:center;padding:20px;">加载中...</div></div></div></div>
-    <div class="modal-overlay" id="usernameModal"><div class="modal"><div class="modal-header"><div class="modal-title">修改用户名</div><button class="modal-close close-modal-btn" data-modal="usernameModal">&times;</button></div><div class="form-group"><input type="text" class="form-input" id="newUsername" maxlength="20" placeholder="新用户名"></div><div class="form-actions"><button class="btn-cancel close-modal-btn" data-modal="usernameModal">取消</button><button class="btn-primary" id="saveUsername">保存</button></div></div></div>
-    <div class="modal-overlay" id="bioModal"><div class="modal"><div class="modal-header"><div class="modal-title">个人简介</div><button class="modal-close close-modal-btn" data-modal="bioModal">&times;</button></div><div class="form-group"><textarea class="form-textarea" id="newBio" rows="3" maxlength="200"></textarea></div><div class="form-actions"><button class="btn-cancel close-modal-btn" data-modal="bioModal">取消</button><button class="btn-primary" id="saveBio">保存</button></div></div></div>
-    <div class="modal-overlay" id="passwordModal"><div class="modal"><div class="modal-header"><div class="modal-title">修改密码</div><button class="modal-close close-modal-btn" data-modal="passwordModal">&times;</button></div><div class="form-group"><input type="password" class="form-input" id="currentPassword" placeholder="当前密码"></div><div class="form-group"><input type="password" class="form-input" id="newPassword" placeholder="新密码（至少6位）"></div><div class="form-group"><input type="password" class="form-input" id="confirmPassword" placeholder="确认新密码"></div><div class="form-actions"><button class="btn-cancel close-modal-btn" data-modal="passwordModal">取消</button><button class="btn-primary" id="savePassword">更新密码</button></div></div></div>
-    <div class="modal-overlay" id="deleteAccountModal"><div class="modal"><div class="modal-header"><div class="modal-title" style="color:#f87171;">注销账号</div><button class="modal-close close-modal-btn" data-modal="deleteAccountModal">&times;</button></div><p>输入邮箱确认：</p><div class="form-group"><input type="email" class="form-input" id="confirmEmail" placeholder="邮箱地址"></div><div class="form-actions"><button class="btn-cancel close-modal-btn" data-modal="deleteAccountModal">取消</button><button class="danger-btn" id="confirmDeleteAccount">确认注销</button></div></div></div>
-    <div class="modal-overlay" id="logoutConfirmModal"><div class="modal"><div class="modal-header"><div class="modal-title">退出登录</div><button class="modal-close" id="closeLogoutModalBtn">&times;</button></div><p>确定退出吗？</p><div class="confirm-buttons"><button class="btn-cancel-modal" id="cancelLogoutBtn">取消</button><button class="btn-confirm" id="confirmLogoutBtn">退出</button></div></div></div>
-    <div class="modal-overlay" id="avatarConfirmModal"><div class="modal"><div class="modal-header"><div class="modal-title">更换头像</div><button class="modal-close" id="closeAvatarConfirmBtn">&times;</button></div><p>确定要更换头像吗？</p><div class="confirm-buttons"><button class="btn-cancel-modal" id="cancelAvatarBtn">取消</button><button class="btn-confirm" id="confirmAvatarBtn">确定</button></div></div></div>
-    <div class="modal-overlay" id="titlesModal"><div class="modal" style="max-width: 500px;"><div class="modal-header"><div class="modal-title"><i class="fas fa-medal"></i> 我的称号</div><button class="modal-close close-modal-btn" data-modal="titlesModal">&times;</button></div><div id="titlesListContainer" style="max-height: 60vh; overflow-y: auto; padding: 0 4px;"></div><div style="margin-top: 12px; text-align: center; font-size: 0.7rem;">完成条件自动获得称号</div></div></div>
-    <div class="modal-overlay" id="helpModal"><div class="modal" style="max-width: 550px;"><div class="modal-header"><div class="modal-title"><i class="fas fa-life-ring"></i> 帮助中心</div><button class="modal-close close-modal-btn" data-modal="helpModal">&times;</button></div><div style="max-height: 60vh; overflow-y: auto; padding-right: 8px;"><div class="help-section"><h3><i class="fas fa-star"></i> 货币与活跃度</h3><p><strong>🍬 糖果碎</strong>：每日签到、活动获得。用于购买头像框、自动签到卡等。<br><strong>🌈 超级棒糖</strong>：稀有货币，连续签到7天或特殊活动获得。可兑换高级物品。<br><strong>⚡ 活跃度</strong>：通过签到获得，影响称号获取条件。</p></div><div class="help-section"><h3><i class="fas fa-calendar-check"></i> 签到</h3><p>每天点击"签到"按钮可获得奖励。连续签到天数越多，奖励越丰厚。<br><strong>自动签到卡</strong>：购买后每天上午8点（北京时间）自动签到，永不漏签。</p></div><div class="help-section"><h3><i class="fas fa-medal"></i> 称号系统</h3><p>完成特定条件自动获得称号（例如连续签到7天、活跃度达到100、拥有500糖果碎等）。<br>管理员拥有特殊限定称号（🌟创世神🌟 / 🌟管理神🌟）。</p></div><div class="help-section"><h3><i class="fas fa-store"></i> 商店</h3><p>可使用糖果碎/超级棒糖购买头像框、自动签到卡。购买后自动生效。</p></div><div class="help-section"><h3><i class="fas fa-user"></i> 个人资料</h3><p>长按头像可更换图片；点击编辑按钮修改用户名/简介；可修改密码或注销账号。</p></div><div class="help-section"><h3><i class="fas fa-question"></i> 其他问题</h3><p>如果遇到bug或有建议，欢迎联系站长。站长QQ：1714400176。邮箱1714400176@qq.com。</p></div></div><div style="margin-top: 16px; text-align: center; font-size: 0.7rem; color: #aaa;">版本 1.0 | 持续更新中</div></div></div>
-    <div class="modal-overlay" id="rewardInfoModal"><div class="modal" style="max-width: 480px;"><div class="modal-header"><div class="modal-title"><i class="fas fa-calendar-alt" style="margin-right:8px;"></i> 签到奖励一览</div><button class="modal-close close-modal-btn" data-modal="rewardInfoModal">&times;</button></div><div id="rewardInfoContent" style="padding: 8px 0;"></div></div></div>
-    <div class="modal-overlay" id="backpackModal"><div class="modal" style="max-width: 480px;"><div class="modal-header"><div class="modal-title"><i class="fas fa-shopping-bag"></i> 我的背包</div><button class="modal-close close-modal-btn" data-modal="backpackModal">&times;</button></div><div id="backpackContent" style="padding: 8px 0; max-height: 60vh; overflow-y: auto;"></div></div></div>
-    <div class="modal-overlay" id="backpackItemModal"><div class="modal" style="max-width: 320px; text-align: center;"><div class="modal-header" style="border-bottom: none; padding-bottom: 0;"><div class="modal-title" id="bItemTitle">物品名称</div><button class="modal-close close-modal-btn" data-modal="backpackItemModal">&times;</button></div><div id="bItemIcon" style="font-size: 4rem; margin: 15px 0;"></div><div id="bItemDesc" style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;"></div><div id="bItemCount" style="font-size: 0.85rem; color: var(--text-highlight); margin-bottom: 15px;"></div></div></div>
+    <!-- ====== 所有模态框 ====== -->
+    <div class="modal-overlay" id="cropModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">裁剪头像</div>
+                <button class="modal-close" id="closeCropModalBtn">&times;</button>
+            </div>
+            <div><img id="cropImage" style="max-width:100%;"></div>
+            <div class="crop-buttons">
+                <button class="btn-cancel" id="cancelCropBtn">取消</button>
+                <button class="btn-primary" id="confirmCropBtn">确认上传</button>
+            </div>
+        </div>
+    </div>
 
+    <div class="modal-overlay" id="shopModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">商店</div>
+                <button class="modal-close" id="closeShopModalBtn">&times;</button>
+            </div>
+            <div id="shopContentContainer"><div style="text-align:center;padding:20px;">加载中...</div></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="usernameModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">修改用户名</div>
+                <button class="modal-close close-modal-btn" data-modal="usernameModal">&times;</button>
+            </div>
+            <div class="form-group">
+                <input type="text" class="form-input" id="newUsername" maxlength="20" placeholder="新用户名">
+            </div>
+            <div class="form-actions">
+                <button class="btn-cancel close-modal-btn" data-modal="usernameModal">取消</button>
+                <button class="btn-primary" id="saveUsername">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="bioModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">个人简介</div>
+                <button class="modal-close close-modal-btn" data-modal="bioModal">&times;</button>
+            </div>
+            <div class="form-group">
+                <textarea class="form-textarea" id="newBio" rows="3" maxlength="200"></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="btn-cancel close-modal-btn" data-modal="bioModal">取消</button>
+                <button class="btn-primary" id="saveBio">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="passwordModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">修改密码</div>
+                <button class="modal-close close-modal-btn" data-modal="passwordModal">&times;</button>
+            </div>
+            <div class="form-group">
+                <input type="password" class="form-input" id="currentPassword" placeholder="当前密码">
+            </div>
+            <div class="form-group">
+                <input type="password" class="form-input" id="newPassword" placeholder="新密码（至少6位）">
+            </div>
+            <div class="form-group">
+                <input type="password" class="form-input" id="confirmPassword" placeholder="确认新密码">
+            </div>
+            <div class="form-actions">
+                <button class="btn-cancel close-modal-btn" data-modal="passwordModal">取消</button>
+                <button class="btn-primary" id="savePassword">更新密码</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="deleteAccountModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" style="color:#f87171;">注销账号</div>
+                <button class="modal-close close-modal-btn" data-modal="deleteAccountModal">&times;</button>
+            </div>
+            <p>输入邮箱确认：</p>
+            <div class="form-group">
+                <input type="email" class="form-input" id="confirmEmail" placeholder="邮箱地址">
+            </div>
+            <div class="form-actions">
+                <button class="btn-cancel close-modal-btn" data-modal="deleteAccountModal">取消</button>
+                <button class="danger-btn" id="confirmDeleteAccount">确认注销</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="logoutConfirmModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">退出登录</div>
+                <button class="modal-close" id="closeLogoutModalBtn">&times;</button>
+            </div>
+            <p>确定退出吗？</p>
+            <div class="confirm-buttons">
+                <button class="btn-cancel-modal" id="cancelLogoutBtn">取消</button>
+                <button class="btn-confirm" id="confirmLogoutBtn">退出</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="avatarConfirmModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">更换头像</div>
+                <button class="modal-close" id="closeAvatarConfirmBtn">&times;</button>
+            </div>
+            <p>确定要更换头像吗？</p>
+            <div class="confirm-buttons">
+                <button class="btn-cancel-modal" id="cancelAvatarBtn">取消</button>
+                <button class="btn-confirm" id="confirmAvatarBtn">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="titlesModal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-medal"></i> 我的称号</div>
+                <button class="modal-close close-modal-btn" data-modal="titlesModal">&times;</button>
+            </div>
+            <div id="titlesListContainer" style="max-height: 60vh; overflow-y: auto; padding: 0 4px;"></div>
+            <div style="margin-top: 12px; text-align: center; font-size: 0.7rem;">完成条件自动获得称号</div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="helpModal">
+        <div class="modal" style="max-width: 550px;">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-life-ring"></i> 帮助中心</div>
+                <button class="modal-close close-modal-btn" data-modal="helpModal">&times;</button>
+            </div>
+            <div style="max-height: 60vh; overflow-y: auto; padding-right: 8px;">
+                <div class="help-section"><h3><i class="fas fa-star"></i> 货币与活跃度</h3><p><strong>🍬 糖果碎</strong>：每日签到、活动获得。用于购买头像框、自动签到卡等。<br><strong>🌈 超级棒糖</strong>：稀有货币，连续签到7天或特殊活动获得。可兑换高级物品。<br><strong>⚡ 活跃度</strong>：通过签到获得，影响称号获取条件。</p></div>
+                <div class="help-section"><h3><i class="fas fa-calendar-check"></i> 签到</h3><p>每天点击"签到"按钮可获得奖励。连续签到天数越多，奖励越丰厚。<br><strong>自动签到卡</strong>：购买后每天上午8点（北京时间）自动签到，永不漏签。</p></div>
+                <div class="help-section"><h3><i class="fas fa-medal"></i> 称号系统</h3><p>完成特定条件自动获得称号（例如连续签到7天、活跃度达到100、拥有500糖果碎等）。<br>管理员拥有特殊限定称号（🌟创世神🌟 / 🌟管理神🌟）。</p></div>
+                <div class="help-section"><h3><i class="fas fa-store"></i> 商店</h3><p>可使用糖果碎/超级棒糖购买头像框、自动签到卡。购买后自动生效。</p></div>
+                <div class="help-section"><h3><i class="fas fa-user"></i> 个人资料</h3><p>长按头像可更换图片；点击编辑按钮修改用户名/简介；可修改密码或注销账号。</p></div>
+                <div class="help-section"><h3><i class="fas fa-question"></i> 其他问题</h3><p>如果遇到bug或有建议，欢迎联系站长。站长QQ：1714400176。邮箱1714400176@qq.com。</p></div>
+            </div>
+            <div style="margin-top: 16px; text-align: center; font-size: 0.7rem; color: #aaa;">版本 1.0 | 持续更新中</div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="rewardInfoModal">
+        <div class="modal" style="max-width: 480px;">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-calendar-alt" style="margin-right:8px;"></i> 签到奖励一览</div>
+                <button class="modal-close close-modal-btn" data-modal="rewardInfoModal">&times;</button>
+            </div>
+            <div id="rewardInfoContent" style="padding: 8px 0;"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="backpackModal">
+        <div class="modal" style="max-width: 480px;">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-shopping-bag"></i> 我的背包</div>
+                <button class="modal-close close-modal-btn" data-modal="backpackModal">&times;</button>
+            </div>
+            <div id="backpackContent" style="padding: 8px 0; max-height: 60vh; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="backpackItemModal">
+        <div class="modal" style="max-width: 320px; text-align: center;">
+            <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+                <div class="modal-title" id="bItemTitle">物品名称</div>
+                <button class="modal-close close-modal-btn" data-modal="backpackItemModal">&times;</button>
+            </div>
+            <div id="bItemIcon" style="font-size: 4rem; margin: 15px 0;"></div>
+            <div id="bItemDesc" style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;"></div>
+            <div id="bItemCount" style="font-size: 0.85rem; color: var(--text-highlight); margin-bottom: 15px;"></div>
+        </div>
+    </div>
+
+    <!-- ====== 回到顶部 ====== -->
     <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fas fa-chevron-up"></i></button>
 
-    <script>
-        // ========== 常量与配置 ==========
-        const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-        const AUTO_CARD_PRICE = 100;
-        const AVATAR_SIZE = 500;
-        const LONG_PRESS_DELAY = 500;
-        const CACHE_TTL = 3600000;
-
-        const ROLE_CONFIG = { owner: { name: '站长', color: '#f97316' }, admin: { name: '管理员', color: '#60a5fa' }, user: { name: '普通用户', color: '#9ca3af' } };
-        function getRoleDisplay(role) { return ROLE_CONFIG[role] || ROLE_CONFIG.user; }
-
-        // ========== 全局状态 ==========
-        let supabaseClient = null;
-        let currentUser = null;
-        let userProfile = null;
-        let userStats = null;
-        let cropper = null;
-        let isUploading = false;
-        let allTitlesList = [];
-        let userOwnedTitles = [];
-        let equippedTitleObj = null;
-        let hasAutoSignCard = false;
-        let autoSignAttempted = false;
-        let notificationTimeout = null;
-        let longPressTimer = null;
-        let isProcessing = false;
-
-        // ========== 工具函数 ==========
-        function escapeHtml(str) { if (!str) return ''; return String(str).replace(/[&<>]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m]||m)); }
-        function getLocalDateString(date) { return date.toLocaleDateString('sv-SE'); }
-        function safeSetText(id, text) { let e = document.getElementById(id); if(e) e.textContent = text || '--'; }
-
-        function showNotification(msg, type='info') {
-            let n = document.getElementById('notification');
-            if(!n) { n = document.createElement('div'); n.id='notification'; document.body.appendChild(n); }
-            n.textContent = msg;
-            n.className = 'notification ' + type;
-            n.classList.remove('show');
-            void n.offsetWidth;
-            n.classList.add('show');
-            if(notificationTimeout) clearTimeout(notificationTimeout);
-            notificationTimeout = setTimeout(() => { if(n) n.classList.remove('show'); }, 3000);
-        }
-
-        function showSyncNotice() { let sn = document.getElementById('syncNotice'); if(sn) { sn.classList.add('show'); setTimeout(() => sn.classList.remove('show'), 2000); } }
-
-        // ========== 缓存管理 ==========
-        function getCachedProfile() {
-            try {
-                const raw = localStorage.getItem('userProfileCache');
-                if(!raw) return null;
-                const { data, timestamp } = JSON.parse(raw);
-                if(timestamp && (Date.now() - timestamp) < CACHE_TTL) return data;
-                return null;
-            } catch(e) { return null; }
-        }
-        function setCachedProfile(data) {
-            localStorage.setItem('userProfileCache', JSON.stringify({ data, timestamp: Date.now() }));
-        }
-        function clearProfileCache() {
-            localStorage.removeItem('userProfileCache');
-        }
-
-        // ========== 模态框 ==========
-        function openModal(id) { let m = document.getElementById(id); if(m) m.classList.add('show'); document.body.style.overflow = 'hidden'; }
-        function closeModal(id) { let m = document.getElementById(id); if(m) m.classList.remove('show'); document.body.style.overflow = ''; }
-
-        // ========== 头像显示（含头像框） ==========
-        function updateAvatarDisplay(imageUrl) {
-            const avatarDiv = document.getElementById('userAvatar');
-            if (!avatarDiv) return;
-            try {
-                const oldClasses = avatarDiv.className.split(' ').filter(c => c !== 'avatar' && !c.startsWith('frame-'));
-                avatarDiv.className = oldClasses.join(' ');
-                let initial = 'U';
-                if (userProfile?.username) initial = userProfile.username.charAt(0).toUpperCase();
-                else if (currentUser?.email) initial = currentUser.email.charAt(0).toUpperCase();
-                if (imageUrl) {
-                    avatarDiv.innerHTML = `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="window.handleAvatarLoadError(this)">`;
-                } else {
-                    avatarDiv.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
-                }
-                // 重新插入头像框图片
-                const frameImg = document.createElement('img');
-                frameImg.className = 'avatar-frame-img';
-                frameImg.id = 'avatarFrameImg';
-                frameImg.src = '';
-                frameImg.alt = '头像框';
-                frameImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:contain;pointer-events:none;transform:scale(1.18);z-index:2;';
-                avatarDiv.appendChild(frameImg);
-                avatarDiv.classList.add('avatar');
-                // 如果有已装备的头像框，重新应用
-                if (window.FrameSystem && currentUser) {
-                    window.FrameSystem.loadUserFrames(currentUser.id)
-                        .then(({ equipped }) => {
-                            window.FrameSystem.applyFrameClassByFrameId(equipped);
-                        })
-                        .catch(err => console.warn('头像框加载失败:', err));
-                }
-            } catch (err) {
-                console.warn('updateAvatarDisplay 出错:', err);
-                avatarDiv.innerHTML = `<div class="avatar-placeholder">U</div>`;
-                avatarDiv.classList.add('avatar');
-            }
-        }
-        window.handleAvatarLoadError = function(imgElement) {
-            imgElement.onerror=null;
-            imgElement.style.display='none';
-            const parent = imgElement.parentElement;
-            const initial = parent.getAttribute('data-initial') || 'U';
-            parent.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
-        };
-
-        // ========== 导航栏 ==========
-        function updateNavbar() {
-            let navDiv = document.getElementById('userNavSection');
-            if(!navDiv) return;
-            if(!currentUser) { navDiv.innerHTML = '<a href="login-real.html">登录</a>'; return; }
-            let username = userProfile?.username || currentUser?.email?.split('@')[0] || '用户';
-            let roleInfo = getRoleDisplay(userProfile?.role);
-            let avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
-            let avatarHtml = avatarUrl ?
-                `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;">` :
-                `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${username.charAt(0).toUpperCase()}</div>`;
-            navDiv.innerHTML =
-                `<div style="display:flex;align-items:center;gap:8px;">${avatarHtml}<span style="color:${roleInfo.color};">${username} (${roleInfo.name})</span><button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:20px;cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
-            document.getElementById('logoutBtn')?.addEventListener('click', () => openModal('logoutConfirmModal'));
-            let adminLink = document.getElementById('adminLink');
-            if(adminLink && currentUser && (userProfile?.role === 'owner' || userProfile?.role === 'admin')) adminLink.style.display = 'inline-block';
-            else if(adminLink) adminLink.style.display = 'none';
-        }
-
-        // ========== 头像框系统（只保留默认 + 环保光环） ==========
-        window.FrameSystem = (function() {
-            const FRAMES = [
-                { id:'nature', name:'默认', description:'无头像框', price_candy:0, price_rainbow:0, imageUrl:'' },
-                { id:'frame_huanbao', name:'环保光环', description:'绿色环保主题头像框', price_candy:30, price_rainbow:0, imageUrl:'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_huanbao.webp' }
-            ];
-            function getFrameById(id) { return FRAMES.find(f=>f.id===id); }
-            async function loadUserFrames(userId) {
-                const { data, error } = await supabaseClient.from('user_profiles').select('owned_frames, equipped_frame').eq('id', userId).maybeSingle();
-                if(error || !data) return { owned:['nature'], equipped:'nature' };
-                let owned = data.owned_frames || ['nature'];
-                if(!owned.includes('nature')) owned.push('nature');
-                let equipped = data.equipped_frame || 'nature';
-                return { owned, equipped };
-            }
-            async function ensureUserFrameFields(userId) {
-                const { data: profile } = await supabaseClient.from('user_profiles').select('owned_frames, equipped_frame').eq('id', userId).maybeSingle();
-                let needUpdate = false;
-                let owned = profile?.owned_frames || ['nature'];
-                let equipped = profile?.equipped_frame || null;
-                if(!owned.includes('nature')) { owned.push('nature'); needUpdate = true; }
-                if(!equipped) { equipped = 'nature'; needUpdate = true; }
-                if(needUpdate) {
-                    await supabaseClient.from('user_profiles').update({ owned_frames: owned, equipped_frame: equipped }).eq('id', userId);
-                }
-            }
-            async function purchaseFrame(frameId, stats, onSuccess) {
-                let frame = getFrameById(frameId);
-                if(!frame || (frame.price_candy===0 && frame.price_rainbow===0)) throw new Error('无效头像框');
-                let { owned } = await loadUserFrames(currentUser.id);
-                if(owned.includes(frameId)) throw new Error('已拥有');
-                if(stats.candy_crumbles < frame.price_candy) throw new Error(`糖果碎不足，需 ${frame.price_candy.toLocaleString()}`);
-                if(stats.rainbow_lollipops < frame.price_rainbow) throw new Error(`超级棒糖不足，需 ${frame.price_rainbow.toLocaleString()}`);
-                let newCandy = stats.candy_crumbles - frame.price_candy;
-                let newRainbow = stats.rainbow_lollipops - frame.price_rainbow;
-                await supabaseClient.from('user_stats').update({ candy_crumbles: newCandy, rainbow_lollipops: newRainbow }).eq('user_id', currentUser.id);
-                const { data: profile } = await supabaseClient.from('user_profiles').select('owned_frames').eq('id', currentUser.id).maybeSingle();
-                let currentOwned = profile?.owned_frames || ['nature'];
-                if(!currentOwned.includes(frameId)) currentOwned.push(frameId);
-                await supabaseClient.from('user_profiles').update({ owned_frames: currentOwned }).eq('id', currentUser.id);
-                if(window.userStats) { window.userStats.candy_crumbles = newCandy; window.userStats.rainbow_lollipops = newRainbow; }
-                clearProfileCache();
-                if(onSuccess) onSuccess(newCandy, newRainbow);
-                if(window.updateShopBalanceDisplay) window.updateShopBalanceDisplay();
-            }
-            async function equipFrame(frameId) {
-                let { owned } = await loadUserFrames(currentUser.id);
-                if(!owned.includes(frameId)) throw new Error('未拥有');
-                await supabaseClient.from('user_profiles').update({ equipped_frame: frameId }).eq('id', currentUser.id);
-                await applyFrameClassByFrameId(frameId);
-                clearProfileCache();
-            }
-            async function applyFrameClassByFrameId(frameId) {
-                const frameImg = document.getElementById('avatarFrameImg');
-                if(!frameImg) return;
-                const frame = getFrameById(frameId);
-                if(frame && frame.imageUrl) {
-                    frameImg.src = frame.imageUrl;
-                } else {
-                    frameImg.src = '';
-                }
-            }
-            async function initFrameForUser(userId) {
-                await ensureUserFrameFields(userId);
-                let { equipped } = await loadUserFrames(userId);
-                await applyFrameClassByFrameId(equipped);
-            }
-            return { FRAMES, getFrameById, loadUserFrames, purchaseFrame, equipFrame, initFrameForUser, applyFrameClassByFrameId };
-        })();
-
-        // ========== 面板函数 ==========
-        function openUsernameModal() { document.getElementById('newUsername').value = userProfile?.username || ''; openModal('usernameModal'); }
-        function openBioModal() { document.getElementById('newBio').value = userProfile?.bio || ''; openModal('bioModal'); }
-        function openPasswordModal() { openModal('passwordModal'); }
-        function openDeleteAccountModal() { document.getElementById('confirmEmail').value = currentUser?.email || ''; openModal('deleteAccountModal'); }
-        function updateActivePointsDisplay() { let span = document.getElementById('activePointsValue'); if(span) span.innerText = (userStats?.active_points || 0).toLocaleString(); }
-        function updateShopBalanceDisplay() {
-            let candySpan = document.getElementById('shopCandyBalance');
-            let rainSpan = document.getElementById('shopRainbowBalance');
-            let syrupSpan = document.getElementById('shopDreamySyrupBalance');
-            if(candySpan) candySpan.innerText = (userStats?.candy_crumbles || 0).toLocaleString();
-            if(rainSpan) rainSpan.innerText = (userStats?.rainbow_lollipops || 0).toLocaleString();
-            if(syrupSpan) syrupSpan.innerText = (userStats?.dreamy_syrup || 0).toLocaleString();
-        }
-
-        // ========== 长按头像 ==========
-        function onAvatarLongPressStart(e) { e.preventDefault(); longPressTimer = setTimeout(() => { openModal('avatarConfirmModal'); longPressTimer = null; }, LONG_PRESS_DELAY); }
-        function onAvatarLongPressEnd(e) { if(longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; } }
-        function attachLongPressToAvatar() {
-            const avatarContainer = document.getElementById('avatarContainer');
-            if(!avatarContainer) return;
-            avatarContainer.addEventListener('touchstart', onAvatarLongPressStart, { passive: false });
-            avatarContainer.addEventListener('touchend', onAvatarLongPressEnd);
-            avatarContainer.addEventListener('touchcancel', onAvatarLongPressEnd);
-            avatarContainer.addEventListener('mousedown', onAvatarLongPressStart);
-            avatarContainer.addEventListener('mouseup', onAvatarLongPressEnd);
-            avatarContainer.addEventListener('mouseleave', onAvatarLongPressEnd);
-        }
-        function openAvatarUpload() {
-            const oldInput = document.getElementById('tempFileInput');
-            if(oldInput) oldInput.remove();
-            const input = document.createElement('input');
-            input.id = 'tempFileInput';
-            input.type = 'file';
-            input.accept = 'image/jpeg,image/png';
-            input.style.cssText = 'position:fixed;top:-100px;left:-100px;opacity:0;pointer-events:none;';
-            document.body.appendChild(input);
-            input.onchange = (e) => {
-                const file = e.target.files[0];
-                if(file && file.size <= 5*1024*1024) initCropperModal(file);
-                else if(file) showNotification('文件过大（最大5MB）', 'error');
-                input.remove();
-            };
-            input.click();
-        }
-        function confirmChangeAvatar() { closeModal('avatarConfirmModal'); openAvatarUpload(); }
-        function cancelChangeAvatar() { closeModal('avatarConfirmModal'); }
-
-        // ========== 头像裁剪 ==========
-        function initCropperModal(file) {
-            let img = document.getElementById('cropImage');
-            let reader = new FileReader();
-            reader.onload = function(e) {
-                img.src = e.target.result;
-                if(cropper) cropper.destroy();
-                img.onload = () => {
-                    cropper = new Cropper(img, { aspectRatio:1, viewMode:1, autoCropArea:0.8 });
-                    openModal('cropModal');
-                };
-            };
-            reader.readAsDataURL(file);
-        }
-        async function confirmCropAndUpload() {
-            if(!cropper) return;
-            let canvas = cropper.getCroppedCanvas({ width: AVATAR_SIZE, height: AVATAR_SIZE });
-            canvas.toBlob(async (blob) => {
-                if(blob) await uploadCroppedImage(blob);
-                closeModal('cropModal');
-                if(cropper) { cropper.destroy(); cropper = null; }
-                document.getElementById('cropImage').removeAttribute('src');
-            }, 'image/png');
-        }
-        function cancelCrop() {
-            if(cropper) { cropper.destroy(); cropper = null; }
-            closeModal('cropModal');
-            document.getElementById('cropImage').removeAttribute('src');
-        }
-        async function uploadCroppedImage(blob) {
-            if(!currentUser || isUploading) return false;
-            isUploading = true;
-            try {
-                let filePath = `${currentUser.id}/avatar.png`;
-                let { error: uploadErr } = await supabaseClient.storage.from('avatars').upload(filePath, blob, { contentType:'image/png', upsert:true });
-                if(uploadErr) throw uploadErr;
-                let { data: { publicUrl } } = supabaseClient.storage.from('avatars').getPublicUrl(filePath);
-                await supabaseClient.from('user_profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
-                if(userProfile) userProfile.avatar_url = publicUrl;
-                localStorage.setItem('userAvatar', publicUrl);
-                updateAvatarDisplay(publicUrl);
-                clearProfileCache();
-                setCachedProfile(userProfile);
-                updateNavbar();
-                showNotification('头像已更新', 'success');
-                return true;
-            } catch(err) {
-                showNotification('上传失败: ' + err.message, 'error');
-                return false;
-            } finally {
-                isUploading = false;
-            }
-        }
-
-        // ========== 用户操作 ==========
-        async function updateUsername() {
-            let newName = document.getElementById('newUsername').value.trim();
-            if(!newName || newName.length<2 || newName.length>20) return showNotification('用户名2-20字符','error');
-            try {
-                await supabaseClient.from('user_profiles').update({ username: newName }).eq('id', currentUser.id);
-                await supabaseClient.auth.updateUser({ data: { username: newName } });
-                userProfile.username = newName;
-                let roleInfo = getRoleDisplay(userProfile.role);
-                let usernameSpan = document.getElementById('displayUsername');
-                if(usernameSpan) usernameSpan.innerHTML = `${newName} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
-                clearProfileCache();
-                setCachedProfile(userProfile);
-                updateNavbar();
-                closeModal('usernameModal');
-                showNotification('用户名已更新','success');
-                showSyncNotice();
-            } catch(err) { showNotification('更新失败: '+err.message,'error'); }
-        }
-        async function updateBio() {
-            let newBio = document.getElementById('newBio').value.trim() || '';
-            try {
-                await supabaseClient.from('user_profiles').update({ bio: newBio }).eq('id', currentUser.id);
-                userProfile.bio = newBio;
-                safeSetText('userBio', newBio);
-                clearProfileCache();
-                setCachedProfile(userProfile);
-                closeModal('bioModal');
-                showNotification('简介已更新','success');
-                showSyncNotice();
-            } catch(err) { showNotification('更新失败: '+err.message,'error'); }
-        }
-        async function updatePassword() {
-            let cur = document.getElementById('currentPassword').value;
-            let np = document.getElementById('newPassword').value;
-            let cp = document.getElementById('confirmPassword').value;
-            if(!cur || !np || !cp) return showNotification('请填写完整','error');
-            if(np.length<6) return showNotification('密码至少6位','error');
-            if(np !== cp) return showNotification('两次密码不一致','error');
-            let { error: signErr } = await supabaseClient.auth.signInWithPassword({ email: currentUser.email, password: cur });
-            if(signErr) return showNotification('当前密码错误','error');
-            let { error } = await supabaseClient.auth.updateUser({ password: np });
-            if(error) showNotification('修改失败: '+error.message,'error');
-            else {
-                showNotification('密码已更新，请重新登录','success');
-                setTimeout(() => { supabaseClient.auth.signOut(); localStorage.clear(); window.location.href='login-real.html'; }, 1500);
-            }
-            closeModal('passwordModal');
-        }
-        async function deleteAccount() {
-            let confirmEmail = document.getElementById('confirmEmail').value;
-            if(confirmEmail !== currentUser.email) return showNotification('邮箱不匹配','error');
-            showNotification('账号删除需联系管理员','warning');
-            closeModal('deleteAccountModal');
-        }
-        async function performLogout() {
-            closeModal('logoutConfirmModal');
-            await supabaseClient.auth.signOut();
-            localStorage.clear();
-            window.location.href = 'index.html';
-        }
-
-        // ========== 签到系统（修复：自动签到后立即更新按钮状态） ==========
-        function updateCheckinButtonState() {
-            const btn = document.getElementById('checkinBtn');
-            if(!btn) return;
-            const today = getLocalDateString();
-            const checked = (userStats?.last_checkin_date === today);
-            btn.disabled = checked;
-            btn.innerHTML = checked ? '<i class="fas fa-check-circle"></i> 已签到' : '<i class="fas fa-calendar-check"></i> 签到';
-        }
-
-        async function executeCheckin(autoTriggered = false) {
-            const today = getLocalDateString();
-            if(userStats?.last_checkin_date === today) {
-                if(!autoTriggered) showNotification('今日已签到','warning');
-                updateCheckinButtonState();
-                return false;
-            }
-            let newStreak = 1;
-            const last = userStats?.last_checkin_date;
-            if(last) {
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate()-1);
-                const yesterdayStr = getLocalDateString(yesterday);
-                if(last === yesterdayStr) newStreak = (userStats.checkin_streak || 0) + 1;
-            }
-            let { data, error } = await supabaseClient.from('checkin_config').select('candy, rainbow, active').eq('day_num', newStreak).maybeSingle();
-            if(!data && !error) {
-                let { data: maxData } = await supabaseClient.from('checkin_config').select('candy, rainbow, active').eq('day_num', 9999).single();
-                data = maxData;
-            }
-            let rewards = { candy:80, rainbow:15, active:20 };
-            if(data) rewards = data;
-            const newCandy = (userStats?.candy_crumbles || 0) + rewards.candy;
-            const newRainbow = (userStats?.rainbow_lollipops || 0) + rewards.rainbow;
-            const newActive = (userStats?.active_points || 0) + rewards.active;
-            const { error: updateError } = await supabaseClient.from('user_stats').update({
-                candy_crumbles: newCandy,
-                rainbow_lollipops: newRainbow,
-                active_points: newActive,
-                last_checkin_date: today,
-                checkin_streak: newStreak
-            }).eq('user_id', currentUser.id);
-            if(updateError) { showNotification('签到失败','error'); return false; }
-            userStats = { ...(userStats||{}), candy_crumbles: newCandy, rainbow_lollipops: newRainbow, active_points: newActive, last_checkin_date: today, checkin_streak: newStreak };
-            clearProfileCache();
-            setCachedProfile(userStats);
-            updateActivePointsDisplay();
-            updateShopBalanceDisplay();
-            document.getElementById('streakDays').innerText = newStreak.toLocaleString();
-            updateCheckinButtonState();
-            showNotification(autoTriggered ? `✨ 自动签到卡已为您签到 +${rewards.candy.toLocaleString()}🍬` : `签到 +${rewards.candy.toLocaleString()}🍬`, 'success');
-            return true;
-        }
-        async function performCheckin() { if(isProcessing) return; await executeCheckin(false); }
-
-        // ========== 自动签到卡 ==========
-        async function loadAutoSignCardStatus() {
-            const { data, error } = await supabaseClient.from('user_auto_sign_card').select('owned').eq('user_id', currentUser.id).maybeSingle();
-            if(error && error.code !== 'PGRST116') return false;
-            return data?.owned === true;
-        }
-        async function tryAutoSign() {
-            if(autoSignAttempted) return;
-            autoSignAttempted = true;
-            const today = getLocalDateString();
-            if(hasAutoSignCard && userStats?.last_checkin_date !== today) {
-                showNotification('🃏 检测到自动签到卡，正在自动签到...', 'info');
-                await executeCheckin(true);
-            }
-        }
-
-        // ========== 称号系统（未改动） ==========
-        async function loadAllTitles() {
-            const { data, error } = await supabaseClient.from('titles').select('*');
-            if(error) return [];
-            return data;
-        }
-        async function loadUserOwnedTitles(userId) {
-            const { data, error } = await supabaseClient.from('user_titles').select('title_id').eq('user_id', userId);
-            if(error) return [];
-            return data.map(item => item.title_id);
-        }
-        async function checkAndGrantOrdinaryTitles(allTitles, ownedIds) {
-            let newGranted = [];
-            for(let title of allTitles) {
-                if(title.is_limited) continue;
-                if(ownedIds.includes(title.id)) continue;
-                let meets = true;
-                if(title.required_active_points > 0 && (userStats?.active_points || 0) < title.required_active_points) meets = false;
-                if(title.required_streak > 0 && (userStats?.checkin_streak || 0) < title.required_streak) meets = false;
-                if(title.required_candy > 0 && (userStats?.candy_crumbles || 0) < title.required_candy) meets = false;
-                if(title.required_rainbow > 0 && (userStats?.rainbow_lollipops || 0) < title.required_rainbow) meets = false;
-                if(meets) {
-                    const { error } = await supabaseClient.from('user_titles').insert({ user_id: currentUser.id, title_id: title.id });
-                    if(!error) { newGranted.push(title.name); ownedIds.push(title.id); }
-                }
-            }
-            if(newGranted.length > 0) { showNotification(`🎉 获得新称号：${newGranted.join(', ')}`, 'success'); return true; }
-            return false;
-        }
-        async function grantLimitedAdminTitles() {
-            const { data: limitedTitles } = await supabaseClient.from('titles').select('id, name').eq('is_limited', true);
-            if(!limitedTitles) return;
-            const ownedIds = await loadUserOwnedTitles(currentUser.id);
-            const role = userProfile?.role;
-            let toGrant = [];
-            if(role === 'owner') {
-                const creator = limitedTitles.find(t => t.name.includes('创世神'));
-                const manager = limitedTitles.find(t => t.name.includes('管理神'));
-                if(creator && !ownedIds.includes(creator.id)) toGrant.push(creator.id);
-                if(manager && !ownedIds.includes(manager.id)) toGrant.push(manager.id);
-            } else if(role === 'admin') {
-                const manager = limitedTitles.find(t => t.name.includes('管理神'));
-                if(manager && !ownedIds.includes(manager.id)) toGrant.push(manager.id);
-            }
-            for(let tid of toGrant) {
-                await supabaseClient.from('user_titles').insert({ user_id: currentUser.id, title_id: tid });
-            }
-            if(toGrant.length > 0) showNotification('✨ 获得管理员限定称号', 'success');
-        }
-        async function refreshTitles() {
-            allTitlesList = await loadAllTitles();
-            userOwnedTitles = await loadUserOwnedTitles(currentUser.id);
-            await grantLimitedAdminTitles();
-            const changed = await checkAndGrantOrdinaryTitles(allTitlesList, userOwnedTitles.slice());
-            if(changed) userOwnedTitles = await loadUserOwnedTitles(currentUser.id);
-            if(userProfile?.equipped_title_id) {
-                equippedTitleObj = allTitlesList.find(t => t.id === userProfile.equipped_title_id);
-            } else {
-                equippedTitleObj = null;
-            }
-            updateTitleDisplay();
-        }
-        function updateTitleDisplay() {
-            const container = document.getElementById('userTitleRow');
-            if(!container) return;
-            if(equippedTitleObj) {
-                let color = '#facc15';
-                if(equippedTitleObj.name.includes('创世神')) color = '#f39c12';
-                else if(equippedTitleObj.name.includes('管理神')) color = '#60a5fa';
-                container.innerHTML =
-                    `<div class="title-badge" style="border-left: 3px solid ${color};"><i class="fas fa-medal" style="color:${color};"></i> <span id="equippedTitleName" style="color:${color};">${equippedTitleObj.name}</span> <button id="unequipTitleBtn" style="background:none;border:none;color:#aaa;cursor:pointer;margin-left:6px;">[卸下]</button></div>`;
-                document.getElementById('unequipTitleBtn')?.addEventListener('click', unequipTitle);
-            } else {
-                container.innerHTML =
-                    `<div class="title-badge"><i class="fas fa-medal"></i> <span id="equippedTitleName">无称号</span> <button id="openTitlesFromBadgeBtn" style="background:none;border:none;color:#facc15;cursor:pointer;margin-left:6px;">[选择]</button></div>`;
-                document.getElementById('openTitlesFromBadgeBtn')?.addEventListener('click', openTitlesModal);
-            }
-        }
-        async function equipTitle(titleId) {
-            const { error } = await supabaseClient.from('user_profiles').update({ equipped_title_id: titleId }).eq('id', currentUser.id);
-            if(error) { showNotification('装备失败','error'); return; }
-            userProfile.equipped_title_id = titleId;
-            equippedTitleObj = allTitlesList.find(t => t.id === titleId);
-            updateTitleDisplay();
-            clearProfileCache();
-            setCachedProfile(userProfile);
-            showNotification(`已装备称号「${equippedTitleObj.name}」`,'success');
-        }
-        async function unequipTitle() {
-            const { error } = await supabaseClient.from('user_profiles').update({ equipped_title_id: null }).eq('id', currentUser.id);
-            if(error) { showNotification('卸下失败','error'); return; }
-            userProfile.equipped_title_id = null;
-            equippedTitleObj = null;
-            updateTitleDisplay();
-            clearProfileCache();
-            setCachedProfile(userProfile);
-            showNotification('已卸下称号','success');
-        }
-        async function openTitlesModal() {
-            const container = document.getElementById('titlesListContainer');
-            if(!container) return;
-            const allTitles = await loadAllTitles();
-            const ownedIds = await loadUserOwnedTitles(currentUser.id);
-            let html = '';
-            for(let title of allTitles) {
-                const owned = ownedIds.includes(title.id);
-                const isEquipped = (userProfile?.equipped_title_id === title.id);
-                let nameColor = '';
-                let extraIcon = '';
-                if(title.is_limited) {
-                    if(title.name.includes('创世神')) nameColor = '#f39c12';
-                    else if(title.name.includes('管理神')) nameColor = '#60a5fa';
-                    extraIcon = '✨ ';
-                }
-                let conditionText = [];
-                if(title.required_active_points > 0) conditionText.push(`活跃度≥${title.required_active_points.toLocaleString()}`);
-                if(title.required_streak > 0) conditionText.push(`连续签到≥${title.required_streak.toLocaleString()}`);
-                if(title.required_candy > 0) conditionText.push(`糖果碎≥${title.required_candy.toLocaleString()}`);
-                if(title.required_rainbow > 0) conditionText.push(`超级棒糖≥${title.required_rainbow.toLocaleString()}`);
-                const conditionHtml = conditionText.length ? `<div class="title-condition">${conditionText.join(' / ')}</div>` : '';
-                html += `<div class="title-item"><div><div class="title-name" style="color:${nameColor || '#fff'};">${extraIcon}${title.name}</div><div class="title-desc">${title.description || ''}</div>${conditionHtml}</div><div>${owned ? (isEquipped ? '<button class="btn-owned" disabled>已装备</button>' : `<button class="btn-equip-title" data-id="${title.id}">装备</button>`) : '<span style="color:#aaa;">未获得</span>'}</div></div>`;
-            }
-            container.innerHTML = html;
-            document.querySelectorAll('.btn-equip-title').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const tid = parseInt(btn.dataset.id);
-                    await equipTitle(tid);
-                    closeModal('titlesModal');
-                });
-            });
-            openModal('titlesModal');
-        }
-
-        // ========== 签到奖励一览 ==========
-        async function openRewardInfoModal() {
-            const { data: configData, error } = await supabaseClient.from('checkin_config').select('*').order('day_num', { ascending: true });
-            if(error) { showNotification('获取奖励信息失败','error'); return; }
-            let html = '<div style="max-height:50vh; overflow-y:auto; padding-right:8px;"><table style="width:100%; border-collapse:collapse; font-size:0.9rem;"><thead><tr style="border-bottom:2px solid var(--border-color); color:var(--text-highlight);"><th style="padding:8px 0; text-align:center;">签到天数</th><th style="padding:8px 0; text-align:center;">🍬 糖果</th><th style="padding:8px 0; text-align:center;">🌈 棒糖</th><th style="padding:8px 0; text-align:center;">⚡ 活跃</th></tr></thead><tbody>';
-            let currentStreak = userStats?.checkin_streak || 0;
-            let tomorrowReward = null;
-            let fallbackReward = null;
-            for(let item of configData) {
-                let dayNum = item.day_num;
-                if(dayNum === 9999) { fallbackReward = item; continue; }
-                let isCurrent = (dayNum === currentStreak);
-                let isTomorrow = (dayNum === currentStreak + 1);
-                if(isTomorrow) { tomorrowReward = item; }
-                let displayDay = dayNum > 30 ? '30天以上' : `第${dayNum}天`;
-                html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05); ${isCurrent ? 'background:rgba(255,215,0,0.15);' : ''}"><td style="padding:8px 0; text-align:center; ${isCurrent ? 'color:#facc15;font-weight:bold;' : ''}">${displayDay}</td><td style="padding:8px 0; text-align:center;">${item.candy.toLocaleString()}</td><td style="padding:8px 0; text-align:center;">${item.rainbow.toLocaleString()}</td><td style="padding:8px 0; text-align:center;">${item.active.toLocaleString()}</td></tr>`;
-            }
-            html += '</tbody></table></div>';
-            if(!tomorrowReward) { tomorrowReward = fallbackReward || { candy:0, rainbow:0, active:0 }; }
-            let footerHtml =
-                `<div style="margin-top:16px; border-top:1px solid var(--border-color); padding-top:12px; text-align:center; font-size:0.95rem; background:rgba(0,0,0,0.2); border-radius:8px; padding:12px;"><div style="color:var(--text-secondary); margin-bottom:4px;">您已连续签到 <strong style="color:#facc15; font-size:1.1rem;">${currentStreak.toLocaleString()}</strong> 天</div><div style="color:var(--text-highlight);">明天的奖励：🍬${tomorrowReward.candy.toLocaleString()} ${tomorrowReward.rainbow>0?`🌈${tomorrowReward.rainbow.toLocaleString()} `:''}⚡${tomorrowReward.active.toLocaleString()}</div></div>`;
-            const container = document.getElementById('rewardInfoContent');
-            if(container) { container.innerHTML = html + footerHtml; openModal('rewardInfoModal'); }
-        }
-
-        // ========== 背包（适配新头像框） ==========
-        const BACKPACK_ITEMS = [
-            { id:'candy', name:'🍬 糖果碎', desc:'基础货币，可用于购买头像框、自动签到卡等道具。', icon:'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp', isImg:true, type:'currency' },
-            { id:'rainbow', name:'🌈 超级棒糖', desc:'中级稀有货币，可用于兑换高级物品。', icon:'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp', isImg:true, type:'currency' },
-            { id:'dreamy_syrup', name:'🌌 梦幻星河糖浆', desc:'终极顶级货币！甜梦镇的最高信仰，无法通过低级货币合成。', icon:'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Dream_galaxy_syrup.webp', isImg:true, type:'currency' },
-            { id:'autocard', name:'📅 自动签到卡', desc:'永久有效，每天上午8点自动签到（北京时间）。', icon:'fa-calendar-check', isImg:false, type:'card' }
-        ];
-        async function openBackpack() {
-            let container = document.getElementById('backpackContent');
-            if(!container) return;
-            let hasCard = await loadAutoSignCardStatus();
-            let { owned } = await window.FrameSystem.loadUserFrames(currentUser.id);
-            let allFrames = window.FrameSystem.FRAMES;
-            let ownedFrames = allFrames.filter(f => owned.includes(f.id) && f.id !== 'nature');
-            let backpackData = [
-                { ...BACKPACK_ITEMS[0], count: userStats?.candy_crumbles || 0 },
-                { ...BACKPACK_ITEMS[1], count: userStats?.rainbow_lollipops || 0 },
-                { ...BACKPACK_ITEMS[2], count: userStats?.dreamy_syrup || 0 },
-                { ...BACKPACK_ITEMS[3], count: hasCard ? 1 : 0 }
-            ];
-            for(let frame of ownedFrames) {
-                backpackData.push({ id: frame.id, name: frame.name, desc: frame.description, icon: frame.imageUrl || '', isImg: frame.imageUrl ? true : false, type:'frame', count:1 });
-            }
-            let filteredItems = backpackData.filter(item => {
-                if(item.type === 'currency') return true;
-                return item.count > 0;
-            });
-            let html = '';
-            if(filteredItems.length === 0) {
-                html = '<div class="backpack-empty">🎒 背包空空如也<br><span style="font-size:0.8rem;">去商店逛逛吧</span></div>';
-            } else {
-                html = '<div class="backpack-grid">';
-                for(let item of filteredItems) {
-                    let iconHtml = '';
-                    let displayCount = item.count.toLocaleString();
-                    if(item.type === 'frame') {
-                        if(item.icon) {
-                            iconHtml = `<img src="${item.icon}" style="width:40px;height:40px;object-fit:contain;">`;
-                        } else {
-                            iconHtml = `<i class="fas fa-image" style="font-size:2rem;"></i>`;
-                        }
-                    } else if(item.isImg) {
-                        iconHtml = `<img src="${item.icon}" alt="${item.name}" style="width:40px;height:40px;object-fit:contain;">`;
-                    } else {
-                        iconHtml = `<i class="fas ${item.icon}"></i>`;
-                    }
-                    html += `<div class="backpack-item" onclick="openBackpackItemDetail('${item.id}')"><div class="item-icon">${iconHtml}</div><div class="item-count" style="color:#ffffff;font-weight:bold;">× ${displayCount}</div></div>`;
-                }
-                html += '</div>';
-            }
-            container.innerHTML = html;
-            openModal('backpackModal');
-        }
-        function openBackpackItemDetail(itemId) {
-            let frame = window.FrameSystem.getFrameById(itemId);
-            if(frame) {
-                let iconHtml = '';
-                if(frame.imageUrl) {
-                    iconHtml = `<img src="${frame.imageUrl}" style="width:80px;height:80px;object-fit:contain;">`;
-                } else {
-                    iconHtml = `<i class="fas fa-image" style="font-size:4rem;"></i>`;
-                }
-                document.getElementById('bItemTitle').innerText = frame.name;
-                document.getElementById('bItemIcon').innerHTML = iconHtml;
-                document.getElementById('bItemDesc').innerText = frame.description;
-                document.getElementById('bItemCount').innerHTML = '<span style="color:#81c784;">已拥有</span>';
-                openModal('backpackItemModal');
-                return;
-            }
-            let item = BACKPACK_ITEMS.find(i => i.id === itemId);
-            if(!item) return;
-            let iconHtml = item.isImg ? `<img src="${item.icon}" style="width:80px;height:80px;object-fit:contain;">` : `<i class="fas ${item.icon}" style="font-size:4rem;"></i>`;
-            document.getElementById('bItemTitle').innerText = item.name;
-            document.getElementById('bItemIcon').innerHTML = iconHtml;
-            document.getElementById('bItemDesc').innerText = item.desc;
-            document.getElementById('bItemCount').innerText = '';
-            openModal('backpackItemModal');
-        }
-
-        // ========== 商店（适配新头像框） ==========
-        async function renderShop() {
-            let container = document.getElementById('shopContentContainer');
-            if(!container) return;
-            container.innerHTML = `
-                <div class="shop-panel">
-                    <div class="balance-row">
-                        <div class="balance-item" data-currency="candy"><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp" style="width:20px;height:20px;object-fit:contain;">糖果碎: <span id="shopCandyBalance">0</span></div>
-                        <div class="balance-item" data-currency="rainbow"><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp" style="width:20px;height:20px;object-fit:contain;">超级棒糖: <span id="shopRainbowBalance">0</span></div>
-                        <div class="balance-item" data-currency="dreamy_syrup"><img src="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Dream_galaxy_syrup.webp" style="width:20px;height:20px;object-fit:contain;">星河糖浆: <span id="shopDreamySyrupBalance">0</span></div>
-                    </div>
-                    <div class="shop-tabs">
-                        <button class="tab-btn" data-shop-tab="frames">🖼️ 头像框</button>
-                        <button class="tab-btn" data-shop-tab="others">📦 其他</button>
-                        <button class="tab-btn active" data-shop-tab="exchange">🔄 等价交换</button>
-                    </div>
-                    <div class="shop-content">
-                        <div class="shop-card hide-card" data-shop-card="frames" id="framesCard"><div id="framesList">⏳ 加载中...</div></div>
-                        <div class="shop-card hide-card" data-shop-card="others" id="othersCard"><div id="autoSignCardItem"></div></div>
-                        <div class="shop-card" data-shop-card="exchange">
-                            <div style="padding:10px 0;">
-                                <div style="margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:20px;">
-                                    <div style="font-weight:bold; font-size:1.1rem; margin-bottom:10px;">🍬 基础兑换区 (糖果碎 ↔ 超级棒糖)</div>
-                                    <div style="font-size:0.85rem; color:#aaa; margin-bottom:10px;">汇率：10 糖果碎 = 1 超级棒糖 (双向自由互换)</div>
-                                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                        <input type="number" id="lowExchangeAmount" value="1" min="1" style="flex:1; min-width:60px; background:rgba(0,0,0,0.3); border:1px solid #3d6b52; color:white; padding:6px 10px; border-radius:20px;">
-                                        <button class="btn-buy" onclick="doLowExchange('to_rainbow')">🍬 → 🌈 换棒糖</button>
-                                        <button class="btn-buy" onclick="doLowExchange('to_candy')">🌈 → 🍬 换碎糖</button>
-                                    </div>
-                                    <div id="lowExchangeMsg" style="margin-top:6px; font-size:0.85rem; color:#fbbf24;"></div>
-                                </div>
-                                <div>
-                                    <div style="font-weight:bold; font-size:1.1rem; margin-bottom:10px;">🌌 顶级兑换区 (梦幻星河糖浆 → 下级)</div>
-                                    <div style="font-size:0.85rem; color:#aaa; margin-bottom:10px;">汇率：1 星河糖浆 = 100 棒糖 = 1,000 碎糖 (不可逆向合成)</div>
-                                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                        <input type="number" id="syrupExchangeAmount" value="1" min="1" style="flex:1; min-width:60px; background:rgba(0,0,0,0.3); border:1px solid #3d6b52; color:white; padding:6px 10px; border-radius:20px;">
-                                        <button class="btn-buy" onclick="doSyrupExchange('to_rainbow')" style="background:linear-gradient(135deg, #a855f7, #9333ea);">🌌 → 🌈 换棒糖</button>
-                                        <button class="btn-buy" onclick="doSyrupExchange('to_candy')" style="background:linear-gradient(135deg, #a855f7, #9333ea);">🌌 → 🍬 换碎糖</button>
-                                    </div>
-                                    <div id="syrupExchangeMsg" style="margin-top:6px; font-size:0.85rem; color:#fbbf24;"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.querySelectorAll('.balance-item').forEach(el => {
-                el.addEventListener('click', () => {
-                    let currency = el.dataset.currency;
-                    if(currency === 'candy') showNotification('🍬 糖果碎：基础货币，签到可获得','info');
-                    else if(currency === 'rainbow') showNotification('🌈 超级棒糖：中级货币，可用于购买商品','info');
-                    else if(currency === 'dreamy_syrup') showNotification('🌌 梦幻星河糖浆：最高级货币！无法通过低级合成，仅限活动获取。','info');
-                });
-            });
-            updateShopBalanceDisplay();
-            try { await loadAutoSignCardUI(); } catch(e) { console.warn('加载签到卡失败',e); document.getElementById('autoSignCardItem').innerHTML = '<div style="padding:20px;text-align:center;color:#f87171;">加载失败</div>'; }
-            try { await loadFramesList(); } catch(e) { console.warn('加载头像框失败',e); document.getElementById('framesList').innerHTML = '<div style="padding:20px;text-align:center;color:#f87171;">加载失败</div>'; }
-            const shopTabs = document.querySelectorAll('.shop-tabs .tab-btn');
-            const shopCards = document.querySelectorAll('.shop-card');
-            shopTabs.forEach(tab => {
-                tab.addEventListener('click', function(e) {
-                    const target = this.dataset.shopTab;
-                    shopTabs.forEach(t => t.classList.remove('active'));
-                    this.classList.add('active');
-                    shopCards.forEach(card => {
-                        if(card.dataset.shopCard === target) card.classList.remove('hide-card');
-                        else card.classList.add('hide-card');
-                    });
-                });
-            });
-        }
-        async function loadFramesList() {
-            const container = document.getElementById('framesList');
-            if(!container) return;
-            const { owned, equipped } = await window.FrameSystem.loadUserFrames(currentUser.id);
-            const frames = window.FrameSystem.FRAMES;
-            let html = '';
-            for(const frame of frames) {
-                if(frame.id === 'nature') continue;
-                const isOwned = owned.includes(frame.id);
-                const isEquipped = equipped === frame.id;
-                let actionHtml = '';
-                if(isEquipped) {
-                    actionHtml = `<button class="btn-owned" disabled>已装备</button>`;
-                } else if(isOwned) {
-                    actionHtml = `<button class="btn-equip" data-frame-id="${frame.id}">装备</button>`;
-                } else {
-                    const priceText = `🍬${frame.price_candy.toLocaleString()} ${frame.price_rainbow > 0 ? `🌈${frame.price_rainbow.toLocaleString()}` : ''}`;
-                    actionHtml = `<button class="btn-buy" data-frame-id="${frame.id}">购买 (${priceText})</button>`;
-                }
-                html += `<div class="frame-item-wrap"><div class="frame-left-box" onclick="openBackpackItemDetail('${frame.id}')"><div class="frame-mini-preview" style="width:44px;height:44px;overflow:hidden;border-radius:50%;">${frame.imageUrl ? `<img src="${frame.imageUrl}" style="width:100%;height:100%;object-fit:contain;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🖼️</div>`}</div><div><div style="font-weight:bold;">${frame.name}</div><div style="font-size:0.8rem; opacity:0.7;">${frame.description}</div></div></div><div>${actionHtml}</div></div>`;
-            }
-            container.innerHTML = html;
-            container.querySelectorAll('.btn-buy').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    if(isProcessing) return;
-                    const frameId = btn.dataset.frameId;
-                    try {
-                        await window.FrameSystem.purchaseFrame(frameId, userStats, (newCandy, newRainbow) => {
-                            userStats.candy_crumbles = newCandy;
-                            userStats.rainbow_lollipops = newRainbow;
-                            updateShopBalanceDisplay();
-                            clearProfileCache();
-                            setCachedProfile(userStats);
-                            showNotification('🎉 购买成功！','success');
-                            loadFramesList();
-                        });
-                    } catch(err) {
-                        showNotification(err.message,'error');
-                    }
-                });
-            });
-            container.querySelectorAll('.btn-equip').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    if(isProcessing) return;
-                    const frameId = btn.dataset.frameId;
-                    try {
-                        await window.FrameSystem.equipFrame(frameId);
-                        showNotification('✅ 已装备头像框','success');
-                        loadFramesList();
-                        await window.FrameSystem.applyFrameClassByFrameId(frameId);
-                    } catch(err) {
-                        showNotification(err.message,'error');
-                    }
-                });
-            });
-        }
-        async function loadAutoSignCardUI() {
-            const container = document.getElementById('autoSignCardItem');
-            if(!container) return;
-            const hasCard = await loadAutoSignCardStatus();
-            const canBuy = (userStats?.candy_crumbles || 0) >= AUTO_CARD_PRICE && !hasCard;
-            let html = `
-                <div class="frame-item-wrap" style="display:block; text-align:center; padding:20px;">
-                    <div style="font-size:2rem;">📅</div>
-                    <div style="font-weight:bold; margin-top:8px;">自动签到卡</div>
-                    <div style="font-size:0.9rem; opacity:0.7;">永久有效，每天08:00自动签到（北京时间）</div>
-                    <div style="margin-top:12px;">
-                        ${hasCard ? `<span style="color:#81c784;">✅ 已拥有</span>` : `<button class="btn-buy" id="buyAutoCardBtn">购买 (🍬 ${AUTO_CARD_PRICE.toLocaleString()})</button>`}
-                    </div>
-                </div>
-            `;
-            container.innerHTML = html;
-            const buyBtn = document.getElementById('buyAutoCardBtn');
-            if(buyBtn) {
-                buyBtn.addEventListener('click', async () => {
-                    if(isProcessing) return;
-                    if(!canBuy) { showNotification(`糖果碎不足，需要 ${AUTO_CARD_PRICE.toLocaleString()}`,'error'); return; }
-                    const { error: upsertError } = await supabaseClient.from('user_auto_sign_card').upsert({ user_id: currentUser.id, owned: true }, { onConflict: 'user_id' });
-                    if(upsertError) { showNotification('购买失败: '+upsertError.message,'error'); return; }
-                    const newCandy = (userStats?.candy_crumbles || 0) - AUTO_CARD_PRICE;
-                    const { error: updateError } = await supabaseClient.from('user_stats').update({ candy_crumbles: newCandy }).eq('user_id', currentUser.id);
-                    if(updateError) {
-                        await supabaseClient.from('user_auto_sign_card').upsert({ user_id: currentUser.id, owned: false }, { onConflict: 'user_id' });
-                        showNotification('购买失败: '+updateError.message,'error');
-                        return;
-                    }
-                    userStats.candy_crumbles = newCandy;
-                    clearProfileCache();
-                    setCachedProfile(userStats);
-                    updateShopBalanceDisplay();
-                    showNotification('🎉 自动签到卡购买成功！','success');
-                    loadAutoSignCardUI();
-                });
-            }
-        }
-
-        // ========== 兑换函数 ==========
-        async function doLowExchange(direction) {
-            let amount = parseInt(document.getElementById('lowExchangeAmount').value);
-            if(!amount || amount < 1) return showNotification('请输入正确数量','error');
-            if(isProcessing) return;
-            const { data, error } = await supabaseClient.rpc('exchange_low_level', { p_user_id: currentUser.id, p_direction: direction, p_amount: amount });
-            if(error) return showNotification('兑换失败: '+error.message,'error');
-            if(!data) return showNotification('余额不足，无法兑换！','error');
-            showNotification('✅ 双向兑换成功！','success');
-            await refreshUserStats();
-        }
-        async function doSyrupExchange(direction) {
-            let amount = parseInt(document.getElementById('syrupExchangeAmount').value);
-            if(!amount || amount < 1) return showNotification('请输入正确数量','error');
-            if(isProcessing) return;
-            const { data, error } = await supabaseClient.rpc('exchange_syrup_down', { p_user_id: currentUser.id, p_target: direction, p_amount: amount });
-            if(error) return showNotification('兑换失败: '+error.message,'error');
-            if(!data) return showNotification('🌌 梦幻星河糖浆不足！','error');
-            showNotification('✨ 高阶货币向下兑换成功！','success');
-            await refreshUserStats();
-        }
-        async function refreshUserStats() {
-            const [profileRes, statsRes] = await Promise.all([
-                supabaseClient.from('user_profiles').select('*').eq('id', currentUser.id).maybeSingle(),
-                supabaseClient.from('user_stats').select('*').eq('user_id', currentUser.id).maybeSingle()
-            ]);
-            if (!profileRes.error && profileRes.data) {
-                userProfile = { ...(userProfile||{}), ...profileRes.data };
-            }
-            if (!statsRes.error && statsRes.data) {
-                userStats = { ...(userStats||{}), ...statsRes.data };
-                updateShopBalanceDisplay();
-                updateActivePointsDisplay();
-                clearProfileCache();
-                setCachedProfile(userStats);
-            }
-        }
-
-        // ========== 核心加载用户资料（彻底移除他人查看逻辑） ==========
-        async function fetchUserFullData(userId) {
-            const [profileRes, statsRes] = await Promise.all([
-                supabaseClient.from('user_profiles').select('*').eq('id', userId).maybeSingle(),
-                supabaseClient.from('user_stats').select('*').eq('user_id', userId).maybeSingle()
-            ]);
-
-            let profile = profileRes.data;
-            if (!profile) {
-                const { data: { user } } = await supabaseClient.auth.getUser();
-                profile = {
-                    id: userId,
-                    username: user?.email?.split('@')[0] || '用户',
-                    bio: '',
-                    avatar_url: null,
-                    role: 'user',
-                    created_at: user?.created_at || new Date().toISOString(),
-                    owned_frames: ['nature'],
-                    equipped_frame: 'nature',
-                    equipped_title_id: null
-                };
-            }
-
-            let stats = statsRes.data;
-            if (!stats) {
-                stats = {
-                    user_id: userId,
-                    candy_crumbles: 0,
-                    rainbow_lollipops: 0,
-                    dreamy_syrup: 0,
-                    active_points: 0,
-                    checkin_streak: 0,
-                    last_checkin_date: null,
-                    last_login: null
-                };
-            }
-            return { ...profile, ...stats };
-        }
-
-        async function loadUserProfileWithCache() {
-            let session = null;
-            let attempts = 0;
-            while (attempts < 5) {
-                const { data, error } = await supabaseClient.auth.getSession();
-                if (!error && data.session) {
-                    session = data.session;
-                    break;
-                }
-                attempts++;
-                await new Promise(r => setTimeout(r, 300));
-            }
-            if (!session || !session.user) {
-                const redirect = encodeURIComponent(window.location.href);
-                window.location.href = `login-real.html?redirect=${redirect}`;
-                return;
-            }
-            currentUser = session.user;
-
-            // ★★★ 删除他人查看逻辑：永远只加载当前用户 ★★★
-            let fullData = getCachedProfile();
-            if (!fullData) {
-                try {
-                    fullData = await fetchUserFullData(currentUser.id);
-                    setCachedProfile(fullData);
-                } catch (e) {
-                    showNotification('加载资料失败，请刷新重试', 'error');
-                    return;
-                }
-            }
-            userProfile = fullData;
-            userStats = fullData;
-
-            try {
-                await renderProfile();
-                if (window.FrameSystem) {
-                    try {
-                        await window.FrameSystem.initFrameForUser(currentUser.id);
-                    } catch (frameErr) {
-                        console.warn('头像框初始化失败（不影响主流程）');
-                    }
-                }
-                // 更新最后登录
-                await supabaseClient.from('user_stats').upsert({ user_id: currentUser.id, last_login: new Date().toISOString() }, { onConflict: 'user_id' });
-                safeSetText('lastLogin', new Date().toLocaleString());
-
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('profileContent').style.display = 'block';
-            } catch (renderErr) {
-                console.error('渲染界面失败:', renderErr);
-                showNotification('页面渲染出错，请刷新重试', 'error');
-            }
-        }
-
-        // ========== renderProfile（只为自己） ==========
-        async function renderProfile() {
-            try {
-                const container = document.getElementById('profileContent');
-                if (!container) throw new Error('页面容器不存在');
-                // 永远移除只读模式
-                container.classList.remove('readonly-mode');
-
-                const roleInfo = getRoleDisplay(userProfile?.role || 'user');
-                const uname = userProfile?.username || '未知用户';
-                const usernameSpan = document.getElementById('displayUsername');
-                if (usernameSpan) {
-                    usernameSpan.innerHTML = `${uname} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
-                }
-
-                safeSetText('userEmail', currentUser?.email || '未登录');
-                safeSetText('userBio', userProfile?.bio || '');
-                const createdTime = userProfile?.created_at || currentUser?.created_at;
-                safeSetText('createdAt', createdTime ? new Date(createdTime).toLocaleString() : '--');
-                let days = createdTime ? Math.floor((new Date() - new Date(createdTime)) / 86400000) : 0;
-                const daysEl = document.getElementById('userDaysText');
-                if (daysEl) daysEl.innerText = `已来到 ${days.toLocaleString()} 天`;
-
-                // 头像
-                try {
-                    if (userProfile?.avatar_url) updateAvatarDisplay(userProfile.avatar_url);
-                    else updateAvatarDisplay(null);
-                } catch (avatarErr) {
-                    console.warn('头像显示失败:', avatarErr);
-                    const avatarDiv = document.getElementById('userAvatar');
-                    if (avatarDiv) {
-                        const initial = (userProfile?.username || 'U').charAt(0).toUpperCase();
-                        avatarDiv.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
-                        const frameImg = document.createElement('img');
-                        frameImg.className = 'avatar-frame-img';
-                        frameImg.id = 'avatarFrameImg';
-                        frameImg.src = '';
-                        frameImg.alt = '头像框';
-                        frameImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:contain;pointer-events:none;transform:scale(1.18);z-index:2;';
-                        avatarDiv.appendChild(frameImg);
-                        avatarDiv.classList.add('avatar');
-                    }
-                }
-
-                const roleRow = document.getElementById('userRoleDisplay');
-                if (roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
-
-                if (userStats) {
-                    try {
-                        updateActivePointsDisplay();
-                        updateShopBalanceDisplay();
-                        const streakEl = document.getElementById('streakDays');
-                        if (streakEl) streakEl.innerText = (userStats.checkin_streak || 0).toLocaleString();
-                        updateCheckinButtonState();
-                    } catch (statsErr) {
-                        console.warn('统计数据显示失败:', statsErr);
-                    }
-                }
-
-                try {
-                    updateNavbar();
-                    await refreshTitles();
-                } catch (titleErr) {
-                    console.warn('称号/导航更新失败:', titleErr);
-                }
-
-                try {
-                    hasAutoSignCard = await loadAutoSignCardStatus();
-                    await tryAutoSign();
-                } catch (autoErr) {
-                    console.warn('自动签到卡处理失败:', autoErr);
-                }
-
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('profileContent').style.display = 'block';
-
-            } catch (err) {
-                console.error('渲染页面整体失败:', err);
-                const loadingDiv = document.getElementById('loading');
-                if (loadingDiv) {
-                    loadingDiv.innerHTML = `
-                        <div style="color: #f87171; padding: 20px; background: rgba(248,113,113,0.1); border-radius: 12px;">
-                            <i class="fas fa-exclamation-triangle" style="font-size: 2rem;"></i>
-                            <p style="margin-top: 10px; font-weight: bold;">页面渲染出错</p>
-                            <p style="font-size: 0.9rem; color: #fca5a5;">错误信息：${escapeHtml(err.message || '未知错误')}</p>
-                            <button onclick="location.reload()" style="margin-top: 12px; padding: 6px 20px; background: #3b82f6; color: white; border: none; border-radius: 20px; cursor: pointer;">刷新重试</button>
-                        </div>
-                    `;
-                    loadingDiv.style.display = 'block';
-                }
-                showNotification('渲染出错：' + (err.message || '未知错误'), 'error');
-            }
-        }
-
-        // ========== 事件绑定 ==========
-        function bindEventListeners() {
-            document.getElementById('saveUsername')?.addEventListener('click', updateUsername);
-            document.getElementById('saveBio')?.addEventListener('click', updateBio);
-            document.getElementById('savePassword')?.addEventListener('click', updatePassword);
-            document.getElementById('confirmDeleteAccount')?.addEventListener('click', deleteAccount);
-            document.getElementById('confirmCropBtn')?.addEventListener('click', confirmCropAndUpload);
-            document.getElementById('cancelCropBtn')?.addEventListener('click', cancelCrop);
-            document.getElementById('closeCropModalBtn')?.addEventListener('click', cancelCrop);
-            document.getElementById('openShopBtn')?.addEventListener('click', async () => { if(isProcessing) return; await renderShop(); openModal('shopModal'); });
-            document.getElementById('openBackpackBtn')?.addEventListener('click', openBackpack);
-            document.getElementById('openTitlesBtn')?.addEventListener('click', openTitlesModal);
-            document.getElementById('openHelpBtn')?.addEventListener('click', () => openModal('helpModal'));
-            document.getElementById('closeShopModalBtn')?.addEventListener('click', () => closeModal('shopModal'));
-            document.getElementById('closeLogoutModalBtn')?.addEventListener('click', () => closeModal('logoutConfirmModal'));
-            document.getElementById('cancelLogoutBtn')?.addEventListener('click', () => closeModal('logoutConfirmModal'));
-            document.getElementById('confirmLogoutBtn')?.addEventListener('click', performLogout);
-            document.getElementById('closeAvatarConfirmBtn')?.addEventListener('click', cancelChangeAvatar);
-            document.getElementById('cancelAvatarBtn')?.addEventListener('click', cancelChangeAvatar);
-            document.getElementById('confirmAvatarBtn')?.addEventListener('click', confirmChangeAvatar);
-            document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', (e) => {
-                let mid = btn.getAttribute('data-modal');
-                if(mid) closeModal(mid);
-            }));
-            document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.addEventListener('click', function(e) {
-                if(e.target === this) closeModal(this.id);
-            }));
-            document.getElementById('checkinBtn')?.addEventListener('click', performCheckin);
-            window.addEventListener('scroll', () => {
-                let btn = document.querySelector('.back-to-top');
-                if(btn) btn.style.display = window.scrollY > 300 ? 'flex' : 'none';
-            });
-            attachLongPressToAvatar();
-            // 暴露全局函数给HTML onclick使用
-            window.openBackpack = openBackpack;
-            window.openBackpackItemDetail = openBackpackItemDetail;
-            window.openTitlesModal = openTitlesModal;
-            window.doLowExchange = doLowExchange;
-            window.doSyrupExchange = doSyrupExchange;
-            window.openRewardInfoModal = openRewardInfoModal;
-        }
-
-        // ========== 初始化 ==========
-        async function initializeProfile() {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            window.supabaseClient = supabaseClient;
-
-            try {
-                let session = null;
-                let attempts = 0;
-                while (attempts < 3) {
-                    const { data, error } = await supabaseClient.auth.getSession();
-                    if (!error && data.session) {
-                        session = data.session;
-                        break;
-                    }
-                    attempts++;
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                }
-                if (!session) {
-                    const redirect = encodeURIComponent(window.location.href);
-                    window.location.href = `login-real.html?redirect=${redirect}`;
-                    return;
-                }
-            } catch (err) {
-                console.warn('会话恢复异常:', err);
-                const redirect = encodeURIComponent(window.location.href);
-                window.location.href = `login-real.html?redirect=${redirect}`;
-                return;
-            }
-
-            try {
-                await loadUserProfileWithCache();
-                bindEventListeners();
-            } catch (err) {
-                console.error('初始化失败:', err);
-                showNotification('加载资料失败，请刷新重试', 'error');
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => setTimeout(initializeProfile, 100));
+    <!-- ====== ★ 模块入口（所有 JS 放在 css/ 目录下） ★ ====== -->
+    <script type="module">
+        import { initializeApp } from './css/app.js';
+        initializeApp();
     </script>
 </body>
 </html>
