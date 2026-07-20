@@ -66,7 +66,7 @@ export function updateAvatarDisplay(imageUrl) {
         frameImg.id = 'avatarFrameImg';
         frameImg.src = '';
         frameImg.alt = '头像框';
-        frameImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:contain;pointer-events:none;transform:scale(1.18);z-index:2;';
+        frameImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:contain;pointer-events:none;z-index:2;';
         avatarDiv.appendChild(frameImg);
         avatarDiv.classList.add('avatar');
         if (state.currentUser) {
@@ -124,7 +124,7 @@ export async function renderProfile() {
                 frameImg.id = 'avatarFrameImg';
                 frameImg.src = '';
                 frameImg.alt = '头像框';
-                frameImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:contain;pointer-events:none;transform:scale(1.18);z-index:2;';
+                frameImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:contain;pointer-events:none;z-index:2;';
                 avatarDiv.appendChild(frameImg);
                 avatarDiv.classList.add('avatar');
             }
