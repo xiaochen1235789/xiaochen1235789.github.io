@@ -42,7 +42,7 @@ FRAMES: [
         price_candy: 1, 
         price_rainbow: 0, 
         imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_fox.webp',
-        scale: 1.24 // 小狐狸放大24%
+        scale: 1.48 // 小狐狸放大48%
     }
 ],
     
