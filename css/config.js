@@ -19,7 +19,7 @@ export const CONFIG = {
     FRAMES: [
     { id: 'nature', name: '默认', description: '默认静态头像框', price_candy: 0, price_rainbow: 0, imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_putong.webp' },
     { id: 'frame_huanbao', name: '环保光环', description: '绿色环保主题静态头像框；来源于网络', price_candy: 1, price_rainbow: 0, imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_huanbao.webp' },
-    { id: 'frame_fox', name: '悠闲小狐狸', description: '悠闲自在的小狐狸动态头像框；来源于网络', price_candy: 1, price_rainbow: 0, imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_fox.gif' }
+    { id: 'frame_fox', name: '悠闲小狐狸', description: '悠闲自在的小狐狸动态头像框；来源于网络', price_candy: 1, price_rainbow: 0, imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_fox.webp' }
 ],
     
     // 背包物品列表（货币 + 道具）
