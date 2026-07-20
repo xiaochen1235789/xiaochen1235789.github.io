@@ -39,11 +39,24 @@ export async function equipFrame(frameId) {
     await applyFrameClassByFrameId(frameId);
 }
 
+// ★ 关键修改：增加动态读取 scale 并应用 transform 的逻辑
 export async function applyFrameClassByFrameId(frameId) {
     const frameImg = document.getElementById('avatarFrameImg');
     if (!frameImg) return;
+    
     const frame = getFrameById(frameId);
-    frameImg.src = (frame && frame.imageUrl) ? frame.imageUrl : '';
+    if (frame && frame.imageUrl) {
+        frameImg.src = frame.imageUrl;
+        frameImg.style.display = 'block';
+        
+        // 读取 config 中的 scale 属性，没有配置则默认为 1.0（不缩放）
+        const scale = frame.scale || 1.0; 
+        frameImg.style.transform = `scale(${scale})`;
+    } else {
+        frameImg.src = '';
+        frameImg.style.display = 'none';
+        frameImg.style.transform = 'scale(1.0)';
+    }
 }
 
 export async function initFrameForUser(userId) {
