@@ -16,10 +16,34 @@ export const CONFIG = {
     },
     
     // 头像框列表
-    FRAMES: [
-    { id: 'nature', name: '默认', description: '默认静态头像框', price_candy: 0, price_rainbow: 0, imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_putong.webp' },
-    { id: 'frame_huanbao', name: '环保光环', description: '绿色环保主题静态头像框；来源于网络', price_candy: 1, price_rainbow: 0, imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_huanbao.webp' },
-    { id: 'frame_fox', name: '悠闲小狐狸', description: '悠闲自在的小狐狸动态头像框；来源于网络', price_candy: 1, price_rainbow: 0, imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_fox.webp' }
+FRAMES: [
+    { 
+        id: 'nature', 
+        name: '默认', 
+        description: '默认静态头像框', 
+        price_candy: 0, 
+        price_rainbow: 0, 
+        imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_putong.webp',
+        scale: 1.0  //默认框保持原大，无需缩放
+    },
+    { 
+        id: 'frame_huanbao', 
+        name: '环保光环', 
+        description: '绿色环保主题静态头像框；来源于网络', 
+        price_candy: 1, 
+        price_rainbow: 0, 
+        imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_huanbao.webp',
+        scale: 1.18 // 环保光环放大18%
+    },
+    { 
+        id: 'frame_fox', 
+        name: '悠闲小狐狸', 
+        description: '悠闲自在的小狐狸动态头像框；来源于网络', 
+        price_candy: 1, 
+        price_rainbow: 0, 
+        imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_fox.webp',
+        scale: 1.24 // 小狐狸放大24%
+    }
 ],
     
     // 背包物品列表（货币 + 道具）
