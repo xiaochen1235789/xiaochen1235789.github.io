@@ -31,7 +31,6 @@ let hasAutoSignCard = false;
 let autoSignAttempted = false;
 let isProcessing = false;
 
-// 暴露给 window
 window.currentUser = currentUser;
 window.userStats = userStats;
 window.userProfile = userProfile;
@@ -255,6 +254,10 @@ async function refreshUserStats() {
 }
 
 // ========== 用户信息编辑函数 ==========
+window.openUsernameModal = function() {
+    document.getElementById('newUsername').value = userProfile?.username || '';
+    openModal('usernameModal');
+};
 window.openBioModal = function() {
     document.getElementById('newBio').value = userProfile?.bio || '';
     openModal('bioModal');
@@ -270,32 +273,6 @@ window.openBackpack = renderBackpack;
 window.openBackpackItemDetail = openBackpackItemDetail;
 window.openTitlesModal = renderTitlesModal;
 window.openRewardInfoModal = openRewardInfoModal;
-
-// ===== ★★★ 个人设置面板（整合头像+用户名） ★★★ =====
-window.openUsernameModal = function() {
-    // 填充当前用户名
-    const newUsernameInput = document.getElementById('newUsername');
-    if (newUsernameInput) {
-        newUsernameInput.value = userProfile?.username || '';
-    }
-
-    // 更新头像预览
-    const avatarPreview = document.getElementById('settingsAvatarPreview');
-    const placeholder = document.getElementById('settingsAvatarPlaceholder');
-    const avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
-
-    if (avatarUrl && avatarUrl.startsWith('http')) {
-        avatarPreview.src = avatarUrl;
-        avatarPreview.style.display = 'block';
-        placeholder.style.display = 'none';
-    } else {
-        avatarPreview.style.display = 'none';
-        placeholder.style.display = 'flex';
-        placeholder.textContent = (userProfile?.username || 'U').charAt(0).toUpperCase();
-    }
-
-    openModal('usernameModal');
-};
 
 // ========== 头像上传相关 ==========
 let cropper = null;
@@ -316,8 +293,7 @@ function attachLongPressToAvatar() {
 function onAvatarLongPressStart(e) {
     e.preventDefault();
     longPressTimer = setTimeout(() => {
-        // ★ 长按头像 → 打开个人设置面板
-        window.openUsernameModal();
+        openModal('avatarConfirmModal');
         longPressTimer = null;
     }, CONFIG.LONG_PRESS_DELAY);
 }
@@ -401,8 +377,12 @@ async function uploadCroppedImage(blob) {
 
 // ========== 保存操作 ==========
 async function updateUsername() {
+    console.log('updateUsername 被调用了'); // ★ 调试日志
     const newName = document.getElementById('newUsername').value.trim();
-    if (!newName || newName.length < 2 || newName.length > 20) return showNotification('用户名2-20字符', 'error');
+    if (!newName || newName.length < 2 || newName.length > 20) {
+        showNotification('用户名2-20字符', 'error');
+        return;
+    }
     try {
         await updateUserProfile(currentUser.id, { username: newName });
         await getSupabase().auth.updateUser({ data: { username: newName } });
@@ -414,7 +394,10 @@ async function updateUsername() {
         updateNavbar();
         closeModal('usernameModal');
         showNotification('用户名已更新', 'success');
-    } catch (err) { showNotification('更新失败: ' + err.message, 'error'); }
+    } catch (err) {
+        console.error('更新用户名错误:', err);
+        showNotification('更新失败: ' + err.message, 'error');
+    }
 }
 
 async function updateBio() {
@@ -509,18 +492,15 @@ async function loadUserProfile() {
 
 // ========== 事件绑定 ==========
 function bindEvents() {
-    // 保存按钮
     document.getElementById('saveUsername')?.addEventListener('click', updateUsername);
     document.getElementById('saveBio')?.addEventListener('click', updateBio);
     document.getElementById('savePassword')?.addEventListener('click', updatePassword);
     document.getElementById('confirmDeleteAccount')?.addEventListener('click', deleteAccount);
 
-    // 裁剪
     document.getElementById('confirmCropBtn')?.addEventListener('click', confirmCropAndUpload);
     document.getElementById('cancelCropBtn')?.addEventListener('click', cancelCrop);
     document.getElementById('closeCropModalBtn')?.addEventListener('click', cancelCrop);
 
-    // 商店、背包、称号、帮助
     document.getElementById('openShopBtn')?.addEventListener('click', async () => {
         if (isProcessing) return;
         await renderShop();
@@ -530,24 +510,6 @@ function bindEvents() {
     document.getElementById('openTitlesBtn')?.addEventListener('click', renderTitlesModal);
     document.getElementById('openHelpBtn')?.addEventListener('click', () => openModal('helpModal'));
 
-    // ===== ★★★ 个人设置面板内的头像操作 ★★★ =====
-    document.getElementById('settingsViewAvatarBtn')?.addEventListener('click', function() {
-        const avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
-        if (avatarUrl) {
-            window.open(avatarUrl, '_blank');
-        } else {
-            showNotification('您还没有设置头像哦', 'info');
-        }
-    });
-
-    document.getElementById('settingsChangeAvatarBtn')?.addEventListener('click', function() {
-        closeModal('usernameModal');
-        setTimeout(() => {
-            window.openAvatarUpload();
-        }, 300);
-    });
-
-    // 统一关闭模态框
     document.querySelectorAll('.close-modal-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const mid = btn.getAttribute('data-modal');
@@ -560,17 +522,23 @@ function bindEvents() {
         });
     });
 
-    // 签到
     document.getElementById('checkinBtn')?.addEventListener('click', performCheckin);
 
-    // 回到顶部
     window.addEventListener('scroll', () => {
         const btn = document.querySelector('.back-to-top');
         if (btn) btn.style.display = window.scrollY > 300 ? 'flex' : 'none';
     });
 
-    // ===== ★★★ 长按头像触发个人设置面板 ★★★ =====
     attachLongPressToAvatar();
+
+    // ★★★ 新增：长按头像弹窗的“取消/确定”按钮绑定 ★★★
+    document.getElementById('cancelAvatarBtn')?.addEventListener('click', function() {
+        closeModal('avatarConfirmModal');
+    });
+    document.getElementById('confirmAvatarBtn')?.addEventListener('click', function() {
+        closeModal('avatarConfirmModal');
+        openAvatarUpload();
+    });
 }
 
 // ========== 启动 ==========
