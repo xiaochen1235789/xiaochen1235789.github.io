@@ -11,7 +11,7 @@
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
     <style>
-        /* ===== 操作菜单模态框 ===== */
+        /* 模态框通用 */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -28,161 +28,112 @@
             transition: all 0.3s ease;
             backdrop-filter: blur(5px);
         }
-
         .modal-overlay.show {
             opacity: 1;
             visibility: visible;
         }
-
         .modal {
-            background: var(--card-bg, #1e3a2f);
+            background: #1e3a2f;
             border-radius: 12px;
             padding: 24px;
             max-width: 480px;
             width: 92%;
-            border: 1px solid var(--border-color, #3d725f);
+            border: 1px solid #3d725f;
             box-shadow: 0 8px 24px rgba(0,0,0,0.3);
             max-height: 80vh;
             overflow-y: auto;
             text-align: left;
         }
-
-        .modal::-webkit-scrollbar {
-            width: 6px;
-        }
-        .modal::-webkit-scrollbar-thumb {
-            background: var(--border-color, #3d725f);
-            border-radius: 3px;
-        }
-        .modal::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
+        .modal::-webkit-scrollbar { width: 6px; }
+        .modal::-webkit-scrollbar-thumb { background: #3d725f; border-radius: 3px; }
         .modal-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             margin-bottom: 16px;
             padding-bottom: 12px;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid #3d725f;
         }
-
-        .modal-title {
-            color: var(--text-highlight, #81c784);
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-
-        .modal-close {
-            background: transparent;
-            border: none;
-            color: var(--text-secondary, #99aabb);
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0 8px;
-            transition: color 0.2s;
-        }
-
-        .modal-close:hover {
-            color: var(--text-main, #e0e0e0);
-        }
-
-        .form-label {
-            display: block;
-            color: var(--text-highlight, #81c784);
-            margin-bottom: 6px;
-            font-weight: 500;
-        }
-
+        .modal-title { color: #81c784; font-size: 1.2rem; font-weight: 600; }
+        .modal-close { background: none; border: none; color: #99aabb; font-size: 1.5rem; cursor: pointer; padding: 0 8px; }
+        .modal-close:hover { color: #e0e0e0; }
+        .form-label { display: block; color: #81c784; margin-bottom: 6px; font-weight: 500; }
         .form-input {
             width: 100%;
             padding: 10px 14px;
             background: #2d3748;
-            border: 1px solid var(--border-color, #3d725f);
+            border: 1px solid #3d725f;
             border-radius: 8px;
-            color: var(--text-main, #e0e0e0);
+            color: #e0e0e0;
             font-size: 1rem;
             outline: none;
-            transition: border-color 0.2s;
+            box-sizing: border-box;
         }
-
-        .form-input:focus {
-            border-color: var(--text-highlight, #81c784);
+        .form-input:focus { border-color: #81c784; }
+        .form-textarea {
+            width: 100%;
+            padding: 10px 14px;
+            background: #2d3748;
+            border: 1px solid #3d725f;
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 1rem;
+            outline: none;
+            resize: vertical;
+            min-height: 80px;
+            box-sizing: border-box;
+            font-family: inherit;
         }
-
-        .form-actions {
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-            margin-top: 16px;
-        }
-
+        .form-textarea:focus { border-color: #81c784; }
+        .form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px; }
         .btn {
             padding: 8px 20px;
-            background: var(--card-bg, #1e3a2f);
-            color: var(--text-main, #e0e0e0);
-            border: 1px solid var(--border-color, #3d725f);
+            background: #1e3a2f;
+            color: #e0e0e0;
+            border: 1px solid #3d725f;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s;
             font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
-
-        .btn:hover {
-            background: var(--card-bg-hover, #284a3c);
-            border-color: var(--text-highlight, #81c784);
-        }
-
-        .btn-primary {
-            background: var(--text-highlight, #81c784);
-            color: #121212;
-            border: none;
-            font-weight: 600;
-        }
-
-        .btn-primary:hover {
-            background: #6ab56f;
-            transform: scale(1.02);
-        }
-
-        .btn-cancel {
+        .btn:hover { background: #284a3c; border-color: #81c784; }
+        .btn-primary { background: #81c784; color: #121212; border: none; font-weight: 600; }
+        .btn-primary:hover { background: #6ab56f; transform: scale(1.02); }
+        .btn-cancel { background: transparent; border: 1px solid #3d725f; color: #99aabb; }
+        .btn-cancel:hover { background: rgba(255,255,255,0.05); }
+        .danger-btn {
             background: transparent;
-            border: 1px solid var(--border-color, #3d725f);
-            color: var(--text-secondary, #99aabb);
+            border: 2px solid #f87171;
+            color: #f87171;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
+        .danger-btn:hover { background: rgba(248,113,113,0.1); transform: scale(1.02); }
 
-        .btn-cancel:hover {
-            background: rgba(255,255,255,0.05);
-        }
-
-        /* ===== 头像容器 ===== */
-        .avatar-container {
-            position: relative;
-            display: inline-block;
-        }
-
+        /* 头像容器 */
+        .avatar-container { position: relative; display: inline-block; }
         .avatar {
             width: 140px;
             height: 140px;
             border-radius: 50%;
-            border: 4px solid rgba(255, 255, 255, 0.8);
+            border: 4px solid rgba(255,255,255,0.8);
             background: linear-gradient(135deg, #3ecf8e, #8a4baf);
             overflow: hidden;
             position: relative;
             box-shadow: 0 8px 32px rgba(0,0,0,0.3);
             transition: 0.3s ease;
         }
-
-        .avatar:hover {
-            transform: scale(1.03);
-        }
-
-        .avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
+        .avatar:hover { transform: scale(1.03); }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
         .avatar-placeholder {
             width: 100%;
             height: 100%;
@@ -194,7 +145,6 @@
             font-weight: bold;
             background: linear-gradient(135deg, #3ecf8e, #8a4baf);
         }
-
         .avatar-frame-img {
             position: absolute;
             inset: 0;
@@ -210,7 +160,7 @@
             outline: none !important;
         }
 
-        /* ===== 设置面板内的头像预览 ===== */
+        /* 设置面板内的头像预览 */
         .settings-avatar {
             width: 64px;
             height: 64px;
@@ -220,13 +170,7 @@
             flex-shrink: 0;
             position: relative;
         }
-
-        .settings-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
+        .settings-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .settings-avatar .placeholder {
             width: 100%;
             height: 100%;
@@ -238,20 +182,210 @@
             font-weight: bold;
             background: linear-gradient(135deg, #3ecf8e, #8a4baf);
         }
+
+        /* 其他通用样式（与主页保持一致） */
+        .top-nav {
+            background: #1e3a2f;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            border-bottom: 2px solid #3d725f;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .nav-title { font-size: 1.5rem; font-weight: bold; color: #81c784; margin-right: auto; }
+        .nav-link { color: #e0e0e0; text-decoration: none; padding: 8px 16px; border-radius: 8px; transition: 0.2s; }
+        .nav-link:hover { background: #284a3c; color: #81c784; }
+        .user-nav-section { display: flex; align-items: center; gap: 10px; }
+        .profile-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .profile-banner {
+            position: relative;
+            height: 240px;
+            background: linear-gradient(135deg, #1a3229, #2d5243);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 30px;
+            border: 1px solid #3d725f;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        .banner-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.5));
+        }
+        .banner-content {
+            position: relative;
+            z-index: 2;
+            padding: 40px;
+            display: flex;
+            align-items: flex-end;
+            height: 100%;
+            gap: 30px;
+        }
+        .avatar-section { position: relative; display: flex; align-items: flex-end; }
+        .user-info { flex: 1; padding-bottom: 10px; }
+        .username { font-size: 2.5rem; color: white; font-weight: 800; display: flex; align-items: center; gap: 15px; }
+        .username-edit {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #ffd700;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 8px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+        .username-edit:hover { background: rgba(255,215,0,0.2); transform: scale(1.1); }
+        .user-email { color: #99aabb; font-size: 1.1rem; margin-bottom: 8px; }
+        .user-bio { color: #a8d0b9; margin-top: 15px; max-width: 600px; line-height: 1.6; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 8px; border-left: 4px solid #81c784; }
+        .edit-bio { background: none; border: none; color: #81c784; cursor: pointer; font-size: 0.9rem; margin-left: 10px; padding: 4px 8px; border-radius: 4px; }
+        .edit-bio:hover { background: rgba(129,199,132,0.1); }
+        .register-days, .active-points { display: inline-block; margin-right: 15px; font-size: 0.95rem; color: #99aabb; }
+        .username-wrapper { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+        .shop-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+            color: white;
+        }
+        .shop-button:hover { transform: scale(1.05); }
+        .my-title-btn { background: linear-gradient(135deg, #3b82f6, #8b5cf6); }
+
+        .checkin-card {
+            background: linear-gradient(135deg, rgba(30,58,47,0.8), rgba(46,125,50,0.6));
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid #3d725f;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .checkin-info { display: flex; align-items: center; gap: 30px; }
+        .streak-box { display: flex; flex-direction: column; align-items: center; background: rgba(0,0,0,0.2); padding: 10px 20px; border-radius: 12px; }
+        .streak-number { font-size: 2.2rem; font-weight: bold; color: #ffd700; }
+        .streak-label { font-size: 0.8rem; color: #99aabb; }
+        .reward-preview { color: #99aabb; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .reward-preview:hover { color: #81c784; }
+        .checkin-btn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #ffd700, #ff9800);
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.3s;
+            color: #121212;
+        }
+        .checkin-btn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 8px 24px rgba(255,215,0,0.3); }
+        .checkin-btn:disabled { background: #666; color: #999; cursor: not-allowed; transform: none; }
+
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin: 30px 0 20px; padding-bottom: 10px; border-bottom: 2px solid rgba(255,255,255,0.1); }
+        .section-title { font-size: 1.6rem; color: #81c784; display: flex; align-items: center; gap: 12px; }
+        .settings-section {
+            background: #1e3a2f;
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid #3d725f;
+            margin-bottom: 30px;
+        }
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 0;
+            border-bottom: 1px solid #3d725f;
+        }
+        .settings-item:last-child { border-bottom: none; }
+        .settings-label { color: #81c784; font-weight: 600; font-size: 1.1rem; }
+        .settings-desc { color: #99aabb; font-size: 0.95rem; margin-top: 4px; }
+        .danger-zone {
+            border: 2px solid #f87171;
+            background: rgba(248,113,113,0.05);
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 30px;
+            position: relative;
+        }
+        .danger-title { color: #f87171; margin-bottom: 15px; font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
+        .danger-note { font-size: 0.85rem; color: #fca5a5; margin-top: 10px; }
+
+        .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 100px 20px; color: #99aabb; }
+        .loading-spinner {
+            width: 60px; height: 60px;
+            border: 4px solid rgba(129,199,132,0.2);
+            border-top-color: #81c784;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .back-to-top {
+            position: fixed;
+            bottom: 40px; right: 40px;
+            width: 60px; height: 60px;
+            background: #81c784;
+            color: #121212;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            transition: 0.3s;
+            z-index: 999;
+        }
+        .back-to-top:hover { transform: translateY(-5px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+        .sync-notice {
+            position: fixed;
+            bottom: 100px; right: 20px;
+            background: #81c784;
+            color: #121212;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s;
+            z-index: 1001;
+        }
+        .sync-notice.show { opacity: 1; transform: translateY(0); }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .profile-banner { height: auto; min-height: 180px; }
+            .banner-content { flex-direction: column; align-items: flex-start; gap: 20px; padding: 20px; }
+            .avatar { width: 100px; height: 100px; }
+            .username { font-size: 1.8rem; }
+            .checkin-card { flex-direction: column; gap: 15px; align-items: stretch; }
+            .checkin-info { flex-wrap: wrap; gap: 15px; }
+        }
+        @media (max-width: 480px) {
+            .settings-item { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .modal { padding: 16px; max-width: 100%; }
+        }
     </style>
 </head>
 <body>
-    <!-- ====== 顶部导航 ====== -->
     <nav class="top-nav">
         <div class="nav-title">六哥荣耀WIKI</div>
         <a href="./admin.html" id="adminLink" class="nav-link" style="display: none;">管理后台</a>
         <div class="user-nav-section" id="userNavSection"></div>
     </nav>
 
-    <!-- ====== 同步通知 ====== -->
     <div class="sync-notice" id="syncNotice"><i class="fas fa-sync-alt"></i><span>已同步</span></div>
 
-    <!-- ====== 主容器 ====== -->
     <div class="profile-container">
         <div class="loading" id="loading">
             <div class="loading-spinner"></div>
@@ -259,7 +393,6 @@
         </div>
 
         <div id="profileContent" style="display: none;">
-            <!-- ====== 个人资料横幅 ====== -->
             <div class="profile-banner">
                 <div class="banner-overlay"></div>
                 <div class="banner-content">
@@ -267,7 +400,6 @@
                         <div class="avatar-container" id="avatarContainer">
                             <div class="avatar" id="userAvatar">
                                 <div class="avatar-placeholder" id="avatarPlaceholder">U</div>
-                                <img class="avatar-frame-img" id="avatarFrameImg" src="" alt="头像框">
                             </div>
                         </div>
                     </div>
@@ -294,21 +426,21 @@
                 </div>
             </div>
 
-            <!-- ====== 签到卡片 ====== -->
+            <!-- 签到卡片 -->
             <div class="checkin-card">
                 <div class="checkin-info">
                     <div class="streak-box">
                         <div class="streak-number" id="streakDays">0</div>
                         <div class="streak-label">连续签到</div>
                     </div>
-                    <div class="reward-preview" id="rewardInfoBtn" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px;" onclick="window.openRewardInfoModal()">
+                    <div class="reward-preview" id="rewardInfoBtn" onclick="window.openRewardInfoModal()">
                         <i class="fas fa-question-circle"></i> <span>奖励预览</span>
                     </div>
                 </div>
                 <button class="checkin-btn" id="checkinBtn"><i class="fas fa-calendar-check"></i> 签到</button>
             </div>
 
-            <!-- ====== 账号设置 ====== -->
+            <!-- 账号设置 -->
             <div class="section-header">
                 <div class="section-title"><i class="fas fa-cog"></i>账号设置</div>
             </div>
@@ -341,9 +473,11 @@
         </div>
     </div>
 
-    <!-- ====== 裁剪头像模态框 ====== -->
+    <!-- ========== 所有模态框 ========== -->
+
+    <!-- 裁剪头像 -->
     <div class="modal-overlay" id="cropModal">
-        <div class="modal" style="max-width: 500px; text-align: center;">
+        <div class="modal" style="max-width:500px; text-align:center;">
             <div class="modal-header">
                 <div class="modal-title">裁剪头像</div>
                 <button class="modal-close" id="closeCropModalBtn">&times;</button>
@@ -356,39 +490,30 @@
         </div>
     </div>
 
-    <!-- ====== ★★★ 个人设置面板（整合头像+用户名） ★★★ ====== -->
+    <!-- 个人设置面板（整合头像+用户名） -->
     <div class="modal-overlay" id="usernameModal">
         <div class="modal">
             <div class="modal-header">
                 <div class="modal-title"><i class="fas fa-user-cog"></i> 个人设置</div>
                 <button class="modal-close close-modal-btn" data-modal="usernameModal">&times;</button>
             </div>
-
-            <!-- 头像区域 -->
-            <div style="display: flex; align-items: center; gap: 20px; padding: 12px 0 16px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 18px;">
+            <div style="display:flex; align-items:center; gap:20px; padding:12px 0 16px 0; border-bottom:1px solid #3d725f; margin-bottom:18px;">
                 <div class="settings-avatar">
-                    <img id="settingsAvatarPreview" src="" alt="头像" style="display: none;">
+                    <img id="settingsAvatarPreview" src="" alt="头像" style="display:none;">
                     <div class="placeholder" id="settingsAvatarPlaceholder">U</div>
                 </div>
-                <div style="flex: 1;">
-                    <div style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 6px;">当前头像</div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button id="settingsViewAvatarBtn" class="btn" style="padding: 5px 14px; font-size: 0.85rem;">
-                            <i class="fas fa-eye"></i> 查看
-                        </button>
-                        <button id="settingsChangeAvatarBtn" class="btn btn-primary" style="padding: 5px 14px; font-size: 0.85rem;">
-                            <i class="fas fa-camera"></i> 更换
-                        </button>
+                <div style="flex:1;">
+                    <div style="color:#99aabb; font-size:0.85rem; margin-bottom:6px;">当前头像</div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button id="settingsViewAvatarBtn" class="btn" style="padding:5px 14px; font-size:0.85rem;"><i class="fas fa-eye"></i> 查看</button>
+                        <button id="settingsChangeAvatarBtn" class="btn btn-primary" style="padding:5px 14px; font-size:0.85rem;"><i class="fas fa-camera"></i> 更换</button>
                     </div>
                 </div>
             </div>
-
-            <!-- 修改用户名 -->
-            <div style="margin-bottom: 6px;">
+            <div style="margin-bottom:6px;">
                 <label class="form-label">修改用户名</label>
                 <input type="text" class="form-input" id="newUsername" maxlength="20" placeholder="输入新用户名（2-20字符）">
             </div>
-
             <div class="form-actions">
                 <button class="btn-cancel close-modal-btn" data-modal="usernameModal">取消</button>
                 <button class="btn-primary" id="saveUsername">保存</button>
@@ -396,15 +521,15 @@
         </div>
     </div>
 
-    <!-- ====== 其他模态框 ====== -->
+    <!-- 修改简介 -->
     <div class="modal-overlay" id="bioModal">
-        <div class="modal" style="max-width: 420px;">
+        <div class="modal" style="max-width:420px;">
             <div class="modal-header">
                 <div class="modal-title">个人简介</div>
                 <button class="modal-close close-modal-btn" data-modal="bioModal">&times;</button>
             </div>
             <div class="form-group">
-                <textarea class="form-input" id="newBio" rows="3" maxlength="200" style="resize:vertical; min-height:80px;" placeholder="介绍一下你自己..."></textarea>
+                <textarea class="form-textarea" id="newBio" rows="3" maxlength="200" placeholder="介绍一下你自己..."></textarea>
             </div>
             <div class="form-actions">
                 <button class="btn-cancel close-modal-btn" data-modal="bioModal">取消</button>
@@ -413,8 +538,9 @@
         </div>
     </div>
 
+    <!-- 修改密码 -->
     <div class="modal-overlay" id="passwordModal">
-        <div class="modal" style="max-width: 420px;">
+        <div class="modal" style="max-width:420px;">
             <div class="modal-header">
                 <div class="modal-title">修改密码</div>
                 <button class="modal-close close-modal-btn" data-modal="passwordModal">&times;</button>
@@ -429,13 +555,14 @@
         </div>
     </div>
 
+    <!-- 注销账号 -->
     <div class="modal-overlay" id="deleteAccountModal">
-        <div class="modal" style="max-width: 420px;">
+        <div class="modal" style="max-width:420px;">
             <div class="modal-header">
                 <div class="modal-title" style="color:#f87171;">注销账号</div>
                 <button class="modal-close close-modal-btn" data-modal="deleteAccountModal">&times;</button>
             </div>
-            <p style="color:var(--text-secondary);">输入邮箱确认：</p>
+            <p style="color:#99aabb;">输入邮箱确认：</p>
             <div class="form-group"><input type="email" class="form-input" id="confirmEmail" placeholder="邮箱地址" style="border-color:#f87171;"></div>
             <div class="form-actions">
                 <button class="btn-cancel close-modal-btn" data-modal="deleteAccountModal">取消</button>
@@ -444,13 +571,14 @@
         </div>
     </div>
 
+    <!-- 退出登录确认 -->
     <div class="modal-overlay" id="logoutConfirmModal">
-        <div class="modal" style="max-width: 360px; text-align:center;">
+        <div class="modal" style="max-width:360px; text-align:center;">
             <div class="modal-header">
                 <div class="modal-title">退出登录</div>
                 <button class="modal-close close-modal-btn" data-modal="logoutConfirmModal">&times;</button>
             </div>
-            <p style="color:var(--text-main);">确定退出吗？</p>
+            <p style="color:#e0e0e0;">确定退出吗？</p>
             <div class="form-actions" style="justify-content:center;">
                 <button class="btn-cancel" id="cancelLogoutBtn">取消</button>
                 <button class="btn-primary" id="confirmLogoutBtn" style="background:#f87171; color:white;">退出</button>
@@ -458,8 +586,9 @@
         </div>
     </div>
 
+    <!-- 商店 -->
     <div class="modal-overlay" id="shopModal">
-        <div class="modal" style="max-width: 500px;">
+        <div class="modal" style="max-width:500px;">
             <div class="modal-header">
                 <div class="modal-title">商店</div>
                 <button class="modal-close close-modal-btn" data-modal="shopModal">&times;</button>
@@ -468,71 +597,76 @@
         </div>
     </div>
 
+    <!-- 称号 -->
     <div class="modal-overlay" id="titlesModal">
-        <div class="modal" style="max-width: 500px;">
+        <div class="modal" style="max-width:500px;">
             <div class="modal-header">
                 <div class="modal-title"><i class="fas fa-medal"></i> 我的称号</div>
                 <button class="modal-close close-modal-btn" data-modal="titlesModal">&times;</button>
             </div>
-            <div id="titlesListContainer" style="max-height: 60vh; overflow-y: auto; padding: 0 4px;"></div>
-            <div style="margin-top: 12px; text-align: center; font-size: 0.7rem; color: var(--text-secondary);">完成条件自动获得称号</div>
+            <div id="titlesListContainer" style="max-height:60vh; overflow-y:auto; padding:0 4px;"></div>
+            <div style="margin-top:12px; text-align:center; font-size:0.7rem; color:#99aabb;">完成条件自动获得称号</div>
         </div>
     </div>
 
+    <!-- 帮助 -->
     <div class="modal-overlay" id="helpModal">
-        <div class="modal" style="max-width: 550px;">
+        <div class="modal" style="max-width:550px;">
             <div class="modal-header">
                 <div class="modal-title"><i class="fas fa-life-ring"></i> 帮助中心</div>
                 <button class="modal-close close-modal-btn" data-modal="helpModal">&times;</button>
             </div>
-            <div style="max-height: 60vh; overflow-y: auto; padding-right: 8px; color:var(--text-main);">
-                <div class="help-section"><h3 style="color:var(--text-highlight);"><i class="fas fa-star"></i> 货币与活跃度</h3><p><strong>🍬 糖果碎</strong>：每日签到、活动获得。用于购买头像框、自动签到卡等。<br><strong>🌈 超级棒糖</strong>：稀有货币，连续签到7天或特殊活动获得。可兑换高级物品。<br><strong>⚡ 活跃度</strong>：通过签到获得，影响称号获取条件。</p></div>
-                <div class="help-section"><h3 style="color:var(--text-highlight);"><i class="fas fa-calendar-check"></i> 签到</h3><p>每天点击"签到"按钮可获得奖励。连续签到天数越多，奖励越丰厚。<br><strong>自动签到卡</strong>：购买后每天上午8点（北京时间）自动签到，永不漏签。</p></div>
-                <div class="help-section"><h3 style="color:var(--text-highlight);"><i class="fas fa-medal"></i> 称号系统</h3><p>完成特定条件自动获得称号（例如连续签到7天、活跃度达到100、拥有500糖果碎等）。<br>管理员拥有特殊限定称号（🌟创世神🌟 / 🌟管理神🌟）。</p></div>
-                <div class="help-section"><h3 style="color:var(--text-highlight);"><i class="fas fa-store"></i> 商店</h3><p>可使用糖果碎/超级棒糖购买头像框、自动签到卡。购买后自动生效。</p></div>
-                <div class="help-section"><h3 style="color:var(--text-highlight);"><i class="fas fa-user"></i> 个人资料</h3><p>长按头像打开设置，可更换头像、修改用户名；点击编辑按钮修改简介；可修改密码或注销账号。</p></div>
-                <div class="help-section"><h3 style="color:var(--text-highlight);"><i class="fas fa-question"></i> 其他问题</h3><p>如果遇到bug或有建议，欢迎联系站长。站长QQ：1714400176。邮箱1714400176@qq.com。</p></div>
+            <div style="max-height:60vh; overflow-y:auto; padding-right:8px; color:#e0e0e0;">
+                <div class="help-section"><h3 style="color:#81c784;"><i class="fas fa-star"></i> 货币与活跃度</h3><p><strong>🍬 糖果碎</strong>：每日签到、活动获得。用于购买头像框、自动签到卡等。<br><strong>🌈 超级棒糖</strong>：稀有货币，连续签到7天或特殊活动获得。可兑换高级物品。<br><strong>⚡ 活跃度</strong>：通过签到获得，影响称号获取条件。</p></div>
+                <div class="help-section"><h3 style="color:#81c784;"><i class="fas fa-calendar-check"></i> 签到</h3><p>每天点击"签到"按钮可获得奖励。连续签到天数越多，奖励越丰厚。<br><strong>自动签到卡</strong>：购买后每天上午8点（北京时间）自动签到，永不漏签。</p></div>
+                <div class="help-section"><h3 style="color:#81c784;"><i class="fas fa-medal"></i> 称号系统</h3><p>完成特定条件自动获得称号（例如连续签到7天、活跃度达到100、拥有500糖果碎等）。<br>管理员拥有特殊限定称号（🌟创世神🌟 / 🌟管理神🌟）。</p></div>
+                <div class="help-section"><h3 style="color:#81c784;"><i class="fas fa-store"></i> 商店</h3><p>可使用糖果碎/超级棒糖购买头像框、自动签到卡。购买后自动生效。</p></div>
+                <div class="help-section"><h3 style="color:#81c784;"><i class="fas fa-user"></i> 个人资料</h3><p>长按头像打开设置，可更换头像、修改用户名；点击编辑按钮修改简介；可修改密码或注销账号。</p></div>
+                <div class="help-section"><h3 style="color:#81c784;"><i class="fas fa-question"></i> 其他问题</h3><p>如果遇到bug或有建议，欢迎联系站长。站长QQ：1714400176。邮箱1714400176@qq.com。</p></div>
             </div>
-            <div style="margin-top: 16px; text-align: center; font-size: 0.7rem; color: var(--text-secondary);">版本 1.0 | 持续更新中</div>
+            <div style="margin-top:16px; text-align:center; font-size:0.7rem; color:#99aabb;">版本 1.0 | 持续更新中</div>
         </div>
     </div>
 
+    <!-- 签到奖励预览 -->
     <div class="modal-overlay" id="rewardInfoModal">
-        <div class="modal" style="max-width: 480px;">
+        <div class="modal" style="max-width:480px;">
             <div class="modal-header">
                 <div class="modal-title"><i class="fas fa-calendar-alt"></i> 签到奖励一览</div>
                 <button class="modal-close close-modal-btn" data-modal="rewardInfoModal">&times;</button>
             </div>
-            <div id="rewardInfoContent" style="padding: 8px 0;"></div>
+            <div id="rewardInfoContent" style="padding:8px 0;"></div>
         </div>
     </div>
 
+    <!-- 背包 -->
     <div class="modal-overlay" id="backpackModal">
-        <div class="modal" style="max-width: 480px;">
+        <div class="modal" style="max-width:480px;">
             <div class="modal-header">
                 <div class="modal-title"><i class="fas fa-shopping-bag"></i> 我的背包</div>
                 <button class="modal-close close-modal-btn" data-modal="backpackModal">&times;</button>
             </div>
-            <div id="backpackContent" style="padding: 8px 0; max-height: 60vh; overflow-y: auto;"></div>
+            <div id="backpackContent" style="padding:8px 0; max-height:60vh; overflow-y:auto;"></div>
         </div>
     </div>
 
+    <!-- 背包物品详情 -->
     <div class="modal-overlay" id="backpackItemModal">
-        <div class="modal" style="max-width: 320px; text-align: center;">
-            <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+        <div class="modal" style="max-width:320px; text-align:center;">
+            <div class="modal-header" style="border-bottom:none; padding-bottom:0;">
                 <div class="modal-title" id="bItemTitle" style="flex:1; text-align:center;">物品名称</div>
                 <button class="modal-close close-modal-btn" data-modal="backpackItemModal">&times;</button>
             </div>
-            <div id="bItemIcon" style="font-size: 4rem; margin: 15px 0;"></div>
-            <div id="bItemDesc" style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;"></div>
-            <div id="bItemCount" style="font-size: 0.85rem; color: var(--text-highlight); margin-bottom: 15px;"></div>
+            <div id="bItemIcon" style="font-size:4rem; margin:15px 0;"></div>
+            <div id="bItemDesc" style="color:#99aabb; font-size:0.9rem; margin-bottom:20px;"></div>
+            <div id="bItemCount" style="font-size:0.85rem; color:#81c784; margin-bottom:15px;"></div>
         </div>
     </div>
 
-    <!-- ====== 回到顶部 ====== -->
+    <!-- 回到顶部 -->
     <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fas fa-chevron-up"></i></button>
 
-    <!-- ====== 模块入口 ====== -->
+    <!-- 主脚本入口 -->
     <script type="module">
         import { initializeApp } from './css/app.js';
         initializeApp();
