@@ -37,7 +37,6 @@ window.userStats = userStats;
 window.userProfile = userProfile;
 window.isProcessing = isProcessing;
 
-// ★ 统一状态更新函数
 function updateAppState() {
     setAppState({ currentUser, userProfile, userStats });
     window.currentUser = currentUser;
@@ -75,7 +74,6 @@ async function refreshTitles() {
     const allTitles = await loadAllTitles();
     let ownedIds = await loadUserOwnedTitles(currentUser.id);
 
-    // 授予管理员限定称号
     const role = userProfile?.role;
     const limitedTitles = allTitles.filter(t => t.is_limited);
     let toGrant = [];
@@ -94,7 +92,6 @@ async function refreshTitles() {
     }
     if (toGrant.length > 0) showNotification('✨ 获得管理员限定称号', 'success');
 
-    // 检查普通称号条件
     let newGranted = [];
     for (let title of allTitles) {
         if (title.is_limited) continue;
@@ -112,7 +109,6 @@ async function refreshTitles() {
     }
     if (newGranted.length > 0) showNotification(`🎉 获得新称号：${newGranted.join(', ')}`, 'success');
 
-    // 更新界面称号显示
     let equippedTitleObj = null;
     if (userProfile?.equipped_title_id) {
         equippedTitleObj = allTitles.find(t => t.id === userProfile.equipped_title_id);
@@ -134,7 +130,6 @@ async function refreshTitles() {
     }
 }
 
-// ========== 装备/卸下称号 ==========
 async function equipTitle(titleId) {
     const sb = getSupabase();
     const { error } = await sb.from('user_profiles').update({ equipped_title_id: titleId }).eq('id', currentUser.id);
@@ -158,7 +153,7 @@ async function unequipTitle() {
 
 // ========== 签到执行 ==========
 async function executeCheckin(autoTriggered = false) {
-    const today = getLocalDateString(); // 现在不需要传参，因为有了默认值
+    const today = getLocalDateString();
     if (userStats?.last_checkin_date === today) {
         if (!autoTriggered) showNotification('今日已签到', 'warning');
         updateCheckinButtonState();
@@ -208,7 +203,7 @@ async function performCheckin() {
 async function tryAutoSign() {
     if (autoSignAttempted) return;
     autoSignAttempted = true;
-    const today = getLocalDateString(); // 已修复
+    const today = getLocalDateString();
     if (hasAutoSignCard && userStats?.last_checkin_date !== today) {
         showNotification('🃏 检测到自动签到卡，正在自动签到...', 'info');
         await executeCheckin(true);
@@ -280,7 +275,135 @@ window.openBackpackItemDetail = openBackpackItemDetail;
 window.openTitlesModal = renderTitlesModal;
 window.openRewardInfoModal = openRewardInfoModal;
 
-// ========== 各种保存/更新操作 ==========
+// ===== ★★★ 新增：头像操作菜单（长按 + 铅笔共用） ★★★ =====
+function openAvatarActionModal() {
+    openModal('avatarActionModal');
+}
+window.openAvatarActionModal = openAvatarActionModal;
+
+// ===== ★★★ 头像操作菜单的按钮绑定 ★★★ =====
+function bindAvatarActionButtons() {
+    // 查看当前头像 → 新标签页打开
+    document.getElementById('viewAvatarBtn')?.addEventListener('click', function() {
+        closeModal('avatarActionModal');
+        const avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
+        if (avatarUrl) {
+            window.open(avatarUrl, '_blank');
+        } else {
+            showNotification('您还没有设置头像哦', 'info');
+        }
+    });
+
+    // 更换头像 → 关闭菜单，打开文件选择
+    document.getElementById('changeAvatarBtn')?.addEventListener('click', function() {
+        closeModal('avatarActionModal');
+        openAvatarUpload();
+    });
+}
+
+// ========== 头像上传相关 ==========
+let cropper = null;
+let longPressTimer = null;
+let isUploading = false;
+
+function attachLongPressToAvatar() {
+    const container = document.getElementById('avatarContainer');
+    if (!container) return;
+    container.addEventListener('touchstart', onAvatarLongPressStart, { passive: false });
+    container.addEventListener('touchend', onAvatarLongPressEnd);
+    container.addEventListener('touchcancel', onAvatarLongPressEnd);
+    container.addEventListener('mousedown', onAvatarLongPressStart);
+    container.addEventListener('mouseup', onAvatarLongPressEnd);
+    container.addEventListener('mouseleave', onAvatarLongPressEnd);
+}
+
+function onAvatarLongPressStart(e) {
+    e.preventDefault();
+    longPressTimer = setTimeout(() => {
+        // 长按触发操作菜单
+        openAvatarActionModal();
+        longPressTimer = null;
+    }, CONFIG.LONG_PRESS_DELAY);
+}
+
+function onAvatarLongPressEnd(e) {
+    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+}
+
+window.openAvatarUpload = function() {
+    const oldInput = document.getElementById('tempFileInput');
+    if (oldInput) oldInput.remove();
+    const input = document.createElement('input');
+    input.id = 'tempFileInput';
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png';
+    input.style.cssText = 'position:fixed;top:-100px;left:-100px;opacity:0;pointer-events:none;';
+    document.body.appendChild(input);
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file && file.size <= 5 * 1024 * 1024) initCropperModal(file);
+        else if (file) showNotification('文件过大（最大5MB）', 'error');
+        input.remove();
+    };
+    input.click();
+};
+
+function initCropperModal(file) {
+    const img = document.getElementById('cropImage');
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        img.src = e.target.result;
+        if (cropper) cropper.destroy();
+        img.onload = () => {
+            cropper = new Cropper(img, { aspectRatio: 1, viewMode: 1, autoCropArea: 0.8 });
+            openModal('cropModal');
+        };
+    };
+    reader.readAsDataURL(file);
+}
+
+async function confirmCropAndUpload() {
+    if (!cropper) return;
+    const canvas = cropper.getCroppedCanvas({ width: CONFIG.AVATAR_SIZE, height: CONFIG.AVATAR_SIZE });
+    canvas.toBlob(async (blob) => {
+        if (blob) await uploadCroppedImage(blob);
+        closeModal('cropModal');
+        if (cropper) { cropper.destroy(); cropper = null; }
+        document.getElementById('cropImage').removeAttribute('src');
+    }, 'image/png');
+}
+
+function cancelCrop() {
+    if (cropper) { cropper.destroy(); cropper = null; }
+    closeModal('cropModal');
+    document.getElementById('cropImage').removeAttribute('src');
+}
+
+async function uploadCroppedImage(blob) {
+    if (!currentUser || isUploading) return false;
+    isUploading = true;
+    try {
+        const filePath = `${currentUser.id}/avatar.png`;
+        const { error: uploadErr } = await getSupabase().storage.from('avatars').upload(filePath, blob, { contentType: 'image/png', upsert: true });
+        if (uploadErr) throw uploadErr;
+        const { data: { publicUrl } } = getSupabase().storage.from('avatars').getPublicUrl(filePath);
+        await updateUserProfile(currentUser.id, { avatar_url: publicUrl });
+        userProfile.avatar_url = publicUrl;
+        localStorage.setItem('userAvatar', publicUrl);
+        updateAvatarDisplay(publicUrl);
+        updateAppState();
+        updateNavbar();
+        showNotification('头像已更新', 'success');
+        return true;
+    } catch (err) {
+        showNotification('上传失败: ' + err.message, 'error');
+        return false;
+    } finally {
+        isUploading = false;
+    }
+}
+
+// ========== 保存操作 ==========
 async function updateUsername() {
     const newName = document.getElementById('newUsername').value.trim();
     if (!newName || newName.length < 2 || newName.length > 20) return showNotification('用户名2-20字符', 'error');
@@ -373,19 +496,15 @@ async function loadUserProfile() {
     userStats = fullData;
     updateAppState();
 
-    // 渲染界面
     await renderProfile();
     await initFrameForUser(currentUser.id);
 
-    // 更新最后登录
     await updateUserStats(currentUser.id, { last_login: new Date().toISOString() });
     safeSetText('lastLogin', new Date().toLocaleString());
 
-    // 自动签到
     hasAutoSignCard = await loadAutoSignCardStatus(currentUser.id);
     await tryAutoSign();
 
-    // 刷新称号
     await refreshTitles();
 
     document.getElementById('loading').style.display = 'none';
@@ -394,15 +513,18 @@ async function loadUserProfile() {
 
 // ========== 事件绑定 ==========
 function bindEvents() {
+    // 保存按钮
     document.getElementById('saveUsername')?.addEventListener('click', updateUsername);
     document.getElementById('saveBio')?.addEventListener('click', updateBio);
     document.getElementById('savePassword')?.addEventListener('click', updatePassword);
     document.getElementById('confirmDeleteAccount')?.addEventListener('click', deleteAccount);
 
+    // 裁剪
     document.getElementById('confirmCropBtn')?.addEventListener('click', confirmCropAndUpload);
     document.getElementById('cancelCropBtn')?.addEventListener('click', cancelCrop);
     document.getElementById('closeCropModalBtn')?.addEventListener('click', cancelCrop);
 
+    // 商店、背包、称号、帮助
     document.getElementById('openShopBtn')?.addEventListener('click', async () => {
         if (isProcessing) return;
         await renderShop();
@@ -412,6 +534,7 @@ function bindEvents() {
     document.getElementById('openTitlesBtn')?.addEventListener('click', renderTitlesModal);
     document.getElementById('openHelpBtn')?.addEventListener('click', () => openModal('helpModal'));
 
+    // 统一关闭模态框
     document.querySelectorAll('.close-modal-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const mid = btn.getAttribute('data-modal');
@@ -424,123 +547,27 @@ function bindEvents() {
         });
     });
 
+    // 签到
     document.getElementById('checkinBtn')?.addEventListener('click', performCheckin);
 
+    // 回到顶部
     window.addEventListener('scroll', () => {
         const btn = document.querySelector('.back-to-top');
         if (btn) btn.style.display = window.scrollY > 300 ? 'flex' : 'none';
     });
 
+    // ===== ★★★ 长按头像（触发操作菜单） ★★★ =====
     attachLongPressToAvatar();
-}
 
-// ========== 头像上传相关 ==========
-let cropper = null;
-let longPressTimer = null;
+    // ===== ★★★ 铅笔按钮 → 操作菜单 ★★★ =====
+    document.getElementById('avatarEditBtn')?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        openAvatarActionModal();
+    });
 
-function attachLongPressToAvatar() {
-    const container = document.getElementById('avatarContainer');
-    if (!container) return;
-    container.addEventListener('touchstart', onAvatarLongPressStart, { passive: false });
-    container.addEventListener('touchend', onAvatarLongPressEnd);
-    container.addEventListener('touchcancel', onAvatarLongPressEnd);
-    container.addEventListener('mousedown', onAvatarLongPressStart);
-    container.addEventListener('mouseup', onAvatarLongPressEnd);
-    container.addEventListener('mouseleave', onAvatarLongPressEnd);
+    // ===== ★★★ 操作菜单的“查看/更换”按钮 ★★★ =====
+    bindAvatarActionButtons();
 }
-
-function onAvatarLongPressStart(e) {
-    e.preventDefault();
-    longPressTimer = setTimeout(() => {
-        openModal('avatarConfirmModal');
-        longPressTimer = null;
-    }, CONFIG.LONG_PRESS_DELAY);
-}
-function onAvatarLongPressEnd(e) {
-    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
-}
-
-window.confirmChangeAvatar = function() {
-    closeModal('avatarConfirmModal');
-    openAvatarUpload();
-};
-window.cancelChangeAvatar = function() {
-    closeModal('avatarConfirmModal');
-};
-
-function openAvatarUpload() {
-    const oldInput = document.getElementById('tempFileInput');
-    if (oldInput) oldInput.remove();
-    const input = document.createElement('input');
-    input.id = 'tempFileInput';
-    input.type = 'file';
-    input.accept = 'image/jpeg,image/png';
-    input.style.cssText = 'position:fixed;top:-100px;left:-100px;opacity:0;pointer-events:none;';
-    document.body.appendChild(input);
-    input.onchange = (e) => {
-        const file = e.target.files[0];
-        if (file && file.size <= 5 * 1024 * 1024) initCropperModal(file);
-        else if (file) showNotification('文件过大（最大5MB）', 'error');
-        input.remove();
-    };
-    input.click();
-}
-
-function initCropperModal(file) {
-    const img = document.getElementById('cropImage');
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        img.src = e.target.result;
-        if (cropper) cropper.destroy();
-        img.onload = () => {
-            cropper = new Cropper(img, { aspectRatio: 1, viewMode: 1, autoCropArea: 0.8 });
-            openModal('cropModal');
-        };
-    };
-    reader.readAsDataURL(file);
-}
-
-async function confirmCropAndUpload() {
-    if (!cropper) return;
-    const canvas = cropper.getCroppedCanvas({ width: CONFIG.AVATAR_SIZE, height: CONFIG.AVATAR_SIZE });
-    canvas.toBlob(async (blob) => {
-        if (blob) await uploadCroppedImage(blob);
-        closeModal('cropModal');
-        if (cropper) { cropper.destroy(); cropper = null; }
-        document.getElementById('cropImage').removeAttribute('src');
-    }, 'image/png');
-}
-
-function cancelCrop() {
-    if (cropper) { cropper.destroy(); cropper = null; }
-    closeModal('cropModal');
-    document.getElementById('cropImage').removeAttribute('src');
-}
-
-async function uploadCroppedImage(blob) {
-    if (!currentUser || isUploading) return false;
-    isUploading = true;
-    try {
-        const filePath = `${currentUser.id}/avatar.png`;
-        const { error: uploadErr } = await getSupabase().storage.from('avatars').upload(filePath, blob, { contentType: 'image/png', upsert: true });
-        if (uploadErr) throw uploadErr;
-        const { data: { publicUrl } } = getSupabase().storage.from('avatars').getPublicUrl(filePath);
-        await updateUserProfile(currentUser.id, { avatar_url: publicUrl });
-        userProfile.avatar_url = publicUrl;
-        localStorage.setItem('userAvatar', publicUrl);
-        updateAvatarDisplay(publicUrl);
-        updateAppState();
-        updateNavbar();
-        showNotification('头像已更新', 'success');
-        return true;
-    } catch (err) {
-        showNotification('上传失败: ' + err.message, 'error');
-        return false;
-    } finally {
-        isUploading = false;
-    }
-}
-let isUploading = false;
 
 // ========== 启动 ==========
 export async function initializeApp() {
