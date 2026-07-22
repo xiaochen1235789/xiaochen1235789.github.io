@@ -255,10 +255,6 @@ async function refreshUserStats() {
 }
 
 // ========== 用户信息编辑函数 ==========
-window.openUsernameModal = function() {
-    document.getElementById('newUsername').value = userProfile?.username || '';
-    openModal('usernameModal');
-};
 window.openBioModal = function() {
     document.getElementById('newBio').value = userProfile?.bio || '';
     openModal('bioModal');
@@ -275,31 +271,31 @@ window.openBackpackItemDetail = openBackpackItemDetail;
 window.openTitlesModal = renderTitlesModal;
 window.openRewardInfoModal = openRewardInfoModal;
 
-// ===== ★★★ 新增：头像操作菜单（长按 + 铅笔共用） ★★★ =====
-function openAvatarActionModal() {
-    openModal('avatarActionModal');
-}
-window.openAvatarActionModal = openAvatarActionModal;
+// ===== ★★★ 个人设置面板（整合头像+用户名） ★★★ =====
+window.openUsernameModal = function() {
+    // 填充当前用户名
+    const newUsernameInput = document.getElementById('newUsername');
+    if (newUsernameInput) {
+        newUsernameInput.value = userProfile?.username || '';
+    }
 
-// ===== ★★★ 头像操作菜单的按钮绑定 ★★★ =====
-function bindAvatarActionButtons() {
-    // 查看当前头像 → 新标签页打开
-    document.getElementById('viewAvatarBtn')?.addEventListener('click', function() {
-        closeModal('avatarActionModal');
-        const avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
-        if (avatarUrl) {
-            window.open(avatarUrl, '_blank');
-        } else {
-            showNotification('您还没有设置头像哦', 'info');
-        }
-    });
+    // 更新头像预览
+    const avatarPreview = document.getElementById('settingsAvatarPreview');
+    const placeholder = document.getElementById('settingsAvatarPlaceholder');
+    const avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
 
-    // 更换头像 → 关闭菜单，打开文件选择
-    document.getElementById('changeAvatarBtn')?.addEventListener('click', function() {
-        closeModal('avatarActionModal');
-        openAvatarUpload();
-    });
-}
+    if (avatarUrl && avatarUrl.startsWith('http')) {
+        avatarPreview.src = avatarUrl;
+        avatarPreview.style.display = 'block';
+        placeholder.style.display = 'none';
+    } else {
+        avatarPreview.style.display = 'none';
+        placeholder.style.display = 'flex';
+        placeholder.textContent = (userProfile?.username || 'U').charAt(0).toUpperCase();
+    }
+
+    openModal('usernameModal');
+};
 
 // ========== 头像上传相关 ==========
 let cropper = null;
@@ -320,8 +316,8 @@ function attachLongPressToAvatar() {
 function onAvatarLongPressStart(e) {
     e.preventDefault();
     longPressTimer = setTimeout(() => {
-        // 长按触发操作菜单
-        openAvatarActionModal();
+        // ★ 长按头像 → 打开个人设置面板
+        window.openUsernameModal();
         longPressTimer = null;
     }, CONFIG.LONG_PRESS_DELAY);
 }
@@ -534,6 +530,23 @@ function bindEvents() {
     document.getElementById('openTitlesBtn')?.addEventListener('click', renderTitlesModal);
     document.getElementById('openHelpBtn')?.addEventListener('click', () => openModal('helpModal'));
 
+    // ===== ★★★ 个人设置面板内的头像操作 ★★★ =====
+    document.getElementById('settingsViewAvatarBtn')?.addEventListener('click', function() {
+        const avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
+        if (avatarUrl) {
+            window.open(avatarUrl, '_blank');
+        } else {
+            showNotification('您还没有设置头像哦', 'info');
+        }
+    });
+
+    document.getElementById('settingsChangeAvatarBtn')?.addEventListener('click', function() {
+        closeModal('usernameModal');
+        setTimeout(() => {
+            window.openAvatarUpload();
+        }, 300);
+    });
+
     // 统一关闭模态框
     document.querySelectorAll('.close-modal-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -556,17 +569,8 @@ function bindEvents() {
         if (btn) btn.style.display = window.scrollY > 300 ? 'flex' : 'none';
     });
 
-    // ===== ★★★ 长按头像（触发操作菜单） ★★★ =====
+    // ===== ★★★ 长按头像触发个人设置面板 ★★★ =====
     attachLongPressToAvatar();
-
-    // ===== ★★★ 铅笔按钮 → 操作菜单 ★★★ =====
-    document.getElementById('avatarEditBtn')?.addEventListener('click', function(e) {
-        e.stopPropagation();
-        openAvatarActionModal();
-    });
-
-    // ===== ★★★ 操作菜单的“查看/更换”按钮 ★★★ =====
-    bindAvatarActionButtons();
 }
 
 // ========== 启动 ==========
