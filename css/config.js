@@ -8,45 +8,42 @@ export const CONFIG = {
     LONG_PRESS_DELAY: 500,
     CACHE_TTL: 3600000,
     
-    // 角色映射
     ROLE_MAP: {
         owner: { name: '站长', color: '#f97316' },
         admin: { name: '管理员', color: '#60a5fa' },
         user: { name: '普通用户', color: '#9ca3af' }
     },
     
-    // 头像框列表
-FRAMES: [
-    { 
-        id: 'nature', 
-        name: '默认', 
-        description: '默认静态头像框', 
-        price_candy: 0, 
-        price_rainbow: 0, 
-        imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_putong.webp',
-        scale: 1.0  //默认框保持原大，无需缩放
-    },
-    { 
-        id: 'frame_huanbao', 
-        name: '环保光环', 
-        description: '绿色环保主题静态头像框；来源于网络', 
-        price_candy: 1, 
-        price_rainbow: 0, 
-        imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_huanbao.webp',
-        scale: 1.18 // 环保光环放大18%
-    },
-    { 
-        id: 'frame_fox', 
-        name: '悠闲小狐狸', 
-        description: '悠闲自在的小狐狸动态头像框；来源于网络', 
-        price_candy: 1, 
-        price_rainbow: 0, 
-        imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_fox.webp',
-        scale: 1.32 // 小狐狸放大32%
-    }
-],
+    FRAMES: [
+        { 
+            id: 'nature', 
+            name: '默认', 
+            description: '默认静态头像框', 
+            price_candy: 0, 
+            price_rainbow: 0, 
+            imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_putong.webp',
+            scale: 1.0
+        },
+        { 
+            id: 'frame_huanbao', 
+            name: '环保光环', 
+            description: '绿色环保主题静态头像框；来源于网络', 
+            price_candy: 1, 
+            price_rainbow: 0, 
+            imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_huanbao.webp',
+            scale: 1.18
+        },
+        { 
+            id: 'frame_fox', 
+            name: '悠闲小狐狸', 
+            description: '悠闲自在的小狐狸动态头像框；来源于网络', 
+            price_candy: 1, 
+            price_rainbow: 0, 
+            imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_fox.webp',
+            scale: 1.32
+        }
+    ],
     
-    // 背包物品列表（货币 + 道具）
     BACKPACK_ITEMS: [
         { id: 'candy', name: '🍬 糖果碎', desc: '基础货币，可用于购买头像框、自动签到卡等道具。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp', isImg: true, type: 'currency' },
         { id: 'rainbow', name: '🌈 超级棒糖', desc: '中级稀有货币，可用于兑换高级物品。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp', isImg: true, type: 'currency' },
@@ -54,11 +51,9 @@ FRAMES: [
         { id: 'autocard', name: '📅 自动签到卡', desc: '永久有效，每天上午8点自动签到（北京时间）。', icon: 'fa-calendar-check', isImg: false, type: 'card' }
     ],
     
-    // 签到后备硬编码奖励（数据库为空时使用）
     FALLBACK_CHECKIN_REWARD: { candy: 8000, rainbow: 150, active: 20 }
 };
 
-// 工具：根据角色ID获取显示配置
 export function getRoleDisplay(role) {
     return CONFIG.ROLE_MAP[role] || CONFIG.ROLE_MAP.user;
 }
