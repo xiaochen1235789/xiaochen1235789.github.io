@@ -10,20 +10,18 @@ import {
     loadAllTitles, loadUserOwnedTitles, grantTitle,
     loadUserFrames, updateUserProfile, updateUserStats
 } from './api.js';
-import { getSupabase } from './api.js';  // ★ 新增
+import { getSupabase } from './api.js';
 import {
     getFrameById, purchaseFrame, equipFrame, applyFrameClassByFrameId,
     initFrameForUser
 } from './frame-system.js';
 
-// ========== 状态引用 ==========
 let state = {};
 
 export function setAppState(appState) {
     state = appState;
 }
 
-// ========== 辅助更新函数 ==========
 export function updateActivePointsDisplay() {
     const span = document.getElementById('activePointsValue');
     if (span) span.innerText = (state.userStats?.active_points || 0).toLocaleString();
@@ -50,25 +48,28 @@ export function updateCheckinButtonState() {
 export function updateAvatarDisplay(imageUrl) {
     const avatarDiv = document.getElementById('userAvatar');
     if (!avatarDiv) return;
+
+    const oldFrame = document.getElementById('avatarFrameImg');
+    if (oldFrame) oldFrame.remove();
+
     try {
-        const oldClasses = avatarDiv.className.split(' ').filter(c => c !== 'avatar' && !c.startsWith('frame-'));
-        avatarDiv.className = oldClasses.join(' ');
         let initial = 'U';
         if (state.userProfile?.username) initial = state.userProfile.username.charAt(0).toUpperCase();
         else if (state.currentUser?.email) initial = state.currentUser.email.charAt(0).toUpperCase();
+
         if (imageUrl) {
             avatarDiv.innerHTML = `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="window.handleAvatarLoadError(this)">`;
         } else {
             avatarDiv.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
         }
+
         const frameImg = document.createElement('img');
         frameImg.className = 'avatar-frame-img';
         frameImg.id = 'avatarFrameImg';
-        frameImg.src = '';
-        frameImg.alt = '头像框';
-        frameImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:contain;pointer-events:none;z-index:2;';
+        frameImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:contain;pointer-events:none;z-index:2;background:transparent!important;border:none!important;box-shadow:none!important;display:none;';
         avatarDiv.appendChild(frameImg);
         avatarDiv.classList.add('avatar');
+
         if (state.currentUser) {
             loadUserFrames(state.currentUser.id).then(({ equipped }) => {
                 applyFrameClassByFrameId(equipped);
@@ -88,7 +89,6 @@ window.handleAvatarLoadError = function(imgElement) {
     parent.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
 };
 
-// ========== 渲染个人主页 ==========
 export async function renderProfile() {
     try {
         const container = document.getElementById('profileContent');
@@ -119,13 +119,6 @@ export async function renderProfile() {
             if (avatarDiv) {
                 const initial = (state.userProfile?.username || 'U').charAt(0).toUpperCase();
                 avatarDiv.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
-                const frameImg = document.createElement('img');
-                frameImg.className = 'avatar-frame-img';
-                frameImg.id = 'avatarFrameImg';
-                frameImg.src = '';
-                frameImg.alt = '头像框';
-                frameImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:contain;pointer-events:none;z-index:2;';
-                avatarDiv.appendChild(frameImg);
                 avatarDiv.classList.add('avatar');
             }
         }
@@ -166,7 +159,7 @@ export async function renderProfile() {
     }
 }
 
-// ========== 商店渲染 ==========
+// ===== 商店渲染 =====
 export async function renderShop() {
     const container = document.getElementById('shopContentContainer');
     if (!container) return;
@@ -241,7 +234,6 @@ export async function renderShop() {
     });
 }
 
-// ========== 商店：加载头像框列表 ==========
 async function loadFramesList() {
     const container = document.getElementById('framesList');
     if (!container) return;
@@ -301,7 +293,6 @@ async function loadFramesList() {
     });
 }
 
-// ========== 商店：加载自动签到卡 ==========
 async function loadAutoSignCardUI() {
     const container = document.getElementById('autoSignCardItem');
     if (!container) return;
@@ -323,7 +314,6 @@ async function loadAutoSignCardUI() {
         buyBtn.addEventListener('click', async () => {
             if (window.isProcessing) return;
             if (!canBuy) { showNotification(`糖果碎不足，需要 ${CONFIG.AUTO_CARD_PRICE.toLocaleString()}`, 'error'); return; }
-            // ★ 使用 getSupabase()
             const sb = getSupabase();
             const { error: upsertError } = await sb.from('user_auto_sign_card').upsert({ user_id: state.currentUser.id, owned: true }, { onConflict: 'user_id' });
             if (upsertError) { showNotification('购买失败: ' + upsertError.message, 'error'); return; }
@@ -344,7 +334,6 @@ async function loadAutoSignCardUI() {
     }
 }
 
-// ========== 背包渲染 ==========
 export async function renderBackpack() {
     const container = document.getElementById('backpackContent');
     if (!container) return;
@@ -402,7 +391,6 @@ export async function renderBackpack() {
     openModal('backpackModal');
 }
 
-// ========== 背包物品详情弹窗 ==========
 export function openBackpackItemDetail(itemId) {
     const frame = getFrameById(itemId);
     if (frame) {
@@ -429,7 +417,6 @@ export function openBackpackItemDetail(itemId) {
     openModal('backpackItemModal');
 }
 
-// ========== 称号弹窗 ==========
 export async function renderTitlesModal() {
     const container = document.getElementById('titlesListContainer');
     if (!container) return;
@@ -465,9 +452,8 @@ export async function renderTitlesModal() {
     openModal('titlesModal');
 }
 
-// ========== 签到奖励预览 ==========
 export async function openRewardInfoModal() {
-    const sb = getSupabase();  // ★ 使用 getSupabase
+    const sb = getSupabase();
     const { data: configData, error } = await sb.from('checkin_config').select('*').order('day_num', { ascending: true });
     if (error) { showNotification('获取奖励信息失败', 'error'); return; }
     let html = '<div style="max-height:50vh; overflow-y:auto; padding-right:8px;"><table style="width:100%; border-collapse:collapse; font-size:0.9rem;"><thead><tr style="border-bottom:2px solid var(--border-color); color:var(--text-highlight);"><th style="padding:8px 0; text-align:center;">签到天数</th><th style="padding:8px 0; text-align:center;">🍬 糖果</th><th style="padding:8px 0; text-align:center;">🌈 棒糖</th><th style="padding:8px 0; text-align:center;">⚡ 活跃</th></tr></thead><tbody>';
