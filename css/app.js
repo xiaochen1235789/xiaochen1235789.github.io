@@ -254,8 +254,41 @@ async function refreshUserStats() {
 }
 
 // ========== 用户信息编辑函数 ==========
+// ★★★ 新增：更新用户名弹窗中的头像预览 ★★★
+function updateUsernameModalAvatar() {
+    const img = document.getElementById('usernameModalAvatar');
+    const placeholder = document.getElementById('usernameModalPlaceholder');
+    const frameImg = document.getElementById('usernameModalFrameImg');
+    if (!img || !placeholder || !frameImg) return;
+
+    const avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
+    if (avatarUrl) {
+        img.src = avatarUrl;
+        img.style.display = 'block';
+        placeholder.style.display = 'none';
+    } else {
+        img.style.display = 'none';
+        placeholder.style.display = 'flex';
+        const initial = (userProfile?.username || 'U').charAt(0).toUpperCase();
+        placeholder.textContent = initial;
+    }
+
+    const frameId = userProfile?.equipped_frame || 'nature';
+    const frame = CONFIG.FRAMES.find(f => f.id === frameId);
+    if (frame && frame.imageUrl) {
+        frameImg.src = frame.imageUrl;
+        frameImg.style.display = 'block';
+        const scale = frame.scale || 1.0;
+        frameImg.style.transform = `scale(${scale})`;
+    } else {
+        frameImg.src = '';
+        frameImg.style.display = 'none';
+    }
+}
+
 window.openUsernameModal = function() {
     document.getElementById('newUsername').value = userProfile?.username || '';
+    updateUsernameModalAvatar();   // 打开时刷新预览
     openModal('usernameModal');
 };
 window.openBioModal = function() {
@@ -363,7 +396,7 @@ async function uploadCroppedImage(blob) {
         userProfile.avatar_url = publicUrl;
         localStorage.setItem('userAvatar', publicUrl);
         updateAvatarDisplay(publicUrl);
-        updateAppState();
+        updateUsernameModalAvatar();   // ★ 同步更新弹窗预览
         updateNavbar();
         showNotification('头像已更新', 'success');
         return true;
@@ -392,6 +425,8 @@ async function updateUsername() {
         const usernameSpan = document.getElementById('displayUsername');
         if (usernameSpan) usernameSpan.innerHTML = `${newName} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
         updateNavbar();
+        // 更新弹窗中的占位符（如果弹窗开着，预览也会更新）
+        updateUsernameModalAvatar();
         closeModal('usernameModal');
         showNotification('用户名已更新', 'success');
     } catch (err) {
@@ -510,6 +545,13 @@ function bindEvents() {
     document.getElementById('openTitlesBtn')?.addEventListener('click', renderTitlesModal);
     document.getElementById('openHelpBtn')?.addEventListener('click', () => openModal('helpModal'));
 
+    // ★★★ 新增：绑定用户名弹窗中的“更换头像”按钮 ★★★
+    document.getElementById('changeAvatarFromUsernameBtn')?.addEventListener('click', function() {
+        // 先关闭当前弹窗，再弹出头像确认框（与主页面行为一致）
+        closeModal('usernameModal');
+        openModal('avatarConfirmModal');
+    });
+
     document.querySelectorAll('.close-modal-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const mid = btn.getAttribute('data-modal');
@@ -531,7 +573,7 @@ function bindEvents() {
 
     attachLongPressToAvatar();
 
-    // ★★★ 新增：长按头像弹窗的“取消/确定”按钮绑定 ★★★
+    // 已有：长按头像弹窗的“取消/确定”按钮绑定
     document.getElementById('cancelAvatarBtn')?.addEventListener('click', function() {
         closeModal('avatarConfirmModal');
     });
