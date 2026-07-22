@@ -73,7 +73,6 @@ export async function getCheckinConfig(dayNum) {
     const sb = getSupabase();
     const { data, error } = await sb.from('checkin_config').select('candy, rainbow, active').eq('day_num', dayNum).maybeSingle();
     if (data) return data;
-    // 如果没找到，尝试获取 9999 保底
     const { data: fallback } = await sb.from('checkin_config').select('candy, rainbow, active').eq('day_num', 9999).single();
     return fallback || CONFIG.FALLBACK_CHECKIN_REWARD;
 }
