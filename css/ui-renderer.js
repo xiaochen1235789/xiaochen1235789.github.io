@@ -96,7 +96,8 @@ export async function renderProfile() {
         const uname = state.userProfile?.username || '未知用户';
         const usernameSpan = document.getElementById('displayUsername');
         if (usernameSpan) {
-            usernameSpan.innerHTML = `${uname} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
+            // ★★★ 只显示用户名，不带括号身份 ★★★
+            usernameSpan.innerHTML = `${uname}`;
         }
 
         safeSetText('userEmail', state.currentUser?.email || '未登录');
@@ -127,6 +128,7 @@ export async function renderProfile() {
             }
         }
 
+        // 独立身份行保留
         const roleRow = document.getElementById('userRoleDisplay');
         if (roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
 
@@ -427,7 +429,7 @@ export async function renderTitlesModal() {
     const ownedIds = await loadUserOwnedTitles(state.currentUser.id);
     let html = '';
     for (let title of allTitles) {
-        // ★★★ 过滤特殊称号：只有拥有才可见（使用新 ID） ★★★
+        // 过滤特殊称号：只有拥有才可见
         const isSpecial = (title.id === 10001 || title.id === 10002);
         if (isSpecial && !ownedIds.includes(title.id)) {
             continue;
@@ -440,6 +442,10 @@ export async function renderTitlesModal() {
             if (title.name.includes('创世神')) nameColor = '#f39c12';
             else if (title.name.includes('管理神')) nameColor = '#60a5fa';
             extraIcon = '✨ ';
+        }
+        // ★★★ 特殊称号粉色 ★★★
+        if (isSpecial) {
+            nameColor = '#FF69B4';
         }
         let conditionText = [];
         if (title.required_active_points > 0) conditionText.push(`活跃度≥${title.required_active_points.toLocaleString()}`);
