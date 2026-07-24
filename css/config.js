@@ -9,9 +9,9 @@ export const CONFIG = {
     CACHE_TTL: 3600000,
     
     ROLE_MAP: {
-        owner: { name: '站长', color: '#f97316' },
-        admin: { name: '管理员', color: '#60a5fa' },
-        user: { name: '普通用户', color: '#9ca3af' }
+        owner: { name: '主人', color: '#f97316' },
+        admin: { name: '管理员大人', color: '#60a5fa' },
+        user: { name: '用户', color: '#9ca3af' }
     },
     
     FRAMES: [
@@ -27,19 +27,37 @@ export const CONFIG = {
         { 
             id: 'frame_huanbao', 
             name: '环保光环', 
-            description: '绿色环保主题静态头像框；来源于网络', 
+            description: '绿色环保主题静态头像框；素材来源于网络', 
             price_candy: 1, 
             price_rainbow: 0, 
             imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_huanbao.webp',
-            scale: 1.18
+            scale: 1.12
         },
         { 
             id: 'frame_fox', 
             name: '悠闲小狐狸', 
-            description: '悠闲自在的小狐狸动态头像框；来源于网络', 
+            description: '悠闲自在的小狐狸动态头像框；素材来源于网络', 
             price_candy: 1, 
             price_rainbow: 0, 
             imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_fox.webp',
+            scale: 1.12
+        },
+        { 
+            id: 'frame_soak', 
+            name: '冰蓝泡泡', 
+            description: '泡泡包裹的静态头像框；素材来源于网络', 
+            price_candy: 1, 
+            price_rainbow: 0, 
+            imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_soak.webp',
+            scale: 1.12
+        },
+        { 
+            id: 'frame_grass', 
+            name: '幸运四叶草', 
+            description: '象征好运的四叶草静态头像框；素材来源于网络', 
+            price_candy: 1, 
+            price_rainbow: 0, 
+            imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_grass.webp',
             scale: 1.12
         }
     ],
