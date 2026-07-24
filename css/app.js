@@ -56,8 +56,9 @@ function updateNavbar() {
     const avatarHtml = avatarUrl ?
         `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;">` :
         `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${username.charAt(0).toUpperCase()}</div>`;
+    // ★★★ 删除括号身份，只显示用户名 ★★★
     navDiv.innerHTML =
-        `<div style="display:flex;align-items:center;gap:8px;">${avatarHtml}<span style="color:${roleInfo.color};">${username} (${roleInfo.name})</span><button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:20px;cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
+        `<div style="display:flex;align-items:center;gap:8px;">${avatarHtml}<span style="color:${roleInfo.color};">${username}</span><button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:20px;cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
     document.getElementById('logoutBtn')?.addEventListener('click', () => openModal('logoutConfirmModal'));
 
     const adminLink = document.getElementById('adminLink');
@@ -133,8 +134,15 @@ async function refreshTitles() {
     if (container) {
         if (equippedTitleObj) {
             let color = '#facc15';
-            if (equippedTitleObj.name.includes('创世神')) color = '#f39c12';
-            else if (equippedTitleObj.name.includes('管理神')) color = '#60a5fa';
+            // ★★★ 特殊称号粉色 ★★★
+            if (equippedTitleObj.id === 10001 || equippedTitleObj.id === 10002) {
+                color = '#FF69B4';
+            } else if (equippedTitleObj.name.includes('创世神')) {
+                color = '#f39c12';
+            } else if (equippedTitleObj.name.includes('管理神')) {
+                color = '#60a5fa';
+            }
+            // 保留卸下按钮
             container.innerHTML =
                 `<div class="title-badge" style="border-left: 3px solid ${color};"><i class="fas fa-medal" style="color:${color};"></i> <span id="equippedTitleName" style="color:${color};">${equippedTitleObj.name}</span> <button id="unequipTitleBtn" style="background:none;border:none;color:#aaa;cursor:pointer;margin-left:6px;">[卸下]</button></div>`;
             document.getElementById('unequipTitleBtn')?.addEventListener('click', unequipTitle);
@@ -437,9 +445,9 @@ async function updateUsername() {
         await getSupabase().auth.updateUser({ data: { username: newName } });
         userProfile.username = newName;
         updateAppState();
-        const roleInfo = getRoleDisplay(userProfile.role, currentUser?.id);
+        // ★★★ 只显示用户名，不带括号身份 ★★★
         const usernameSpan = document.getElementById('displayUsername');
-        if (usernameSpan) usernameSpan.innerHTML = `${newName} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
+        if (usernameSpan) usernameSpan.innerHTML = `${newName}`;
         updateNavbar();
         updateUsernameModalAvatar();
         closeModal('usernameModal');
