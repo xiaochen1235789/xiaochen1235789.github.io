@@ -92,7 +92,6 @@ export async function renderProfile() {
         if (!container) throw new Error('页面容器不存在');
         container.classList.remove('readonly-mode');
 
-        // ★★★ 修改：传入 state.currentUser?.id ★★★
         const roleInfo = getRoleDisplay(state.userProfile?.role || 'user', state.currentUser?.id);
         const uname = state.userProfile?.username || '未知用户';
         const usernameSpan = document.getElementById('displayUsername');
@@ -428,6 +427,11 @@ export async function renderTitlesModal() {
     const ownedIds = await loadUserOwnedTitles(state.currentUser.id);
     let html = '';
     for (let title of allTitles) {
+        // ★★★ 过滤特殊称号：只有拥有才可见（使用新 ID） ★★★
+        const isSpecial = (title.id === 10001 || title.id === 10002);
+        if (isSpecial && !ownedIds.includes(title.id)) {
+            continue;
+        }
         const owned = ownedIds.includes(title.id);
         const isEquipped = (state.userProfile?.equipped_title_id === title.id);
         let nameColor = '';
