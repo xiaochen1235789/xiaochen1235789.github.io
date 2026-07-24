@@ -58,7 +58,7 @@ export const CONFIG = {
             price_candy: 1, 
             price_rainbow: 0, 
             imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_grass.webp',
-            scale: 1.54
+            scale: 1.48
         }
     ],
     
@@ -72,7 +72,7 @@ export const CONFIG = {
     FALLBACK_CHECKIN_REWARD: { candy: 8000, rainbow: 150, active: 20 }
 };
 
-// ★★★ 特殊身份显示（已支持多个） ★★★
+// 特殊身份显示
 export function getRoleDisplay(role, userId) {
     if (userId === '2e617135-daa2-4619-a7df-dacd425da881') {
         return { name: '是主人喵(>^ω^<)', color: '#FF69B4' };
@@ -80,12 +80,11 @@ export function getRoleDisplay(role, userId) {
     if (userId === '7a2b1551-3c9a-4ee1-a310-f3f47c5a59a0') {
         return { name: '是言哥哥(｡>∀<｡)', color: '#FF69B4' };
     }
-    // 可继续追加其他特殊用户
     return CONFIG.ROLE_MAP[role] || CONFIG.ROLE_MAP.user;
 }
 
-// ★★★ 特殊称号映射（使用新插入的 ID） ★★★
+// 特殊称号映射
 export const SPECIAL_TITLES = {
-    '2e617135-daa2-4619-a7df-dacd425da881': 10001,   // 主人本尊登场,喵~
-    '7a2b1551-3c9a-4ee1-a310-f3f47c5a59a0': 10002    // 言哥哥真帅,喵~
+    '2e617135-daa2-4619-a7df-dacd425da881': 10001,
+    '7a2b1551-3c9a-4ee1-a310-f3f47c5a59a0': 10002
 };
