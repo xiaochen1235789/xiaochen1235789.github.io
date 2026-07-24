@@ -48,28 +48,25 @@ export function updateCheckinButtonState() {
 export function updateAvatarDisplay(imageUrl) {
     const avatarDiv = document.getElementById('userAvatar');
     if (!avatarDiv) return;
-
-    const oldFrame = document.getElementById('avatarFrameImg');
-    if (oldFrame) oldFrame.remove();
-
     try {
+        const oldClasses = avatarDiv.className.split(' ').filter(c => c !== 'avatar' && !c.startsWith('frame-'));
+        avatarDiv.className = oldClasses.join(' ');
         let initial = 'U';
         if (state.userProfile?.username) initial = state.userProfile.username.charAt(0).toUpperCase();
         else if (state.currentUser?.email) initial = state.currentUser.email.charAt(0).toUpperCase();
-
         if (imageUrl) {
             avatarDiv.innerHTML = `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="window.handleAvatarLoadError(this)">`;
         } else {
             avatarDiv.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
         }
-
         const frameImg = document.createElement('img');
         frameImg.className = 'avatar-frame-img';
         frameImg.id = 'avatarFrameImg';
-        frameImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:contain;pointer-events:none;z-index:2;background:transparent!important;border:none!important;box-shadow:none!important;display:none;';
+        frameImg.src = '';
+        frameImg.alt = '头像框';
+        frameImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:contain;pointer-events:none;z-index:2;';
         avatarDiv.appendChild(frameImg);
         avatarDiv.classList.add('avatar');
-
         if (state.currentUser) {
             loadUserFrames(state.currentUser.id).then(({ equipped }) => {
                 applyFrameClassByFrameId(equipped);
@@ -95,7 +92,8 @@ export async function renderProfile() {
         if (!container) throw new Error('页面容器不存在');
         container.classList.remove('readonly-mode');
 
-        const roleInfo = getRoleDisplay(state.userProfile?.role || 'user');
+        // ★★★ 修改：传入 state.currentUser?.id ★★★
+        const roleInfo = getRoleDisplay(state.userProfile?.role || 'user', state.currentUser?.id);
         const uname = state.userProfile?.username || '未知用户';
         const usernameSpan = document.getElementById('displayUsername');
         if (usernameSpan) {
@@ -119,6 +117,13 @@ export async function renderProfile() {
             if (avatarDiv) {
                 const initial = (state.userProfile?.username || 'U').charAt(0).toUpperCase();
                 avatarDiv.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
+                const frameImg = document.createElement('img');
+                frameImg.className = 'avatar-frame-img';
+                frameImg.id = 'avatarFrameImg';
+                frameImg.src = '';
+                frameImg.alt = '头像框';
+                frameImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:contain;pointer-events:none;z-index:2;';
+                avatarDiv.appendChild(frameImg);
                 avatarDiv.classList.add('avatar');
             }
         }
@@ -159,7 +164,6 @@ export async function renderProfile() {
     }
 }
 
-// ===== 商店渲染 =====
 export async function renderShop() {
     const container = document.getElementById('shopContentContainer');
     if (!container) return;
