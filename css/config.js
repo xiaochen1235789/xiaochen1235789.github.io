@@ -49,7 +49,7 @@ export const CONFIG = {
             price_candy: 1, 
             price_rainbow: 0, 
             imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_soak.webp',
-            scale: 1.12
+            scale: 1.24
         },
         { 
             id: 'frame_grass', 
@@ -58,7 +58,7 @@ export const CONFIG = {
             price_candy: 1, 
             price_rainbow: 0, 
             imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_grass.webp',
-            scale: 1.12
+            scale: 1.48
         }
     ],
     
