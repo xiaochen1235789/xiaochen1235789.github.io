@@ -1,5 +1,5 @@
 // ========== 主入口 ==========
-import { CONFIG, getRoleDisplay } from './config.js';
+import { CONFIG, getRoleDisplay, SPECIAL_TITLES } from './config.js';
 import {
     showNotification, openModal, closeModal,
     getLocalDateString, getCachedProfile,
@@ -51,7 +51,6 @@ function updateNavbar() {
     if (!navDiv) return;
     if (!currentUser) { navDiv.innerHTML = '<a href="login-real.html">登录</a>'; return; }
     const username = userProfile?.username || currentUser?.email?.split('@')[0] || '用户';
-    // ★★★ 修改：传入 currentUser.id ★★★
     const roleInfo = getRoleDisplay(userProfile?.role, currentUser?.id);
     const avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
     const avatarHtml = avatarUrl ?
@@ -92,6 +91,7 @@ async function refreshTitles() {
     }
     if (toGrant.length > 0) showNotification('✨ 获得管理员限定称号', 'success');
 
+    // 普通称号授予
     let newGranted = [];
     for (let title of allTitles) {
         if (title.is_limited) continue;
@@ -109,6 +109,22 @@ async function refreshTitles() {
     }
     if (newGranted.length > 0) showNotification(`🎉 获得新称号：${newGranted.join(', ')}`, 'success');
 
+    // ★★★ 授予特殊称号（使用映射） ★★★
+    const specialTitleId = SPECIAL_TITLES[currentUser.id];
+    if (specialTitleId) {
+        const specialTitle = allTitles.find(t => t.id === specialTitleId);
+        if (specialTitle && !ownedIds.includes(specialTitleId)) {
+            await grantTitle(currentUser.id, specialTitleId);
+            ownedIds.push(specialTitleId);
+            showNotification(`🎉 获得专属称号：${specialTitle.name}`, 'success');
+        }
+        // 自动装备特殊称号（如果尚未装备任何称号）
+        if (specialTitle && !userProfile?.equipped_title_id) {
+            await equipTitle(specialTitleId);
+        }
+    }
+
+    // 显示已装备称号
     let equippedTitleObj = null;
     if (userProfile?.equipped_title_id) {
         equippedTitleObj = allTitles.find(t => t.id === userProfile.equipped_title_id);
@@ -421,7 +437,6 @@ async function updateUsername() {
         await getSupabase().auth.updateUser({ data: { username: newName } });
         userProfile.username = newName;
         updateAppState();
-        // ★★★ 修改：传入 userId ★★★
         const roleInfo = getRoleDisplay(userProfile.role, currentUser?.id);
         const usernameSpan = document.getElementById('displayUsername');
         if (usernameSpan) usernameSpan.innerHTML = `${newName} <span style="font-size:0.8rem;color:${roleInfo.color};">(${roleInfo.name})</span>`;
