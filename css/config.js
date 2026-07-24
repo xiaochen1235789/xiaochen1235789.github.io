@@ -9,8 +9,8 @@ export const CONFIG = {
     CACHE_TTL: 3600000,
     
     ROLE_MAP: {
-        owner: { name: '主人', color: '#f97316' },
-        admin: { name: '管理员大人', color: '#60a5fa' },
+        owner: { name: '站长', color: '#f97316' },
+        admin: { name: '管理员', color: '#60a5fa' },
         user: { name: '用户', color: '#9ca3af' }
     },
     
@@ -58,7 +58,7 @@ export const CONFIG = {
             price_candy: 1, 
             price_rainbow: 0, 
             imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_grass.webp',
-            scale: 1.60
+            scale: 1.48
         }
     ],
     
@@ -72,6 +72,14 @@ export const CONFIG = {
     FALLBACK_CHECKIN_REWARD: { candy: 8000, rainbow: 150, active: 20 }
 };
 
-export function getRoleDisplay(role) {
+// ★★★ 修改点：增加 userId 参数，支持多个特殊用户 ★★★
+export function getRoleDisplay(role, userId) {
+    // 特殊用户覆盖身份
+    if (userId === '2e617135-daa2-4619-a7df-dacd425da881') {
+        return { name: '是主人喵(>^ω^<)', color: '#FF69B4' };
+    }
+    if (userId === '7a2b1551-3c9a-4ee1-a310-f3f47c5a59a0') {
+        return { name: '是言哥哥(｡>∀<｡)', color: '#FF69B4' };
+    }
     return CONFIG.ROLE_MAP[role] || CONFIG.ROLE_MAP.user;
 }
