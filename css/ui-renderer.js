@@ -96,7 +96,6 @@ export async function renderProfile() {
         const uname = state.userProfile?.username || '未知用户';
         const usernameSpan = document.getElementById('displayUsername');
         if (usernameSpan) {
-            // ★★★ 只显示用户名，不带括号身份 ★★★
             usernameSpan.innerHTML = `${uname}`;
         }
 
@@ -128,7 +127,6 @@ export async function renderProfile() {
             }
         }
 
-        // 独立身份行保留
         const roleRow = document.getElementById('userRoleDisplay');
         if (roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
 
@@ -282,6 +280,7 @@ async function loadFramesList() {
         });
     });
 
+    // ★★★ 装备按钮 - 已整合内存同步补丁 ★★★
     container.querySelectorAll('.btn-equip').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             if (window.isProcessing) return;
@@ -289,10 +288,24 @@ async function loadFramesList() {
             try {
                 await equipFrame(frameId);
                 showNotification('✅ 已装备头像框', 'success');
-                loadFramesList();
-                await applyFrameClassByFrameId(frameId);
-                // ★★★ 刷新导航栏头像框 ★★★
+
+                // ★★★ 修补：手动同步内存状态 ★★★
+                // 1. 更新 ui-renderer 内部的 state
+                if (state.userProfile) {
+                    state.userProfile.equipped_frame = frameId;
+                }
+                // 2. 更新全局的 userProfile（供 updateNavbar 读取）
+                if (window.userProfile) {
+                    window.userProfile.equipped_frame = frameId;
+                }
+                // ★★★ 修补结束 ★★★
+
+                loadFramesList(); // 刷新商店列表
+                await applyFrameClassByFrameId(frameId); // 刷新主页面头像框
+
+                // 最后刷新导航栏（此时读取的已经是最新的 frameId）
                 window.updateNavbar?.();
+
             } catch (err) {
                 showNotification(err.message, 'error');
             }
@@ -431,7 +444,6 @@ export async function renderTitlesModal() {
     const ownedIds = await loadUserOwnedTitles(state.currentUser.id);
     let html = '';
     for (let title of allTitles) {
-        // 过滤特殊称号：只有拥有才可见
         const isSpecial = (title.id === 10001 || title.id === 10002);
         if (isSpecial && !ownedIds.includes(title.id)) {
             continue;
@@ -445,7 +457,6 @@ export async function renderTitlesModal() {
             else if (title.name.includes('管理神')) nameColor = '#60a5fa';
             extraIcon = '✨ ';
         }
-        // ★★★ 特殊称号粉色 ★★★
         if (isSpecial) {
             nameColor = '#FF69B4';
         }
