@@ -45,7 +45,7 @@ function updateAppState() {
     setCachedProfile({ ...userProfile, ...userStats });
 }
 
-// ========== 导航栏（已支持头像框缩放） ==========
+// ========== 导航栏（已修复：头像框完美覆盖 + 固定白色用户名） ==========
 function updateNavbar() {
     const navDiv = document.getElementById('userNavSection');
     if (!navDiv) return;
@@ -56,25 +56,23 @@ function updateNavbar() {
     const equippedFrameId = userProfile?.equipped_frame || 'nature';
     const frame = CONFIG.FRAMES.find(f => f.id === equippedFrameId);
     const frameImageUrl = frame?.imageUrl || '';
-    const frameScale = frame?.scale || 1.0; // ★★★ 自动读取缩放比例 ★★★
+    const frameScale = frame?.scale || 1.0;
 
-    // 构建头像（含头像框）
-    let avatarHtml = '';
+    // ★★★ 头像容器（与主页完全一致的结构：头像底 + 头像框绝对定位覆盖） ★★★
+    let avatarContent = '';
     if (avatarUrl) {
-        avatarHtml = `
-            <div style="position:relative; width:32px; height:32px; border-radius:50%; overflow:hidden; flex-shrink:0;">
-                <img src="${avatarUrl}" style="width:100%; height:100%; object-fit:cover;">
-                ${frameImageUrl ? `<img src="${frameImageUrl}" style="position:absolute; inset:0; width:100%; height:100%; border-radius:50%; object-fit:contain; pointer-events:none; z-index:2; transform: scale(${frameScale});">` : ''}
-            </div>
-        `;
+        avatarContent = `<img src="${avatarUrl}" style="width:100%; height:100%; object-fit:cover; display:block;">`;
     } else {
         const initial = username.charAt(0).toUpperCase();
-        avatarHtml = `
-            <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#3ecf8e,#8a4baf); display:flex; align-items:center; justify-content:center; color:white; font-weight:600; flex-shrink:0;">
-                ${initial}
-            </div>
-        `;
+        avatarContent = `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#3ecf8e,#8a4baf); color:white; font-weight:600; font-size:14px;">${initial}</div>`;
     }
+
+    const avatarHtml = `
+        <div style="position:relative; width:32px; height:32px; border-radius:50%; overflow:hidden; flex-shrink:0;">
+            ${avatarContent}
+            ${frameImageUrl ? `<img src="${frameImageUrl}" style="position:absolute; inset:0; width:100%; height:100%; border-radius:50%; object-fit:contain; pointer-events:none; z-index:2; display:block; transform: scale(${frameScale});">` : ''}
+        </div>
+    `;
 
     // ★★★ 用户名固定白色 ★★★
     navDiv.innerHTML = `
