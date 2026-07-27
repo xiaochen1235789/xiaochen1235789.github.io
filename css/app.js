@@ -50,17 +50,45 @@ function updateNavbar() {
     const navDiv = document.getElementById('userNavSection');
     if (!navDiv) return;
     if (!currentUser) { navDiv.innerHTML = '<a href="login-real.html">登录</a>'; return; }
+
     const username = userProfile?.username || currentUser?.email?.split('@')[0] || '用户';
-    const roleInfo = getRoleDisplay(userProfile?.role, currentUser?.id);
     const avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
-    const avatarHtml = avatarUrl ?
-        `<img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;">` :
-        `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${username.charAt(0).toUpperCase()}</div>`;
-    // ★★★ 删除括号身份，只显示用户名 ★★★
-    navDiv.innerHTML =
-        `<div style="display:flex;align-items:center;gap:8px;">${avatarHtml}<span style="color:${roleInfo.color};">${username}</span><button id="logoutBtn" style="background:transparent;color:#f87171;border:1px solid rgba(248,113,113,0.3);padding:4px 12px;border-radius:20px;cursor:pointer;"><i class="fas fa-sign-out-alt"></i> 退出</button></div>`;
+    const equippedFrameId = userProfile?.equipped_frame || 'nature';
+    const frame = CONFIG.FRAMES.find(f => f.id === equippedFrameId);
+    const frameImageUrl = frame?.imageUrl || '';
+
+    // 构建头像（含头像框）
+    let avatarHtml = '';
+    if (avatarUrl) {
+        avatarHtml = `
+            <div style="position:relative; width:32px; height:32px; border-radius:50%; overflow:hidden; flex-shrink:0;">
+                <img src="${avatarUrl}" style="width:100%; height:100%; object-fit:cover;">
+                ${frameImageUrl ? `<img src="${frameImageUrl}" style="position:absolute; inset:0; width:100%; height:100%; border-radius:50%; object-fit:contain; pointer-events:none; z-index:2;">` : ''}
+            </div>
+        `;
+    } else {
+        const initial = username.charAt(0).toUpperCase();
+        avatarHtml = `
+            <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#3ecf8e,#8a4baf); display:flex; align-items:center; justify-content:center; color:white; font-weight:600; flex-shrink:0;">
+                ${initial}
+            </div>
+        `;
+    }
+
+    // ★★★ 用户名固定白色 ★★★
+    navDiv.innerHTML = `
+        <div style="display:flex; align-items:center; gap:8px;">
+            ${avatarHtml}
+            <span style="color: #ffffff; font-weight:500;">${escapeHtml(username)}</span>
+            <button id="logoutBtn" style="background:transparent; color:#f87171; border:1px solid rgba(248,113,113,0.3); padding:4px 12px; border-radius:20px; cursor:pointer;">
+                <i class="fas fa-sign-out-alt"></i> 退出
+            </button>
+        </div>
+    `;
+
     document.getElementById('logoutBtn')?.addEventListener('click', () => openModal('logoutConfirmModal'));
 
+    // 管理后台链接
     const adminLink = document.getElementById('adminLink');
     if (adminLink && currentUser && (userProfile?.role === 'owner' || userProfile?.role === 'admin')) {
         adminLink.style.display = 'inline-block';
@@ -68,6 +96,7 @@ function updateNavbar() {
         adminLink.style.display = 'none';
     }
 }
+window.updateNavbar = updateNavbar; // 暴露给其他模块
 
 // ========== 称号刷新 ==========
 async function refreshTitles() {
@@ -601,6 +630,10 @@ function bindEvents() {
         closeModal('avatarConfirmModal');
         openAvatarUpload();
     });
+
+    // ★★★ 新增：退出登录确认按钮 ★★★
+    document.getElementById('confirmLogoutBtn')?.addEventListener('click', performLogout);
+    document.getElementById('cancelLogoutBtn')?.addEventListener('click', () => closeModal('logoutConfirmModal'));
 }
 
 // ========== 启动 ==========
