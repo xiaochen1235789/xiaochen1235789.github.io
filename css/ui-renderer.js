@@ -291,6 +291,8 @@ async function loadFramesList() {
                 showNotification('✅ 已装备头像框', 'success');
                 loadFramesList();
                 await applyFrameClassByFrameId(frameId);
+                // ★★★ 刷新导航栏头像框 ★★★
+                window.updateNavbar?.();
             } catch (err) {
                 showNotification(err.message, 'error');
             }
