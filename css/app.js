@@ -45,7 +45,7 @@ function updateAppState() {
     setCachedProfile({ ...userProfile, ...userStats });
 }
 
-// ========== 导航栏 ==========
+// ========== 导航栏（已支持头像框缩放） ==========
 function updateNavbar() {
     const navDiv = document.getElementById('userNavSection');
     if (!navDiv) return;
@@ -56,6 +56,7 @@ function updateNavbar() {
     const equippedFrameId = userProfile?.equipped_frame || 'nature';
     const frame = CONFIG.FRAMES.find(f => f.id === equippedFrameId);
     const frameImageUrl = frame?.imageUrl || '';
+    const frameScale = frame?.scale || 1.0; // ★★★ 自动读取缩放比例 ★★★
 
     // 构建头像（含头像框）
     let avatarHtml = '';
@@ -63,7 +64,7 @@ function updateNavbar() {
         avatarHtml = `
             <div style="position:relative; width:32px; height:32px; border-radius:50%; overflow:hidden; flex-shrink:0;">
                 <img src="${avatarUrl}" style="width:100%; height:100%; object-fit:cover;">
-                ${frameImageUrl ? `<img src="${frameImageUrl}" style="position:absolute; inset:0; width:100%; height:100%; border-radius:50%; object-fit:contain; pointer-events:none; z-index:2;">` : ''}
+                ${frameImageUrl ? `<img src="${frameImageUrl}" style="position:absolute; inset:0; width:100%; height:100%; border-radius:50%; object-fit:contain; pointer-events:none; z-index:2; transform: scale(${frameScale});">` : ''}
             </div>
         `;
     } else {
@@ -148,7 +149,6 @@ async function refreshTitles() {
             ownedIds.push(specialTitleId);
             showNotification(`🎉 获得专属称号：${specialTitle.name}`, 'success');
         }
-        // 自动装备特殊称号（如果尚未装备任何称号）
         if (specialTitle && !userProfile?.equipped_title_id) {
             await equipTitle(specialTitleId);
         }
@@ -163,7 +163,6 @@ async function refreshTitles() {
     if (container) {
         if (equippedTitleObj) {
             let color = '#facc15';
-            // ★★★ 特殊称号粉色 ★★★
             if (equippedTitleObj.id === 10001 || equippedTitleObj.id === 10002) {
                 color = '#FF69B4';
             } else if (equippedTitleObj.name.includes('创世神')) {
@@ -171,7 +170,6 @@ async function refreshTitles() {
             } else if (equippedTitleObj.name.includes('管理神')) {
                 color = '#60a5fa';
             }
-            // 保留卸下按钮
             container.innerHTML =
                 `<div class="title-badge" style="border-left: 3px solid ${color};"><i class="fas fa-medal" style="color:${color};"></i> <span id="equippedTitleName" style="color:${color};">${equippedTitleObj.name}</span> <button id="unequipTitleBtn" style="background:none;border:none;color:#aaa;cursor:pointer;margin-left:6px;">[卸下]</button></div>`;
             document.getElementById('unequipTitleBtn')?.addEventListener('click', unequipTitle);
@@ -474,7 +472,6 @@ async function updateUsername() {
         await getSupabase().auth.updateUser({ data: { username: newName } });
         userProfile.username = newName;
         updateAppState();
-        // ★★★ 只显示用户名，不带括号身份 ★★★
         const usernameSpan = document.getElementById('displayUsername');
         if (usernameSpan) usernameSpan.innerHTML = `${newName}`;
         updateNavbar();
@@ -631,7 +628,7 @@ function bindEvents() {
         openAvatarUpload();
     });
 
-    // ★★★ 新增：退出登录确认按钮 ★★★
+    // ★★★ 退出登录确认按钮 ★★★
     document.getElementById('confirmLogoutBtn')?.addEventListener('click', performLogout);
     document.getElementById('cancelLogoutBtn')?.addEventListener('click', () => closeModal('logoutConfirmModal'));
 }
