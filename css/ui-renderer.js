@@ -289,21 +289,17 @@ async function loadFramesList() {
                 await equipFrame(frameId);
                 showNotification('✅ 已装备头像框', 'success');
 
-                // ★★★ 修补：手动同步内存状态 ★★★
-                // 1. 更新 ui-renderer 内部的 state
+                // ★★★ 手动同步内存状态 ★★★
                 if (state.userProfile) {
                     state.userProfile.equipped_frame = frameId;
                 }
-                // 2. 更新全局的 userProfile（供 updateNavbar 读取）
                 if (window.userProfile) {
                     window.userProfile.equipped_frame = frameId;
                 }
                 // ★★★ 修补结束 ★★★
 
-                loadFramesList(); // 刷新商店列表
-                await applyFrameClassByFrameId(frameId); // 刷新主页面头像框
-
-                // 最后刷新导航栏（此时读取的已经是最新的 frameId）
+                loadFramesList();
+                await applyFrameClassByFrameId(frameId);
                 window.updateNavbar?.();
 
             } catch (err) {
