@@ -126,7 +126,7 @@ export async function getShopFrames() {
         price_rainbow: item.price_rainbow,
         is_purchasable: item.is_purchasable,
         is_chest_exclusive: item.is_chest_exclusive,
-        scale: 1.12 // 默认缩放，如需可从数据库扩展
+        scale: 1.12
     }));
 }
 
@@ -186,7 +186,7 @@ export async function grantTitle(userId, titleId) {
 }
 
 // =====================================================
-// ★★★ 新增：宝箱系统 API ★★★
+// ★★★ 宝箱系统 API ★★★
 // =====================================================
 
 // ---- 从数据库读取价格和保底次数（安全） ----
@@ -197,7 +197,7 @@ export async function getChestPrice() {
         .eq('key', 'chest_price_candy')
         .maybeSingle();
     if (error || !data) {
-        return CHEST_CONFIG.price_candy; // 回退到 config
+        return CHEST_CONFIG.price_candy;
     }
     return parseInt(data.value) || 100;
 }
@@ -310,7 +310,7 @@ export async function incrementPityCounter(userId) {
     return current + 1;
 }
 
-// ---- 核心：开启单个宝箱（含小狐狸特殊转换 + 保底） ----
+// ---- 核心：开启单个宝箱（备用，但批量用优化版） ----
 export async function openChest(userId, stats, onReward) {
     const sb = getSupabase();
     const probs = await getChestProbabilities();
@@ -320,7 +320,6 @@ export async function openChest(userId, stats, onReward) {
     let selected = null;
     let isGuaranteed = false;
 
-    // 检查是否触发保底
     if (pityCounter >= pityLimit - 1) {
         const limited = probs.filter(p => p.is_limited);
         if (limited.length > 0) {
@@ -331,7 +330,6 @@ export async function openChest(userId, stats, onReward) {
     }
 
     if (!selected) {
-        // 加权随机
         const totalWeight = probs.reduce((s, p) => s + p.weight, 0);
         let rand = Math.random() * totalWeight;
         for (let p of probs) {
@@ -339,7 +337,6 @@ export async function openChest(userId, stats, onReward) {
             if (rand <= 0) { selected = p; break; }
         }
         if (!selected) selected = probs[0];
-        // 更新保底计数
         if (selected.is_limited) {
             await resetPityCounter(userId);
         } else {
@@ -347,12 +344,11 @@ export async function openChest(userId, stats, onReward) {
         }
     }
 
-    // ----- 应用奖励 -----
     const type = selected.reward_type;
     const extra = selected.reward_extra;
     let updates = {};
     let rewardDesc = '';
-    let rewardTypeForSummary = type; // 用于汇总
+    let rewardTypeForSummary = type;
 
     switch (type) {
         case 'candy': {
@@ -381,14 +377,12 @@ export async function openChest(userId, stats, onReward) {
                 .maybeSingle();
             let owned = profile?.owned_frames || ['nature'];
             if (!owned.includes(frameId)) {
-                // 未拥有，正常获得
                 owned.push(frameId);
                 await sb.from('user_profiles').update({ owned_frames: owned }).eq('id', userId);
                 const frame = await getFrameById(frameId);
                 rewardDesc = `🖼️ 获得头像框「${frame?.name || frameId}」`;
                 rewardTypeForSummary = `头像框「${frame?.name || frameId}」`;
             } else {
-                // 已拥有，检查是否是小狐狸（特殊转换）
                 if (frameId === 'frame_fox') {
                     const newSyrup = (stats.dreamy_syrup || 0) + 100;
                     updates.dreamy_syrup = newSyrup;
@@ -426,7 +420,6 @@ export async function openChest(userId, stats, onReward) {
             rewardTypeForSummary = '空';
     }
 
-    // 消耗一个宝箱
     updates.chest_count = (stats.chest_count || 0) - 1;
 
     const { error } = await sb.from('user_stats').update(updates).eq('user_id', userId);
@@ -442,9 +435,42 @@ export async function openChest(userId, stats, onReward) {
     };
 }
 
-// ---- 批量开启 ----
+// ---- ★★★ 批量开启宝箱（优化版：单次事务，极速） ★★★ ----
+// 辅助函数：纯内存计算单次开箱结果
+function calculateChestReward(probs, pityLimit, currentPity) {
+    let selected = null;
+    let isGuaranteed = false;
+    const totalWeight = probs.reduce((s, p) => s + p.weight, 0);
+
+    if (currentPity >= pityLimit - 1) {
+        const limited = probs.filter(p => p.is_limited);
+        if (limited.length > 0) {
+            selected = limited[Math.floor(Math.random() * limited.length)];
+            isGuaranteed = true;
+            return { selected, isGuaranteed, newPity: 0 };
+        }
+    }
+
+    let rand = Math.random() * totalWeight;
+    for (let p of probs) {
+        rand -= p.weight;
+        if (rand <= 0) { selected = p; break; }
+    }
+    if (!selected) selected = probs[0];
+    const newPity = selected.is_limited ? 0 : currentPity + 1;
+    return { selected, isGuaranteed, newPity };
+}
+
 export async function batchOpenChests(userId, amount) {
     const sb = getSupabase();
+
+    // 1. 预获取静态配置
+    const [probs, pityLimit] = await Promise.all([
+        getChestProbabilities(),
+        getPityLimit()
+    ]);
+
+    // 2. 获取当前用户数据
     const { data: stats, error } = await sb.from('user_stats')
         .select('*')
         .eq('user_id', userId)
@@ -452,22 +478,136 @@ export async function batchOpenChests(userId, amount) {
     if (error) throw error;
     if (!stats || stats.chest_count < amount) throw new Error('宝箱数量不足');
 
-    let currentStats = { ...stats };
+    // 3. 准备数据容器
+    let pityCounter = stats.chest_pity_counter || 0;
     const results = [];
+    const updates = {
+        candy_crumbles: stats.candy_crumbles || 0,
+        rainbow_lollipops: stats.rainbow_lollipops || 0,
+        active_points: stats.active_points || 0,
+        dreamy_syrup: stats.dreamy_syrup || 0,
+        chest_count: stats.chest_count || 0,
+        chest_pity_counter: pityCounter
+    };
 
+    // 收集待处理的框架和称号
+    const frameRequests = [];
+    const titleRequests = [];
+
+    // 4. 循环开箱（纯内存计算）
     for (let i = 0; i < amount; i++) {
-        const result = await openChest(userId, currentStats, null);
-        currentStats = result.newStats;
-        results.push({
-            type: result.summary || result.rewardDesc,
-            isGuaranteed: result.isGuaranteed
-        });
+        const { selected, isGuaranteed, newPity } = calculateChestReward(probs, pityLimit, pityCounter);
+        pityCounter = newPity;
+        const type = selected.reward_type;
+        const extra = selected.reward_extra;
+        let rewardDesc = '';
+        let rewardTypeForSummary = type;
+
+        switch (type) {
+            case 'candy': {
+                const amt = parseInt(extra) || 1000;
+                updates.candy_crumbles += amt;
+                rewardDesc = `🍬 +${amt.toLocaleString()} 糖果碎`;
+                break;
+            }
+            case 'rainbow': {
+                const amt = parseInt(extra) || 10;
+                updates.rainbow_lollipops += amt;
+                rewardDesc = `🌈 +${amt.toLocaleString()} 超级棒糖`;
+                break;
+            }
+            case 'active': {
+                const amt = parseInt(extra) || 100;
+                updates.active_points += amt;
+                rewardDesc = `⚡ +${amt.toLocaleString()} 活跃度`;
+                break;
+            }
+            case 'frame': {
+                const frameId = extra;
+                frameRequests.push(frameId);
+                const frame = CONFIG.FRAMES.find(f => f.id === frameId);
+                rewardDesc = `🖼️ 获得头像框「${frame?.name || frameId}」`;
+                rewardTypeForSummary = `头像框「${frame?.name || frameId}」`;
+                break;
+            }
+            case 'title': {
+                const titleId = parseInt(extra);
+                titleRequests.push(titleId);
+                rewardDesc = `🏅 获得称号「${titleId}」`;
+                rewardTypeForSummary = `称号「${titleId}」`;
+                break;
+            }
+            default:
+                rewardDesc = '🎁 空';
+        }
+
+        results.push({ type: rewardDesc || rewardTypeForSummary, isGuaranteed });
     }
 
-    // 重新获取最终数据（确保一致性）
+    // 5. 统一处理框架（一次性查询 + 更新）
+    if (frameRequests.length > 0) {
+        const { data: profile } = await sb.from('user_profiles')
+            .select('owned_frames')
+            .eq('id', userId)
+            .maybeSingle();
+        let ownedFrames = profile?.owned_frames || ['nature'];
+        let newFrames = [];
+        let foxConvertCount = 0;
+
+        for (let fId of frameRequests) {
+            if (ownedFrames.includes(fId)) {
+                if (fId === 'frame_fox') {
+                    updates.dreamy_syrup += 100;
+                    foxConvertCount++;
+                } else {
+                    updates.candy_crumbles += 500;
+                }
+            } else {
+                ownedFrames.push(fId);
+                newFrames.push(fId);
+            }
+        }
+        if (newFrames.length > 0) {
+            await sb.from('user_profiles').update({ owned_frames: ownedFrames }).eq('id', userId);
+        }
+        // 记录转换信息到结果（可选）
+        if (foxConvertCount > 0) {
+            results.push({ type: `🦊 小狐狸×${foxConvertCount} → 🌌 +${foxConvertCount * 100} 星河糖浆`, isGuaranteed: false });
+        }
+    }
+
+    // 6. 统一处理称号
+    if (titleRequests.length > 0) {
+        const { data: ownedTitles } = await sb.from('user_titles')
+            .select('title_id')
+            .eq('user_id', userId);
+        const ownedTitleIds = (ownedTitles || []).map(t => t.title_id);
+        const titlesToInsert = titleRequests.filter(tid => !ownedTitleIds.includes(tid));
+        if (titlesToInsert.length > 0) {
+            const insertData = titlesToInsert.map(tid => ({ user_id: userId, title_id: tid }));
+            await sb.from('user_titles').insert(insertData);
+        }
+        const duplicateCount = titleRequests.length - titlesToInsert.length;
+        if (duplicateCount > 0) {
+            updates.rainbow_lollipops += duplicateCount;
+        }
+    }
+
+    // 7. 更新保底计数和宝箱数量
+    updates.chest_pity_counter = pityCounter;
+    updates.chest_count = (stats.chest_count || 0) - amount;
+
+    // 8. 一次性更新用户统计
+    const { error: updateErr } = await sb.from('user_stats')
+        .update(updates)
+        .eq('user_id', userId);
+    if (updateErr) throw updateErr;
+
+    // 9. 获取最终数据
     const { data: finalStats } = await sb.from('user_stats')
         .select('*')
         .eq('user_id', userId)
         .single();
+
     return { results, newStats: finalStats };
 }
