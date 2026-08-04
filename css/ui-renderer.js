@@ -1,4 +1,4 @@
-// ========== UI 渲染器（完整版） ==========
+// ========== UI 渲染器（完整版，修复 getChestPrice 导入） ==========
 import { CONFIG, CHEST_CONFIG, getRoleDisplay } from './config.js';
 import {
     safeSetText, showNotification, openModal, closeModal,
@@ -10,11 +10,12 @@ import {
     loadAllTitles, loadUserOwnedTitles, grantTitle,
     loadUserFrames, updateUserProfile, updateUserStats,
     getShopFrames, getFrameById,
-    getPityCounter, getChestProbabilities, batchOpenChests, getPityLimit
+    getPityCounter, getChestProbabilities, batchOpenChests, getPityLimit,
+    getChestPrice  // ✅ 修复：添加缺失的导入
 } from './api.js';
 import { getSupabase } from './api.js';
 import {
-    getFrameById as getFrameByIdSync, // 为了兼容，但我们会异步调用
+    getFrameById as getFrameByIdSync,
     purchaseFrame, equipFrame, applyFrameClassByFrameId,
     initFrameForUser
 } from './frame-system.js';
@@ -122,7 +123,7 @@ export async function renderProfile() {
             updateCheckinButtonState();
         }
 
-        // 显示宝箱数量（在用户信息区域）
+        // 显示宝箱数量
         const userInfo = document.querySelector('.user-info');
         if (userInfo && !document.getElementById('chestDisplay')) {
             const chestDiv = document.createElement('div');
@@ -349,7 +350,7 @@ async function loadAutoSignCardUI() {
 async function loadChestShopUI() {
     const container = document.getElementById('chestShopItem');
     if (!container) return;
-    const price = await getChestPrice();
+    const price = await getChestPrice();  // ✅ 现在可以正常调用
     const maxBuy = CHEST_CONFIG.max_purchase;
     const currentChests = state.userStats?.chest_count || 0;
     let html = `
