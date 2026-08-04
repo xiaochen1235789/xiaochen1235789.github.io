@@ -95,19 +95,18 @@ export const SPECIAL_TITLES = {
 // =====================================================
 export const CHEST_CONFIG = {
     price_candy: 100,           // 【仅用于前端展示】购买宝箱所需糖果碎
-    max_purchase: 999,          // 单次最多购买数量（前端限制）
+    max_purchase: 99999,          // 单次最多购买数量（前端限制）
     pity_limit: 100,            // 【仅用于前端展示】保底次数
     image_url: 'https://cdn-icons-png.flaticon.com/512/2720/2720633.png', // 宝箱图标
     
     // 数据库不可用时的后备概率配置（与数据库 chest_probs 表结构一致）
     default_probs: [
-        { type: 'candy', extra: '1000', weight: 30, is_limited: false, desc: '+1000 糖果碎' },
-        { type: 'candy', extra: '5000', weight: 15, is_limited: false, desc: '+5000 糖果碎' },
-        { type: 'rainbow', extra: '10', weight: 20, is_limited: false, desc: '+10 超级棒糖' },
-        { type: 'rainbow', extra: '50', weight: 10, is_limited: false, desc: '+50 超级棒糖' },
-        { type: 'active', extra: '100', weight: 15, is_limited: false, desc: '+100 活跃度' },
-        { type: 'active', extra: '500', weight: 5, is_limited: false, desc: '+500 活跃度' },
-        { type: 'frame', extra: 'frame_huanbao', weight: 2, is_limited: false, desc: '获得头像框「环保光环」' },
-        { type: 'frame', extra: 'frame_fox', weight: 1, is_limited: true, desc: '🌟 获得动态头像框「悠闲小狐狸」' }
+        { type: 'candy', extra: '1000', weight: 999, is_limited: false, desc: '+1000 糖果碎' },
+        { type: 'candy', extra: '5000', weight: 333, is_limited: false, desc: '+5000 糖果碎' },
+        { type: 'rainbow', extra: '10', weight: 666, is_limited: false, desc: '+10 超级棒糖' },
+        { type: 'rainbow', extra: '50', weight: 150, is_limited: false, desc: '+50 超级棒糖' },
+        { type: 'active', extra: '100', weight: 500, is_limited: false, desc: '+100 活跃度' },
+        { type: 'active', extra: '500', weight: 99, is_limited: false, desc: '+500 活跃度' },
+        { type: 'frame', extra: 'frame_fox', weight: 10, is_limited: true, desc: '🌟 获得动态头像框「悠闲小狐狸」' }
     ]
 };
