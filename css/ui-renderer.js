@@ -1,5 +1,5 @@
-// ========== UI 渲染器 ==========
-import { CONFIG, getRoleDisplay } from './config.js';
+// ========== UI 渲染器（完整版） ==========
+import { CONFIG, CHEST_CONFIG, getRoleDisplay } from './config.js';
 import {
     safeSetText, showNotification, openModal, closeModal,
     getLocalDateString, clearProfileCache, setCachedProfile,
@@ -8,11 +8,14 @@ import {
 import {
     fetchUserFullData, getCheckinConfig, loadAutoSignCardStatus,
     loadAllTitles, loadUserOwnedTitles, grantTitle,
-    loadUserFrames, updateUserProfile, updateUserStats
+    loadUserFrames, updateUserProfile, updateUserStats,
+    getShopFrames, getFrameById,
+    getPityCounter, getChestProbabilities, batchOpenChests, getPityLimit
 } from './api.js';
 import { getSupabase } from './api.js';
 import {
-    getFrameById, purchaseFrame, equipFrame, applyFrameClassByFrameId,
+    getFrameById as getFrameByIdSync, // 为了兼容，但我们会异步调用
+    purchaseFrame, equipFrame, applyFrameClassByFrameId,
     initFrameForUser
 } from './frame-system.js';
 
@@ -49,8 +52,6 @@ export function updateAvatarDisplay(imageUrl) {
     const avatarDiv = document.getElementById('userAvatar');
     if (!avatarDiv) return;
     try {
-        const oldClasses = avatarDiv.className.split(' ').filter(c => c !== 'avatar' && !c.startsWith('frame-'));
-        avatarDiv.className = oldClasses.join(' ');
         let initial = 'U';
         if (state.userProfile?.username) initial = state.userProfile.username.charAt(0).toUpperCase();
         else if (state.currentUser?.email) initial = state.currentUser.email.charAt(0).toUpperCase();
@@ -59,6 +60,7 @@ export function updateAvatarDisplay(imageUrl) {
         } else {
             avatarDiv.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
         }
+        // 头像框
         const frameImg = document.createElement('img');
         frameImg.className = 'avatar-frame-img';
         frameImg.id = 'avatarFrameImg';
@@ -86,6 +88,7 @@ window.handleAvatarLoadError = function(imgElement) {
     parent.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
 };
 
+// ===== 主渲染 =====
 export async function renderProfile() {
     try {
         const container = document.getElementById('profileContent');
@@ -95,9 +98,7 @@ export async function renderProfile() {
         const roleInfo = getRoleDisplay(state.userProfile?.role || 'user', state.currentUser?.id);
         const uname = state.userProfile?.username || '未知用户';
         const usernameSpan = document.getElementById('displayUsername');
-        if (usernameSpan) {
-            usernameSpan.innerHTML = `${uname}`;
-        }
+        if (usernameSpan) usernameSpan.innerHTML = `${uname}`;
 
         safeSetText('userEmail', state.currentUser?.email || '未登录');
         safeSetText('userBio', state.userProfile?.bio || '');
@@ -107,44 +108,37 @@ export async function renderProfile() {
         const daysEl = document.getElementById('userDaysText');
         if (daysEl) daysEl.innerText = `已来到 ${days.toLocaleString()} 天`;
 
-        try {
-            if (state.userProfile?.avatar_url) updateAvatarDisplay(state.userProfile.avatar_url);
-            else updateAvatarDisplay(null);
-        } catch (avatarErr) {
-            console.warn('头像显示失败:', avatarErr);
-            const avatarDiv = document.getElementById('userAvatar');
-            if (avatarDiv) {
-                const initial = (state.userProfile?.username || 'U').charAt(0).toUpperCase();
-                avatarDiv.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
-                const frameImg = document.createElement('img');
-                frameImg.className = 'avatar-frame-img';
-                frameImg.id = 'avatarFrameImg';
-                frameImg.src = '';
-                frameImg.alt = '头像框';
-                frameImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:contain;pointer-events:none;z-index:2;';
-                avatarDiv.appendChild(frameImg);
-                avatarDiv.classList.add('avatar');
-            }
-        }
+        if (state.userProfile?.avatar_url) updateAvatarDisplay(state.userProfile.avatar_url);
+        else updateAvatarDisplay(null);
 
         const roleRow = document.getElementById('userRoleDisplay');
         if (roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
 
         if (state.userStats) {
-            try {
-                updateActivePointsDisplay();
-                updateShopBalanceDisplay();
-                const streakEl = document.getElementById('streakDays');
-                if (streakEl) streakEl.innerText = (state.userStats.checkin_streak || 0).toLocaleString();
-                updateCheckinButtonState();
-            } catch (statsErr) {
-                console.warn('统计数据显示失败:', statsErr);
-            }
+            updateActivePointsDisplay();
+            updateShopBalanceDisplay();
+            const streakEl = document.getElementById('streakDays');
+            if (streakEl) streakEl.innerText = (state.userStats.checkin_streak || 0).toLocaleString();
+            updateCheckinButtonState();
+        }
+
+        // 显示宝箱数量（在用户信息区域）
+        const userInfo = document.querySelector('.user-info');
+        if (userInfo && !document.getElementById('chestDisplay')) {
+            const chestDiv = document.createElement('div');
+            chestDiv.className = 'chest-info';
+            chestDiv.id = 'chestDisplay';
+            chestDiv.innerHTML = `🎁 宝箱：${(state.userStats?.chest_count || 0).toLocaleString()}`;
+            const wrapper = userInfo.querySelector('.username-wrapper');
+            if (wrapper) wrapper.after(chestDiv);
+            else userInfo.appendChild(chestDiv);
+        } else {
+            const chestEl = document.getElementById('chestDisplay');
+            if (chestEl) chestEl.textContent = `🎁 宝箱：${(state.userStats?.chest_count || 0).toLocaleString()}`;
         }
 
         document.getElementById('loading').style.display = 'none';
         document.getElementById('profileContent').style.display = 'block';
-
     } catch (err) {
         console.error('渲染页面整体失败:', err);
         const loadingDiv = document.getElementById('loading');
@@ -163,6 +157,7 @@ export async function renderProfile() {
     }
 }
 
+// ===== 商店 =====
 export async function renderShop() {
     const container = document.getElementById('shopContentContainer');
     if (!container) return;
@@ -180,7 +175,10 @@ export async function renderShop() {
             </div>
             <div class="shop-content">
                 <div class="shop-card hide-card" data-shop-card="frames" id="framesCard"><div id="framesList">⏳ 加载中...</div></div>
-                <div class="shop-card hide-card" data-shop-card="others" id="othersCard"><div id="autoSignCardItem"></div></div>
+                <div class="shop-card hide-card" data-shop-card="others" id="othersCard">
+                    <div id="autoSignCardItem"></div>
+                    <div id="chestShopItem"></div>
+                </div>
                 <div class="shop-card" data-shop-card="exchange">
                     <div style="padding:10px 0;">
                         <div style="margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:20px;">
@@ -221,6 +219,7 @@ export async function renderShop() {
     updateShopBalanceDisplay();
     try { await loadAutoSignCardUI(); } catch (e) { console.warn('加载签到卡失败', e); document.getElementById('autoSignCardItem').innerHTML = '<div style="padding:20px;text-align:center;color:#f87171;">加载失败</div>'; }
     try { await loadFramesList(); } catch (e) { console.warn('加载头像框失败', e); document.getElementById('framesList').innerHTML = '<div style="padding:20px;text-align:center;color:#f87171;">加载失败</div>'; }
+    try { await loadChestShopUI(); } catch (e) { console.warn('加载宝箱商店失败', e); document.getElementById('chestShopItem').innerHTML = '<div style="padding:20px;text-align:center;color:#f87171;">加载失败</div>'; }
 
     const shopTabs = document.querySelectorAll('.shop-tabs .tab-btn');
     const shopCards = document.querySelectorAll('.shop-card');
@@ -237,11 +236,12 @@ export async function renderShop() {
     });
 }
 
+// 加载头像框列表（从数据库）
 async function loadFramesList() {
     const container = document.getElementById('framesList');
     if (!container) return;
+    const frames = await getShopFrames();
     const { owned, equipped } = await loadUserFrames(state.currentUser.id);
-    const frames = CONFIG.FRAMES;
     let html = '';
     for (const frame of frames) {
         if (frame.id === 'nature') continue;
@@ -252,9 +252,13 @@ async function loadFramesList() {
             actionHtml = `<button class="btn-owned" disabled>已装备</button>`;
         } else if (isOwned) {
             actionHtml = `<button class="btn-equip" data-frame-id="${frame.id}">装备</button>`;
-        } else {
+        } else if (frame.is_chest_exclusive) {
+            actionHtml = `<span style="color:#facc15;font-size:0.8rem;">🎁 仅限宝箱获得</span>`;
+        } else if (frame.is_purchasable) {
             const priceText = `🍬${frame.price_candy.toLocaleString()} ${frame.price_rainbow > 0 ? `🌈${frame.price_rainbow.toLocaleString()}` : ''}`;
             actionHtml = `<button class="btn-buy" data-frame-id="${frame.id}">购买 (${priceText})</button>`;
+        } else {
+            actionHtml = `<span style="color:#aaa;">不可购买</span>`;
         }
         html += `<div class="frame-item-wrap"><div class="frame-left-box" onclick="window.openBackpackItemDetail('${frame.id}')"><div class="frame-mini-preview" style="width:44px;height:44px;overflow:hidden;border-radius:50%;">${frame.imageUrl ? `<img src="${frame.imageUrl}" style="width:100%;height:100%;object-fit:contain;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🖼️</div>`}</div><div><div style="font-weight:bold;">${frame.name}</div><div style="font-size:0.8rem; opacity:0.7;">${frame.description}</div></div></div><div>${actionHtml}</div></div>`;
     }
@@ -280,28 +284,18 @@ async function loadFramesList() {
         });
     });
 
-    // ★★★ 装备按钮 - 已整合内存同步补丁 ★★★
     container.querySelectorAll('.btn-equip').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             if (window.isProcessing) return;
             const frameId = btn.dataset.frameId;
             try {
                 await equipFrame(frameId);
+                state.userProfile.equipped_frame = frameId;
+                window.userProfile.equipped_frame = frameId;
                 showNotification('✅ 已装备头像框', 'success');
-
-                // ★★★ 手动同步内存状态 ★★★
-                if (state.userProfile) {
-                    state.userProfile.equipped_frame = frameId;
-                }
-                if (window.userProfile) {
-                    window.userProfile.equipped_frame = frameId;
-                }
-                // ★★★ 修补结束 ★★★
-
                 loadFramesList();
                 await applyFrameClassByFrameId(frameId);
                 window.updateNavbar?.();
-
             } catch (err) {
                 showNotification(err.message, 'error');
             }
@@ -341,6 +335,7 @@ async function loadAutoSignCardUI() {
                 return;
             }
             state.userStats.candy_crumbles = newCandy;
+            state.hasAutoSignCard = true;
             clearProfileCache();
             setCachedProfile(state.userStats);
             updateShopBalanceDisplay();
@@ -350,12 +345,72 @@ async function loadAutoSignCardUI() {
     }
 }
 
+// 宝箱商店购买
+async function loadChestShopUI() {
+    const container = document.getElementById('chestShopItem');
+    if (!container) return;
+    const price = await getChestPrice();
+    const maxBuy = CHEST_CONFIG.max_purchase;
+    const currentChests = state.userStats?.chest_count || 0;
+    let html = `
+        <div class="frame-item-wrap" style="display:block; text-align:center; padding:20px; border-top:1px solid rgba(255,255,255,0.1); margin-top:10px;">
+            <div style="font-size:2rem;">🎁</div>
+            <div style="font-weight:bold; margin-top:8px;">神秘宝箱</div>
+            <div style="font-size:0.9rem; opacity:0.7;">开启可获得随机奖励！每日登录赠送1个</div>
+            <div style="margin-top:8px; display:flex; justify-content:center; align-items:center; gap:8px; flex-wrap:wrap;">
+                <input type="number" id="chestBuyAmount" value="1" min="1" max="${maxBuy}" style="width:60px; background:rgba(0,0,0,0.3); border:1px solid #3d6b52; color:white; padding:4px 6px; border-radius:10px; text-align:center;">
+                <span style="font-size:0.9rem;">🍬 ${price} / 个</span>
+                <button class="btn-buy" id="buyChestBtn">购买</button>
+            </div>
+            <div style="margin-top:6px; font-size:0.85rem; color:var(--text-secondary);">当前拥有：${currentChests.toLocaleString()} 个</div>
+        </div>
+    `;
+    container.innerHTML = html;
+    document.getElementById('buyChestBtn')?.addEventListener('click', async () => {
+        const amount = parseInt(document.getElementById('chestBuyAmount').value) || 0;
+        if (amount < 1 || amount > maxBuy) {
+            showNotification(`购买数量必须在 1 ~ ${maxBuy} 之间`, 'error');
+            return;
+        }
+        if (window.isProcessing) return;
+        window.isProcessing = true;
+        try {
+            const sb = getSupabase();
+            const price = await getChestPrice();
+            const totalCost = price * amount;
+            if (state.userStats.candy_crumbles < totalCost) {
+                showNotification(`糖果碎不足，需要 ${totalCost.toLocaleString()}`, 'error');
+                return;
+            }
+            const newCandy = state.userStats.candy_crumbles - totalCost;
+            const newChest = (state.userStats.chest_count || 0) + amount;
+            const { error } = await sb.from('user_stats').update({
+                candy_crumbles: newCandy,
+                chest_count: newChest
+            }).eq('user_id', state.currentUser.id);
+            if (error) throw error;
+            state.userStats.candy_crumbles = newCandy;
+            state.userStats.chest_count = newChest;
+            window.userStats = state.userStats;
+            updateShopBalanceDisplay();
+            updateChestDisplay?.();
+            loadChestShopUI();
+            showNotification(`✅ 成功购买 ${amount} 个宝箱`, 'success');
+        } catch (err) {
+            showNotification(err.message, 'error');
+        } finally {
+            window.isProcessing = false;
+        }
+    });
+}
+
+// ===== 背包 =====
 export async function renderBackpack() {
     const container = document.getElementById('backpackContent');
     if (!container) return;
     const hasCard = await loadAutoSignCardStatus(state.currentUser.id);
     const { owned } = await loadUserFrames(state.currentUser.id);
-    const allFrames = CONFIG.FRAMES;
+    const allFrames = await getShopFrames();
     const ownedFrames = allFrames.filter(f => owned.includes(f.id) && f.id !== 'nature');
 
     let backpackData = [
@@ -375,6 +430,21 @@ export async function renderBackpack() {
             count: 1
         });
     }
+
+    // 宝箱
+    const chestCount = state.userStats?.chest_count || 0;
+    if (chestCount > 0) {
+        backpackData.push({
+            id: 'chest',
+            name: '神秘宝箱',
+            desc: '开启可获得随机奖励，每日登录赠送1个',
+            icon: CHEST_CONFIG.image_url,
+            isImg: true,
+            type: 'chest',
+            count: chestCount
+        });
+    }
+
     const filteredItems = backpackData.filter(item => {
         if (item.type === 'currency') return true;
         return item.count > 0;
@@ -407,32 +477,221 @@ export async function renderBackpack() {
     openModal('backpackModal');
 }
 
-export function openBackpackItemDetail(itemId) {
-    const frame = getFrameById(itemId);
+// ===== 物品详情（含拥有数量） =====
+export async function openBackpackItemDetail(itemId) {
+    // 1. 头像框
+    const frame = await getFrameById(itemId);
     if (frame) {
-        let iconHtml = '';
-        if (frame.imageUrl) {
-            iconHtml = `<img src="${frame.imageUrl}" style="width:80px;height:80px;object-fit:contain;">`;
-        } else {
-            iconHtml = `<i class="fas fa-image" style="font-size:4rem;"></i>`;
-        }
+        const ownedFrames = state.userProfile?.owned_frames || ['nature'];
+        const count = ownedFrames.includes(frame.id) ? 1 : 0;
         document.getElementById('bItemTitle').innerText = frame.name;
-        document.getElementById('bItemIcon').innerHTML = iconHtml;
+        document.getElementById('bItemIcon').innerHTML = frame.imageUrl ? `<img src="${frame.imageUrl}" style="width:80px;height:80px;object-fit:contain;">` : `<i class="fas fa-image" style="font-size:4rem;"></i>`;
         document.getElementById('bItemDesc').innerText = frame.description;
-        document.getElementById('bItemCount').innerHTML = '<span style="color:#81c784;">已拥有</span>';
+        document.getElementById('bItemCount').innerHTML = `当前拥有：${count}`;
         openModal('backpackItemModal');
         return;
     }
+
+    // 2. 普通物品
     const item = CONFIG.BACKPACK_ITEMS.find(i => i.id === itemId);
-    if (!item) return;
-    const iconHtml = item.isImg ? `<img src="${item.icon}" style="width:80px;height:80px;object-fit:contain;">` : `<i class="fas ${item.icon}" style="font-size:4rem;"></i>`;
-    document.getElementById('bItemTitle').innerText = item.name;
-    document.getElementById('bItemIcon').innerHTML = iconHtml;
-    document.getElementById('bItemDesc').innerText = item.desc;
-    document.getElementById('bItemCount').innerText = '';
-    openModal('backpackItemModal');
+    if (item) {
+        let count = 0;
+        if (item.type === 'currency') {
+            if (item.id === 'candy') count = state.userStats?.candy_crumbles || 0;
+            else if (item.id === 'rainbow') count = state.userStats?.rainbow_lollipops || 0;
+            else if (item.id === 'dreamy_syrup') count = state.userStats?.dreamy_syrup || 0;
+        } else if (item.id === 'autocard') {
+            count = state.hasAutoSignCard ? 1 : 0;
+        }
+        document.getElementById('bItemTitle').innerText = item.name;
+        const iconHtml = item.isImg ? `<img src="${item.icon}" style="width:80px;height:80px;object-fit:contain;">` : `<i class="fas ${item.icon}" style="font-size:4rem;"></i>`;
+        document.getElementById('bItemIcon').innerHTML = iconHtml;
+        document.getElementById('bItemDesc').innerText = item.desc;
+        document.getElementById('bItemCount').innerHTML = `当前拥有：${count}`;
+        openModal('backpackItemModal');
+        return;
+    }
+
+    // 3. 宝箱
+    if (itemId === 'chest') {
+        const count = state.userStats?.chest_count || 0;
+        if (count < 1) {
+            showNotification('没有宝箱可开启', 'warning');
+            return;
+        }
+        openBatchChestModal(count);
+        return;
+    }
+
+    showNotification('未知物品', 'error');
 }
 
+// ===== 批量开启宝箱（含保底进度） =====
+let batchModalOpen = false;
+
+export async function openBatchChestModal(maxCount) {
+    if (batchModalOpen) return;
+    batchModalOpen = true;
+
+    let pityCounter = 0;
+    try {
+        pityCounter = await getPityCounter(state.currentUser.id);
+    } catch (e) { console.warn('获取保底计数失败', e); }
+    const pityLimit = await getPityLimit();
+    const remaining = Math.max(0, pityLimit - pityCounter);
+    const openedCount = pityCounter;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay show';
+    overlay.id = 'batchChestModal';
+    overlay.innerHTML = `
+        <div class="modal" style="max-width: 420px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-box-open"></i> 开启宝箱
+                    <button id="chestHelpBtn" style="background:none;border:none;color:#60a5fa;font-size:1.2rem;cursor:pointer;margin-left:8px;" title="查看完整概率表">
+                        <i class="fas fa-question-circle"></i>
+                    </button>
+                </div>
+                <button class="modal-close" id="closeBatchChestBtn">&times;</button>
+            </div>
+            <div style="text-align:center; padding:10px 0;">
+                <img src="${CHEST_CONFIG.image_url}" alt="宝箱" style="width:80px; height:80px; object-fit:contain;">
+                <div style="margin:10px 0; font-size:0.95rem;">
+                    当前拥有 <strong>${maxCount}</strong> 个宝箱
+                </div>
+                <div id="pityProgress" style="font-size:0.85rem; color:#facc15; background:rgba(0,0,0,0.3); padding:6px 12px; border-radius:20px; display:inline-block; margin-bottom:10px;">
+                    已开启 <strong>${openedCount}</strong> 次（未出限定），距离保底剩余 <strong>${remaining}</strong> 次
+                </div>
+                <div style="display:flex; align-items:center; gap:12px; justify-content:center;">
+                    <span>开启数量：</span>
+                    <input type="range" id="chestSlider" min="1" max="${maxCount}" value="${Math.min(10, maxCount)}" style="flex:1; max-width:200px;">
+                    <span id="chestSliderValue">${Math.min(10, maxCount)}</span>
+                </div>
+                <button id="confirmBatchOpenBtn" class="btn-primary" style="margin-top:16px; padding:8px 30px;">确认开启</button>
+                <div id="batchResultArea" style="margin-top:12px; max-height:150px; overflow-y:auto; font-size:0.9rem; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px; display:none;"></div>
+            </div>
+            <div id="probabilityInfo" style="display:none; margin:10px 0; padding:10px; background:rgba(0,0,0,0.3); border-radius:8px; font-size:0.85rem; text-align:left;"></div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const slider = document.getElementById('chestSlider');
+    const valueDisplay = document.getElementById('chestSliderValue');
+    const confirmBtn = document.getElementById('confirmBatchOpenBtn');
+    const closeBtn = document.getElementById('closeBatchChestBtn');
+    const resultArea = document.getElementById('batchResultArea');
+    const probInfo = document.getElementById('probabilityInfo');
+    const pityDisplay = document.getElementById('pityProgress');
+
+    async function updatePityDisplay() {
+        try {
+            const newCounter = await getPityCounter(state.currentUser.id);
+            const newRemaining = Math.max(0, pityLimit - newCounter);
+            pityDisplay.innerHTML = `
+                已开启 <strong>${newCounter}</strong> 次（未出限定），距离保底剩余 <strong>${newRemaining}</strong> 次
+            `;
+        } catch (e) { console.warn('更新保底显示失败', e); }
+    }
+
+    slider.addEventListener('input', () => {
+        valueDisplay.textContent = slider.value;
+    });
+
+    const closeModal = () => {
+        overlay.remove();
+        batchModalOpen = false;
+    };
+    closeBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeModal();
+    });
+
+    document.getElementById('chestHelpBtn').addEventListener('click', async () => {
+        if (probInfo.style.display === 'block') {
+            probInfo.style.display = 'none';
+            return;
+        }
+        try {
+            const probs = await getChestProbabilities();
+            const totalWeight = probs.reduce((s, p) => s + p.weight, 0);
+            let html = `<div style="font-weight:bold;margin-bottom:6px;">🎲 完整奖励配置表</div>`;
+            const normal = probs.filter(p => !p.is_limited);
+            const limited = probs.filter(p => p.is_limited);
+            html += `<div style="border-bottom:1px solid #333;padding-bottom:6px;margin-bottom:6px;">【普通奖励】</div>`;
+            for (let p of normal) {
+                const percent = ((p.weight / totalWeight) * 100).toFixed(1);
+                html += `<div>${p.description}：${percent}%</div>`;
+            }
+            if (limited.length) {
+                html += `<div style="margin-top:8px;border-top:1px solid #444;padding-top:8px;color:#facc15;">【限定奖励】（保底 ${pityLimit} 次必出）</div>`;
+                for (let p of limited) {
+                    const percent = ((p.weight / totalWeight) * 100).toFixed(1);
+                    html += `<div>${p.description}：${percent}%</div>`;
+                }
+                html += `<div style="margin-top:4px;font-size:0.8rem;color:#f87171;">💡 保底规则：若连续 ${pityLimit-1} 次未出限定，第 ${pityLimit} 次必定获得一个限定物品（从所有限定中随机）</div>`;
+            } else {
+                html += `<div style="margin-top:8px;color:#aaa;">暂无限定物品配置</div>`;
+            }
+            const currentCounter = await getPityCounter(state.currentUser.id);
+            const remain = Math.max(0, pityLimit - currentCounter);
+            html += `<div style="margin-top:10px;border-top:1px solid #333;padding-top:8px;font-size:0.9rem;color:#facc15;">📊 当前保底进度：已开启 ${currentCounter} 次，距离保底还差 ${remain} 次</div>`;
+            probInfo.innerHTML = html;
+            probInfo.style.display = 'block';
+        } catch (err) {
+            showNotification('加载配置表失败', 'error');
+        }
+    });
+
+    confirmBtn.addEventListener('click', async () => {
+        const amount = parseInt(slider.value);
+        if (amount < 1 || amount > maxCount) {
+            showNotification('数量无效', 'error');
+            return;
+        }
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = '开启中...';
+        try {
+            const { results, newStats } = await batchOpenChests(state.currentUser.id, amount);
+            let summary = {};
+            results.forEach(r => {
+                const key = r.type;
+                if (!summary[key]) summary[key] = 0;
+                summary[key]++;
+            });
+            let lines = [];
+            for (let key in summary) {
+                lines.push(`${key} ×${summary[key]}`);
+            }
+            resultArea.style.display = 'block';
+            resultArea.innerHTML = `<div style="color:#facc15;">🎉 成功开启 ${amount} 个宝箱</div><div>${lines.join('<br>')}</div>`;
+            state.userStats = newStats;
+            window.userStats = newStats;
+            updateChestDisplay?.();
+            updateShopBalanceDisplay?.();
+            updateActivePointsDisplay?.();
+            renderBackpack();
+            await updatePityDisplay();
+            const newCount = newStats.chest_count || 0;
+            if (newCount > 0) {
+                slider.max = newCount;
+                slider.value = Math.min(parseInt(slider.value), newCount);
+                valueDisplay.textContent = slider.value;
+                maxCount = newCount;
+            } else {
+                setTimeout(closeModal, 2000);
+            }
+            showNotification(`✅ 成功开启 ${amount} 个宝箱`, 'success');
+        } catch (err) {
+            showNotification('开箱失败：' + err.message, 'error');
+        } finally {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = '确认开启';
+        }
+    });
+}
+
+// ===== 称号 =====
 export async function renderTitlesModal() {
     const container = document.getElementById('titlesListContainer');
     if (!container) return;
@@ -441,9 +700,7 @@ export async function renderTitlesModal() {
     let html = '';
     for (let title of allTitles) {
         const isSpecial = (title.id === 10001 || title.id === 10002);
-        if (isSpecial && !ownedIds.includes(title.id)) {
-            continue;
-        }
+        if (isSpecial && !ownedIds.includes(title.id)) continue;
         const owned = ownedIds.includes(title.id);
         const isEquipped = (state.userProfile?.equipped_title_id === title.id);
         let nameColor = '';
@@ -453,9 +710,7 @@ export async function renderTitlesModal() {
             else if (title.name.includes('管理神')) nameColor = '#60a5fa';
             extraIcon = '✨ ';
         }
-        if (isSpecial) {
-            nameColor = '#FF69B4';
-        }
+        if (isSpecial) nameColor = '#FF69B4';
         let conditionText = [];
         if (title.required_active_points > 0) conditionText.push(`活跃度≥${title.required_active_points.toLocaleString()}`);
         if (title.required_streak > 0) conditionText.push(`连续签到≥${title.required_streak.toLocaleString()}`);
@@ -475,6 +730,7 @@ export async function renderTitlesModal() {
     openModal('titlesModal');
 }
 
+// ===== 奖励预览 =====
 export async function openRewardInfoModal() {
     const sb = getSupabase();
     const { data: configData, error } = await sb.from('checkin_config').select('*').order('day_num', { ascending: true });
@@ -494,8 +750,15 @@ export async function openRewardInfoModal() {
     }
     html += '</tbody></table></div>';
     if (!tomorrowReward) { tomorrowReward = fallbackReward || { candy: 0, rainbow: 0, active: 0 }; }
-    let footerHtml =
-        `<div style="margin-top:16px; border-top:1px solid var(--border-color); padding-top:12px; text-align:center; font-size:0.95rem; background:rgba(0,0,0,0.2); border-radius:8px; padding:12px;"><div style="color:var(--text-secondary); margin-bottom:4px;">您已连续签到 <strong style="color:#facc15; font-size:1.1rem;">${currentStreak.toLocaleString()}</strong> 天</div><div style="color:var(--text-highlight);">明天的奖励：🍬${tomorrowReward.candy.toLocaleString()} ${tomorrowReward.rainbow > 0 ? `🌈${tomorrowReward.rainbow.toLocaleString()} ` : ''}⚡${tomorrowReward.active.toLocaleString()}</div></div>`;
+    let footerHtml = `<div style="margin-top:16px; border-top:1px solid var(--border-color); padding-top:12px; text-align:center; font-size:0.95rem; background:rgba(0,0,0,0.2); border-radius:8px; padding:12px;"><div style="color:var(--text-secondary); margin-bottom:4px;">您已连续签到 <strong style="color:#facc15; font-size:1.1rem;">${currentStreak.toLocaleString()}</strong> 天</div><div style="color:var(--text-highlight);">明天的奖励：🍬${tomorrowReward.candy.toLocaleString()} ${tomorrowReward.rainbow > 0 ? `🌈${tomorrowReward.rainbow.toLocaleString()} ` : ''}⚡${tomorrowReward.active.toLocaleString()}</div></div>`;
     const container = document.getElementById('rewardInfoContent');
     if (container) { container.innerHTML = html + footerHtml; openModal('rewardInfoModal'); }
 }
+
+// 导出全局更新显示函数（供 app.js 调用）
+window.updateChestDisplay = function() {
+    const el = document.getElementById('chestDisplay');
+    if (el) {
+        el.textContent = `🎁 宝箱：${(state.userStats?.chest_count || 0).toLocaleString()}`;
+    }
+};
