@@ -4,9 +4,9 @@ import {
     showNotification, logAction, openModal, closeModal,
     escapeHtml, getLocalDateString
 } from './utils.js';
-import { CONFIG, FRAMES_LIST, roleConfig } from './config.js';
+import { CONFIG, roleConfig } from './config.js';
 
-// ----- 头像框列表（从 config 引入） -----
+// ----- 头像框列表（从 CONFIG 读取） -----
 const FRAMES = CONFIG.FRAMES || [];
 
 // ----- 加载用户头像框 -----
@@ -238,7 +238,7 @@ async function reloadMiscData(userId) {
         });
     }
 
-    // 4. 渲染头像框
+    // 4. 渲染头像框（从 CONFIG.FRAMES 读取）
     let framesHtml = '<div class="frames-grid">';
     for (const frame of FRAMES) {
         if (frame.id === 'nature') continue;
