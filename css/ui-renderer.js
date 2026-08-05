@@ -1,4 +1,4 @@
-// ========== UI 渲染器（最终版：头像框图片完整显示，带错误回退） ==========
+// ========== UI 渲染器（最终版：兼容 image_url 字段） ==========
 import { CONFIG, CHEST_CONFIG, getRoleDisplay } from './config.js';
 import {
     safeSetText, showNotification, openModal, closeModal,
@@ -240,7 +240,7 @@ export async function renderShop() {
     });
 }
 
-// 加载头像框列表（完整图片显示 + 错误回退）
+// ===== ★★★ 加载头像框列表（兼容 image_url 和 imageUrl） ★★★ =====
 async function loadFramesList() {
     const container = document.getElementById('framesList');
     if (!container) return;
@@ -256,6 +256,19 @@ async function loadFramesList() {
     let html = '';
     for (const frame of frames) {
         if (frame.id === 'nature') continue;
+        
+        // ★★★ 兼容字段名：优先 imageUrl，其次 image_url ★★★
+        let imageUrl = frame.imageUrl || frame.image_url || '';
+        if (!imageUrl) {
+            // 从 CONFIG 后备
+            const configFrame = CONFIG.FRAMES.find(f => f.id === frame.id);
+            if (configFrame && configFrame.imageUrl) {
+                imageUrl = configFrame.imageUrl;
+            }
+        }
+        // 调试日志（可在控制台查看）
+        console.log(`[商店] ${frame.id} 图片URL:`, imageUrl || '(无)');
+        
         const isOwned = owned.includes(frame.id);
         const isEquipped = equipped === frame.id;
         let actionHtml = '';
@@ -266,20 +279,20 @@ async function loadFramesList() {
         } else if (frame.is_chest_exclusive) {
             actionHtml = `<span style="color:#facc15;font-size:0.8rem;">🎁 仅限宝箱获得</span>`;
         } else if (frame.is_purchasable) {
-            const priceText = `🍬${frame.price_candy.toLocaleString()} ${frame.price_rainbow > 0 ? `🌈${frame.price_rainbow.toLocaleString()}` : ''}`;
+            const priceText = `🍬${frame.price_candy?.toLocaleString() || 0} ${frame.price_rainbow > 0 ? `🌈${frame.price_rainbow.toLocaleString()}` : ''}`;
             actionHtml = `<button class="btn-buy" data-frame-id="${frame.id}">购买 (${priceText})</button>`;
         } else {
             actionHtml = `<span style="color:#aaa;">不可购买</span>`;
         }
-        // ★ 商店头像框预览：方形，完整显示图片，加载失败显示图标
+        
         html += `<div class="frame-item-wrap">
             <div class="frame-left-box" onclick="window.openBackpackItemDetail('${frame.id}')">
                 <div class="frame-mini-preview" style="width:56px;height:56px;overflow:hidden;border-radius:8px;flex-shrink:0;background:#1a1a2e;display:flex;align-items:center;justify-content:center;">
-                    ${frame.imageUrl ? `<img src="${frame.imageUrl}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\'font-size:1.5rem;\\'>🖼️</span>';">` : `<span style="font-size:1.5rem;">🖼️</span>`}
+                    ${imageUrl ? `<img src="${imageUrl}" style="width:100%;height:100%;object-fit:contain;" onerror="console.error('[商店] 图片加载失败:', this.src); this.style.display='none'; this.parentElement.innerHTML='<span style=\\'font-size:1.5rem;\\'>🖼️</span>';">` : `<span style="font-size:1.5rem;">🖼️</span>`}
                 </div>
                 <div>
                     <div style="font-weight:bold;">${frame.name}</div>
-                    <div style="font-size:0.8rem; opacity:0.7;">${frame.description}</div>
+                    <div style="font-size:0.8rem; opacity:0.7;">${frame.description || ''}</div>
                 </div>
             </div>
             <div>${actionHtml}</div>
@@ -326,7 +339,6 @@ async function loadFramesList() {
     });
 }
 
-// ===== 自动签到卡UI =====
 async function loadAutoSignCardUI() {
     const container = document.getElementById('autoSignCardItem');
     if (!container) return;
@@ -369,7 +381,7 @@ async function loadAutoSignCardUI() {
     }
 }
 
-// ===== 宝箱商店购买 =====
+// 宝箱商店购买
 async function loadChestShopUI() {
     const container = document.getElementById('chestShopItem');
     if (!container) return;
@@ -443,13 +455,22 @@ export async function renderBackpack() {
         { ...CONFIG.BACKPACK_ITEMS[2], count: state.userStats?.dreamy_syrup || 0 },
         { ...CONFIG.BACKPACK_ITEMS[3], count: hasCard ? 1 : 0 }
     ];
+
     for (let frame of ownedFrames) {
+        // ★★★ 兼容字段名 ★★★
+        let iconUrl = frame.imageUrl || frame.image_url || '';
+        if (!iconUrl) {
+            const configFrame = CONFIG.FRAMES.find(f => f.id === frame.id);
+            if (configFrame && configFrame.imageUrl) {
+                iconUrl = configFrame.imageUrl;
+            }
+        }
         backpackData.push({
             id: frame.id,
             name: frame.name,
             desc: frame.description,
-            icon: frame.imageUrl || '',
-            isImg: !!frame.imageUrl,
+            icon: iconUrl || '',
+            isImg: !!iconUrl,
             type: 'frame',
             count: 1
         });
@@ -482,9 +503,8 @@ export async function renderBackpack() {
             let iconHtml = '';
             const displayCount = item.count.toLocaleString();
             if (item.type === 'frame') {
-                // ★ 背包中头像框预览：方形，完整显示图片，加载失败显示图标
                 if (item.icon) {
-                    iconHtml = `<img src="${item.icon}" style="width:40px;height:40px;object-fit:contain;" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\'font-size:1.5rem;\\'>🖼️</span>';">`;
+                    iconHtml = `<img src="${item.icon}" style="width:40px;height:40px;object-fit:contain;" onerror="console.error('[背包] 图片加载失败:', this.src); this.style.display='none'; this.parentElement.innerHTML='<span style=\\'font-size:1.5rem;\\'>🖼️</span>';">`;
                 } else {
                     iconHtml = `<span style="font-size:1.5rem;">🖼️</span>`;
                 }
@@ -510,9 +530,20 @@ export async function openBackpackItemDetail(itemId) {
         const count = ownedFrames.includes(frame.id) ? 1 : 0;
         const isEquipped = state.userProfile?.equipped_frame === frame.id;
         
+        // ★★★ 兼容字段名 ★★★
+        let imageUrl = frame.imageUrl || frame.image_url || '';
+        if (!imageUrl) {
+            const configFrame = CONFIG.FRAMES.find(f => f.id === frame.id);
+            if (configFrame && configFrame.imageUrl) {
+                imageUrl = configFrame.imageUrl;
+            }
+        }
+        
         document.getElementById('bItemTitle').innerText = frame.name;
-        document.getElementById('bItemIcon').innerHTML = frame.imageUrl ? `<img src="${frame.imageUrl}" style="width:80px;height:80px;object-fit:contain;" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\'font-size:3rem;\\'>🖼️</span>';">` : `<span style="font-size:3rem;">🖼️</span>`;
-        document.getElementById('bItemDesc').innerText = frame.description;
+        document.getElementById('bItemIcon').innerHTML = imageUrl 
+            ? `<img src="${imageUrl}" style="width:80px;height:80px;object-fit:contain;" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\'font-size:3rem;\\'>🖼️</span>';">` 
+            : `<span style="font-size:3rem;">🖼️</span>`;
+        document.getElementById('bItemDesc').innerText = frame.description || '';
         
         let actionHtml = '';
         if (count > 0) {
