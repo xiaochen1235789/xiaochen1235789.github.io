@@ -1,4 +1,4 @@
-// ========== UI 渲染器（完整版，修复宝箱交互） ==========
+// ========== UI 渲染器（最终版：头像框图片完整显示，带错误回退） ==========
 import { CONFIG, CHEST_CONFIG, getRoleDisplay } from './config.js';
 import {
     safeSetText, showNotification, openModal, closeModal,
@@ -21,6 +21,11 @@ import {
 } from './frame-system.js';
 
 let state = {};
+
+// 缓存商店头像框列表
+let cachedFrames = null;
+let framesCacheTime = 0;
+const FRAMES_CACHE_TTL = 60000;
 
 export function setAppState(appState) {
     state = appState;
@@ -61,7 +66,6 @@ export function updateAvatarDisplay(imageUrl) {
         } else {
             avatarDiv.innerHTML = `<div class="avatar-placeholder">${initial}</div>`;
         }
-        // 头像框
         const frameImg = document.createElement('img');
         frameImg.className = 'avatar-frame-img';
         frameImg.id = 'avatarFrameImg';
@@ -123,7 +127,6 @@ export async function renderProfile() {
             updateCheckinButtonState();
         }
 
-        // 显示宝箱数量
         const userInfo = document.querySelector('.user-info');
         if (userInfo && !document.getElementById('chestDisplay')) {
             const chestDiv = document.createElement('div');
@@ -237,11 +240,18 @@ export async function renderShop() {
     });
 }
 
-// 加载头像框列表（从数据库）
+// 加载头像框列表（完整图片显示 + 错误回退）
 async function loadFramesList() {
     const container = document.getElementById('framesList');
     if (!container) return;
-    const frames = await getShopFrames();
+    
+    let frames = cachedFrames;
+    if (!frames || Date.now() - framesCacheTime > FRAMES_CACHE_TTL) {
+        frames = await getShopFrames();
+        cachedFrames = frames;
+        framesCacheTime = Date.now();
+    }
+    
     const { owned, equipped } = await loadUserFrames(state.currentUser.id);
     let html = '';
     for (const frame of frames) {
@@ -261,7 +271,19 @@ async function loadFramesList() {
         } else {
             actionHtml = `<span style="color:#aaa;">不可购买</span>`;
         }
-        html += `<div class="frame-item-wrap"><div class="frame-left-box" onclick="window.openBackpackItemDetail('${frame.id}')"><div class="frame-mini-preview" style="width:44px;height:44px;overflow:hidden;border-radius:50%;">${frame.imageUrl ? `<img src="${frame.imageUrl}" style="width:100%;height:100%;object-fit:contain;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🖼️</div>`}</div><div><div style="font-weight:bold;">${frame.name}</div><div style="font-size:0.8rem; opacity:0.7;">${frame.description}</div></div></div><div>${actionHtml}</div></div>`;
+        // ★ 商店头像框预览：方形，完整显示图片，加载失败显示图标
+        html += `<div class="frame-item-wrap">
+            <div class="frame-left-box" onclick="window.openBackpackItemDetail('${frame.id}')">
+                <div class="frame-mini-preview" style="width:56px;height:56px;overflow:hidden;border-radius:8px;flex-shrink:0;background:#1a1a2e;display:flex;align-items:center;justify-content:center;">
+                    ${frame.imageUrl ? `<img src="${frame.imageUrl}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\'font-size:1.5rem;\\'>🖼️</span>';">` : `<span style="font-size:1.5rem;">🖼️</span>`}
+                </div>
+                <div>
+                    <div style="font-weight:bold;">${frame.name}</div>
+                    <div style="font-size:0.8rem; opacity:0.7;">${frame.description}</div>
+                </div>
+            </div>
+            <div>${actionHtml}</div>
+        </div>`;
     }
     container.innerHTML = html;
 
@@ -304,6 +326,7 @@ async function loadFramesList() {
     });
 }
 
+// ===== 自动签到卡UI =====
 async function loadAutoSignCardUI() {
     const container = document.getElementById('autoSignCardItem');
     if (!container) return;
@@ -346,7 +369,7 @@ async function loadAutoSignCardUI() {
     }
 }
 
-// 宝箱商店购买
+// ===== 宝箱商店购买 =====
 async function loadChestShopUI() {
     const container = document.getElementById('chestShopItem');
     if (!container) return;
@@ -432,7 +455,6 @@ export async function renderBackpack() {
         });
     }
 
-    // 宝箱
     const chestCount = state.userStats?.chest_count || 0;
     if (chestCount > 0) {
         backpackData.push({
@@ -460,13 +482,14 @@ export async function renderBackpack() {
             let iconHtml = '';
             const displayCount = item.count.toLocaleString();
             if (item.type === 'frame') {
+                // ★ 背包中头像框预览：方形，完整显示图片，加载失败显示图标
                 if (item.icon) {
-                    iconHtml = `<img src="${item.icon}" style="width:40px;height:40px;object-fit:contain;">`;
+                    iconHtml = `<img src="${item.icon}" style="width:40px;height:40px;object-fit:contain;" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\'font-size:1.5rem;\\'>🖼️</span>';">`;
                 } else {
-                    iconHtml = `<i class="fas fa-image" style="font-size:2rem;"></i>`;
+                    iconHtml = `<span style="font-size:1.5rem;">🖼️</span>`;
                 }
             } else if (item.isImg) {
-                iconHtml = `<img src="${item.icon}" alt="${item.name}" style="width:40px;height:40px;object-fit:contain;">`;
+                iconHtml = `<img src="${item.icon}" alt="${item.name}" style="width:40px;height:40px;object-fit:contain;" onerror="this.style.display='none';">`;
             } else {
                 iconHtml = `<i class="fas ${item.icon}"></i>`;
             }
@@ -478,18 +501,48 @@ export async function renderBackpack() {
     openModal('backpackModal');
 }
 
-// ===== 物品详情（含拥有数量） =====
+// ===== 物品详情（含装备头像框功能） =====
 export async function openBackpackItemDetail(itemId) {
     // 1. 头像框
     const frame = await getFrameById(itemId);
     if (frame) {
         const ownedFrames = state.userProfile?.owned_frames || ['nature'];
         const count = ownedFrames.includes(frame.id) ? 1 : 0;
+        const isEquipped = state.userProfile?.equipped_frame === frame.id;
+        
         document.getElementById('bItemTitle').innerText = frame.name;
-        document.getElementById('bItemIcon').innerHTML = frame.imageUrl ? `<img src="${frame.imageUrl}" style="width:80px;height:80px;object-fit:contain;">` : `<i class="fas fa-image" style="font-size:4rem;"></i>`;
+        document.getElementById('bItemIcon').innerHTML = frame.imageUrl ? `<img src="${frame.imageUrl}" style="width:80px;height:80px;object-fit:contain;" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\'font-size:3rem;\\'>🖼️</span>';">` : `<span style="font-size:3rem;">🖼️</span>`;
         document.getElementById('bItemDesc').innerText = frame.description;
-        document.getElementById('bItemCount').innerHTML = `当前拥有：${count}`;
+        
+        let actionHtml = '';
+        if (count > 0) {
+            if (isEquipped) {
+                actionHtml = `<button class="btn-owned" disabled style="margin-top:12px;">已装备</button>`;
+            } else {
+                actionHtml = `<button class="btn-primary" id="equipFromBackpackBtn" style="margin-top:12px;">装备此头像框</button>`;
+            }
+        }
+        document.getElementById('bItemCount').innerHTML = `当前拥有：${count}${actionHtml}`;
+        
         openModal('backpackItemModal');
+        
+        const equipBtn = document.getElementById('equipFromBackpackBtn');
+        if (equipBtn) {
+            equipBtn.addEventListener('click', async () => {
+                try {
+                    await equipFrame(frame.id);
+                    state.userProfile.equipped_frame = frame.id;
+                    window.userProfile.equipped_frame = frame.id;
+                    showNotification('✅ 已装备头像框', 'success');
+                    closeModal('backpackItemModal');
+                    renderBackpack();
+                    applyFrameClassByFrameId(frame.id);
+                    window.updateNavbar?.();
+                } catch (err) {
+                    showNotification(err.message, 'error');
+                }
+            });
+        }
         return;
     }
 
@@ -505,7 +558,7 @@ export async function openBackpackItemDetail(itemId) {
             count = state.hasAutoSignCard ? 1 : 0;
         }
         document.getElementById('bItemTitle').innerText = item.name;
-        const iconHtml = item.isImg ? `<img src="${item.icon}" style="width:80px;height:80px;object-fit:contain;">` : `<i class="fas ${item.icon}" style="font-size:4rem;"></i>`;
+        const iconHtml = item.isImg ? `<img src="${item.icon}" style="width:80px;height:80px;object-fit:contain;" onerror="this.style.display='none';">` : `<i class="fas ${item.icon}" style="font-size:4rem;"></i>`;
         document.getElementById('bItemIcon').innerHTML = iconHtml;
         document.getElementById('bItemDesc').innerText = item.desc;
         document.getElementById('bItemCount').innerHTML = `当前拥有：${count}`;
@@ -528,7 +581,7 @@ export async function openBackpackItemDetail(itemId) {
 }
 
 // ============================================================
-// ★★★ 第一步修复：宝箱开启界面（动态更新 + 开一次/十次 + 结果模态框） ★★★
+// ★★★ 宝箱开启界面（动态更新 + 开一次/十次 + 结果模态框 + 帮助模态框） ★★★
 // ============================================================
 let batchModalOpen = false;
 let isOpeningChest = false;
@@ -546,7 +599,6 @@ export async function openBatchChestModal(maxCount) {
     const remaining = Math.max(0, pityLimit - pityCounter);
     const openedCount = pityCounter;
 
-    // 创建模态框
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay show';
     overlay.id = 'batchChestModal';
@@ -581,7 +633,6 @@ export async function openBatchChestModal(maxCount) {
                 </div>
                 <div id="batchResultArea" style="display:none;"></div>
             </div>
-            <div id="probabilityInfo" style="display:none; margin:10px 0; padding:10px; background:rgba(0,0,0,0.3); border-radius:8px; font-size:0.85rem; text-align:left;"></div>
         </div>
     `;
     document.body.appendChild(overlay);
@@ -595,7 +646,6 @@ export async function openBatchChestModal(maxCount) {
     const pityDisplay = document.getElementById('pityProgress');
     const chestCountDisplay = document.getElementById('chestCountDisplay');
 
-    // 更新保底显示
     async function updatePityDisplay() {
         try {
             const newCounter = await getPityCounter(state.currentUser.id);
@@ -606,7 +656,6 @@ export async function openBatchChestModal(maxCount) {
         } catch (e) { console.warn('更新保底显示失败', e); }
     }
 
-    // 更新UI上的宝箱数量
     function updateChestCountDisplay() {
         const count = state.userStats?.chest_count || 0;
         chestCountDisplay.textContent = count;
@@ -622,7 +671,6 @@ export async function openBatchChestModal(maxCount) {
             openTenBtn.disabled = true;
             confirmBtn.disabled = true;
         } else {
-            // 恢复启用（如果当前没有锁定）
             if (!isOpeningChest) {
                 setButtonsDisabled(false);
             }
@@ -638,7 +686,6 @@ export async function openBatchChestModal(maxCount) {
         isOpeningChest = disabled;
     }
 
-    // 显示结果模态框
     function showChestResultModal(results) {
         const summary = {};
         results.forEach(r => {
@@ -680,7 +727,6 @@ export async function openBatchChestModal(maxCount) {
         });
     }
 
-    // 核心开箱逻辑
     async function performOpen(amount) {
         if (isOpeningChest) return;
         const currentCount = state.userStats?.chest_count || 0;
@@ -695,7 +741,6 @@ export async function openBatchChestModal(maxCount) {
             window.userStats = newStats;
             updateChestCountDisplay();
             updatePityDisplay();
-            // 弹出结果模态框
             showChestResultModal(results);
             if (newStats.chest_count === 0) {
                 setTimeout(() => {
@@ -715,7 +760,6 @@ export async function openBatchChestModal(maxCount) {
         }
     }
 
-    // 事件绑定
     slider.addEventListener('input', () => {
         valueDisplay.textContent = slider.value;
     });
@@ -733,38 +777,62 @@ export async function openBatchChestModal(maxCount) {
         }
     });
 
-    // 帮助按钮（暂时保留原有展开逻辑，第二步会改为模态框）
+    // ★★★ 帮助按钮 - 弹出模态框 ★★★
     document.getElementById('chestHelpBtn').addEventListener('click', async () => {
-        if (document.getElementById('probabilityInfo').style.display === 'block') {
-            document.getElementById('probabilityInfo').style.display = 'none';
-            return;
-        }
         try {
             const probs = await getChestProbabilities();
             const totalWeight = probs.reduce((s, p) => s + p.weight, 0);
-            let html = `<div style="font-weight:bold;margin-bottom:6px;">🎲 完整奖励配置表</div>`;
+            const pityLimit = await getPityLimit();
+            const currentCounter = await getPityCounter(state.currentUser.id);
+            const remain = Math.max(0, pityLimit - currentCounter);
+
+            let html = `<div style="font-weight:bold;margin-bottom:10px;font-size:1.1rem;">🎲 完整奖励配置表</div>`;
             const normal = probs.filter(p => !p.is_limited);
             const limited = probs.filter(p => p.is_limited);
-            html += `<div style="border-bottom:1px solid #333;padding-bottom:6px;margin-bottom:6px;">【普通奖励】</div>`;
+            html += `<div style="border-bottom:1px solid #333;padding-bottom:8px;margin-bottom:8px;">【普通奖励】</div>`;
             for (let p of normal) {
                 const percent = ((p.weight / totalWeight) * 100).toFixed(1);
                 html += `<div>${p.description}：${percent}%</div>`;
             }
             if (limited.length) {
-                html += `<div style="margin-top:8px;border-top:1px solid #444;padding-top:8px;color:#facc15;">【限定奖励】（保底 ${pityLimit} 次必出）</div>`;
+                html += `<div style="margin-top:10px;border-top:1px solid #444;padding-top:10px;color:#facc15;">【限定奖励】（保底 ${pityLimit} 次必出）</div>`;
                 for (let p of limited) {
                     const percent = ((p.weight / totalWeight) * 100).toFixed(1);
                     html += `<div>${p.description}：${percent}%</div>`;
                 }
-                html += `<div style="margin-top:4px;font-size:0.8rem;color:#f87171;">💡 保底规则：若连续 ${pityLimit-1} 次未出限定，第 ${pityLimit} 次必定获得一个限定物品（从所有限定中随机）</div>`;
+                html += `<div style="margin-top:8px;font-size:0.85rem;color:#f87171;">💡 保底规则：若连续 ${pityLimit-1} 次未出限定，第 ${pityLimit} 次必定获得一个限定物品（从所有限定中随机）</div>`;
             } else {
                 html += `<div style="margin-top:8px;color:#aaa;">暂无限定物品配置</div>`;
             }
-            const currentCounter = await getPityCounter(state.currentUser.id);
-            const remain = Math.max(0, pityLimit - currentCounter);
-            html += `<div style="margin-top:10px;border-top:1px solid #333;padding-top:8px;font-size:0.9rem;color:#facc15;">📊 当前保底进度：已开启 ${currentCounter} 次，距离保底还差 ${remain} 次</div>`;
-            document.getElementById('probabilityInfo').innerHTML = html;
-            document.getElementById('probabilityInfo').style.display = 'block';
+            html += `<div style="margin-top:12px;border-top:1px solid #333;padding-top:10px;font-size:0.9rem;color:#facc15;">📊 当前保底进度：已开启 ${currentCounter} 次，距离保底还差 ${remain} 次</div>`;
+
+            const helpOverlay = document.createElement('div');
+            helpOverlay.className = 'modal-overlay show';
+            helpOverlay.id = 'chestProbModal';
+            helpOverlay.innerHTML = `
+                <div class="modal" style="max-width: 420px;">
+                    <div class="modal-header">
+                        <div class="modal-title"><i class="fas fa-info-circle"></i> 宝箱概率详情</div>
+                        <button class="modal-close" id="closeChestProbBtn">&times;</button>
+                    </div>
+                    <div style="padding: 8px 0; max-height: 60vh; overflow-y: auto;">
+                        ${html}
+                    </div>
+                    <div style="text-align:center; padding:10px 0 0;">
+                        <button class="btn-primary" id="closeChestProbConfirm">知道了</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(helpOverlay);
+
+            const closeProb = () => {
+                helpOverlay.remove();
+            };
+            document.getElementById('closeChestProbBtn').addEventListener('click', closeProb);
+            document.getElementById('closeChestProbConfirm').addEventListener('click', closeProb);
+            helpOverlay.addEventListener('click', (e) => {
+                if (e.target === helpOverlay) closeProb();
+            });
         } catch (err) {
             showNotification('加载配置表失败', 'error');
         }
@@ -805,7 +873,6 @@ export async function openBatchChestModal(maxCount) {
         performOpen(amount);
     });
 
-    // 初始化显示
     updateChestCountDisplay();
 }
 
@@ -873,7 +940,7 @@ export async function openRewardInfoModal() {
     if (container) { container.innerHTML = html + footerHtml; openModal('rewardInfoModal'); }
 }
 
-// 导出全局更新显示函数（供 app.js 调用）
+// 导出全局更新显示函数
 window.updateChestDisplay = function() {
     const el = document.getElementById('chestDisplay');
     if (el) {
