@@ -1,4 +1,4 @@
-// ========== UI 渲染器（完整版，修复 getChestPrice 导入） ==========
+// ========== UI 渲染器（完整版，修复宝箱交互） ==========
 import { CONFIG, CHEST_CONFIG, getRoleDisplay } from './config.js';
 import {
     safeSetText, showNotification, openModal, closeModal,
@@ -11,7 +11,7 @@ import {
     loadUserFrames, updateUserProfile, updateUserStats,
     getShopFrames, getFrameById,
     getPityCounter, getChestProbabilities, batchOpenChests, getPityLimit,
-    getChestPrice  // ✅ 修复：添加缺失的导入
+    getChestPrice
 } from './api.js';
 import { getSupabase } from './api.js';
 import {
@@ -350,7 +350,7 @@ async function loadAutoSignCardUI() {
 async function loadChestShopUI() {
     const container = document.getElementById('chestShopItem');
     if (!container) return;
-    const price = await getChestPrice();  // ✅ 现在可以正常调用
+    const price = await getChestPrice();
     const maxBuy = CHEST_CONFIG.max_purchase;
     const currentChests = state.userStats?.chest_count || 0;
     let html = `
@@ -527,12 +527,16 @@ export async function openBackpackItemDetail(itemId) {
     showNotification('未知物品', 'error');
 }
 
-// ===== 批量开启宝箱（含保底进度） =====
+// ============================================================
+// ★★★ 第一步修复：宝箱开启界面（动态更新 + 开一次/十次 + 结果模态框） ★★★
+// ============================================================
 let batchModalOpen = false;
+let isOpeningChest = false;
 
 export async function openBatchChestModal(maxCount) {
     if (batchModalOpen) return;
     batchModalOpen = true;
+    isOpeningChest = false;
 
     let pityCounter = 0;
     try {
@@ -542,6 +546,7 @@ export async function openBatchChestModal(maxCount) {
     const remaining = Math.max(0, pityLimit - pityCounter);
     const openedCount = pityCounter;
 
+    // 创建模态框
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay show';
     overlay.id = 'batchChestModal';
@@ -559,18 +564,22 @@ export async function openBatchChestModal(maxCount) {
             <div style="text-align:center; padding:10px 0;">
                 <img src="${CHEST_CONFIG.image_url}" alt="宝箱" style="width:80px; height:80px; object-fit:contain;">
                 <div style="margin:10px 0; font-size:0.95rem;">
-                    当前拥有 <strong>${maxCount}</strong> 个宝箱
+                    当前拥有 <strong id="chestCountDisplay">${maxCount}</strong> 个宝箱
                 </div>
                 <div id="pityProgress" style="font-size:0.85rem; color:#facc15; background:rgba(0,0,0,0.3); padding:6px 12px; border-radius:20px; display:inline-block; margin-bottom:10px;">
                     已开启 <strong>${openedCount}</strong> 次（未出限定），距离保底剩余 <strong>${remaining}</strong> 次
                 </div>
                 <div style="display:flex; align-items:center; gap:12px; justify-content:center;">
                     <span>开启数量：</span>
-                    <input type="range" id="chestSlider" min="1" max="${maxCount}" value="${Math.min(10, maxCount)}" style="flex:1; max-width:200px;">
-                    <span id="chestSliderValue">${Math.min(10, maxCount)}</span>
+                    <input type="range" id="chestSlider" min="1" max="${Math.min(maxCount, 100)}" value="${Math.min(10, maxCount, 100)}" style="flex:1; max-width:200px;">
+                    <span id="chestSliderValue">${Math.min(10, maxCount, 100)}</span>
                 </div>
-                <button id="confirmBatchOpenBtn" class="btn-primary" style="margin-top:16px; padding:8px 30px;">确认开启</button>
-                <div id="batchResultArea" style="margin-top:12px; max-height:150px; overflow-y:auto; font-size:0.9rem; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px; display:none;"></div>
+                <div style="display:flex; gap:8px; justify-content:center; margin-top:12px; flex-wrap:wrap;">
+                    <button id="openOnceBtn" class="btn-buy" style="padding:6px 18px;">开一次</button>
+                    <button id="openTenBtn" class="btn-buy" style="padding:6px 18px;">开十次</button>
+                    <button id="confirmBatchOpenBtn" class="btn-primary" style="padding:6px 18px;">确认开启</button>
+                </div>
+                <div id="batchResultArea" style="display:none;"></div>
             </div>
             <div id="probabilityInfo" style="display:none; margin:10px 0; padding:10px; background:rgba(0,0,0,0.3); border-radius:8px; font-size:0.85rem; text-align:left;"></div>
         </div>
@@ -580,11 +589,13 @@ export async function openBatchChestModal(maxCount) {
     const slider = document.getElementById('chestSlider');
     const valueDisplay = document.getElementById('chestSliderValue');
     const confirmBtn = document.getElementById('confirmBatchOpenBtn');
+    const openOnceBtn = document.getElementById('openOnceBtn');
+    const openTenBtn = document.getElementById('openTenBtn');
     const closeBtn = document.getElementById('closeBatchChestBtn');
-    const resultArea = document.getElementById('batchResultArea');
-    const probInfo = document.getElementById('probabilityInfo');
     const pityDisplay = document.getElementById('pityProgress');
+    const chestCountDisplay = document.getElementById('chestCountDisplay');
 
+    // 更新保底显示
     async function updatePityDisplay() {
         try {
             const newCounter = await getPityCounter(state.currentUser.id);
@@ -595,22 +606,137 @@ export async function openBatchChestModal(maxCount) {
         } catch (e) { console.warn('更新保底显示失败', e); }
     }
 
+    // 更新UI上的宝箱数量
+    function updateChestCountDisplay() {
+        const count = state.userStats?.chest_count || 0;
+        chestCountDisplay.textContent = count;
+        const maxVal = Math.min(count, 100);
+        slider.max = maxVal;
+        if (parseInt(slider.value) > maxVal) {
+            slider.value = maxVal;
+            valueDisplay.textContent = maxVal;
+        }
+        if (maxVal < 1) {
+            setButtonsDisabled(true);
+            openOnceBtn.disabled = true;
+            openTenBtn.disabled = true;
+            confirmBtn.disabled = true;
+        } else {
+            // 恢复启用（如果当前没有锁定）
+            if (!isOpeningChest) {
+                setButtonsDisabled(false);
+            }
+        }
+    }
+
+    function setButtonsDisabled(disabled) {
+        slider.disabled = disabled;
+        openOnceBtn.disabled = disabled;
+        openTenBtn.disabled = disabled;
+        confirmBtn.disabled = disabled;
+        closeBtn.disabled = disabled;
+        isOpeningChest = disabled;
+    }
+
+    // 显示结果模态框
+    function showChestResultModal(results) {
+        const summary = {};
+        results.forEach(r => {
+            const key = r.type;
+            summary[key] = (summary[key] || 0) + 1;
+        });
+        let lines = [];
+        for (let key in summary) {
+            lines.push(`${key} ×${summary[key]}`);
+        }
+
+        const resultOverlay = document.createElement('div');
+        resultOverlay.className = 'modal-overlay show';
+        resultOverlay.id = 'chestResultModal';
+        resultOverlay.innerHTML = `
+            <div class="modal" style="max-width: 400px;">
+                <div class="modal-header">
+                    <div class="modal-title"><i class="fas fa-gift"></i> 开箱结果</div>
+                    <button class="modal-close" id="closeChestResultBtn">&times;</button>
+                </div>
+                <div style="padding: 16px 0; text-align: center;">
+                    <div style="font-size:1.2rem; margin-bottom:12px;">🎉 成功开启 ${results.length} 个宝箱</div>
+                    <div style="max-height:200px; overflow-y:auto; text-align:left; padding:0 12px;">
+                        ${lines.map(line => `<div style="padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);">${line}</div>`).join('')}
+                    </div>
+                    <button class="btn-primary" id="closeChestResultConfirm" style="margin-top:16px;">知道了</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(resultOverlay);
+
+        const closeResult = () => {
+            resultOverlay.remove();
+        };
+        document.getElementById('closeChestResultBtn').addEventListener('click', closeResult);
+        document.getElementById('closeChestResultConfirm').addEventListener('click', closeResult);
+        resultOverlay.addEventListener('click', (e) => {
+            if (e.target === resultOverlay) closeResult();
+        });
+    }
+
+    // 核心开箱逻辑
+    async function performOpen(amount) {
+        if (isOpeningChest) return;
+        const currentCount = state.userStats?.chest_count || 0;
+        if (currentCount < amount || amount < 1) {
+            showNotification('宝箱数量不足', 'error');
+            return;
+        }
+        setButtonsDisabled(true);
+        try {
+            const { results, newStats } = await batchOpenChests(state.currentUser.id, amount);
+            state.userStats = newStats;
+            window.userStats = newStats;
+            updateChestCountDisplay();
+            updatePityDisplay();
+            // 弹出结果模态框
+            showChestResultModal(results);
+            if (newStats.chest_count === 0) {
+                setTimeout(() => {
+                    if (overlay.parentNode) overlay.remove();
+                    batchModalOpen = false;
+                }, 1500);
+            }
+            showNotification(`✅ 成功开启 ${amount} 个宝箱`, 'success');
+        } catch (err) {
+            showNotification('开箱失败：' + err.message, 'error');
+        } finally {
+            if ((state.userStats?.chest_count || 0) > 0) {
+                setButtonsDisabled(false);
+            } else {
+                setButtonsDisabled(true);
+            }
+        }
+    }
+
+    // 事件绑定
     slider.addEventListener('input', () => {
         valueDisplay.textContent = slider.value;
     });
 
-    const closeModal = () => {
+    closeBtn.addEventListener('click', () => {
+        if (isOpeningChest) return;
         overlay.remove();
         batchModalOpen = false;
-    };
-    closeBtn.addEventListener('click', closeModal);
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) closeModal();
     });
 
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay && !isOpeningChest) {
+            overlay.remove();
+            batchModalOpen = false;
+        }
+    });
+
+    // 帮助按钮（暂时保留原有展开逻辑，第二步会改为模态框）
     document.getElementById('chestHelpBtn').addEventListener('click', async () => {
-        if (probInfo.style.display === 'block') {
-            probInfo.style.display = 'none';
+        if (document.getElementById('probabilityInfo').style.display === 'block') {
+            document.getElementById('probabilityInfo').style.display = 'none';
             return;
         }
         try {
@@ -637,59 +763,50 @@ export async function openBatchChestModal(maxCount) {
             const currentCounter = await getPityCounter(state.currentUser.id);
             const remain = Math.max(0, pityLimit - currentCounter);
             html += `<div style="margin-top:10px;border-top:1px solid #333;padding-top:8px;font-size:0.9rem;color:#facc15;">📊 当前保底进度：已开启 ${currentCounter} 次，距离保底还差 ${remain} 次</div>`;
-            probInfo.innerHTML = html;
-            probInfo.style.display = 'block';
+            document.getElementById('probabilityInfo').innerHTML = html;
+            document.getElementById('probabilityInfo').style.display = 'block';
         } catch (err) {
             showNotification('加载配置表失败', 'error');
         }
     });
 
-    confirmBtn.addEventListener('click', async () => {
+    confirmBtn.addEventListener('click', () => {
+        if (isOpeningChest) return;
         const amount = parseInt(slider.value);
-        if (amount < 1 || amount > maxCount) {
-            showNotification('数量无效', 'error');
+        if (amount < 1) {
+            showNotification('至少开启1个', 'error');
             return;
         }
-        confirmBtn.disabled = true;
-        confirmBtn.textContent = '开启中...';
-        try {
-            const { results, newStats } = await batchOpenChests(state.currentUser.id, amount);
-            let summary = {};
-            results.forEach(r => {
-                const key = r.type;
-                if (!summary[key]) summary[key] = 0;
-                summary[key]++;
-            });
-            let lines = [];
-            for (let key in summary) {
-                lines.push(`${key} ×${summary[key]}`);
-            }
-            resultArea.style.display = 'block';
-            resultArea.innerHTML = `<div style="color:#facc15;">🎉 成功开启 ${amount} 个宝箱</div><div>${lines.join('<br>')}</div>`;
-            state.userStats = newStats;
-            window.userStats = newStats;
-            updateChestDisplay?.();
-            updateShopBalanceDisplay?.();
-            updateActivePointsDisplay?.();
-            renderBackpack();
-            await updatePityDisplay();
-            const newCount = newStats.chest_count || 0;
-            if (newCount > 0) {
-                slider.max = newCount;
-                slider.value = Math.min(parseInt(slider.value), newCount);
-                valueDisplay.textContent = slider.value;
-                maxCount = newCount;
-            } else {
-                setTimeout(closeModal, 2000);
-            }
-            showNotification(`✅ 成功开启 ${amount} 个宝箱`, 'success');
-        } catch (err) {
-            showNotification('开箱失败：' + err.message, 'error');
-        } finally {
-            confirmBtn.disabled = false;
-            confirmBtn.textContent = '确认开启';
-        }
+        performOpen(amount);
     });
+
+    openOnceBtn.addEventListener('click', () => {
+        if (isOpeningChest) return;
+        const currentCount = state.userStats?.chest_count || 0;
+        if (currentCount < 1) {
+            showNotification('没有宝箱可开启', 'error');
+            return;
+        }
+        slider.value = 1;
+        valueDisplay.textContent = '1';
+        performOpen(1);
+    });
+
+    openTenBtn.addEventListener('click', () => {
+        if (isOpeningChest) return;
+        const currentCount = state.userStats?.chest_count || 0;
+        const amount = Math.min(10, currentCount);
+        if (amount < 1) {
+            showNotification('没有宝箱可开启', 'error');
+            return;
+        }
+        slider.value = amount;
+        valueDisplay.textContent = amount;
+        performOpen(amount);
+    });
+
+    // 初始化显示
+    updateChestCountDisplay();
 }
 
 // ===== 称号 =====
