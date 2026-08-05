@@ -1,4 +1,4 @@
-// ========== 杂项管理（资产/头像框/邮件） ==========
+// ========== 杂项管理（资产/头像框/邮件）- Tab 切换版 ==========
 import { getSupabase, currentUser, currentUserRole } from './auth.js';
 import {
     showNotification, logAction, openModal, closeModal,
@@ -57,7 +57,6 @@ async function updateUserFrames(userId, ownedFrameIds) {
 async function updateUserTitles(userId, titleIds) {
     const sb = getSupabase();
 
-    // 获取当前称号
     const { data: current, error: fetchErr } = await sb
         .from('user_titles')
         .select('title_id')
@@ -117,7 +116,6 @@ export async function initMiscPanel() {
     const select = document.getElementById('miscUserSelect');
     if (!select) return;
 
-    // 加载用户列表
     const sb = getSupabase();
     const { data: profiles } = await sb
         .from('user_profiles')
@@ -156,17 +154,19 @@ export async function initMiscPanel() {
 
 // ----- 重置杂项面板 -----
 export function resetMiscPanels() {
-    document.getElementById('assetControlArea').innerHTML =
-        '<p style="color: var(--text-secondary);">请选择用户</p>';
-    document.getElementById('framesManagementArea').innerHTML =
-        '<p style="color: var(--text-secondary);">请选择用户</p>';
+    const container = document.getElementById('assetControlArea');
+    if (container) {
+        container.innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
+    }
+    // 清除其他区域的内容（已经合并到 Tab 中）
+    document.getElementById('framesManagementArea').innerHTML = '';
     const titleSection = document.getElementById('titleManagementArea');
     if (titleSection) titleSection.innerHTML = '';
     const autoSection = document.getElementById('autoCardManagementArea');
     if (autoSection) autoSection.innerHTML = '';
 }
 
-// ----- 加载并渲染杂项数据 -----
+// ----- 加载并渲染杂项数据（Tab 版） -----
 async function reloadMiscData(userId) {
     const sb = getSupabase();
     const canEdit = currentUserRole === 'owner';
@@ -188,7 +188,7 @@ async function reloadMiscData(userId) {
     // 2. 获取头像框
     let userFrames = await loadUserFrames(userId);
 
-    // 3. 渲染资产控制
+    // 3. 构建资产 HTML
     const assetHtml = `
         <div class="asset-item">
             <img src="${CONFIG.BACKPACK_ITEMS[0].icon}" style="width:24px;height:24px;object-fit:contain;">
@@ -208,8 +208,153 @@ async function reloadMiscData(userId) {
         }
     `;
 
-    document.getElementById('assetControlArea').innerHTML = assetHtml;
+    // 4. 构建头像框 HTML
+    let framesHtml = '<div class="frames-grid">';
+    for (const frame of FRAMES) {
+        if (frame.id === 'nature') continue;
+        const isOwned = userFrames.includes(frame.id);
+        framesHtml += `
+            <label class="frame-checkbox-item">
+                <input type="checkbox" class="frame-checkbox" data-frame-id="${frame.id}"
+                    ${isOwned ? 'checked' : ''} ${!canEdit ? 'disabled' : ''}>
+                <div class="frame-name">${escapeHtml(frame.name)}</div>
+            </label>
+        `;
+    }
+    framesHtml += '</div>';
+    framesHtml += `
+        <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">
+            ✅ 默认头像框（不可取消）
+        </div>
+    `;
+    if (canEdit) {
+        framesHtml += '<button class="save-frames-btn" id="saveFramesBtn"><i class="fas fa-save"></i> 保存头像框修改</button>';
+    } else {
+        framesHtml += '<span style="color: var(--text-secondary);">仅站长可修改头像框拥有状态</span>';
+    }
 
+    // 5. 构建称号 HTML
+    const { data: allTitles, error: titlesErr } = await sb
+        .from('titles')
+        .select('id, name, description, is_limited');
+
+    let titlesHtml = '<div style="color: var(--text-secondary);">加载称号失败</div>';
+    if (!titlesErr && allTitles) {
+        const { data: userTitles } = await sb
+            .from('user_titles')
+            .select('title_id')
+            .eq('user_id', userId);
+
+        const ownedTitleIds = new Set((userTitles || []).map(t => t.title_id));
+
+        titlesHtml = '<div class="frames-grid" id="titlesGrid">';
+        for (const title of allTitles) {
+            const isOwned = ownedTitleIds.has(title.id);
+            const limitedBadge = title.is_limited ? ' [限定]' : '';
+            titlesHtml += `
+                <label class="frame-checkbox-item" style="justify-content: space-between; width: calc(50% - 12px);">
+                    <div>
+                        <strong>${escapeHtml(title.name)}</strong>${limitedBadge}
+                        <br><span style="font-size:0.7rem;">${escapeHtml(title.description || '')}</span>
+                    </div>
+                    <input type="checkbox" class="title-checkbox" data-title-id="${title.id}"
+                        ${isOwned ? 'checked' : ''} ${!canEdit ? 'disabled' : ''}>
+                </label>
+            `;
+        }
+        titlesHtml += '</div>';
+        if (canEdit) {
+            titlesHtml += '<button class="save-frames-btn" id="saveTitlesBtn"><i class="fas fa-save"></i> 保存徽章修改</button>';
+        } else {
+            titlesHtml += '<span style="color: var(--text-secondary);">仅站长可修改徽章拥有状态</span>';
+        }
+    }
+
+    // 6. 构建自动签到卡 HTML
+    const { data: autoCard } = await sb
+        .from('user_auto_sign_card')
+        .select('owned')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    const hasAutoCard = autoCard?.owned === true;
+    const autoHtml = `
+        <div style="display: flex; align-items: center; gap: 20px; margin: 10px 0; flex-wrap:wrap;">
+            <span>当前状态: ${hasAutoCard ? '已拥有 ✅' : '未拥有 ❌'}</span>
+            ${canEdit
+                ? `<button id="toggleAutoCardBtn" class="save-asset-btn" style="background: ${hasAutoCard ? '#c41e3a' : '#10b981'};">
+                    ${hasAutoCard ? '移除卡片' : '授予卡片'}
+                </button>`
+                : '<span style="color: var(--text-secondary);">仅站长可修改</span>'
+            }
+        </div>
+    `;
+
+    // ============================================================
+    // ★★★★★ Tab 切换结构 ★★★★★
+    // ============================================================
+    const tabHtml = `
+        <!-- Tab 导航 -->
+        <div class="misc-tabs" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;">
+            <button class="misc-tab-btn active" data-tab="assets" style="padding:6px 18px; border-radius:20px; border:none; cursor:pointer; background:#3b82f6; color:white; font-size:0.9rem;">💰 资产</button>
+            <button class="misc-tab-btn" data-tab="frames" style="padding:6px 18px; border-radius:20px; border:none; cursor:pointer; background:transparent; color:var(--text-secondary); font-size:0.9rem;">🖼️ 头像框</button>
+            <button class="misc-tab-btn" data-tab="titles" style="padding:6px 18px; border-radius:20px; border:none; cursor:pointer; background:transparent; color:var(--text-secondary); font-size:0.9rem;">🏅 称号</button>
+            <button class="misc-tab-btn" data-tab="autocard" style="padding:6px 18px; border-radius:20px; border:none; cursor:pointer; background:transparent; color:var(--text-secondary); font-size:0.9rem;">📅 签到卡</button>
+        </div>
+
+        <!-- Tab 内容 -->
+        <div id="miscTabContent">
+            <div class="misc-tab-panel" data-panel="assets" style="display:block;">
+                ${assetHtml}
+            </div>
+            <div class="misc-tab-panel" data-panel="frames" style="display:none;">
+                ${framesHtml}
+            </div>
+            <div class="misc-tab-panel" data-panel="titles" style="display:none;">
+                ${titlesHtml}
+            </div>
+            <div class="misc-tab-panel" data-panel="autocard" style="display:none;">
+                ${autoHtml}
+            </div>
+        </div>
+    `;
+
+    // 渲染到 assetControlArea（其他区域清空）
+    const container = document.getElementById('assetControlArea');
+    if (container) {
+        container.innerHTML = tabHtml;
+    }
+    document.getElementById('framesManagementArea').innerHTML = '';
+    const titleSection = document.getElementById('titleManagementArea');
+    if (titleSection) titleSection.innerHTML = '';
+    const autoSection = document.getElementById('autoCardManagementArea');
+    if (autoSection) autoSection.innerHTML = '';
+
+    // ============================================================
+    // Tab 切换事件
+    // ============================================================
+    document.querySelectorAll('.misc-tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tab = this.dataset.tab;
+            // 切换按钮样式
+            document.querySelectorAll('.misc-tab-btn').forEach(b => {
+                b.classList.remove('active');
+                b.style.background = 'transparent';
+                b.style.color = 'var(--text-secondary)';
+            });
+            this.classList.add('active');
+            this.style.background = '#3b82f6';
+            this.style.color = 'white';
+            // 切换面板
+            document.querySelectorAll('.misc-tab-panel').forEach(p => {
+                p.style.display = p.dataset.panel === tab ? 'block' : 'none';
+            });
+        });
+    });
+
+    // ============================================================
+    // 资产保存事件
+    // ============================================================
     if (canEdit) {
         document.getElementById('saveAssetBtn')?.addEventListener('click', async () => {
             const nc = parseInt(document.getElementById('miscCandy').value, 10);
@@ -238,36 +383,9 @@ async function reloadMiscData(userId) {
         });
     }
 
-    // 4. 渲染头像框（从 CONFIG.FRAMES 读取）
-    let framesHtml = '<div class="frames-grid">';
-    for (const frame of FRAMES) {
-        if (frame.id === 'nature') continue;
-        const isOwned = userFrames.includes(frame.id);
-        framesHtml += `
-            <label class="frame-checkbox-item">
-                <input type="checkbox" class="frame-checkbox" data-frame-id="${frame.id}"
-                    ${isOwned ? 'checked' : ''} ${!canEdit ? 'disabled' : ''}>
-                <div class="frame-name">${escapeHtml(frame.name)}</div>
-            </label>
-        `;
-    }
-    framesHtml += '</div>';
-
-    // 默认头像框单独显示
-    framesHtml += `
-        <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary);">
-            ✅ 默认头像框（不可取消）
-        </div>
-    `;
-
-    if (canEdit) {
-        framesHtml += '<button class="save-frames-btn" id="saveFramesBtn"><i class="fas fa-save"></i> 保存头像框修改</button>';
-    } else {
-        framesHtml += '<span style="color: var(--text-secondary);">仅站长可修改头像框拥有状态</span>';
-    }
-
-    document.getElementById('framesManagementArea').innerHTML = framesHtml;
-
+    // ============================================================
+    // 头像框保存事件
+    // ============================================================
     if (canEdit) {
         document.getElementById('saveFramesBtn')?.addEventListener('click', async () => {
             const checkboxes = document.querySelectorAll('.frame-checkbox');
@@ -296,115 +414,37 @@ async function reloadMiscData(userId) {
         });
     }
 
-    // 5. 称号管理
-    const { data: allTitles, error: titlesErr } = await sb
-        .from('titles')
-        .select('id, name, description, is_limited');
-
-    if (!titlesErr && allTitles) {
-        const { data: userTitles } = await sb
-            .from('user_titles')
-            .select('title_id')
-            .eq('user_id', userId);
-
-        const ownedTitleIds = new Set((userTitles || []).map(t => t.title_id));
-
-        let titlesHtml = `
-            <div class="misc-title"><i class="fas fa-medal"></i> 徽章（称号）管理</div>
-            <div class="frames-grid" id="titlesGrid">
-        `;
-
-        for (const title of allTitles) {
-            const isOwned = ownedTitleIds.has(title.id);
-            const limitedBadge = title.is_limited ? ' [限定]' : '';
-            titlesHtml += `
-                <label class="frame-checkbox-item" style="justify-content: space-between; width: calc(50% - 12px);">
-                    <div>
-                        <strong>${escapeHtml(title.name)}</strong>${limitedBadge}
-                        <br><span style="font-size:0.7rem;">${escapeHtml(title.description || '')}</span>
-                    </div>
-                    <input type="checkbox" class="title-checkbox" data-title-id="${title.id}"
-                        ${isOwned ? 'checked' : ''} ${!canEdit ? 'disabled' : ''}>
-                </label>
-            `;
-        }
-
-        titlesHtml += '</div>';
-
-        if (canEdit) {
-            titlesHtml += '<button class="save-frames-btn" id="saveTitlesBtn"><i class="fas fa-save"></i> 保存徽章修改</button>';
-        } else {
-            titlesHtml += '<span style="color: var(--text-secondary);">仅站长可修改徽章拥有状态</span>';
-        }
-
-        let titleSection = document.getElementById('titleManagementArea');
-        if (!titleSection) {
-            const sec = document.createElement('div');
-            sec.className = 'misc-section';
-            sec.id = 'titleManagementArea';
-            document.getElementById('misc-panel').appendChild(sec);
-            titleSection = sec;
-        }
-        titleSection.innerHTML = titlesHtml;
-
-        if (canEdit) {
-            document.getElementById('saveTitlesBtn')?.addEventListener('click', async () => {
-                const checkboxes = document.querySelectorAll('.title-checkbox');
-                const newOwnedIds = [];
-                checkboxes.forEach(cb => {
-                    if (cb.checked) newOwnedIds.push(parseInt(cb.dataset.titleId));
-                });
-
-                try {
-                    await updateUserTitles(userId, newOwnedIds);
-                    await logAction(
-                        '徽章调整',
-                        'user_titles',
-                        userId,
-                        targetUser?.username || userId,
-                        '称号ID列表: ' + newOwnedIds.join(',')
-                    );
-                    showNotification('徽章已更新', 'success');
-                    await reloadMiscData(userId);
-                } catch (err) {
-                    showNotification(err.message, 'error');
-                }
+    // ============================================================
+    // 称号保存事件
+    // ============================================================
+    if (canEdit) {
+        document.getElementById('saveTitlesBtn')?.addEventListener('click', async () => {
+            const checkboxes = document.querySelectorAll('.title-checkbox');
+            const newOwnedIds = [];
+            checkboxes.forEach(cb => {
+                if (cb.checked) newOwnedIds.push(parseInt(cb.dataset.titleId));
             });
-        }
-    }
 
-    // 6. 自动签到卡
-    const { data: autoCard } = await sb
-        .from('user_auto_sign_card')
-        .select('owned')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-    const hasAutoCard = autoCard?.owned === true;
-
-    const autoHtml = `
-        <div class="misc-title"><i class="fas fa-calendar-check"></i> 自动签到卡</div>
-        <div style="display: flex; align-items: center; gap: 20px; margin: 10px 0;">
-            <span>当前状态: ${hasAutoCard ? '已拥有 ✅' : '未拥有 ❌'}</span>
-            ${canEdit
-                ? `<button id="toggleAutoCardBtn" class="save-asset-btn" style="background: ${hasAutoCard ? '#c41e3a' : '#10b981'};">
-                    ${hasAutoCard ? '移除卡片' : '授予卡片'}
-                </button>`
-                : '<span style="color: var(--text-secondary);">仅站长可修改</span>'
+            try {
+                await updateUserTitles(userId, newOwnedIds);
+                await logAction(
+                    '徽章调整',
+                    'user_titles',
+                    userId,
+                    targetUser?.username || userId,
+                    '称号ID列表: ' + newOwnedIds.join(',')
+                );
+                showNotification('徽章已更新', 'success');
+                await reloadMiscData(userId);
+            } catch (err) {
+                showNotification(err.message, 'error');
             }
-        </div>
-    `;
-
-    let autoSection = document.getElementById('autoCardManagementArea');
-    if (!autoSection) {
-        const sec = document.createElement('div');
-        sec.className = 'misc-section';
-        sec.id = 'autoCardManagementArea';
-        document.getElementById('misc-panel').appendChild(sec);
-        autoSection = sec;
+        });
     }
-    autoSection.innerHTML = autoHtml;
 
+    // ============================================================
+    // 自动签到卡切换事件
+    // ============================================================
     if (canEdit) {
         document.getElementById('toggleAutoCardBtn')?.addEventListener('click', async () => {
             const newHas = !hasAutoCard;
@@ -462,10 +502,8 @@ function initMailSender() {
         }
     });
 
-    // 加载用户列表到邮件收件人下拉
     const mailTarget = document.getElementById('mailTargetUser');
     if (mailTarget) {
-        // 使用已缓存的用户列表
         setTimeout(async () => {
             if (allUsersForMisc.length === 0) {
                 const sb = getSupabase();
@@ -511,7 +549,6 @@ async function sendSystemMail() {
         }
     });
 
-    // 获取目标用户列表
     let targetIds = [];
     if (target === 'all') {
         targetIds = allUsersForMisc.map(u => u.id);
