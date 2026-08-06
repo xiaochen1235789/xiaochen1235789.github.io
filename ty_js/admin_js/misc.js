@@ -163,7 +163,7 @@ export function resetMiscPanels() {
     }
     // 清除其他区域的内容（已经合并到 Tab 中）
     const framesArea = document.getElementById('framesManagementArea');
-    if (framesArea) framesArea.innerHTML = '';   // ✅ 判空修复
+    if (framesArea) framesArea.innerHTML = '';
     const titleSection = document.getElementById('titleManagementArea');
     if (titleSection) titleSection.innerHTML = '';
     const autoSection = document.getElementById('autoCardManagementArea');
@@ -478,41 +478,124 @@ async function reloadMiscData(userId) {
 }
 
 // ============================================================
-// 系统邮件发送
+// 系统邮件发送（增强版：动态奖励行 + 称号/头像框下拉列表）
 // ============================================================
 
-function addAttachmentRow(container) {
-    const div = document.createElement('div');
-    div.style.display = 'flex';
-    div.style.gap = '8px';
-    div.style.marginBottom = '8px';
-    div.innerHTML = `
-        <select class="attach-type" style="width:120px;">
-            <option value="candy">🍬 糖果碎</option>
-            <option value="rainbow">🌈 彩虹棒糖</option>
-            <option value="title">🏅 称号</option>
-            <option value="frame">🖼️ 头像框</option>
-        </select>
-        <input type="number" class="attach-amount" placeholder="数量/ID" value="10" style="width:100px;">
-        <button type="button" class="remove-attach-btn" style="background:#f87171;color:white;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;">-</button>
+// 缓存邮件发送所需的选项
+let cachedTitleOptions = [];
+let cachedFrameOptions = [];
+
+// 加载称号和头像框列表
+async function loadMailOptions() {
+    const sb = getSupabase();
+    // 加载称号
+    const { data: titles } = await sb.from('titles').select('id, name').order('name');
+    cachedTitleOptions = titles || [];
+    // 加载头像框（从 CONFIG 获取，因为数据库表可能不完整）
+    cachedFrameOptions = CONFIG.FRAMES.filter(f => f.id !== 'nature').map(f => ({ id: f.id, name: f.name }));
+}
+
+// 生成奖励行HTML
+function createAttachmentRowHTML(type = 'candy', value = '10') {
+    // 构建类型下拉
+    const typeOptions = `
+        <option value="candy" ${type === 'candy' ? 'selected' : ''}>🍬 糖果碎</option>
+        <option value="rainbow" ${type === 'rainbow' ? 'selected' : ''}>🌈 彩虹棒糖</option>
+        <option value="title" ${type === 'title' ? 'selected' : ''}>🏅 称号</option>
+        <option value="frame" ${type === 'frame' ? 'selected' : ''}>🖼️ 头像框</option>
     `;
-    div.querySelector('.remove-attach-btn').addEventListener('click', () => div.remove());
-    container.appendChild(div);
+
+    // 构建称号下拉选项
+    let titleSelectOptions = '<option value="">-- 选择称号 --</option>';
+    for (const t of cachedTitleOptions) {
+        const selected = (type === 'title' && String(t.id) === String(value)) ? 'selected' : '';
+        titleSelectOptions += `<option value="${t.id}" ${selected}>${escapeHtml(t.name)} (ID: ${t.id})</option>`;
+    }
+
+    // 构建头像框下拉选项
+    let frameSelectOptions = '<option value="">-- 选择头像框 --</option>';
+    for (const f of cachedFrameOptions) {
+        const selected = (type === 'frame' && String(f.id) === String(value)) ? 'selected' : '';
+        frameSelectOptions += `<option value="${f.id}" ${selected}>${escapeHtml(f.name)} (ID: ${f.id})</option>`;
+    }
+
+    // 数量输入框（用于candy/rainbow）
+    const numberInput = `<input type="number" class="attach-amount" value="${type === 'candy' || type === 'rainbow' ? value : '10'}" min="1" style="width:80px; flex:1;">`;
+
+    // 称号选择框（初始隐藏）
+    const titleSelect = `<select class="attach-title-select" style="width:100%; flex:1; display:${type === 'title' ? 'block' : 'none'};">${titleSelectOptions}</select>`;
+
+    // 头像框选择框（初始隐藏）
+    const frameSelect = `<select class="attach-frame-select" style="width:100%; flex:1; display:${type === 'frame' ? 'block' : 'none'};">${frameSelectOptions}</select>`;
+
+    return `
+        <div style="display:flex; gap:8px; margin-bottom:8px; align-items:center; flex-wrap:wrap;">
+            <select class="attach-type" style="width:130px; flex-shrink:0;">${typeOptions}</select>
+            <div style="flex:1; min-width:120px;">
+                ${numberInput}
+                ${titleSelect}
+                ${frameSelect}
+            </div>
+            <button type="button" class="remove-attach-btn" style="background:#f87171;color:white;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;flex-shrink:0;">-</button>
+        </div>
+    `;
+}
+
+// 添加奖励行（绑定动态切换事件）
+function addAttachmentRow(container, type = 'candy', value = '10') {
+    const div = document.createElement('div');
+    div.innerHTML = createAttachmentRowHTML(type, value);
+    const row = div.firstElementChild;
+
+    // 类型切换事件
+    const typeSelect = row.querySelector('.attach-type');
+    const numberInput = row.querySelector('.attach-amount');
+    const titleSelect = row.querySelector('.attach-title-select');
+    const frameSelect = row.querySelector('.attach-frame-select');
+
+    typeSelect.addEventListener('change', function() {
+        const t = this.value;
+        numberInput.style.display = (t === 'candy' || t === 'rainbow') ? 'block' : 'none';
+        titleSelect.style.display = (t === 'title') ? 'block' : 'none';
+        frameSelect.style.display = (t === 'frame') ? 'block' : 'none';
+        // 清空其他输入的值
+        if (t !== 'candy' && t !== 'rainbow') numberInput.value = '1';
+        if (t !== 'title') titleSelect.value = '';
+        if (t !== 'frame') frameSelect.value = '';
+    });
+
+    // 删除按钮
+    row.querySelector('.remove-attach-btn').addEventListener('click', () => {
+        row.remove();
+    });
+
+    container.appendChild(row);
 }
 
 function initMailSender() {
     const container = document.getElementById('attachmentsList');
     if (!container) return;
 
-    container.innerHTML = '';
-    addAttachmentRow(container);
+    // 加载称号和头像框选项
+    loadMailOptions().then(() => {
+        // 清空并添加一行默认
+        container.innerHTML = '';
+        addAttachmentRow(container, 'candy', '10');
+    }).catch(err => {
+        console.warn('加载邮件选项失败:', err);
+        // 即使失败也显示基础行
+        container.innerHTML = '';
+        addAttachmentRow(container, 'candy', '10');
+    });
 
+    // 监听“添加”按钮（通过事件委托）
     container.addEventListener('click', (e) => {
         if (e.target.classList.contains('add-attach-btn')) {
-            addAttachmentRow(container);
+            addAttachmentRow(container, 'candy', '10');
         }
     });
 
+    // 初始化邮件目标用户下拉
     const mailTarget = document.getElementById('mailTargetUser');
     if (mailTarget) {
         setTimeout(async () => {
@@ -532,6 +615,7 @@ function initMailSender() {
         }, 100);
     }
 
+    // 发送按钮
     document.getElementById('sendMailBtn')?.addEventListener('click', sendSystemMail);
 }
 
@@ -545,20 +629,53 @@ async function sendSystemMail() {
         return;
     }
 
+    // 解析所有奖励行
     const attachments = [];
-    document.querySelectorAll('#attachmentsList > div').forEach(row => {
+    const rows = document.querySelectorAll('#attachmentsList > div');
+    for (const row of rows) {
         const type = row.querySelector('.attach-type').value;
-        const amount = row.querySelector('.attach-amount').value;
-        if (!amount) return;
+        let amount = null;
+        let titleId = null;
+        let frameId = null;
 
         if (type === 'candy' || type === 'rainbow') {
-            attachments.push({ type, amount: parseInt(amount) });
+            const input = row.querySelector('.attach-amount');
+            amount = parseInt(input.value);
+            if (isNaN(amount) || amount < 1) {
+                showNotification('数量必须为正整数', 'error');
+                return;
+            }
         } else if (type === 'title') {
-            attachments.push({ type, title_id: parseInt(amount) });
+            const select = row.querySelector('.attach-title-select');
+            titleId = select.value;
+            if (!titleId) {
+                showNotification('请选择称号', 'error');
+                return;
+            }
         } else if (type === 'frame') {
-            attachments.push({ type, frame_id: amount });
+            const select = row.querySelector('.attach-frame-select');
+            frameId = select.value;
+            if (!frameId) {
+                showNotification('请选择头像框', 'error');
+                return;
+            }
         }
-    });
+
+        let item = { type };
+        if (type === 'candy' || type === 'rainbow') {
+            item.amount = amount;
+        } else if (type === 'title') {
+            item.title_id = parseInt(titleId);
+        } else if (type === 'frame') {
+            item.frame_id = frameId;
+        }
+        attachments.push(item);
+    }
+
+    if (attachments.length === 0) {
+        showNotification('请至少添加一项奖励', 'error');
+        return;
+    }
 
     let targetIds = [];
     if (target === 'all') {
@@ -603,12 +720,13 @@ async function sendSystemMail() {
         '标题: ' + title
     );
 
+    // 清空表单
     document.getElementById('mailTitle').value = '';
     document.getElementById('mailContent').value = '';
     const container = document.getElementById('attachmentsList');
     if (container) {
         container.innerHTML = '';
-        addAttachmentRow(container);
+        addAttachmentRow(container, 'candy', '10');
     }
 }
 
