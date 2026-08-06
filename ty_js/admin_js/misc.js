@@ -155,14 +155,15 @@ export async function initMiscPanel() {
     initMailSender();
 }
 
-// ----- 重置杂项面板 -----
+// ----- 重置杂项面板（已修复判空） -----
 export function resetMiscPanels() {
     const container = document.getElementById('assetControlArea');
     if (container) {
         container.innerHTML = '<p style="color: var(--text-secondary);">请选择用户</p>';
     }
     // 清除其他区域的内容（已经合并到 Tab 中）
-    document.getElementById('framesManagementArea').innerHTML = '';
+    const framesArea = document.getElementById('framesManagementArea');
+    if (framesArea) framesArea.innerHTML = '';   // ✅ 判空修复
     const titleSection = document.getElementById('titleManagementArea');
     if (titleSection) titleSection.innerHTML = '';
     const autoSection = document.getElementById('autoCardManagementArea');
@@ -331,7 +332,9 @@ async function reloadMiscData(userId) {
     if (container) {
         container.innerHTML = tabHtml;
     }
-    document.getElementById('framesManagementArea').innerHTML = '';
+    // 修复：判空保护
+    const framesArea = document.getElementById('framesManagementArea');
+    if (framesArea) framesArea.innerHTML = '';
     const titleSection = document.getElementById('titleManagementArea');
     if (titleSection) titleSection.innerHTML = '';
     const autoSection = document.getElementById('autoCardManagementArea');
