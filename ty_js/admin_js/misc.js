@@ -24,18 +24,21 @@ async function loadUserFrames(userId) {
     return owned;
 }
 
-// ----- 更新用户资产 -----
-async function updateUserAssets(userId, candy, rainbow, syrup) {
+// ----- 更新用户资产（含宝箱） -----
+async function updateUserAssets(userId, candy, rainbow, syrup, chest) {
     const sb = getSupabase();
+    const updates = {
+        candy_crumbles: candy,
+        rainbow_lollipops: rainbow,
+        dreamy_syrup: syrup
+    };
+    if (chest !== undefined) updates.chest_count = chest;
     const { error } = await sb
         .from('user_stats')
         .upsert({
             user_id: userId,
-            candy_crumbles: candy,
-            rainbow_lollipops: rainbow,
-            dreamy_syrup: syrup
+            ...updates
         }, { onConflict: 'user_id' });
-
     if (error) throw new Error('资产更新失败: ' + error.message);
 }
 
@@ -172,10 +175,10 @@ async function reloadMiscData(userId) {
     const canEdit = currentUserRole === 'owner';
     const targetUser = allUsersForMisc.find(u => u.id === userId);
 
-    // 1. 获取资产
+    // 1. 获取资产（含宝箱）
     const { data: stats, error: statsErr } = await sb
         .from('user_stats')
-        .select('candy_crumbles, rainbow_lollipops, dreamy_syrup')
+        .select('candy_crumbles, rainbow_lollipops, dreamy_syrup, chest_count')
         .eq('user_id', userId)
         .maybeSingle();
 
@@ -184,11 +187,12 @@ async function reloadMiscData(userId) {
     const candy = stats?.candy_crumbles ?? 100;
     const rainbow = stats?.rainbow_lollipops ?? 5;
     const syrup = stats?.dreamy_syrup ?? 0;
+    const chest = stats?.chest_count ?? 0;
 
     // 2. 获取头像框
     let userFrames = await loadUserFrames(userId);
 
-    // 3. 构建资产 HTML
+    // 3. 构建资产 HTML（新增宝箱输入框）
     const assetHtml = `
         <div class="asset-item">
             <img src="${CONFIG.BACKPACK_ITEMS[0].icon}" style="width:24px;height:24px;object-fit:contain;">
@@ -201,6 +205,9 @@ async function reloadMiscData(userId) {
         <div class="asset-item">
             <img src="${CONFIG.BACKPACK_ITEMS[2].icon}" style="width:24px;height:24px;object-fit:contain;">
             梦幻星河糖浆: <input type="number" id="miscSyrup" value="${syrup}" min="0" style="width:100px;" ${canEdit ? '' : 'disabled'}>
+        </div>
+        <div class="asset-item">
+            🎁 宝箱: <input type="number" id="miscChest" value="${chest}" min="0" style="width:100px;" ${canEdit ? '' : 'disabled'}>
         </div>
         ${canEdit
             ? '<button class="save-asset-btn" id="saveAssetBtn"><i class="fas fa-save"></i> 保存资产修改</button>'
@@ -353,27 +360,28 @@ async function reloadMiscData(userId) {
     });
 
     // ============================================================
-    // 资产保存事件
+    // 资产保存事件（含宝箱）
     // ============================================================
     if (canEdit) {
         document.getElementById('saveAssetBtn')?.addEventListener('click', async () => {
             const nc = parseInt(document.getElementById('miscCandy').value, 10);
             const nr = parseInt(document.getElementById('miscRainbow').value, 10);
             const ns = parseInt(document.getElementById('miscSyrup').value, 10);
+            const nch = parseInt(document.getElementById('miscChest').value, 10);
 
-            if (isNaN(nc) || isNaN(nr) || isNaN(ns) || nc < 0 || nr < 0 || ns < 0) {
+            if (isNaN(nc) || isNaN(nr) || isNaN(ns) || isNaN(nch) || nc < 0 || nr < 0 || ns < 0 || nch < 0) {
                 showNotification('请输入非负整数', 'error');
                 return;
             }
 
             try {
-                await updateUserAssets(userId, nc, nr, ns);
+                await updateUserAssets(userId, nc, nr, ns, nch);
                 await logAction(
                     '资产调整',
                     'user_stats',
                     userId,
                     targetUser?.username || userId,
-                    `糖果碎: ${candy} → ${nc}, 棒糖: ${rainbow} → ${nr}, 星河糖浆: ${syrup} → ${ns}`
+                    `糖果碎: ${candy} → ${nc}, 棒糖: ${rainbow} → ${nr}, 星河糖浆: ${syrup} → ${ns}, 宝箱: ${chest} → ${nch}`
                 );
                 showNotification('资产已更新', 'success');
                 await reloadMiscData(userId);
