@@ -1,6 +1,6 @@
 // ================================================================
 //  js/state.js  -  通用游戏状态管理
-//  支持：角色命座、光锥精炼、未来任何物品类型
+//  支持：共享保底、多池子切换（复刻池）、角色命座/精炼（未来扩展）
 // ================================================================
 
 import {
@@ -23,12 +23,18 @@ export const state = {
     user: null,
     userNumber: null,
 
-    // ---------- 卡池信息 ----------
-    currentBanner: null,
-    bannerStart: null,
-    bannerEnd: null,
-    bannerType: null,              // 'character' | 'light_cone' | 'mixed'
-    upFiveStarList: [],            // ★ 改为数组，支持多个UP（复刻池）
+    // ---------- 卡池信息（当前选中的池子） ----------
+    currentBanner: null,          // 当前选中的池子对象
+    bannerStart: null,            // 当前池子开始时间
+    bannerEnd: null,              // 当前池子结束时间
+    bannerType: null,             // 'character' | 'light_cone' | 'mixed'
+    upFiveStarList: [],           // 当前池子的UP列表（数组，支持多UP）
+
+    // ---------- ★★★ 所有开放中的池子列表 ★★★ ----------
+    bannerList: [],               // 从数据库加载的所有开放池子
+    selectedBannerIndex: -1,      // 当前选中的池子在 bannerList 中的索引
+
+    // ---------- 四星/三星池（全局共享） ----------
     permanentFiveStar: [],
     fourStarChars: [],
     threeStarItems: [],
@@ -42,10 +48,10 @@ export const state = {
     overflowComp4: DEFAULT_OVERFLOW_COMP_4,
     exchangeRate: EXCHANGE_RATE,
 
-    // ---------- 当前保底状态 ----------
-    fiveStarPity: 0,
-    fourStarPity: 0,
-    guaranteedUp: false,           // true = 大保底
+    // ---------- ★ 共享保底（所有池子共用） ----------
+    fiveStarPity: 0,               // 五星保底计数器 (0~90)
+    fourStarPity: 0,               // 四星保底计数器 (0~10)
+    guaranteedUp: false,           // true = 大保底（必出UP）
 
     // ---------- 玩家资源 ----------
     starJade: 0,
@@ -55,12 +61,9 @@ export const state = {
     gachaHistory: [],              // [{ name, star, type? }, ...]
 
     // ============================================================
-    //  ★★★ 通用物品仓库（核心升级） ★★★
-    //  存储所有已获得的角色、光锥、武器的进度
+    //  ★★★ 通用物品仓库（核心） ★★★
+    //  存储所有已获得的角色、光锥等，支持星级固化
     //  格式：Map<`${itemType}_${itemName}`, { level, star, type }>
-    //  示例：
-    //    inventory.get('character_布洛妮娅') → { level: 3, star: 5, type: 'character' }
-    //    inventory.get('light_cone_但战斗还未结束') → { level: 2, star: 5, type: 'light_cone' }
     // ============================================================
     inventory: new Map(),
 
@@ -153,6 +156,7 @@ export function resetGachaData() {
     state.fiveStarDistances = [];
     state.lastFiveStarPullIndex = 0;
     state.isDrawing = false;
+    // 注意：不重置 bannerList 和 currentBanner，因为它们属于卡池信息，不应被重置
 }
 
 // ================================================================
@@ -171,9 +175,41 @@ export function getItemsByType(itemType) {
     const result = [];
     for (const [key, value] of state.inventory) {
         if (value.type === itemType) {
-            const name = key.substring(itemType.length + 1); // 去掉 "type_"
+            // 从 key 中提取名称（去掉 "type_" 前缀）
+            const name = key.substring(itemType.length + 1);
             result.push({ name, ...value });
         }
     }
     return result;
+}
+
+// ================================================================
+//  辅助函数：切换池子时更新当前卡池信息（供 ui.js 调用）
+// ================================================================
+export function selectBanner(index) {
+    const banners = state.bannerList || [];
+    if (index < 0 || index >= banners.length) return false;
+    if (index === state.selectedBannerIndex) return true;
+
+    const banner = banners[index];
+    state.selectedBannerIndex = index;
+    state.currentBanner = banner;
+    state.bannerStart = new Date(banner.start_time);
+    state.bannerEnd = new Date(banner.end_time);
+    state.bannerType = banner.banner_type || 'character';
+
+    // 解析 UP 列表（支持 up_five_star_list 或 up_five_star）
+    if (banner.up_five_star_list && Array.isArray(banner.up_five_star_list) && banner.up_five_star_list.length > 0) {
+        state.upFiveStarList = banner.up_five_star_list;
+    } else if (banner.up_five_star) {
+        if (banner.up_five_star.includes(',')) {
+            state.upFiveStarList = banner.up_five_star.split(',').map(s => s.trim()).filter(Boolean);
+        } else {
+            state.upFiveStarList = [banner.up_five_star];
+        }
+    } else {
+        state.upFiveStarList = [];
+    }
+
+    return true;
 }
