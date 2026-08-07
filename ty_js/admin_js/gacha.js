@@ -77,16 +77,14 @@ function renderBannersTable() {
     html += '</tbody></table>';
     container.innerHTML = html;
 
-    // 激活切换事件
+    // ★ 激活切换事件（允许多个卡池同时激活）
     document.querySelectorAll('.banner-active').forEach(cb => {
         cb.addEventListener('change', async (e) => {
             const id = parseInt(cb.dataset.id);
             const isActive = cb.checked;
 
             const sb = getSupabase();
-            if (isActive) {
-                await sb.from('gacha_banners').update({ is_active: false }).neq('id', id);
-            }
+            // 直接更新当前卡池状态，不强制只激活一个
             await sb.from('gacha_banners').update({ is_active: isActive }).eq('id', id);
 
             showNotification('卡池激活状态已更新', 'success');
@@ -101,7 +99,6 @@ function parseUpListForForm(banner) {
     if (banner.up_five_star_list && Array.isArray(banner.up_five_star_list) && banner.up_five_star_list.length > 0) {
         return banner.up_five_star_list.join(', ');
     } else if (banner.up_five_star) {
-        // 如果 up_five_star 包含逗号，说明已经是多UP格式
         if (banner.up_five_star.includes(',')) {
             return banner.up_five_star;
         }
