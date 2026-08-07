@@ -134,7 +134,7 @@ export async function performSingleDraw(itemType = ITEM_TYPES.CHARACTER) {
     // ---- ★★★ 调用通用物品处理（命座/精炼/溢出补偿） ★★★ ----
     let constellationMsg = null;
     if (resultStar >= 4) {
-        const result = addItemToInventory(itemType, resultName, resultStar);
+        const result = addItemToInventory('character', resultName, resultStar);
         if (result.action === 'first') {
             constellationMsg = '首次获得';
         } else if (result.action === 'upgrade') {
