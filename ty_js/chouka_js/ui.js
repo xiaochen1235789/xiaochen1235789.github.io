@@ -1,11 +1,11 @@
 // ================================================================
-//  js/ui.js  -  UI渲染层
-//  负责：更新界面、渲染命座列表、统计面板、历史记录、抽卡结果
+//  js/ui.js  -  UI渲染层（含多池子切换）
 // ================================================================
 
-import { state, getItemsByType, getItemStar } from './state.js';
+import { state, getItemsByType, selectBanner } from './state.js';
 import { getCurrentFiveStarRate } from './gacha.js';
 import { ITEM_TYPES, FALLBACK_SPLASH } from './constants.js';
+import { getBannerSplashUrl } from './db.js';
 
 // ================================================================
 //  1. DOM 缓存
@@ -43,7 +43,8 @@ const dom = {
     resultSummary: document.getElementById('resultSummary'),
     historyPageInfo: document.getElementById('historyPageInfo'),
     historyPrevBtn: document.getElementById('historyPrevBtn'),
-    historyNextBtn: document.getElementById('historyNextBtn')
+    historyNextBtn: document.getElementById('historyNextBtn'),
+    bannerTabs: document.getElementById('bannerTabs')  // ★ 新增
 };
 
 // ================================================================
@@ -57,7 +58,6 @@ export function showNotification(msg, type = 'info') {
     el.textContent = msg;
     el.className = 'toast-notice ' + type;
     clearTimeout(toastTimer);
-    // 强制重排
     void el.offsetWidth;
     el.classList.add('show');
     toastTimer = setTimeout(() => {
@@ -66,7 +66,62 @@ export function showNotification(msg, type = 'info') {
 }
 
 // ================================================================
-//  3. 更新主界面
+//  3. ★★★ 渲染池子切换 Tabs ★★★
+// ================================================================
+export function renderBannerTabs() {
+    const container = dom.bannerTabs;
+    if (!container) return;
+
+    const banners = state.bannerList || [];
+    if (banners.length <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '<div class="banner-tabs">';
+    banners.forEach((b, index) => {
+        const active = index === state.selectedBannerIndex ? 'active' : '';
+        const isActive = state.currentBanner && state.currentBanner.banner_key === b.banner_key;
+        const cls = isActive ? 'active' : '';
+        html += `<button class="banner-tab ${cls}" data-index="${index}">
+            ${b.name}
+        </button>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+
+    // 绑定点击事件
+    container.querySelectorAll('.banner-tab').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const index = parseInt(this.dataset.index);
+            switchBanner(index);
+        });
+    });
+}
+
+// ================================================================
+//  4. ★★★ 切换池子 ★★★
+// ================================================================
+export function switchBanner(index) {
+    const banners = state.bannerList || [];
+    if (index < 0 || index >= banners.length) return;
+    if (index === state.selectedBannerIndex) return;
+
+    // 调用 state.js 中的 selectBanner 更新状态
+    const success = selectBanner(index);
+    if (!success) return;
+
+    // 更新 UI
+    updateMainUI();
+    renderBannerTabs();
+    showNotification(`切换到「${state.currentBanner.name}」`, 'info');
+}
+
+// 挂载到 window 以便在 HTML 中直接调用（可选）
+window.switchBanner = switchBanner;
+
+// ================================================================
+//  5. 更新主界面
 // ================================================================
 export function updateMainUI() {
     // ---- 资源 ----
@@ -108,7 +163,7 @@ export function updateMainUI() {
         dom.poolName.innerText = state.currentBanner.name || '✨ 卡池 ✨';
         dom.poolSub.innerText = state.currentBanner.sub_name || '';
         dom.upCharName.innerHTML = `🌟 ${state.upFiveStarList.join(' · ')} 🌟`;
-        dom.splashImg.src = state.currentBanner.splash_url || FALLBACK_SPLASH;
+        dom.splashImg.src = getBannerSplashUrl(state.currentBanner);
         dom.splashImg.onerror = function() {
             this.src = FALLBACK_SPLASH;
         };
@@ -120,7 +175,7 @@ export function updateMainUI() {
 }
 
 // ================================================================
-//  4. 更新按钮状态（卡池是否开放）
+//  6. 更新按钮状态（卡池是否开放）
 // ================================================================
 export function updateButtonsState() {
     const now = new Date();
@@ -152,7 +207,7 @@ export function updateButtonsState() {
 }
 
 // ================================================================
-//  5. 更新倒计时
+//  7. 更新倒计时
 // ================================================================
 export function updateCountdown() {
     if (!state.bannerStart || !state.bannerEnd) {
@@ -186,13 +241,12 @@ export function updateCountdown() {
 }
 
 // ================================================================
-//  6. ★★★ 渲染命座列表（从 inventory 读取星级） ★★★
+//  8. 渲染命座列表
 // ================================================================
 export function renderConstellations() {
     const container = dom.constellationList;
     if (!container) return;
 
-    // 获取所有角色（character类型）
     const characters = getItemsByType(ITEM_TYPES.CHARACTER);
 
     if (characters.length === 0) {
@@ -200,12 +254,10 @@ export function renderConstellations() {
         return;
     }
 
-    // 按星级排序：5星在前，4星在后
     characters.sort((a, b) => b.star - a.star);
 
     let html = '';
     for (const char of characters) {
-        // ★★★ 关键：直接使用存储的 star 字段，不再依赖当前卡池 ★★★
         const isFiveStar = char.star === 5;
         const cls = isFiveStar ? 'constellation-five' : 'constellation-four';
         const color = isFiveStar ? '#ffb347' : '#c084fc';
@@ -222,7 +274,7 @@ export function renderConstellations() {
 }
 
 // ================================================================
-//  7. 渲染统计面板
+//  9. 渲染统计面板
 // ================================================================
 export function renderStats() {
     const container = dom.statsGrid;
@@ -234,7 +286,6 @@ export function renderStats() {
     const upRate = state.fiveStarCount === 0 ? '--' :
         ((state.upFiveStarCount / state.fiveStarCount) * 100).toFixed(1) + '%';
 
-    // 获取角色总数
     const characters = getItemsByType(ITEM_TYPES.CHARACTER);
 
     container.innerHTML = `
@@ -280,13 +331,12 @@ export function renderStats() {
         </div>
     `;
 
-    // 评级
     const rating = getRating();
     dom.ratingText.innerText = rating;
 }
 
 // ================================================================
-//  8. 获取抽卡评价
+//  10. 获取抽卡评价
 // ================================================================
 function getRating() {
     if (state.totalPulls === 0) return '尚未抽卡';
@@ -302,7 +352,7 @@ function getRating() {
 }
 
 // ================================================================
-//  9. 渲染历史记录（分页）
+//  11. 渲染历史记录（分页）
 // ================================================================
 let historyPage = 1;
 const PAGE_SIZE = 5;
@@ -343,7 +393,6 @@ export function renderHistory() {
         </div>`;
     }
 
-    // 补齐到5条
     const fillCount = PAGE_SIZE - visible.length;
     for (let i = 0; i < fillCount; i++) {
         html += `<div class="record-item" style="opacity:0.2;background:transparent;border-left:6px solid transparent;">&nbsp;</div>`;
@@ -372,7 +421,7 @@ export function resetHistoryPage() {
 }
 
 // ================================================================
-//  10. ★★★ 抽卡结果展示（卡片翻转动画） ★★★
+//  12. 抽卡结果展示（卡片翻转动画）
 // ================================================================
 export function showResultDialog(results) {
     if (!results || results.length === 0) return;
@@ -380,10 +429,7 @@ export function showResultDialog(results) {
     const container = dom.dialogContent;
     container.innerHTML = '';
 
-    // 统计本次结果
-    let c5 = 0,
-        c4 = 0,
-        c3 = 0;
+    let c5 = 0, c4 = 0, c3 = 0;
     for (const r of results) {
         if (r.star === 5) c5++;
         else if (r.star === 4) c4++;
@@ -410,16 +456,14 @@ export function showResultDialog(results) {
         const card = document.createElement('div');
         card.className = 'card';
 
-        // 正面
         const front = document.createElement('div');
         front.className = 'card-face card-front';
         const starColor = item.star === 5 ? '#ffb347' : (item.star === 4 ? '#c084fc' : '#5f7f9e');
         front.style.borderColor = starColor;
 
         let contentHtml = '';
-        // 如果是五星UP，显示立绘
         if (item.star === 5 && state.upFiveStarList.includes(item.name)) {
-            const splashUrl = state.currentBanner?.splash_url || FALLBACK_SPLASH;
+            const splashUrl = getBannerSplashUrl(state.currentBanner);
             contentHtml += `<img src="${splashUrl}" alt="${escapeHtml(item.name)}" class="card-splash-img">`;
         }
         contentHtml += `<div class="card-name">${escapeHtml(item.name)}</div>`;
@@ -429,7 +473,6 @@ export function showResultDialog(results) {
         }
         front.innerHTML = contentHtml;
 
-        // 背面
         const back = document.createElement('div');
         let backClass = 'card-face card-back';
         if (item.star === 5) backClass += ' card-back-gold';
@@ -447,7 +490,6 @@ export function showResultDialog(results) {
     container.appendChild(grid);
     dom.resultDialog.classList.add('active');
 
-    // 点击翻转
     const cards = container.querySelectorAll('.card');
     let flippedCount = 0;
 
@@ -465,7 +507,6 @@ export function showResultDialog(results) {
         });
     });
 
-    // 跳过按钮
     dom.skipBtn.style.display = results.length > 1 ? 'block' : 'none';
     dom.confirmBtn.style.display = 'none';
 
@@ -481,7 +522,6 @@ export function showResultDialog(results) {
         dom.skipBtn.style.display = 'none';
     };
 
-    // 点击外部关闭
     dom.resultDialog.addEventListener('click', function(e) {
         if (e.target === this && dom.confirmBtn.style.display !== 'none') {
             dom.confirmBtn.click();
@@ -490,7 +530,7 @@ export function showResultDialog(results) {
 }
 
 // ================================================================
-//  11. 关闭结果弹窗（全局）
+//  13. 关闭结果弹窗（全局）
 // ================================================================
 export function closeResultDialog() {
     dom.resultDialog.classList.remove('active');
@@ -499,7 +539,7 @@ export function closeResultDialog() {
 }
 
 // ================================================================
-//  12. 工具：HTML转义
+//  14. 工具：HTML转义
 // ================================================================
 function escapeHtml(str) {
     if (!str) return '';
@@ -510,24 +550,23 @@ function escapeHtml(str) {
 }
 
 // ================================================================
-//  13. 挂载全局关闭函数（供HTML onclick调用）
+//  15. 挂载全局关闭函数
 // ================================================================
 window.closeResultDialogGlobal = closeResultDialog;
 
 // ================================================================
-//  14. 初始化UI（绑定事件）
+//  16. 初始化UI（绑定事件）
 // ================================================================
 export function initUI() {
-    // 历史分页按钮
     dom.historyPrevBtn.addEventListener('click', historyPrevPage);
     dom.historyNextBtn.addEventListener('click', historyNextPage);
 
-    // 挂载UI函数到window供外部调用
     window.showNotification = showNotification;
     window.renderConstellations = renderConstellations;
     window.renderStats = renderStats;
     window.renderHistory = renderHistory;
     window.showResultDialog = showResultDialog;
+    window.renderBannerTabs = renderBannerTabs;
 
     console.log('✅ UI 初始化完成');
 }
