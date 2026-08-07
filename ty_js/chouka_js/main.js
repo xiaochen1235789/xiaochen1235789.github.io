@@ -1,6 +1,6 @@
 // ================================================================
-//  js/main.js  -  应用入口
-//  负责：初始化、事件绑定、定时器、整合所有功能
+//  js/main.js  -  应用入口（整合所有模块）
+//  负责：初始化、事件绑定、定时器、弹窗控制、多池子切换
 // ================================================================
 
 import { getSupabase, loadUserData, resetAllGachaData } from './db.js';
@@ -17,7 +17,9 @@ import {
     updateButtonsState,
     initUI,
     closeResultDialog,
-    resetHistoryPage
+    resetHistoryPage,
+    renderBannerTabs,
+    switchBanner
 } from './ui.js';
 import { ITEM_TYPES } from './constants.js';
 
@@ -28,6 +30,7 @@ window.singlePull = singlePull;
 window.tenPull = tenPull;
 window.showNotification = showNotification;
 window.closeResultDialog = closeResultDialog;
+window.switchBanner = switchBanner;
 window.openStatsModal = openStatsModal;
 window.openExchangeModal = openExchangeModal;
 window.openRecordModal = openRecordModal;
@@ -68,6 +71,10 @@ document.addEventListener('keydown', function(e) {
 //  3. 统计弹窗
 // ================================================================
 function openStatsModal() {
+    if (!state.user) {
+        showNotification('请先登录', 'error');
+        return;
+    }
     renderStats();
     renderConstellations();
     openModal('statsModal');
@@ -77,13 +84,7 @@ document.getElementById('closeStatsBtn')?.addEventListener('click', () => {
     closeModal('statsModal');
 });
 
-document.getElementById('statsBtn')?.addEventListener('click', () => {
-    if (!state.user) {
-        showNotification('请先登录', 'error');
-        return;
-    }
-    openStatsModal();
-});
+document.getElementById('statsBtn')?.addEventListener('click', openStatsModal);
 
 // ================================================================
 //  4. 兑换弹窗
@@ -126,9 +127,8 @@ document.getElementById('confirmExchangeBtn')?.addEventListener('click', async f
         state.tickets += amount;
         updateMainUI();
 
-        // 保存到数据库
         const sb = getSupabase();
-        await sb.from('user_stats').upsert({
+        await sb.from('user_resources').upsert({
             user_id: state.user.id,
             star_jade: state.starJade,
             tickets: state.tickets,
@@ -184,7 +184,7 @@ document.getElementById('confirmAddJadeBtn')?.addEventListener('click', async fu
         state.starJade += add;
         updateMainUI();
         const sb = getSupabase();
-        await sb.from('user_stats').update({ star_jade: state.starJade })
+        await sb.from('user_resources').update({ star_jade: state.starJade })
             .eq('user_id', state.user.id);
         showNotification(`✅ 增加了 ${add} 星琼`, 'success');
     }
@@ -198,7 +198,7 @@ document.getElementById('confirmAddTicketBtn')?.addEventListener('click', async 
         state.tickets += add;
         updateMainUI();
         const sb = getSupabase();
-        await sb.from('user_stats').update({ tickets: state.tickets })
+        await sb.from('user_resources').update({ tickets: state.tickets })
             .eq('user_id', state.user.id);
         showNotification(`✅ 增加了 ${add} 张星轨专票`, 'success');
     }
@@ -208,7 +208,6 @@ document.getElementById('confirmAddTicketBtn')?.addEventListener('click', async 
 document.getElementById('resetConstellationsBtn')?.addEventListener('click', async function() {
     if (!state.user) return;
     if (!confirm('确定清空所有命座吗？')) return;
-    // 清空 inventory 中的角色
     const toDelete = [];
     for (const [key, value] of state.inventory) {
         if (value.type === ITEM_TYPES.CHARACTER) {
@@ -218,11 +217,9 @@ document.getElementById('resetConstellationsBtn')?.addEventListener('click', asy
     for (const key of toDelete) {
         state.inventory.delete(key);
     }
-    // 保存到数据库
     const sb = getSupabase();
-    await sb.from('user_inventory').delete()
-        .eq('user_id', state.user.id)
-        .eq('item_type', ITEM_TYPES.CHARACTER);
+    await sb.from('user_constellations').delete()
+        .eq('user_id', state.user.id);
     renderConstellations();
     showNotification('命座已重置', 'success');
 });
@@ -231,7 +228,6 @@ document.getElementById('resetConstellationsBtn')?.addEventListener('click', asy
 document.getElementById('resetHistoryBtn')?.addEventListener('click', async function() {
     if (!state.user) return;
     if (!confirm('确定清空抽卡记录和统计吗？')) return;
-    // 只清空历史，保留 inventory
     state.gachaHistory = [];
     state.totalPulls = 0;
     state.fiveStarCount = 0;
@@ -257,15 +253,13 @@ document.getElementById('resetAllBtn')?.addEventListener('click', async function
 
     await resetAllGachaData(state.user.id);
     resetGachaData();
-
-    // 重新加载用户数据
     await loadUserData(state.user.id);
 
-    // 刷新所有UI
     updateMainUI();
     renderConstellations();
     renderStats();
     renderHistory();
+    renderBannerTabs();
     showNotification('✅ 所有数据已重置', 'success');
 });
 
@@ -274,7 +268,6 @@ document.getElementById('starToggle')?.addEventListener('change', function() {
     const bg = document.getElementById('starBg');
     if (this.checked) {
         bg.classList.remove('hidden');
-        // 如果没有星星，重新生成
         if (bg.children.length === 0) {
             initStars();
         }
@@ -306,7 +299,6 @@ document.getElementById('singlePullBtn')?.addEventListener('click', async functi
     }
     if (state.isDrawing) return;
 
-    // 检查卡池是否开放
     const now = new Date();
     if (state.bannerStart && state.bannerEnd &&
         (now < state.bannerStart || now > state.bannerEnd)) {
@@ -367,7 +359,6 @@ function initStars() {
     const starCount = w <= 480 ? 60 : (w <= 768 ? 100 : 180);
     const meteorCount = w <= 480 ? 2 : (w <= 768 ? 3 : 4);
 
-    // 星星
     for (let i = 0; i < starCount; i++) {
         const star = document.createElement('div');
         star.classList.add('star');
@@ -380,7 +371,6 @@ function initStars() {
         starContainer.appendChild(star);
     }
 
-    // 流星
     for (let i = 0; i < meteorCount; i++) {
         const meteor = document.createElement('div');
         meteor.classList.add('shooting-star');
@@ -391,7 +381,6 @@ function initStars() {
     }
 }
 
-// 检查星星开关状态
 document.addEventListener('DOMContentLoaded', function() {
     const stored = localStorage.getItem('star_render_enabled');
     const toggle = document.getElementById('starToggle');
@@ -417,51 +406,47 @@ export async function init() {
     try {
         console.log('🚀 应用初始化开始...');
 
-        // ---- 初始化UI事件 ----
         initUI();
 
-        // ---- 生成星空 ----
-        initStars();
-
-        // ---- 获取用户会话 ----
         const sb = getSupabase();
         const { data: sessionData } = await sb.auth.getSession();
 
         if (!sessionData.session || !sessionData.session.user) {
             console.warn('未登录用户，请先登录');
             showNotification('请先登录以使用抽卡功能', 'warning');
-            // 显示登录按钮或跳转
             return;
         }
 
         state.user = sessionData.session.user;
         console.log('👤 用户:', state.user.email);
 
-        // ---- 加载用户数据 ----
         await loadUserData(state.user.id);
         console.log('✅ 用户数据加载完成');
 
-        // ---- 更新所有UI ----
+        // 初始化星空（可放在加载前）
+        initStars();
+
+        // ★★★ 更新所有UI ★★★
         updateMainUI();
         renderConstellations();
         renderStats();
         renderHistory();
+        renderBannerTabs();   // ★ 渲染池子切换 Tab
 
-        // ---- 启动倒计时定时器 ----
+        // 启动倒计时定时器
         setInterval(() => {
             updateCountdown();
             updateButtonsState();
         }, 1000);
 
-        // ---- 初始更新倒计时 ----
         updateCountdown();
         updateButtonsState();
 
         console.log('✅ 应用初始化完成！');
         console.log(`📊 总抽数: ${state.totalPulls}, 五星: ${state.fiveStarCount}`);
         console.log(`📦 库存大小: ${state.inventory.size}`);
+        console.log(`📋 开放池子数: ${state.bannerList.length}`);
 
-        // ---- 隐藏加载提示 ----
         const loading = document.getElementById('loading');
         if (loading) loading.style.display = 'none';
 
@@ -484,7 +469,6 @@ export async function init() {
 // ================================================================
 //  12. 自动执行初始化
 // ================================================================
-// 当DOM加载完成后执行
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
