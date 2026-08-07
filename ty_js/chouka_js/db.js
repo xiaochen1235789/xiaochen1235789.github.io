@@ -1,6 +1,7 @@
 // ================================================================
-//  js/db.js  -  适配现有 Supabase 表结构
-//  表：user_resources, user_gacha_state, user_constellations, gacha_history, gacha_config, gacha_banners
+//  js/db.js  -  适配现有表结构（自动判断角色星级）
+//  表：user_resources, user_gacha_state, user_constellations,
+//      gacha_history, gacha_config, gacha_banners, gacha_four_star
 // ================================================================
 
 import { SUPABASE_URL, SUPABASE_KEY, CACHE_TTL } from './constants.js';
@@ -39,6 +40,7 @@ function setCached(key, data) {
 export async function loadUserData(userId) {
     const sb = getSupabase();
 
+    // ---- 并行加载所有数据 ----
     const [
         resourcesRes,
         gachaStateRes,
@@ -46,7 +48,9 @@ export async function loadUserData(userId) {
         constellationsRes,
         configRes,
         bannerRes,
-        profileRes
+        profileRes,
+        fourStarRes,      // ★ 加载四星角色表
+        permanentFiveRes  // 可选：加载常驻五星表
     ] = await Promise.all([
         sb.from('user_resources').select('*').eq('user_id', userId).maybeSingle(),
         sb.from('user_gacha_state').select('*').eq('user_id', userId).maybeSingle(),
@@ -58,7 +62,9 @@ export async function loadUserData(userId) {
             .lte('start_time', new Date().toISOString())
             .gte('end_time', new Date().toISOString())
             .maybeSingle(),
-        sb.from('user_profiles').select('user_number').eq('id', userId).maybeSingle()
+        sb.from('user_profiles').select('user_number').eq('id', userId).maybeSingle(),
+        sb.from('gacha_four_star').select('character_name'),          // ★ 四星角色名称列表
+        sb.from('gacha_permanent_five').select('character_name')      // 常驻五星（备用）
     ]);
 
     // ---- 资源 ----
@@ -66,12 +72,7 @@ export async function loadUserData(userId) {
         state.starJade = resourcesRes.data.star_jade || 0;
         state.tickets = resourcesRes.data.tickets || 0;
     } else {
-        // 如果没有记录，插入默认
-        await sb.from('user_resources').insert({
-            user_id: userId,
-            star_jade: 1599840,
-            tickets: 100
-        });
+        await sb.from('user_resources').insert({ user_id: userId, star_jade: 1599840, tickets: 100 });
         state.starJade = 1599840;
         state.tickets = 100;
     }
@@ -93,17 +94,22 @@ export async function loadUserData(userId) {
         state.guaranteedUp = false;
     }
 
+    // ---- ★ 四星角色列表（用于判断星级） ----
+    state.fourStarChars = (fourStarRes.data || []).map(row => row.character_name);
+
+    // ---- 常驻五星列表（备用） ----
+    state.permanentFiveStar = (permanentFiveRes.data || []).map(row => row.character_name);
+
     // ---- 卡池信息 ----
     if (bannerRes.data) {
         const b = bannerRes.data;
         state.currentBanner = b;
         state.bannerStart = new Date(b.start_time);
         state.bannerEnd = new Date(b.end_time);
-        // 暂时只支持单UP，未来可改列表
+        // up_five_star 是字符串，转成数组（方便未来复刻）
         state.upFiveStarList = b.up_five_star ? [b.up_five_star] : [];
-        state.permanentFiveStar = []; // 从其他表获取，可留空
-        state.fourStarChars = [];
-        state.threeStarItems = [];
+    } else {
+        state.upFiveStarList = [];
     }
 
     // ---- 概率配置 ----
@@ -111,15 +117,19 @@ export async function loadUserData(userId) {
         applyDatabaseConfig(configRes.data);
     }
 
-    // ---- ★ 通用库存（从 user_constellations 加载） ----
+    // ---- ★ 加载库存（自动判断星级） ----
     state.inventory.clear();
     if (constellationsRes.data) {
         for (const row of constellationsRes.data) {
-            // 使用 character 类型，key 为 "character_角色名"
+            let star = row.star_level;
+            if (star === null || star === undefined) {
+                // 如果数据库没有 star_level，则根据四星列表判断
+                star = state.fourStarChars.includes(row.character_name) ? 4 : 5;
+            }
             const key = `character_${row.character_name}`;
             state.inventory.set(key, {
                 level: row.constellation_level || 0,
-                star: row.star_level || 5,   // 如果有 star_level 则使用，否则默认5星
+                star: star,
                 type: 'character'
             });
         }
@@ -129,7 +139,7 @@ export async function loadUserData(userId) {
     state.gachaHistory = (historyRes.data || []).map(h => ({
         name: h.item_name,
         star: h.star_level,
-        type: 'character'   // 历史中没有 item_type，统一为 character
+        type: 'character'
     }));
 
     // ---- 用户编号 ----
@@ -199,22 +209,19 @@ export async function saveInventory(userId) {
     const items = [];
 
     for (const [key, value] of state.inventory) {
-        // 只处理 character 类型，其他类型暂不支持
         if (value.type !== 'character') continue;
-        // key 格式 "character_角色名"
         const charName = key.substring('character_'.length);
         items.push({
             user_id: userId,
             character_name: charName,
             constellation_level: value.level,
-            star_level: value.star,
+            star_level: value.star,        // ★ 保存星级
             updated_at: new Date().toISOString()
         });
     }
 
     if (items.length === 0) return;
 
-    // 使用 upsert 批量更新（基于唯一约束）
     const { error } = await sb.from('user_constellations')
         .upsert(items, { onConflict: 'user_id, character_name' });
 
@@ -222,19 +229,8 @@ export async function saveInventory(userId) {
 }
 
 // ================================================================
-//  保存单次抽卡结果（历史）
+//  保存抽卡历史
 // ================================================================
-export async function saveGachaResult(userId, itemName, starLevel) {
-    const sb = getSupabase();
-    const { error } = await sb.from('gacha_history').insert({
-        user_id: userId,
-        item_name: itemName,
-        star_level: starLevel,
-        created_at: new Date().toISOString()
-    });
-    if (error) throw error;
-}
-
 export async function saveBatchGachaResults(userId, results) {
     const sb = getSupabase();
     const inserts = results.map(r => ({
@@ -248,33 +244,29 @@ export async function saveBatchGachaResults(userId, results) {
 }
 
 // ================================================================
-//  保存资源与保底状态
+//  保存资源与保底
 // ================================================================
 export async function saveResourcesAndPity(userId) {
     const sb = getSupabase();
 
-    // 1. 更新 user_resources
-    const { error: err1 } = await sb.from('user_resources').upsert({
+    await sb.from('user_resources').upsert({
         user_id: userId,
         star_jade: state.starJade,
         tickets: state.tickets,
         updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' });
-    if (err1) throw err1;
 
-    // 2. 更新 user_gacha_state
-    const { error: err2 } = await sb.from('user_gacha_state').upsert({
+    await sb.from('user_gacha_state').upsert({
         user_id: userId,
         five_star_pity: state.fiveStarPity,
         four_star_pity: state.fourStarPity,
         guaranteed_up: state.guaranteedUp,
         updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' });
-    if (err2) throw err2;
 }
 
 // ================================================================
-//  一次性保存所有数据（抽卡后调用）
+//  一次性保存
 // ================================================================
 export async function saveAllAfterDraw(userId, results) {
     await Promise.all([
@@ -297,10 +289,7 @@ export async function resetAllGachaData(userId) {
             four_star_pity: 0,
             guaranteed_up: false
         }).eq('user_id', userId),
-        sb.from('user_resources').update({
-            star_jade: 1599840,
-            tickets: 100
-        }).eq('user_id', userId)
+        sb.from('user_resources').update({ star_jade: 1599840, tickets: 100 }).eq('user_id', userId)
     ]);
 }
 
