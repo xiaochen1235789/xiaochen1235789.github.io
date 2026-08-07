@@ -48,7 +48,7 @@ export async function loadUserData(userId) {
         historyRes,
         constellationsRes,
         configRes,
-        bannerRes,          // 多个池子
+        bannerRes,
         profileRes,
         fourStarRes,
         permanentFiveRes,
@@ -63,7 +63,7 @@ export async function loadUserData(userId) {
         sb.from('gacha_banners').select('*')
             .lte('start_time', new Date().toISOString())
             .gte('end_time', new Date().toISOString())
-            .order('display_order', { ascending: true }),   // ★ 查询所有开放池子
+            .order('display_order', { ascending: true }),
         sb.from('user_profiles').select('user_number').eq('id', userId).maybeSingle(),
         sb.from('gacha_four_star').select('character_name'),
         sb.from('gacha_permanent_five').select('character_name'),
@@ -111,14 +111,12 @@ export async function loadUserData(userId) {
     state.bannerList = bannerData;
 
     if (bannerData.length > 0) {
-        // 自动选中第一个池子（或按 display_order 最小的）
-        selectBanner(0);  // 调用 state.js 中的 selectBanner
+        selectBanner(0);
     } else {
         state.bannerList = [];
         state.currentBanner = null;
         state.upFiveStarList = [];
         state.selectedBannerIndex = -1;
-        // 如果没有池子，显示无卡池状态
         state.bannerStart = null;
         state.bannerEnd = null;
     }
@@ -254,25 +252,65 @@ export async function saveBatchGachaResults(userId, results) {
 }
 
 // ================================================================
-//  保存资源与保底
+//  保存资源与保底（修复版：先 update 后 insert 兜底）
 // ================================================================
 export async function saveResourcesAndPity(userId) {
     const sb = getSupabase();
 
-    await sb.from('user_resources').upsert({
-        user_id: userId,
-        star_jade: state.starJade,
-        tickets: state.tickets,
-        updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id' });
+    // ---- 保存 user_resources ----
+    const { error: err1, count: count1 } = await sb
+        .from('user_resources')
+        .update({
+            star_jade: state.starJade,
+            tickets: state.tickets,
+            updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId);
 
-    await sb.from('user_gacha_state').upsert({
-        user_id: userId,
-        five_star_pity: state.fiveStarPity,
-        four_star_pity: state.fourStarPity,
-        guaranteed_up: state.guaranteedUp,
-        updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id' });
+    if (err1) {
+        // 更新失败（可能记录不存在），尝试插入
+        if (err1.code === 'PGRST116' || count1 === 0) {
+            const { error: insertErr } = await sb
+                .from('user_resources')
+                .insert({
+                    user_id: userId,
+                    star_jade: state.starJade,
+                    tickets: state.tickets,
+                    updated_at: new Date().toISOString()
+                });
+            if (insertErr) throw insertErr;
+        } else {
+            throw err1;
+        }
+    }
+
+    // ---- 保存 user_gacha_state ----
+    const { error: err2, count: count2 } = await sb
+        .from('user_gacha_state')
+        .update({
+            five_star_pity: state.fiveStarPity,
+            four_star_pity: state.fourStarPity,
+            guaranteed_up: state.guaranteedUp,
+            updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId);
+
+    if (err2) {
+        if (err2.code === 'PGRST116' || count2 === 0) {
+            const { error: insertErr } = await sb
+                .from('user_gacha_state')
+                .insert({
+                    user_id: userId,
+                    five_star_pity: state.fiveStarPity,
+                    four_star_pity: state.fourStarPity,
+                    guaranteed_up: state.guaranteedUp,
+                    updated_at: new Date().toISOString()
+                });
+            if (insertErr) throw insertErr;
+        } else {
+            throw err2;
+        }
+    }
 }
 
 // ================================================================
