@@ -1,6 +1,6 @@
 // ========== 抽卡配置管理（卡池 / 池子项目 / 全局概率） ==========
 import { getSupabase } from './auth.js';
-import { showNotification, logAction, openModal, closeModal } from './utils.js';
+import { showNotification, logAction, openModal, closeModal, escapeHtml } from './utils.js';
 
 // ----- 卡池管理 -----
 let currentBanners = [];
@@ -32,6 +32,7 @@ function renderBannersTable() {
                     <th>标识</th>
                     <th>名称</th>
                     <th>UP五星</th>
+                    <th>UP列表</th>
                     <th>开始时间</th>
                     <th>结束时间</th>
                     <th>激活</th>
@@ -42,11 +43,24 @@ function renderBannersTable() {
     `;
 
     for (const b of currentBanners) {
+        // 解析 UP 列表显示
+        let upListDisplay = '';
+        if (b.up_five_star_list && Array.isArray(b.up_five_star_list) && b.up_five_star_list.length > 0) {
+            upListDisplay = b.up_five_star_list.join(' · ');
+        } else if (b.up_five_star) {
+            if (b.up_five_star.includes(',')) {
+                upListDisplay = b.up_five_star.split(',').map(s => s.trim()).join(' · ');
+            } else {
+                upListDisplay = b.up_five_star;
+            }
+        }
+
         html += `
             <tr>
-                <td>${escapeHtml(b.banner_key)}</td>
+                <td><code>${escapeHtml(b.banner_key)}</code></td>
                 <td>${escapeHtml(b.name)}</td>
-                <td>${escapeHtml(b.up_five_star)}</td>
+                <td>${escapeHtml(b.up_five_star || '')}</td>
+                <td><span style="color:#facc15;font-size:0.85rem;">${escapeHtml(upListDisplay) || '-'}</span></td>
                 <td>${new Date(b.start_time).toLocaleString()}</td>
                 <td>${new Date(b.end_time).toLocaleString()}</td>
                 <td>
@@ -82,13 +96,31 @@ function renderBannersTable() {
     });
 }
 
+// ----- 辅助：解析 up_five_star_list 为显示字符串 -----
+function parseUpListForForm(banner) {
+    if (banner.up_five_star_list && Array.isArray(banner.up_five_star_list) && banner.up_five_star_list.length > 0) {
+        return banner.up_five_star_list.join(', ');
+    } else if (banner.up_five_star) {
+        // 如果 up_five_star 包含逗号，说明已经是多UP格式
+        if (banner.up_five_star.includes(',')) {
+            return banner.up_five_star;
+        }
+        return banner.up_five_star;
+    }
+    return '';
+}
+
 // ----- 添加卡池 -----
 export async function addBanner() {
     const html = `
         <div class="form-field"><label>标识(banner_key)</label><input type="text" name="banner_key" required></div>
         <div class="form-field"><label>名称</label><input type="text" name="name" required></div>
         <div class="form-field"><label>副标题</label><input type="text" name="sub_name"></div>
-        <div class="form-field"><label>UP五星角色名</label><input type="text" name="up_five_star" required></div>
+        <div class="form-field"><label>UP五星角色名</label><input type="text" name="up_five_star" placeholder="单UP填一个，复刻用逗号分隔"></div>
+        <div class="form-field"><label style="color:#facc15;">⭐ 复刻多UP列表（逗号分隔）</label>
+            <input type="text" name="up_five_star_list" placeholder="布洛妮娅, 希儿, 鹿将军" style="border-color:#facc15;">
+            <small style="color:var(--text-secondary);">多个UP角色用逗号分隔，会自动保存为数组。优先使用此字段。</small>
+        </div>
         <div class="form-field"><label>立绘URL</label><input type="text" name="splash_url"></div>
         <div class="form-field"><label>说明文字</label><input type="text" name="caption"></div>
         <div class="form-field"><label>开始时间</label><input type="datetime-local" name="start_time" required></div>
@@ -103,11 +135,20 @@ export async function addBanner() {
     document.getElementById('modalForm').onsubmit = async (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
+        const upListRaw = fd.get('up_five_star_list')?.trim() || '';
+
+        // 解析多UP列表
+        let upFiveStarList = [];
+        if (upListRaw) {
+            upFiveStarList = upListRaw.split(',').map(s => s.trim()).filter(Boolean);
+        }
+
         const data = {
             banner_key: fd.get('banner_key'),
             name: fd.get('name'),
             sub_name: fd.get('sub_name'),
-            up_five_star: fd.get('up_five_star'),
+            up_five_star: fd.get('up_five_star') || (upFiveStarList.length > 0 ? upFiveStarList[0] : ''),
+            up_five_star_list: upFiveStarList,
             splash_url: fd.get('splash_url'),
             caption: fd.get('caption'),
             start_time: new Date(fd.get('start_time')).toISOString(),
@@ -134,11 +175,23 @@ window.editBanner = async function (id) {
     const b = currentBanners.find(x => x.id === id);
     if (!b) return;
 
+    // 解析 up_five_star_list 为逗号分隔字符串
+    let upListStr = '';
+    if (b.up_five_star_list && Array.isArray(b.up_five_star_list) && b.up_five_star_list.length > 0) {
+        upListStr = b.up_five_star_list.join(', ');
+    } else if (b.up_five_star && b.up_five_star.includes(',')) {
+        upListStr = b.up_five_star;
+    }
+
     const html = `
         <div class="form-field"><label>标识(banner_key)</label><input type="text" name="banner_key" value="${escapeHtml(b.banner_key)}" required></div>
         <div class="form-field"><label>名称</label><input type="text" name="name" value="${escapeHtml(b.name)}" required></div>
         <div class="form-field"><label>副标题</label><input type="text" name="sub_name" value="${escapeHtml(b.sub_name || '')}"></div>
-        <div class="form-field"><label>UP五星角色名</label><input type="text" name="up_five_star" value="${escapeHtml(b.up_five_star)}" required></div>
+        <div class="form-field"><label>UP五星角色名</label><input type="text" name="up_five_star" value="${escapeHtml(b.up_five_star || '')}" placeholder="单UP填一个"></div>
+        <div class="form-field"><label style="color:#facc15;">⭐ 复刻多UP列表（逗号分隔）</label>
+            <input type="text" name="up_five_star_list" value="${escapeHtml(upListStr)}" placeholder="布洛妮娅, 希儿" style="border-color:#facc15;">
+            <small style="color:var(--text-secondary);">多个UP角色用逗号分隔，会自动保存为数组。优先使用此字段。</small>
+        </div>
         <div class="form-field"><label>立绘URL</label><input type="text" name="splash_url" value="${escapeHtml(b.splash_url || '')}"></div>
         <div class="form-field"><label>说明文字</label><input type="text" name="caption" value="${escapeHtml(b.caption || '')}"></div>
         <div class="form-field"><label>开始时间</label><input type="datetime-local" name="start_time" value="${b.start_time.slice(0, 16)}"></div>
@@ -153,11 +206,20 @@ window.editBanner = async function (id) {
     document.getElementById('modalForm').onsubmit = async (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
+        const upListRaw = fd.get('up_five_star_list')?.trim() || '';
+
+        // 解析多UP列表
+        let upFiveStarList = [];
+        if (upListRaw) {
+            upFiveStarList = upListRaw.split(',').map(s => s.trim()).filter(Boolean);
+        }
+
         const data = {
             banner_key: fd.get('banner_key'),
             name: fd.get('name'),
             sub_name: fd.get('sub_name'),
-            up_five_star: fd.get('up_five_star'),
+            up_five_star: fd.get('up_five_star') || (upFiveStarList.length > 0 ? upFiveStarList[0] : ''),
+            up_five_star_list: upFiveStarList,
             splash_url: fd.get('splash_url'),
             caption: fd.get('caption'),
             start_time: new Date(fd.get('start_time')).toISOString(),
@@ -391,6 +453,3 @@ export async function saveGachaConfig() {
         showNotification('保存失败: ' + err.message, 'error');
     }
 }
-
-// 辅助：escapeHtml（从 utils 导入）
-import { escapeHtml } from './utils.js';
