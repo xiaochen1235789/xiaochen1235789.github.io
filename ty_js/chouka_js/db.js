@@ -1,11 +1,12 @@
 // ================================================================
-//  js/db.js  -  适配现有表结构（自动判断角色星级）
+//  js/db.js  -  适配现有 Supabase 表结构
 //  表：user_resources, user_gacha_state, user_constellations,
-//      gacha_history, gacha_config, gacha_banners, gacha_four_star
+//      gacha_history, gacha_config, gacha_banners, gacha_four_star,
+//      gacha_permanent_five, gacha_three_star
 // ================================================================
 
 import { SUPABASE_URL, SUPABASE_KEY, CACHE_TTL } from './constants.js';
-import { state, applyDatabaseConfig, addItemToInventory } from './state.js';
+import { state, applyDatabaseConfig } from './state.js';
 
 let supabaseClient = null;
 
@@ -49,8 +50,9 @@ export async function loadUserData(userId) {
         configRes,
         bannerRes,
         profileRes,
-        fourStarRes,      // ★ 加载四星角色表
-        permanentFiveRes  // 可选：加载常驻五星表
+        fourStarRes,
+        permanentFiveRes,
+        threeStarRes
     ] = await Promise.all([
         sb.from('user_resources').select('*').eq('user_id', userId).maybeSingle(),
         sb.from('user_gacha_state').select('*').eq('user_id', userId).maybeSingle(),
@@ -63,8 +65,9 @@ export async function loadUserData(userId) {
             .gte('end_time', new Date().toISOString())
             .maybeSingle(),
         sb.from('user_profiles').select('user_number').eq('id', userId).maybeSingle(),
-        sb.from('gacha_four_star').select('character_name'),          // ★ 四星角色名称列表
-        sb.from('gacha_permanent_five').select('character_name')      // 常驻五星（备用）
+        sb.from('gacha_four_star').select('character_name'),
+        sb.from('gacha_permanent_five').select('character_name'),
+        sb.from('gacha_three_star').select('item_name')   // ★ 加载三星物品
     ]);
 
     // ---- 资源 ----
@@ -94,10 +97,13 @@ export async function loadUserData(userId) {
         state.guaranteedUp = false;
     }
 
-    // ---- ★ 四星角色列表（用于判断星级） ----
+    // ---- ★ 四星角色列表 ----
     state.fourStarChars = (fourStarRes.data || []).map(row => row.character_name);
 
-    // ---- 常驻五星列表（备用） ----
+    // ---- ★ 三星物品列表 ----
+    state.threeStarItems = (threeStarRes.data || []).map(row => row.item_name);
+
+    // ---- 常驻五星列表 ----
     state.permanentFiveStar = (permanentFiveRes.data || []).map(row => row.character_name);
 
     // ---- 卡池信息 ----
@@ -106,7 +112,7 @@ export async function loadUserData(userId) {
         state.currentBanner = b;
         state.bannerStart = new Date(b.start_time);
         state.bannerEnd = new Date(b.end_time);
-        // up_five_star 是字符串，转成数组（方便未来复刻）
+        // up_five_star 是字符串，转成数组（支持未来复刻多UP）
         state.upFiveStarList = b.up_five_star ? [b.up_five_star] : [];
     } else {
         state.upFiveStarList = [];
@@ -215,7 +221,7 @@ export async function saveInventory(userId) {
             user_id: userId,
             character_name: charName,
             constellation_level: value.level,
-            star_level: value.star,        // ★ 保存星级
+            star_level: value.star,
             updated_at: new Date().toISOString()
         });
     }
@@ -266,7 +272,7 @@ export async function saveResourcesAndPity(userId) {
 }
 
 // ================================================================
-//  一次性保存
+//  一次性保存所有数据（抽卡后调用）
 // ================================================================
 export async function saveAllAfterDraw(userId, results) {
     await Promise.all([
