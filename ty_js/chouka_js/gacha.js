@@ -1,15 +1,15 @@
 // ================================================================
 //  js/gacha.js  -  通用抽卡核心引擎
-//  支持：角色池、光锥池、复刻池（多UP）
+//  支持：角色池、复刻池（多UP），未来可扩展光锥池
 // ================================================================
 
-import { state, addItemToInventory } from './state.js';
+import { state, addItemToInventory, getItemRule } from './state.js';
 import {
     saveAllAfterDraw,
-    saveGachaResult,
     loadUserData
 } from './db.js';
 import { ITEM_TYPES } from './constants.js';
+import { showNotification } from './ui.js';
 
 // ================================================================
 //  计算当前五星概率（含软保底）
@@ -83,11 +83,15 @@ function selectFiveStarResult() {
 }
 
 // ================================================================
-//  选择四星结果
+//  选择四星结果（从数据库的 gacha_four_star 表读取）
 // ================================================================
 function selectFourStarResult() {
     const pool = state.fourStarChars || [];
-    if (pool.length === 0) return '四星角色';
+    if (pool.length === 0) {
+        // 如果四星池为空，返回一个默认占位（但正常情况不应该发生）
+        console.warn('四星池为空，请检查 gacha_four_star 表数据');
+        return '四星角色';
+    }
     return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -131,15 +135,16 @@ export async function performSingleDraw(itemType = ITEM_TYPES.CHARACTER) {
         }
     }
 
-    // ---- ★★★ 调用通用物品处理（命座/精炼/溢出补偿） ★★★ ----
+    // ---- ★★★ 调用通用物品处理（命座/溢出补偿） ★★★ ----
+    // 注意：目前只支持角色，所以 itemType 固定为 'character'
     let constellationMsg = null;
     if (resultStar >= 4) {
         const result = addItemToInventory('character', resultName, resultStar);
         if (result.action === 'first') {
             constellationMsg = '首次获得';
         } else if (result.action === 'upgrade') {
-            const rule = getItemRule(itemType);
-            constellationMsg = `${rule?.levelLabel || '等级'} ${result.newLevel}`;
+            const rule = getItemRule('character');
+            constellationMsg = `${rule?.levelLabel || '命座'} ${result.newLevel}`;
         } else if (result.action === 'overflow') {
             constellationMsg = `满级转化 +${result.compensation} 星琼`;
         }
@@ -149,7 +154,7 @@ export async function performSingleDraw(itemType = ITEM_TYPES.CHARACTER) {
     state.gachaHistory.unshift({
         name: resultName,
         star: resultStar,
-        type: itemType
+        type: 'character'   // 统一为 character，历史表无此列，但保留便于未来
     });
 
     // 限制历史记录数量
@@ -182,7 +187,7 @@ export async function performSingleDraw(itemType = ITEM_TYPES.CHARACTER) {
     return {
         name: resultName,
         star: resultStar,
-        type: itemType,
+        type: 'character',
         constellationMsg: constellationMsg
     };
 }
@@ -218,7 +223,7 @@ export async function singlePull() {
     state.isDrawing = true;
 
     try {
-        // 获取当前卡池类型
+        // 当前卡池类型（默认为角色）
         const itemType = state.bannerType || ITEM_TYPES.CHARACTER;
 
         // 执行抽卡
@@ -317,17 +322,4 @@ export function getItemTypeDisplay(itemType) {
         'light_cone': '光锥',
     };
     return map[itemType] || itemType;
-}
-
-// ================================================================
-//  导入辅助（解决循环依赖）
-// ================================================================
-import { getItemRule } from './state.js';
-import { showNotification } from './ui.js';
-
-// 如果 ui.js 还没创建，先用 console 代替
-if (typeof showNotification === 'undefined') {
-    window.showNotification = function(msg, type) {
-        console.log(`[${type}] ${msg}`);
-    };
 }
