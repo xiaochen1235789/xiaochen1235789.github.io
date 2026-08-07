@@ -1,12 +1,12 @@
 // ================================================================
-//  js/db.js  -  适配现有 Supabase 表结构
+//  js/db.js  -  适配现有 Supabase 表结构（支持多池子）
 //  表：user_resources, user_gacha_state, user_constellations,
 //      gacha_history, gacha_config, gacha_banners, gacha_four_star,
 //      gacha_permanent_five, gacha_three_star
 // ================================================================
 
 import { SUPABASE_URL, SUPABASE_KEY, CACHE_TTL } from './constants.js';
-import { state, applyDatabaseConfig } from './state.js';
+import { state, applyDatabaseConfig, selectBanner } from './state.js';
 
 let supabaseClient = null;
 
@@ -48,7 +48,7 @@ export async function loadUserData(userId) {
         historyRes,
         constellationsRes,
         configRes,
-        bannerRes,
+        bannerRes,          // 多个池子
         profileRes,
         fourStarRes,
         permanentFiveRes,
@@ -63,11 +63,11 @@ export async function loadUserData(userId) {
         sb.from('gacha_banners').select('*')
             .lte('start_time', new Date().toISOString())
             .gte('end_time', new Date().toISOString())
-            .maybeSingle(),
+            .order('display_order', { ascending: true }),   // ★ 查询所有开放池子
         sb.from('user_profiles').select('user_number').eq('id', userId).maybeSingle(),
         sb.from('gacha_four_star').select('character_name'),
         sb.from('gacha_permanent_five').select('character_name'),
-        sb.from('gacha_three_star').select('item_name')   // ★ 加载三星物品
+        sb.from('gacha_three_star').select('item_name')
     ]);
 
     // ---- 资源 ----
@@ -106,16 +106,21 @@ export async function loadUserData(userId) {
     // ---- 常驻五星列表 ----
     state.permanentFiveStar = (permanentFiveRes.data || []).map(row => row.character_name);
 
-    // ---- 卡池信息 ----
-    if (bannerRes.data) {
-        const b = bannerRes.data;
-        state.currentBanner = b;
-        state.bannerStart = new Date(b.start_time);
-        state.bannerEnd = new Date(b.end_time);
-        // up_five_star 是字符串，转成数组（支持未来复刻多UP）
-        state.upFiveStarList = b.up_five_star ? [b.up_five_star] : [];
+    // ---- ★★★ 处理卡池列表 ★★★ ----
+    const bannerData = bannerRes.data || [];
+    state.bannerList = bannerData;
+
+    if (bannerData.length > 0) {
+        // 自动选中第一个池子（或按 display_order 最小的）
+        selectBanner(0);  // 调用 state.js 中的 selectBanner
     } else {
+        state.bannerList = [];
+        state.currentBanner = null;
         state.upFiveStarList = [];
+        state.selectedBannerIndex = -1;
+        // 如果没有池子，显示无卡池状态
+        state.bannerStart = null;
+        state.bannerEnd = null;
     }
 
     // ---- 概率配置 ----
@@ -129,7 +134,6 @@ export async function loadUserData(userId) {
         for (const row of constellationsRes.data) {
             let star = row.star_level;
             if (star === null || star === undefined) {
-                // 如果数据库没有 star_level，则根据四星列表判断
                 star = state.fourStarChars.includes(row.character_name) ? 4 : 5;
             }
             const key = `character_${row.character_name}`;
