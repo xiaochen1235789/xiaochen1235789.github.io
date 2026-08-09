@@ -9,7 +9,7 @@
     <meta name="msvalidate.01" content="40BA1755FA42BA4AC37FB824A1308402" />
     <meta property="og:title" content="六哥荣耀WIKI">
     <meta property="og:description" content="整理游戏内角色、光锥、养成材料、道具等信息，为玩家提供详细参考">
-    <meta property="og:image" content="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/icon.png">
+    <meta property="og:image" content="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/avatars/icon.png">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="六哥荣耀WIKI">
@@ -23,8 +23,9 @@
             "url": "https://xiaochen1235789.github.io"
         }
     </script>
-    <link rel="icon" href="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/icon.png" type="image/png">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <!-- ★ 修改图标为指定链接 ★ -->
+    <link rel="icon" href="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/avatars/icon.png" type="image/png">
+    <link rel="icon" href="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/avatars/icon.png" type="image/x-icon">
     <title>六哥荣耀WIKI</title>
     <link rel="stylesheet" href="./css/zhuye0.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -126,6 +127,9 @@
         .menu-auto-sign-card .status-loading {
             color: var(--text-secondary);
             animation: pulseText 1.2s ease-in-out infinite;
+        }
+        .menu-auto-sign-card .status-error {
+            color: #f87171;
         }
         @keyframes pulseText {
             0%,
@@ -269,6 +273,17 @@
         }
         body.night-mode .notification.auto-sign .auto-sign-close:hover {
             color: #c9a84c;
+        }
+
+        /* 补充夜间模式样式 */
+        body.night-mode .menu-item {
+            color: #ccc;
+        }
+        body.night-mode .menu-item:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        body.night-mode .card-desc {
+            color: #aaa;
         }
 
         /* ===== 响应式微调 ===== */
@@ -418,7 +433,7 @@
 
     <!-- 搜索框 + 网站天数 + 空结果 -->
     <div class="search-container">
-        <input type="text" id="search-input" placeholder="搜索角色/光锥/材料/道具（支持关键词模糊匹配）" aria-label="搜索内容">
+        <input type="text" id="search-input" placeholder="搜索当前分类中的角色/光锥/材料/道具（支持模糊匹配）" aria-label="搜索内容">
         <div class="search-icon">🔍</div>
     </div>
 
@@ -435,7 +450,7 @@
     </div>
     <div class="empty-result">
         <i>🔍</i>
-        <h3>未找到匹配结果</h3>
+        <h3>当前分类未找到匹配结果</h3>
         <p>试试更换关键词或检查拼写~</p>
     </div>
 
@@ -477,6 +492,10 @@
             </div>
             <div class="modal-body">
                 <iframe id="changelog-iframe" src="changelog.html" frameborder="0" allow="fullscreen" loading="lazy" title="更新日志" style="width:100%;height:100%;"></iframe>
+                <div id="changelog-error" style="display:none; text-align:center; padding:40px 20px; color:#f87171;">
+                    <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;"></i>
+                    <p style="margin-top:12px;">更新日志加载失败，请稍后重试。</p>
+                </div>
             </div>
         </div>
     </div>
@@ -490,6 +509,8 @@
         let hasAutoSignCard = false;
         let autoSignAttempted = false;
         let autoSignNotificationTimer = null;
+        let isJumping = false; // 防误触
+
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
 
@@ -568,12 +589,16 @@
             if (skeleton) skeleton.classList.remove('skeleton');
         }
 
+        // 防误触
         function jumpToDetail(targetUrl, charName) {
+            if (isJumping) return;
             if (!targetUrl || targetUrl === '#' || targetUrl === '') {
                 showNotification(`「${charName}」的详情页暂未开放`, 'error');
                 return;
             }
+            isJumping = true;
             window.open(targetUrl, '_blank');
+            setTimeout(() => { isJumping = false; }, 500);
         }
 
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -742,7 +767,12 @@
                         card.style.display = isMatch ? 'block' : 'none';
                         if (isMatch) matchCount++;
                     });
-                    emptyResult.style.display = matchCount === 0 && keyword ? 'block' : 'none';
+                    if (matchCount === 0 && keyword) {
+                        emptyResult.style.display = 'block';
+                        emptyResult.querySelector('h3').textContent = '当前分类未找到匹配结果';
+                    } else {
+                        emptyResult.style.display = 'none';
+                    }
                 }, 200);
             });
         }
@@ -759,15 +789,27 @@
         function openChangelogModal() {
             const modal = document.getElementById('changelog-modal');
             const iframe = document.getElementById('changelog-iframe');
+            const errorDiv = document.getElementById('changelog-error');
             if (!modal || !iframe) return;
             if (modal.style.display === 'flex' && !modal.classList.contains('closing')) return;
             modal.classList.remove('closing');
             modal.style.display = 'flex';
             document.body.classList.add('modal-open');
+            errorDiv.style.display = 'none';
+            iframe.style.display = 'block';
             showNotification('正在加载更新日志...', 'info');
             iframe.src = 'changelog.html?t=' + Date.now();
-            iframe.onload = function() { showNotification('更新日志已加载', 'success'); };
-            iframe.onerror = function() { showNotification('加载更新日志失败', 'error'); };
+
+            iframe.onload = function() {
+                showNotification('更新日志已加载', 'success');
+                errorDiv.style.display = 'none';
+                iframe.style.display = 'block';
+            };
+            iframe.onerror = function() {
+                iframe.style.display = 'none';
+                errorDiv.style.display = 'block';
+                showNotification('加载更新日志失败', 'error');
+            };
         }
 
         function closeChangelogModal() {
@@ -816,6 +858,10 @@
         async function executeCheckin(autoTriggered = false) {
             if (!currentUser) {
                 showNotification('请先登录', 'error');
+                return false;
+            }
+            if (!userStats) {
+                showNotification('用户统计未加载，请刷新页面重试', 'error');
                 return false;
             }
             const today = getLocalDateString();
@@ -883,17 +929,20 @@
 
         // ==================== 自动签到卡功能 ====================
         async function loadAutoSignCardStatus() {
-            if (!supabaseClient || !currentUser) return false;
-            const { data, error } = await supabaseClient
-                .from('user_auto_sign_card')
-                .select('owned')
-                .eq('user_id', currentUser.id)
-                .maybeSingle();
-            if (error && error.code !== 'PGRST116') return false;
-            return data?.owned === true;
+            if (!supabaseClient || !currentUser) return null; // null表示未登录或未加载
+            try {
+                const { data, error } = await supabaseClient
+                    .from('user_auto_sign_card')
+                    .select('owned')
+                    .eq('user_id', currentUser.id)
+                    .maybeSingle();
+                if (error && error.code !== 'PGRST116') return null;
+                return data?.owned === true;
+            } catch (e) {
+                return null;
+            }
         }
 
-        // ===== ★★★ 更新侧栏自动签到卡状态显示 ★★★ =====
         async function updateAutoSignCardStatusUI() {
             const statusElem = document.getElementById('autoSignCardStatus');
             if (!statusElem) return;
@@ -904,6 +953,11 @@
             }
             try {
                 const owned = await loadAutoSignCardStatus();
+                if (owned === null) {
+                    statusElem.className = 'status-error';
+                    statusElem.textContent = '❌ 加载失败';
+                    return;
+                }
                 hasAutoSignCard = owned;
                 if (owned) {
                     statusElem.className = 'status-owned';
@@ -913,7 +967,7 @@
                     statusElem.textContent = '❌ 未拥有';
                 }
             } catch (e) {
-                statusElem.className = 'status-unowned';
+                statusElem.className = 'status-error';
                 statusElem.textContent = '❌ 加载失败';
             }
         }
@@ -922,7 +976,12 @@
             if (!currentUser || !userStats || autoSignAttempted) return;
             autoSignAttempted = true;
             const today = getLocalDateString();
-            hasAutoSignCard = await loadAutoSignCardStatus();
+            const owned = await loadAutoSignCardStatus();
+            if (owned === null) {
+                // 加载失败，不执行签到，但已标记尝试过
+                return;
+            }
+            hasAutoSignCard = owned;
             if (hasAutoSignCard && userStats.last_checkin_date !== today) {
                 showNotification('🃏 检测到自动签到卡，正在自动签到...', 'auto-sign');
                 await executeCheckin(true);
@@ -934,17 +993,20 @@
         async function refreshUserState() {
             if (!supabaseClient) return;
             try {
-                // 使用 getSession 获取真实会话
                 const { data: { session }, error: sessionErr } = await supabaseClient.auth.getSession();
                 if (sessionErr || !session || !session.user) {
-                    // 未登录
-                    currentUser = null;
-                    userStats = null;
-                    updateNavbar(null);
-                    updateMenuUserInfo(null);
-                    updateAutoSignCardStatusUI();
+                    // 未登录，但保留缓存信息用于显示，标记为未验证
+                    if (currentUser) {
+                        // 之前是登录状态，现在变为未登录，清空
+                        currentUser = null;
+                        userStats = null;
+                        updateNavbar(null);
+                        updateMenuUserInfo(null);
+                        updateAutoSignCardStatusUI();
+                    }
                     return;
                 }
+                // 登录成功
                 currentUser = session.user;
                 const { data: profile } = await supabaseClient.from('user_profiles').select('username, avatar_url').eq('id',
                     currentUser.id).single();
@@ -967,11 +1029,8 @@
                 await updateAutoSignCardStatusUI();
             } catch (err) {
                 console.warn('refreshUserState error:', err);
-                currentUser = null;
-                userStats = null;
-                updateNavbar(null);
-                updateMenuUserInfo(null);
-                updateAutoSignCardStatusUI();
+                // 不置空 currentUser，保留原状态，但显示警告
+                showNotification('用户状态刷新失败，请重试', 'error');
             }
         }
 
@@ -979,18 +1038,14 @@
         async function initializeUserProfile() {
             try {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                // 直接刷新状态（内部使用 getSession）
                 await refreshUserState();
                 if (currentUser && userStats) {
                     await tryAutoSign();
                 }
             } catch (error) {
                 console.error('用户初始化失败:', error);
-                currentUser = null;
-                userStats = null;
-                updateNavbar(null);
-                updateMenuUserInfo(null);
-                updateAutoSignCardStatusUI();
+                // 不置空当前用户，保留缓存
+                showNotification('用户初始化失败，部分功能可能受限', 'error');
             }
         }
 
@@ -1086,6 +1141,11 @@
             }
         }
 
+        // 关闭所有模态框辅助
+        function closeAllModals() {
+            document.querySelectorAll('.modal-mask.active').forEach(el => el.classList.remove('active'));
+        }
+
         function bindUserMenuActions() {
             const signinItem = document.getElementById('dailySigninItem');
             const logoutItem = document.getElementById('logoutItem');
@@ -1104,6 +1164,7 @@
                         showNotification('请先登录', 'error');
                         return;
                     }
+                    closeAllModals(); // 关闭其他模态框
                     const nextStreak = (userStats?.checkin_streak || 0) + 1;
                     const reward = await fetchCheckinReward(nextStreak);
                     const previewText =
@@ -1143,6 +1204,7 @@
                         showNotification('未登录', 'error');
                         return;
                     }
+                    closeAllModals();
                     logoutModal.classList.add('active');
                 };
             }
@@ -1154,7 +1216,6 @@
                     localStorage.removeItem('cachedAvatar');
                     localStorage.removeItem('cachedUserProfile');
                     localStorage.removeItem('cachedUserStats');
-                    // 不再手动删除 sb-auth-token，Supabase 会自动清理
                     currentUser = null;
                     userStats = null;
                     updateNavbar(null);
@@ -1316,6 +1377,7 @@
 
         // ==================== 站长留言模态框控制 ====================
         function openOwnerMessage() {
+            closeAllModals();
             document.getElementById('ownerMessageModal').classList.add('active');
             document.body.style.overflow = 'hidden';
         }
@@ -1450,6 +1512,16 @@
         document.addEventListener('DOMContentLoaded', function() {
             initializePage();
         });
+
+        // 暴露函数给全局，供HTML内联调用
+        window.closeOwnerMessage = closeOwnerMessage;
+        window.openOwnerMessage = openOwnerMessage;
+        window.scrollToTop = scrollToTop;
+        window.jumpToDetail = jumpToDetail;
+        window.openChangelogModal = openChangelogModal;
+        window.closeChangelogModal = closeChangelogModal;
+        window.imageLoaded = imageLoaded;
+        window.imageError = imageError;
     </script>
 </body>
 </html>
