@@ -9,7 +9,7 @@
     <meta name="msvalidate.01" content="40BA1755FA42BA4AC37FB824A1308402" />
     <meta property="og:title" content="六哥荣耀WIKI">
     <meta property="og:description" content="整理游戏内角色、光锥、养成材料、道具等信息，为玩家提供详细参考">
-    <meta property="og:image" content="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/wangzhantupian.png">
+    <meta property="og:image" content="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/icon.png">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="六哥荣耀WIKI">
@@ -930,43 +930,14 @@
             }
         }
 
-        // ==================== 用户认证和下拉菜单 ====================
+        // ==================== ★★★ 修复：用户认证（使用 getSession） ★★★ ====================
         async function refreshUserState() {
             if (!supabaseClient) return;
             try {
-                const { data: { user }, error } = await supabaseClient.auth.getUser();
-                if (error || !user) {
-                    // ★★★ 如果 getUser 失败，尝试用 localStorage 的 session 恢复 ★★★
-                    const tokenStr = localStorage.getItem('sb-auth-token');
-                    if (tokenStr) {
-                        try {
-                            const session = JSON.parse(tokenStr);
-                            await supabaseClient.auth.setSession(session);
-                            const { data: retryData } = await supabaseClient.auth.getUser();
-                            if (retryData?.user) {
-                                currentUser = retryData.user;
-                                const { data: profile } = await supabaseClient.from('user_profiles').select(
-                                    'username, avatar_url').eq('id', currentUser.id).single();
-                                if (profile) {
-                                    const username = profile.username || currentUser.email.split('@')[0];
-                                    localStorage.setItem('cachedUsername', username);
-                                    if (profile.avatar_url) localStorage.setItem('cachedAvatar', profile
-                                    .avatar_url);
-                                    updateNavbar(username, profile.avatar_url);
-                                    updateMenuUserInfo(username, profile.avatar_url, currentUser.email);
-                                    const { data: stats } = await supabaseClient.from('user_stats').select('*')
-                                        .eq('user_id', currentUser.id).single();
-                                    if (stats) {
-                                        userStats = stats;
-                                        localStorage.setItem('cachedUserStats', JSON.stringify(stats));
-                                    }
-                                    await updateAutoSignCardStatusUI();
-                                    return;
-                                }
-                            }
-                        } catch (e) { console.warn('恢复 session 失败', e); }
-                    }
-                    // 如果都失败，设为未登录
+                // 使用 getSession 获取真实会话
+                const { data: { session }, error: sessionErr } = await supabaseClient.auth.getSession();
+                if (sessionErr || !session || !session.user) {
+                    // 未登录
                     currentUser = null;
                     userStats = null;
                     updateNavbar(null);
@@ -974,24 +945,24 @@
                     updateAutoSignCardStatusUI();
                     return;
                 }
-                currentUser = user;
+                currentUser = session.user;
                 const { data: profile } = await supabaseClient.from('user_profiles').select('username, avatar_url').eq('id',
-                    user.id).single();
+                    currentUser.id).single();
                 if (profile) {
-                    const username = profile.username || user.email.split('@')[0];
+                    const username = profile.username || currentUser.email.split('@')[0];
                     localStorage.setItem('cachedUsername', username);
                     if (profile.avatar_url) localStorage.setItem('cachedAvatar', profile.avatar_url);
                     updateNavbar(username, profile.avatar_url);
-                    updateMenuUserInfo(username, profile.avatar_url, user.email);
-                    const { data: stats } = await supabaseClient.from('user_stats').select('*').eq('user_id', user.id)
+                    updateMenuUserInfo(username, profile.avatar_url, currentUser.email);
+                    const { data: stats } = await supabaseClient.from('user_stats').select('*').eq('user_id', currentUser.id)
                         .single();
                     if (stats) {
                         userStats = stats;
                         localStorage.setItem('cachedUserStats', JSON.stringify(stats));
                     }
                 } else {
-                    updateNavbar(user.email.split('@')[0], null);
-                    updateMenuUserInfo(user.email.split('@')[0], null, user.email);
+                    updateNavbar(currentUser.email.split('@')[0], null);
+                    updateMenuUserInfo(currentUser.email.split('@')[0], null, currentUser.email);
                 }
                 await updateAutoSignCardStatusUI();
             } catch (err) {
@@ -1004,30 +975,12 @@
             }
         }
 
-        // ==================== ★★★ 用户初始化（已修复） ★★★ ====================
+        // ==================== 用户初始化（已修复） ====================
         async function initializeUserProfile() {
             try {
-                // 第一步：先创建客户端（即使没有 session 也要创建）
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-                // ★★★ 第二步：尝试从 localStorage 恢复 session ★★★
-                const tokenStr = localStorage.getItem('sb-auth-token');
-                if (tokenStr) {
-                    try {
-                        const session = JSON.parse(tokenStr);
-                        await supabaseClient.auth.setSession(session);
-                        console.log('✅ Session 已从 localStorage 恢复');
-                    } catch (e) {
-                        console.warn('恢复 session 失败，将尝试正常登录', e);
-                        localStorage.removeItem('sb-auth-token');
-                        localStorage.removeItem('sb-user');
-                    }
-                }
-
-                // 第三步：刷新用户状态
+                // 直接刷新状态（内部使用 getSession）
                 await refreshUserState();
-
-                // 第四步：如果已登录，尝试自动签到
                 if (currentUser && userStats) {
                     await tryAutoSign();
                 }
@@ -1201,8 +1154,7 @@
                     localStorage.removeItem('cachedAvatar');
                     localStorage.removeItem('cachedUserProfile');
                     localStorage.removeItem('cachedUserStats');
-                    localStorage.removeItem('sb-auth-token');
-                    localStorage.removeItem('sb-user');
+                    // 不再手动删除 sb-auth-token，Supabase 会自动清理
                     currentUser = null;
                     userStats = null;
                     updateNavbar(null);
