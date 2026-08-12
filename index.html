@@ -27,7 +27,7 @@
     <link rel="icon" href="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/avatars/icon.png" type="image/png">
     <link rel="icon" href="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/avatars/icon.png" type="image/x-icon">
     <title>六哥荣耀WIKI</title>
-    <!-- 外部样式表（已包含所有样式） -->
+    <!-- 外部样式表 -->
     <link rel="stylesheet" href="./css/zhuye0.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
@@ -93,7 +93,6 @@
             <div class="menu-item" data-section="material"><i class="fas fa-cube"></i> 材料区</div>
             <div class="menu-item" data-section="item"><i class="fas fa-box"></i> 道具区</div>
             <div class="menu-item" id="menuFriend"><i class="fas fa-user-friends"></i> 好友系统</div>
-            <!-- 已删除侧栏的邮箱系统菜单项，移植到导航栏 -->
             <div class="menu-item" id="menuGacha"><i class="fas fa-dice-d6"></i> 抽卡模拟器</div>
             <div class="menu-item" id="menuChangelog"><i class="fas fa-history"></i> 更新日志</div>
             <div class="menu-item" id="menuOwnerMessage"><i class="fas fa-pen-fancy"></i> 站长想说的话</div>
@@ -155,19 +154,28 @@
         </div>
     </div>
 
-    <!-- 邮箱模态框（内嵌邮箱系统） -->
-    <div class="email-modal" id="emailModal">
-        <div class="email-modal-overlay" id="emailModalOverlay"></div>
-        <div class="email-modal-container">
-            <div class="email-modal-header">
-                <span><i class="fas fa-envelope" style="margin-right: 8px;"></i>我的邮箱</span>
-                <button class="email-modal-close" id="emailModalClose" title="关闭邮箱">&times;</button>
+    <!-- ============================================================ -->
+    <!--  ★★★ 邮箱模态框（与更新日志模态框结构一致） ★★★ -->
+    <!-- ============================================================ -->
+    <div id="email-modal" class="modal" style="display: none;">
+        <div class="modal-overlay" id="emailModalOverlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-envelope" style="margin-right: 8px;"></i>我的邮箱</h3>
+                <button class="modal-close" id="emailModalClose" aria-label="关闭邮箱"><i class="fas fa-times"></i></button>
             </div>
-            <div class="email-modal-body">
-                <iframe id="emailIframe" src="email_address.html?embedded=true" frameborder="0" allow="fullscreen"></iframe>
+            <div class="modal-body">
+                <iframe id="emailIframe" src="about:blank" frameborder="0" allow="fullscreen" loading="lazy" title="我的邮箱" style="width:100%;height:100%;"></iframe>
+                <div id="email-error" style="display:none; text-align:center; padding:40px 20px; color:#f87171;">
+                    <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;"></i>
+                    <p style="margin-top:12px;">邮箱加载失败，请稍后重试。</p>
+                    <button onclick="reloadEmailIframe()" style="margin-top:16px; padding:8px 24px; background:#3b82f6; border:none; border-radius:20px; color:white; cursor:pointer; font-size:0.9rem;">重新加载</button>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- ============================================================ -->
 
     <!-- 搜索框 + 网站天数 + 空结果 -->
     <div class="search-container">
@@ -773,7 +781,6 @@
                 if (currentUser && userStats) {
                     await tryAutoSign();
                 }
-                // 启动邮箱角标定时刷新
                 startEmailBadgePolling();
             } catch (error) {
                 console.error('用户初始化失败:', error);
@@ -1014,56 +1021,69 @@
                 clearInterval(emailBadgeTimer);
                 emailBadgeTimer = null;
             }
-            // 立即更新一次
             updateEmailBadge();
-            // 每30秒刷新一次
             emailBadgeTimer = setInterval(updateEmailBadge, 30000);
         }
 
-        // ==================== 邮箱模态框控制 ====================
+        // ==================== ★★★ 邮箱模态框控制（与更新日志逻辑一致） ★★★ ====================
         function openEmailModal() {
-            const modal = document.getElementById('emailModal');
+            const modal = document.getElementById('email-modal');
             const iframe = document.getElementById('emailIframe');
+            const errorDiv = document.getElementById('email-error');
             if (!modal || !iframe) return;
-            // 如果已打开，则关闭
-            if (isEmailModalOpen) {
+
+            if (modal.style.display === 'flex' && !modal.classList.contains('closing')) {
+                // 如果已打开，则关闭
                 closeEmailModal();
                 return;
             }
-            modal.classList.add('active');
+
+            modal.classList.remove('closing');
+            modal.style.display = 'flex';
             document.body.classList.add('modal-open');
-            isEmailModalOpen = true;
-            // 重新加载iframe以刷新邮件列表
+            errorDiv.style.display = 'none';
+            iframe.style.display = 'block';
+
+            showNotification('正在加载邮箱...', 'info');
             iframe.src = 'email_address.html?embedded=true&t=' + Date.now();
-            // 关闭后刷新角标
-            setTimeout(() => updateEmailBadge(), 500);
+
+            iframe.onload = function() {
+                showNotification('邮箱已加载', 'success');
+                errorDiv.style.display = 'none';
+                iframe.style.display = 'block';
+                // 加载完成后刷新角标
+                setTimeout(updateEmailBadge, 1000);
+            };
+            iframe.onerror = function() {
+                iframe.style.display = 'none';
+                errorDiv.style.display = 'block';
+                showNotification('加载邮箱失败', 'error');
+            };
         }
 
         function closeEmailModal() {
-            const modal = document.getElementById('emailModal');
+            const modal = document.getElementById('email-modal');
             if (!modal) return;
-            modal.classList.remove('active');
-            document.body.classList.remove('modal-open');
-            isEmailModalOpen = false;
-            // 关闭后刷新角标
-            updateEmailBadge();
-            // 清理iframe
-            const iframe = document.getElementById('emailIframe');
-            if (iframe) {
-                setTimeout(() => {
-                    if (!isEmailModalOpen) {
-                        iframe.src = 'about:blank';
-                    }
-                }, 300);
-            }
+            modal.classList.add('closing');
+            setTimeout(() => {
+                modal.style.display = 'none';
+                modal.classList.remove('closing');
+                document.body.classList.remove('modal-open');
+                const iframe = document.getElementById('emailIframe');
+                if (iframe) iframe.src = 'about:blank';
+                // 关闭后刷新角标
+                updateEmailBadge();
+            }, 300);
         }
 
-        function toggleEmailModal() {
-            if (isEmailModalOpen) {
-                closeEmailModal();
-            } else {
-                openEmailModal();
-            }
+        function reloadEmailIframe() {
+            const iframe = document.getElementById('emailIframe');
+            const errorDiv = document.getElementById('email-error');
+            if (!iframe) return;
+            errorDiv.style.display = 'none';
+            iframe.style.display = 'block';
+            iframe.src = 'email_address.html?embedded=true&t=' + Date.now();
+            showNotification('重新加载中...', 'info');
         }
 
         // ==================== 动态渲染函数 ====================
@@ -1322,13 +1342,13 @@
                 });
             }
 
-            // 邮箱导航按钮事件
+            // ★★★ 邮箱导航按钮事件（打开模态框） ★★★
             const navEmailBtn = document.getElementById('navEmailBtn');
             if (navEmailBtn) {
-                navEmailBtn.addEventListener('click', toggleEmailModal);
+                navEmailBtn.addEventListener('click', openEmailModal);
             }
 
-            // 邮箱模态框关闭事件
+            // ★★★ 邮箱模态框关闭事件 ★★★
             const emailModalClose = document.getElementById('emailModalClose');
             const emailModalOverlay = document.getElementById('emailModalOverlay');
             if (emailModalClose) {
@@ -1338,21 +1358,23 @@
                 emailModalOverlay.addEventListener('click', closeEmailModal);
             }
 
-            // 监听来自邮箱iframe的postMessage
+            // ★★★ 监听来自邮箱iframe的postMessage（关闭 / 刷新角标） ★★★
             window.addEventListener('message', (event) => {
                 if (event.data && event.data.type === 'closeEmailModal') {
                     closeEmailModal();
                 }
-                // 邮箱内读取邮件后刷新角标
                 if (event.data && event.data.type === 'refreshEmailBadge') {
                     updateEmailBadge();
                 }
             });
 
-            // 监听键盘ESC关闭邮箱
+            // ★★★ ESC键关闭邮箱 ★★★
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && isEmailModalOpen) {
-                    closeEmailModal();
+                if (e.key === 'Escape') {
+                    const emailModal = document.getElementById('email-modal');
+                    if (emailModal && emailModal.style.display === 'flex') {
+                        closeEmailModal();
+                    }
                 }
             });
 
@@ -1373,7 +1395,7 @@
         window.imageError = imageError;
         window.openEmailModal = openEmailModal;
         window.closeEmailModal = closeEmailModal;
-        window.toggleEmailModal = toggleEmailModal;
+        window.reloadEmailIframe = reloadEmailIframe;
         window.updateEmailBadge = updateEmailBadge;
     </script>
 </body>
