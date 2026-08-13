@@ -1,4 +1,4 @@
-// ========== 主入口 ==========
+// ========== 主入口（完整版：集成宝箱系统，并行加载优化） ==========
 import { CONFIG, getRoleDisplay, SPECIAL_TITLES } from './config.js';
 import {
     showNotification, openModal, closeModal,
@@ -10,7 +10,8 @@ import {
     initSupabase, getSupabase, fetchUserFullData,
     updateUserProfile, updateUserStats, getCheckinConfig,
     loadAutoSignCardStatus, loadAllTitles, loadUserOwnedTitles,
-    grantTitle, loadUserFrames
+    grantTitle, loadUserFrames,
+    grantDailyChest, getChestCount, getPityCounter
 } from './api.js';
 import {
     getFrameById, purchaseFrame, equipFrame, applyFrameClassByFrameId,
@@ -37,7 +38,12 @@ window.userProfile = userProfile;
 window.isProcessing = isProcessing;
 
 function updateAppState() {
-    setAppState({ currentUser, userProfile, userStats });
+    setAppState({ 
+        currentUser, 
+        userProfile, 
+        userStats,
+        hasAutoSignCard
+    });
     window.currentUser = currentUser;
     window.userProfile = userProfile;
     window.userStats = userStats;
@@ -45,7 +51,26 @@ function updateAppState() {
     setCachedProfile({ ...userProfile, ...userStats });
 }
 
-// ========== 导航栏（已修复：头像框完美覆盖 + 固定白色用户名） ==========
+// ========== 刷新用户统计（含宝箱） ==========
+async function refreshUserStats() {
+    const sb = getSupabase();
+    const [profileRes, statsRes] = await Promise.all([
+        sb.from('user_profiles').select('*').eq('id', currentUser.id).maybeSingle(),
+        sb.from('user_stats').select('*').eq('user_id', currentUser.id).maybeSingle()
+    ]);
+    if (!profileRes.error && profileRes.data) {
+        userProfile = { ...(userProfile || {}), ...profileRes.data };
+    }
+    if (!statsRes.error && statsRes.data) {
+        userStats = { ...(userStats || {}), ...statsRes.data };
+        updateAppState();
+        updateShopBalanceDisplay();
+        updateActivePointsDisplay();
+        if (window.updateChestDisplay) window.updateChestDisplay();
+    }
+}
+
+// ========== 导航栏 ==========
 function updateNavbar() {
     const navDiv = document.getElementById('userNavSection');
     if (!navDiv) return;
@@ -58,7 +83,6 @@ function updateNavbar() {
     const frameImageUrl = frame?.imageUrl || '';
     const frameScale = frame?.scale || 1.0;
 
-    // ★★★ 头像容器（与主页完全一致的结构：头像底 + 头像框绝对定位覆盖） ★★★
     let avatarContent = '';
     if (avatarUrl) {
         avatarContent = `<img src="${avatarUrl}" style="width:100%; height:100%; object-fit:cover; display:block;">`;
@@ -74,7 +98,6 @@ function updateNavbar() {
         </div>
     `;
 
-    // ★★★ 用户名固定白色 ★★★
     navDiv.innerHTML = `
         <div style="display:flex; align-items:center; gap:8px;">
             ${avatarHtml}
@@ -87,7 +110,6 @@ function updateNavbar() {
 
     document.getElementById('logoutBtn')?.addEventListener('click', () => openModal('logoutConfirmModal'));
 
-    // 管理后台链接
     const adminLink = document.getElementById('adminLink');
     if (adminLink && currentUser && (userProfile?.role === 'owner' || userProfile?.role === 'admin')) {
         adminLink.style.display = 'inline-block';
@@ -95,7 +117,7 @@ function updateNavbar() {
         adminLink.style.display = 'none';
     }
 }
-window.updateNavbar = updateNavbar; // 暴露给其他模块
+window.updateNavbar = updateNavbar;
 
 // ========== 称号刷新 ==========
 async function refreshTitles() {
@@ -120,7 +142,6 @@ async function refreshTitles() {
     }
     if (toGrant.length > 0) showNotification('✨ 获得管理员限定称号', 'success');
 
-    // 普通称号授予
     let newGranted = [];
     for (let title of allTitles) {
         if (title.is_limited) continue;
@@ -138,7 +159,6 @@ async function refreshTitles() {
     }
     if (newGranted.length > 0) showNotification(`🎉 获得新称号：${newGranted.join(', ')}`, 'success');
 
-    // ★★★ 授予特殊称号（使用映射） ★★★
     const specialTitleId = SPECIAL_TITLES[currentUser.id];
     if (specialTitleId) {
         const specialTitle = allTitles.find(t => t.id === specialTitleId);
@@ -152,7 +172,6 @@ async function refreshTitles() {
         }
     }
 
-    // 显示已装备称号
     let equippedTitleObj = null;
     if (userProfile?.equipped_title_id) {
         equippedTitleObj = allTitles.find(t => t.id === userProfile.equipped_title_id);
@@ -200,7 +219,7 @@ async function unequipTitle() {
     showNotification('已卸下称号', 'success');
 }
 
-// ========== 签到执行 ==========
+// ========== 签到 ==========
 async function executeCheckin(autoTriggered = false) {
     const today = getLocalDateString();
     if (userStats?.last_checkin_date === today) {
@@ -259,7 +278,7 @@ async function tryAutoSign() {
     }
 }
 
-// ========== 兑换功能 ==========
+// ========== 兑换 ==========
 async function doLowExchange(direction) {
     const amount = parseInt(document.getElementById('lowExchangeAmount').value);
     if (!amount || amount < 1) return showNotification('请输入正确数量', 'error');
@@ -286,24 +305,7 @@ async function doSyrupExchange(direction) {
 }
 window.doSyrupExchange = doSyrupExchange;
 
-async function refreshUserStats() {
-    const sb = getSupabase();
-    const [profileRes, statsRes] = await Promise.all([
-        sb.from('user_profiles').select('*').eq('id', currentUser.id).maybeSingle(),
-        sb.from('user_stats').select('*').eq('user_id', currentUser.id).maybeSingle()
-    ]);
-    if (!profileRes.error && profileRes.data) {
-        userProfile = { ...(userProfile || {}), ...profileRes.data };
-    }
-    if (!statsRes.error && statsRes.data) {
-        userStats = { ...(userStats || {}), ...statsRes.data };
-        updateAppState();
-        updateShopBalanceDisplay();
-        updateActivePointsDisplay();
-    }
-}
-
-// ========== 用户信息编辑函数 ==========
+// ========== 用户信息编辑 ==========
 function updateUsernameModalAvatar() {
     const img = document.getElementById('usernameModalAvatar');
     const placeholder = document.getElementById('usernameModalPlaceholder');
@@ -356,7 +358,7 @@ window.openBackpackItemDetail = openBackpackItemDetail;
 window.openTitlesModal = renderTitlesModal;
 window.openRewardInfoModal = openRewardInfoModal;
 
-// ========== 头像上传相关 ==========
+// ========== 头像上传 ==========
 let cropper = null;
 let longPressTimer = null;
 let isUploading = false;
@@ -459,7 +461,6 @@ async function uploadCroppedImage(blob) {
 
 // ========== 保存操作 ==========
 async function updateUsername() {
-    console.log('updateUsername 被调用了');
     const newName = document.getElementById('newUsername').value.trim();
     if (!newName || newName.length < 2 || newName.length > 20) {
         showNotification('用户名2-20字符', 'error');
@@ -477,7 +478,6 @@ async function updateUsername() {
         closeModal('usernameModal');
         showNotification('用户名已更新', 'success');
     } catch (err) {
-        console.error('更新用户名错误:', err);
         showNotification('更新失败: ' + err.message, 'error');
     }
 }
@@ -527,7 +527,9 @@ async function performLogout() {
     window.location.href = 'index.html';
 }
 
-// ========== 加载用户资料 ==========
+// =====================================================
+// ★★★ 核心：加载用户资料（集成每日宝箱赠送） ★★★
+// =====================================================
 async function loadUserProfile() {
     const sb = initSupabase();
     let session = null;
@@ -557,17 +559,50 @@ async function loadUserProfile() {
     userStats = fullData;
     updateAppState();
 
+    // ============================================================
+    // 1. 先渲染基础 UI（让用户尽快看到头像和名字）
+    // ============================================================
     await renderProfile();
     await initFrameForUser(currentUser.id);
 
-    await updateUserStats(currentUser.id, { last_login: new Date().toISOString() });
-    safeSetText('lastLogin', new Date().toLocaleString());
+    // ============================================================
+    // 2. 将互不依赖的操作【全部并行执行】，大幅提升加载速度
+    // ============================================================
+    const [ , hasCard, , granted ] = await Promise.all([
+        // 2.1 更新最后登录时间
+        updateUserStats(currentUser.id, { last_login: new Date().toISOString() }).then(() => {
+            safeSetText('lastLogin', new Date().toLocaleString());
+        }),
+        // 2.2 加载自动签到卡状态
+        loadAutoSignCardStatus(currentUser.id),
+        // 2.3 刷新称号（耗时操作）
+        refreshTitles(),
+        // 2.4 每日赠送宝箱
+        grantDailyChest(currentUser.id).catch(err => {
+            console.warn('每日宝箱赠送失败:', err);
+            return false;
+        })
+    ]);
 
-    hasAutoSignCard = await loadAutoSignCardStatus(currentUser.id);
+    // ============================================================
+    // 3. 处理并行执行的结果
+    // ============================================================
+    hasAutoSignCard = hasCard;
+    state.hasAutoSignCard = hasAutoSignCard;
+    updateAppState();
+
+    // 尝试自动签到（依赖 hasAutoSignCard）
     await tryAutoSign();
 
-    await refreshTitles();
+    if (granted) {
+        showNotification('🎁 每日宝箱已放入背包！', 'success');
+        await refreshUserStats();
+        if (window.updateChestDisplay) window.updateChestDisplay();
+    } else {
+        refreshUserStats().catch(() => {});
+    }
 
+    // 隐藏加载状态，显示内容
     document.getElementById('loading').style.display = 'none';
     document.getElementById('profileContent').style.display = 'block';
 }
@@ -626,7 +661,6 @@ function bindEvents() {
         openAvatarUpload();
     });
 
-    // ★★★ 退出登录确认按钮 ★★★
     document.getElementById('confirmLogoutBtn')?.addEventListener('click', performLogout);
     document.getElementById('cancelLogoutBtn')?.addEventListener('click', () => closeModal('logoutConfirmModal'));
 }
