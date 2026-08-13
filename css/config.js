@@ -22,7 +22,7 @@ export const CONFIG = {
             price_candy: 0, 
             price_rainbow: 0, 
             imageUrl: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/profile_picture_frame/frame_putong.webp',
-            scale: 1.0
+            scale: 1.50
         },
         { 
             id: 'frame_huanbao', 
@@ -66,7 +66,7 @@ export const CONFIG = {
         { id: 'candy', name: '🍬 糖果碎', desc: '基础货币，可用于购买头像框、自动签到卡等道具。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp', isImg: true, type: 'currency' },
         { id: 'rainbow', name: '🌈 超级棒糖', desc: '中级稀有货币，可用于兑换高级物品。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp', isImg: true, type: 'currency' },
         { id: 'dreamy_syrup', name: '🌌 梦幻星河糖浆', desc: '终极顶级货币！甜梦镇的最高信仰。', icon: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Dream_galaxy_syrup.webp', isImg: true, type: 'currency' },
-        { id: 'autocard', name: '📅 自动签到卡', desc: '永久有效，每天上午8点自动签到（北京时间）。', icon: 'fa-calendar-check', isImg: false, type: 'card' }
+        { id: 'autocard', name: '📅 自动签到卡', desc: '永久有效，每天凌晨00:00自动签到（北京时间）。', icon: 'fa-calendar-check', isImg: false, type: 'card' }
     ],
     
     FALLBACK_CHECKIN_REWARD: { candy: 8000, rainbow: 150, active: 20 }
