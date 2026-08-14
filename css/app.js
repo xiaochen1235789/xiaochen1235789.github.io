@@ -362,7 +362,7 @@
 
     <!-- ====== ★ 模块入口（所有 JS 放在 css/ 目录下） ★ ====== -->
     <script type="module">
-        import { initializeApp } from './css/app.js?v=1';
+        import { initializeApp } from './css/app.js';
         initializeApp();
     </script>
 </body>
