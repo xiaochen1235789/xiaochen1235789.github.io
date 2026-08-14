@@ -588,8 +588,7 @@ async function loadUserProfile() {
     // 3. 处理并行执行的结果
     // ============================================================
     hasAutoSignCard = hasCard;
-    state.hasAutoSignCard = hasAutoSignCard;
-    updateAppState();
+    updateAppState();  // ← 这里已经同步了 hasAutoSignCard，无需额外赋值
 
     // 尝试自动签到（依赖 hasAutoSignCard）
     await tryAutoSign();
