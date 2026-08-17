@@ -24,7 +24,7 @@
         }
     </script>
     <!-- 图标 -->
-    <link rel="icon" href="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/avatars/icon.png" type="image/webp">
+    <link rel="icon" href="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/avatars/icon.webp" type="image/png">
     <link rel="icon" href="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/avatars/icon.webp" type="image/x-icon">
     <title>六哥荣耀WIKI</title>
     <!-- 外部样式表 -->
@@ -37,7 +37,7 @@
     <div id="global-loading">
         <div style="text-align: center;">
             <div class="loading-spinner"></div>
-            <p style="color: var(--text-highlight); margin-top: 16px; font-size: 1.1rem;">加载资源中...</p>
+            <p style="color: var(--text-highlight); margin-top: 16px; font-size: 1.1rem;">加载核心资源中...</p>
         </div>
     </div>
     <div class="notification" id="notification"></div>
@@ -154,9 +154,7 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!--  ★★★ 邮箱模态框（与更新日志模态框结构一致） ★★★ -->
-    <!-- ============================================================ -->
+    <!-- 邮箱模态框 -->
     <div id="email-modal" class="modal" style="display: none;">
         <div class="modal-overlay" id="emailModalOverlay"></div>
         <div class="modal-content">
@@ -174,8 +172,6 @@
             </div>
         </div>
     </div>
-
-    <!-- ============================================================ -->
 
     <!-- 搜索框 + 网站天数 + 空结果 -->
     <div class="search-container">
@@ -224,7 +220,7 @@
         </div>
         © <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.<br>
         本WIKI所有图片均由人工智能（AI）生成，仅供学习、交流与个人欣赏使用。
-        如涉及任何版权问题，请与站长联系。联系站长：<a href="mailto:1714400176@qq.com">站长QQ邮箱</a>
+        如涉及任何版权问题，请与站长联系。联系站长：<a href="mailto:ixz@ixzzzz.top">站长邮箱</a>
     </footer>
     <button class="back-to-top" onclick="scrollToTop()" aria-label="回到顶部">↑</button>
 
@@ -258,6 +254,7 @@
         let isJumping = false;
         let emailBadgeTimer = null;
         let isEmailModalOpen = false;
+        let isLoadingLazy = {}; // 标记各区域是否已加载
 
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
@@ -349,127 +346,86 @@
 
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
-        // ==================== 网站运行天数 ====================
-        function initializeSiteAge() {
+        // ==================== 网站运行天数 (接入数据库) ====================
+        async function fetchSiteMessages() {
             const launchDate = new Date(2025, 10, 1);
-            const siteAgeElem = document.getElementById('site-age');
-            const specialDays = {
-                30: '🎉 六哥荣耀WIKI上线30天啦！感恩陪伴 🎉',
-                50: '⛄冬至快乐，记得吃饺子🥟⛄',
-                58: '🍰 恭喜言哥哥18岁，生日快乐🍰',
-                59: '🧨跨年倒计时2天🧨',
-                60: '🎉跨年倒计时1天🎉',
-                61: '🎉欢迎来到2026年🎉',
-                78: '_(:з」∠)_话说78这个数字很好看吗或者说很有意思吗？(*´I`*)',
-                100: '🎊 百日庆典！六哥荣耀WIKI与你同行100天 🎊',
-                107: '🧨 除夕快乐！🧨',
-                108: '🎆 新年快乐！ 🎆',
-                124: '✌🏻元宵节快乐，记得吃汤圆哦！✌🏻',
-                151: '👿六哥荣耀是什么几把👿……愚人节快乐(ᵕ—ᴗ—)',
-                181: '劳动光荣，奋斗幸福，劳动节快乐，致每一个努力生活的你 ⌯ᵔᗜᵔ⌯',
-                218: '高考加油！祝莘莘学子全部上岸！',
-                219: '高考加油！祝莘莘学子全部上岸！',
-                220: '高考加油！祝莘莘学子全部上岸！',
-                230: '🐲 端午安康！愿岁岁平安，万事顺遂 🐲',
-                242: '🇨🇳 七一建党节，愿山河无恙，国泰民安 🇨🇳',
-                273: '💪 八一建军节，致敬最可爱的人 💪',
-                313: '👩‍🏫 教师节快乐！感恩遇见，不负教诲 👩‍🏫',
-                329: '🌕 中秋月圆，阖家团圆，佳节安康 🌕',
-                334: '🇨🇳 国庆快乐！盛世华诞，举国同庆 🇨🇳',
-                335: '🎉 举国欢腾，红旗飘扬，祝祖国生日快乐 🎉',
-                336: '🏮 万家灯火，共庆华诞，愿山河锦绣，国泰民安 🏮',
-                337: '🌸 金秋十月，丹桂飘香，祝福祖国繁花似锦 🌸',
-                338: '✨ 五星闪耀，皆为信仰；盛世如愿，中华自强 ✨',
-                339: '🎈 国庆佳节，普天同庆，愿你好运连连，喜气洋洋 🎈',
-                340: '💐 生在红旗下，长在春风里，祝祖国繁荣昌盛，万岁无疆 💐',
-                353: '🍁 重阳佳节，敬老安康，岁岁长乐 🍁',
-                365: '🎂六哥荣耀WIKI一周年纪念🎂'
-            };
+            const today = new Date();
+            const days = Math.floor((today - launchDate) / (1000 * 60 * 60 * 24));
+            const chinaHour = (new Date().getUTCHours() + 8) % 24;
 
-            function getChinaHour() { return (new Date().getUTCHours() + 8) % 24; }
-
-            function getGreetingByHour(hour) {
-                const midnightGreetings = [
-                    '♪凌晨星星不睡你在熬，月亮都困了你还在嗨？快睡吧，别让黑眼圈"熊"霸你的脸♪',
-                    '♪夜深人静，正是修仙好时节——但小心肝儿会抗议哦，早点休息吧～♪',
-                    '♪这个点还在逛WIKI，是真爱没错了！但别忘了给手机也"充个电"，明天见♪',
-                    '♪夜猫子专属福利：嘘～小声告诉你，熬夜的你已经偷偷赚到一天的"先机"啦♪',
-                    '♪凌晨的世界很安静，适合思考人生，也适合——睡觉！快闭眼，梦里啥都有♪'
-                ];
-                const morningGreetings = [
-                    '♪枣尚耗！新的一天从美味早餐开始，记得"早"点开心，"早"点元气满满哦！♪',
-                    '♪清晨的第一缕阳光，配上六哥荣耀WIKI，今天也是能量满满的一天！♪',
-                    '♪早安！一日之计在于晨，今天的你比昨天更接近梦想～♪',
-                    '♪揉揉眼睛，伸个懒腰，新的一天从打开WIKI开始，冲鸭！♪',
-                    '♪早上好呀！记得吃早餐，胃饱了，心就暖了～♪'
-                ];
-                const lateMorningGreetings = [
-                    '♪上午好呀！工作/学习别太累，偶尔"摸鱼"也是生活的艺术，但别让老板"捉"到！♪',
-                    '♪元气满满的一上午！看看WIKI，充充电，效率翻倍♪',
-                    '♪阳光正好，微风不燥，正是摸鱼查攻略的好时光～♪',
-                    '♪上午时间宝贵，但劳逸结合更聪明，来WIKI歇口气吧♪',
-                    '♪滴！上午卡已刷，今日份快乐已送达～♪'
-                ];
-                const noonGreetings = [
-                    '♪中午好！午饭吃饱饱，下午没烦恼，"饱"持微笑，你就是最"粽"要的人！♪',
-                    '♪午饭时间到！不管吃啥，记得对自己好一点，毕竟下午还要继续"肝"♪',
-                    '♪肚子咕咕叫了？快去吃饭，吃饱了才有力气抽卡～♪',
-                    '♪午休片刻，养精蓄锐，下午又是精神小伙/小妹♪',
-                    '♪午饭+WIKI=双倍快乐，今天的你也很会享受生活呢♪'
-                ];
-                const afternoonGreetings = [
-                    '♪下午容易犯困？来杯奶茶"茶"一会儿，精神抖擞"下"午继续冲！',
-                    '♪下午茶时间到！提神醒脑，WIKI陪你度过慵懒时光♪',
-                    '♪阳光斜照，正是刷材料、看攻略的好时候，加油打工人♪',
-                    '♪下午犯困不可怕，可怕的是错过WIKI的更新！快醒醒♪',
-                    '♪一杯咖啡，一份WIKI，下午的快乐就是这么简单♪'
-                ];
-                const eveningGreetings = [
-                    '♪傍晚夕阳无限好，只是近黄昏——赶紧抓住今天的尾巴，把快乐"傍"在身边！♪',
-                    '♪夕阳西下，WIKI陪你回家，今天也是充实的一天～♪',
-                    '♪傍晚的微风，吹散一天的疲惫，来看看WIKI放松一下吧♪',
-                    '♪天色渐暗，但你的WIKI之旅还在继续，夜生活刚刚开始♪',
-                    '♪落日余晖，配上WIKI的温馨，今天也要圆满收官♪'
-                ];
-                const nightGreetings = [
-                    '♪晚上好！追剧打游戏的同时，别忘了喝杯水，眼睛也要"晚"上休息一下哦♪',
-                    '♪华灯初上，WIKI与你共度良宵，愿你好梦♪',
-                    '♪晚上是放松的时间，看看角色，想想配队，也是一种享受♪',
-                    '♪夜生活开始！但别忘了给手机也"放个假"，早点休息～♪',
-                    '♪星光点点，WIKI陪伴，愿你的夜晚温暖如初♪'
-                ];
-                const lateNightGreetings = [
-                    '♪深夜夜深了，再不睡就要"深夜emo"了！快躺下，梦里啥都有，包括你想见的人♪',
-                    '♪夜已深，WIKI即将打烊，明天见！晚安好梦♪',
-                    '♪凌晨的钟声即将敲响，快闭上眼睛，明天又是新的一天♪',
-                    '♪深夜还在努力的你，值得被世界温柔以待，晚安～♪',
-                    '♪月色如水，WIKI陪你入眠，愿你今夜无梦，醒来皆是惊喜♪'
-                ];
-                if (hour >= 0 && hour < 5) return midnightGreetings[Math.floor(Math.random() * midnightGreetings.length)];
-                if (hour >= 5 && hour < 8) return morningGreetings[Math.floor(Math.random() * morningGreetings.length)];
-                if (hour >= 8 && hour < 11) return lateMorningGreetings[Math.floor(Math.random() * lateMorningGreetings.length)];
-                if (hour >= 11 && hour < 13) return noonGreetings[Math.floor(Math.random() * noonGreetings.length)];
-                if (hour >= 13 && hour < 17) return afternoonGreetings[Math.floor(Math.random() * afternoonGreetings.length)];
-                if (hour >= 17 && hour < 19) return eveningGreetings[Math.floor(Math.random() * eveningGreetings.length)];
-                if (hour >= 19 && hour < 23) return nightGreetings[Math.floor(Math.random() * nightGreetings.length)];
-                return lateNightGreetings[Math.floor(Math.random() * lateNightGreetings.length)];
+            // 1. 本地缓存，避免频繁请求数据库
+            const cacheKey = `site_msg_${days}_${chinaHour}`;
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                try { return JSON.parse(cached); } catch { /* 忽略 */ }
             }
 
-            function updateSiteAge() {
-                const today = new Date();
-                const days = Math.floor((today - launchDate) / (1000 * 60 * 60 * 24));
-                const chinaHour = getChinaHour();
-                const greeting = getGreetingByHour(chinaHour);
-                if (specialDays[days]) {
-                    siteAgeElem.innerHTML = specialDays[days] + '<br>' + greeting;
+            let greeting = `📅 六哥荣耀WIKI已上线 ${days} 天`;
+            let isSpecialDay = false;
+
+            try {
+                // 2. 查特殊节日
+                const { data: specialData } = await supabaseClient
+                    .from('site_special_messages')
+                    .select('message')
+                    .eq('day_offset', days)
+                    .maybeSingle();
+
+                if (specialData) {
+                    greeting = specialData.message;
+                    isSpecialDay = true;
+                } else {
+                    // 3. 查时段问候语
+                    const { data: hourlyData } = await supabaseClient
+                        .from('site_hourly_greetings')
+                        .select('greetings')
+                        .eq('hour_start', chinaHour)
+                        .maybeSingle();
+
+                    if (hourlyData && hourlyData.greetings && hourlyData.greetings.length > 0) {
+                        const arr = hourlyData.greetings;
+                        greeting = arr[Math.floor(Math.random() * arr.length)];
+                    } else {
+                        // 兜底
+                        const fallbackMessages = [
+                            "这个世界很大，感谢你在这里停留片刻。",
+                            "愿今天的你，比昨天更靠近心中的理想。",
+                            "无论外面的天气如何，希望这里能给你一点温暖。"
+                        ];
+                        greeting = fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)];
+                    }
+                }
+
+                // 4. 存入本地缓存(有效期1小时)
+                const result = { message: greeting, isSpecialDay };
+                localStorage.setItem(cacheKey, JSON.stringify(result));
+                return result;
+
+            } catch (e) {
+                console.warn("获取消息失败，使用兜底:", e);
+                // 兜底
+                const fallback = "世界很大，感谢你在这里停留片刻。";
+                localStorage.setItem(cacheKey, JSON.stringify({ message: fallback, isSpecialDay: false }));
+                return { message: fallback, isSpecialDay: false };
+            }
+        }
+
+        function initializeSiteAge() {
+            const siteAgeElem = document.getElementById('site-age');
+
+            async function updateUI() {
+                const res = await fetchSiteMessages();
+                if (res.isSpecialDay) {
+                    siteAgeElem.innerHTML = res.message;
                     siteAgeElem.classList.add('special');
                 } else {
-                    siteAgeElem.innerHTML = `📅 六哥荣耀WIKI已上线 ${days} 天<br>${greeting}`;
+                    siteAgeElem.innerHTML = res.message;
                     siteAgeElem.classList.remove('special');
                 }
             }
-            updateSiteAge();
-            setInterval(updateSiteAge, 86400000);
+            updateUI();
+            // 每小时刷新一次问候语
+            setInterval(updateUI, 3600000);
         }
 
         // ==================== 搜索功能 ====================
@@ -1025,25 +981,21 @@
             emailBadgeTimer = setInterval(updateEmailBadge, 30000);
         }
 
-        // ==================== ★★★ 邮箱模态框控制（与更新日志逻辑一致） ★★★ ====================
+        // ==================== 邮箱模态框控制 ====================
         function openEmailModal() {
             const modal = document.getElementById('email-modal');
             const iframe = document.getElementById('emailIframe');
             const errorDiv = document.getElementById('email-error');
             if (!modal || !iframe) return;
-
             if (modal.style.display === 'flex' && !modal.classList.contains('closing')) {
-                // 如果已打开，则关闭
                 closeEmailModal();
                 return;
             }
-
             modal.classList.remove('closing');
             modal.style.display = 'flex';
             document.body.classList.add('modal-open');
             errorDiv.style.display = 'none';
             iframe.style.display = 'block';
-
             showNotification('正在加载邮箱...', 'info');
             iframe.src = 'email_address.html?embedded=true&t=' + Date.now();
 
@@ -1051,7 +1003,6 @@
                 showNotification('邮箱已加载', 'success');
                 errorDiv.style.display = 'none';
                 iframe.style.display = 'block';
-                // 加载完成后刷新角标
                 setTimeout(updateEmailBadge, 1000);
             };
             iframe.onerror = function() {
@@ -1071,7 +1022,6 @@
                 document.body.classList.remove('modal-open');
                 const iframe = document.getElementById('emailIframe');
                 if (iframe) iframe.src = 'about:blank';
-                // 关闭后刷新角标
                 updateEmailBadge();
             }, 300);
         }
@@ -1086,41 +1036,9 @@
             showNotification('重新加载中...', 'info');
         }
 
-        // ==================== 动态渲染函数 ====================
-        async function loadAndRenderAll() {
-            if (!supabaseClient) {
-                console.warn('Supabase 客户端未初始化');
-                return;
-            }
-            const [charRes, lcRes, matRes, itemRes] = await Promise.all([
-                supabaseClient.from('characters').select('*').order('display_order', { ascending: true }),
-                supabaseClient.from('light_cones').select('*').order('display_order', { ascending: true }),
-                supabaseClient.from('materials').select('*').order('display_order', { ascending: true }),
-                supabaseClient.from('items').select('*').order('display_order', { ascending: true })
-            ]);
-            if (!charRes.error && charRes.data) {
-                renderCards(charRes.data, 'character-container', '角色');
-            } else {
-                console.error('角色加载失败', charRes.error);
-                showNotification('角色数据加载失败', 'error');
-            }
-            if (!lcRes.error && lcRes.data) {
-                renderCards(lcRes.data, 'lightcone-container', '光锥', 'lightcone-card');
-            } else {
-                console.error('光锥加载失败', lcRes.error);
-            }
-            if (!matRes.error && matRes.data) {
-                renderCards(matRes.data, 'material-container', '材料', null, true);
-            } else {
-                console.error('材料加载失败', matRes.error);
-            }
-            if (!itemRes.error && itemRes.data) {
-                renderCards(itemRes.data, 'item-container', '道具', null, true);
-            } else {
-                console.error('道具加载失败', itemRes.error);
-            }
-        }
-
+        // =========================================================
+        // ★★★ 核心进化：区域懒加载与数据渲染 ★★★
+        // =========================================================
         function renderCards(items, containerId, typeLabel, extraClass = '', isMaterial = false) {
             const container = document.getElementById(containerId);
             if (!container) return;
@@ -1154,6 +1072,49 @@
                 card.innerHTML = imgHtml + nameHtml + descHtml;
                 container.appendChild(card);
             });
+            // 渲染完后，触发搜索框重新检索当前关键字
+            const searchInput = document.getElementById('search-input');
+            if (searchInput && searchInput.value.trim() !== '') {
+                searchInput.dispatchEvent(new Event('input'));
+            }
+        }
+
+        // 核心数据加载函数
+        async function loadTableData(tableName, containerId, typeLabel, extraClass = '', isMaterial = false) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            // 放入骨架屏占位，防止页面跳动
+            container.innerHTML = Array(6).fill('<div class="content-card skeleton" style="height:200px; background:var(--bg-secondary); border-radius:12px;"></div>').join('');
+
+            const { data, error } = await supabaseClient
+                .from(tableName)
+                .select('*')
+                .order('display_order', { ascending: true });
+
+            if (error) {
+                console.error(`${typeLabel}加载失败:`, error);
+                container.innerHTML = `<div style="text-align:center;color:#f87171;padding:20px;">${typeLabel}加载失败，请稍后重试</div>`;
+                return;
+            }
+            renderCards(data, containerId, typeLabel, extraClass, isMaterial);
+        }
+
+        // 建立区域懒加载观察者
+        function setupLazyLoading(sectionId, containerId, tableName, typeLabel, extraClass = '', isMaterial = false) {
+            if (isLoadingLazy[sectionId]) return; // 防止重复绑定
+            const section = document.getElementById(sectionId);
+            if (!section) return;
+
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    isLoadingLazy[sectionId] = true;
+                    observer.disconnect();
+                    loadTableData(tableName, containerId, typeLabel, extraClass, isMaterial);
+                }
+            }, { threshold: 0.1 }); // 露出 10% 即触发
+
+            observer.observe(section);
         }
 
         // ==================== 侧滑菜单控制 ====================
@@ -1197,6 +1158,21 @@
             }
             const emptyResult = document.querySelector('.empty-result');
             if (emptyResult) emptyResult.style.display = 'none';
+            
+            // 如果切到未加载的页面，手动触发加载
+            if (sectionId === 'lightcone' && !isLoadingLazy['lightconeSection']) {
+                setupLazyLoading('lightconeSection', 'lightcone-container', 'light_cones', '光锥', 'lightcone-card', false);
+                loadTableData('light_cones', 'lightcone-container', '光锥', 'lightcone-card', false);
+                isLoadingLazy['lightconeSection'] = true;
+            } else if (sectionId === 'material' && !isLoadingLazy['materialSection']) {
+                setupLazyLoading('materialSection', 'material-container', 'materials', '材料', null, true);
+                loadTableData('materials', 'material-container', '材料', null, true);
+                isLoadingLazy['materialSection'] = true;
+            } else if (sectionId === 'item' && !isLoadingLazy['itemSection']) {
+                setupLazyLoading('itemSection', 'item-container', 'items', '道具', null, true);
+                loadTableData('items', 'item-container', '道具', null, true);
+                isLoadingLazy['itemSection'] = true;
+            }
         }
 
         // ==================== 跨页签同步 ====================
@@ -1238,11 +1214,10 @@
                 document.body.classList.add('night-mode');
             }
 
-            initializeSiteAge();
+            initializeSiteAge(); // 已从数据库获取问候语
             initializeSearch();
             initializeNavigation();
             await initializeUserProfile();
-            await loadAndRenderAll();
             setupCrossTabSync();
             setupLoginMessageListener();
             bindUserMenuActions();
@@ -1342,13 +1317,10 @@
                 });
             }
 
-            // ★★★ 邮箱导航按钮事件（打开模态框） ★★★
             const navEmailBtn = document.getElementById('navEmailBtn');
             if (navEmailBtn) {
                 navEmailBtn.addEventListener('click', openEmailModal);
             }
-
-            // ★★★ 邮箱模态框关闭事件 ★★★
             const emailModalClose = document.getElementById('emailModalClose');
             const emailModalOverlay = document.getElementById('emailModalOverlay');
             if (emailModalClose) {
@@ -1358,7 +1330,6 @@
                 emailModalOverlay.addEventListener('click', closeEmailModal);
             }
 
-            // ★★★ 监听来自邮箱iframe的postMessage（关闭 / 刷新角标） ★★★
             window.addEventListener('message', (event) => {
                 if (event.data && event.data.type === 'closeEmailModal') {
                     closeEmailModal();
@@ -1368,7 +1339,6 @@
                 }
             });
 
-            // ★★★ ESC键关闭邮箱 ★★★
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     const emailModal = document.getElementById('email-modal');
@@ -1378,8 +1348,21 @@
                 }
             });
 
-            setTimeout(() => { document.getElementById('global-loading').style.display = 'none'; }, 800);
+            // =========================================================
+            // ★★★ 核心加载逻辑：首屏直接加载，其他区域滚动懒加载 ★★★
+            // =========================================================
+            // 1. 立即加载角色区（首屏）
+            await loadTableData('characters', 'character-container', '角色');
+            
+            // 2. 用 IntersectionObserver 监听另外三个区域
+            setupLazyLoading('lightconeSection', 'lightcone-container', 'light_cones', '光锥', 'lightcone-card', false);
+            setupLazyLoading('materialSection', 'material-container', 'materials', '材料', null, true);
+            setupLazyLoading('itemSection', 'item-container', 'items', '道具', null, true);
+
+            // 移除全局 Loading
+            setTimeout(() => { document.getElementById('global-loading').style.display = 'none'; }, 300);
         }
+
         document.addEventListener('DOMContentLoaded', function() {
             initializePage();
         });
