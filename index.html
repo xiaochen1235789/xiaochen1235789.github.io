@@ -14,7 +14,6 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="六哥荣耀WIKI">
     <meta name="twitter:description" content="整理游戏内角色、光锥、养成材料、道具等信息，为玩家提供详细参考">
-
     <script type="application/ld+json">
         {
             "@context": "https://schema.org",
@@ -221,7 +220,7 @@
         </div>
         © <span id="year"></span> 六哥荣耀WIKI. 本WIKI纯属虚构娱乐.<br>
         本WIKI所有图片均由人工智能（AI）生成，仅供学习、交流与个人欣赏使用。
-        如涉及任何版权问题，请与站长联系。联系站长：<a href="mailto:ixz@ixzzzz.top">站长邮箱</a>
+        如涉及任何版权问题，请与站长联系。联系站长：<a href="mailto:1714400176@qq.com">站长QQ邮箱</a>
     </footer>
     <button class="back-to-top" onclick="scrollToTop()" aria-label="回到顶部">↑</button>
 
@@ -347,25 +346,33 @@
 
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
-        // ==================== 网站运行天数 (接入数据库) ====================
+        // ==================== 网站运行天数 (优先数据库，兜底本地缓存) ====================
         async function fetchSiteMessages() {
             const launchDate = new Date(2025, 10, 1);
             const today = new Date();
             const days = Math.floor((today - launchDate) / (1000 * 60 * 60 * 24));
             const chinaHour = (new Date().getUTCHours() + 8) % 24;
-
-            // 1. 本地缓存，避免频繁请求数据库
             const cacheKey = `site_msg_${days}_${chinaHour}`;
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                try { return JSON.parse(cached); } catch { /* 忽略 */ }
+
+            // 防网络崩溃/未初始化的前置兜底
+            if (!supabaseClient) {
+                console.warn('Supabase 未初始化或网络断开，尝试读取本地缓存。');
+                const cached = localStorage.getItem(cacheKey);
+                if (cached) {
+                    try { return JSON.parse(cached); } catch { /* 忽略 */ }
+                }
+                // 终极硬编码兜底
+                const fallback = "世界很大，感谢你在这里停留片刻。";
+                localStorage.setItem(cacheKey, JSON.stringify({ message: fallback, isSpecialDay: false }));
+                return { message: fallback, isSpecialDay: false };
             }
 
-            let greeting = `📅 六哥荣耀WIKI已上线 ${days} 天`;
+            // 1. 优先从数据库拉取最新数据
+            let greeting = "";
             let isSpecialDay = false;
+            let fetchSuccess = false;
 
             try {
-                // 2. 查特殊节日
                 const { data: specialData } = await supabaseClient
                     .from('site_special_messages')
                     .select('message')
@@ -375,8 +382,8 @@
                 if (specialData) {
                     greeting = specialData.message;
                     isSpecialDay = true;
+                    fetchSuccess = true;
                 } else {
-                    // 3. 查时段问候语
                     const { data: hourlyData } = await supabaseClient
                         .from('site_hourly_greetings')
                         .select('greetings')
@@ -386,29 +393,30 @@
                     if (hourlyData && hourlyData.greetings && hourlyData.greetings.length > 0) {
                         const arr = hourlyData.greetings;
                         greeting = arr[Math.floor(Math.random() * arr.length)];
-                    } else {
-                        // 兜底
-                        const fallbackMessages = [
-                            "这个世界很大，感谢你在这里停留片刻。",
-                            "愿今天的你，比昨天更靠近心中的理想。",
-                            "无论外面的天气如何，希望这里能给你一点温暖。"
-                        ];
-                        greeting = fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)];
+                        fetchSuccess = true;
                     }
                 }
 
-                // 4. 存入本地缓存(有效期1小时)
-                const result = { message: greeting, isSpecialDay };
-                localStorage.setItem(cacheKey, JSON.stringify(result));
-                return result;
-
+                // 2. 如果成功从数据库拿到，立刻覆盖本地缓存
+                if (fetchSuccess) {
+                    const result = { message: greeting, isSpecialDay };
+                    localStorage.setItem(cacheKey, JSON.stringify(result));
+                    return result;
+                }
             } catch (e) {
-                console.warn("获取消息失败，使用兜底:", e);
-                // 兜底
-                const fallback = "世界很大，感谢你在这里停留片刻。";
-                localStorage.setItem(cacheKey, JSON.stringify({ message: fallback, isSpecialDay: false }));
-                return { message: fallback, isSpecialDay: false };
+                console.warn("访问数据库失败，尝试读取本地缓存...");
             }
+
+            // 3. 如果数据库失败，读取本地缓存兜底
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                try { return JSON.parse(cached); } catch { /* 忽略 */ }
+            }
+
+            // 4. 如果连本地缓存都没有（首次访问），写入终极硬编码兜底
+            const fallback = "世界很大，感谢你在这里停留片刻。";
+            localStorage.setItem(cacheKey, JSON.stringify({ message: fallback, isSpecialDay: false }));
+            return { message: fallback, isSpecialDay: false };
         }
 
         function initializeSiteAge() {
@@ -1194,6 +1202,21 @@
             });
         }
 
+        // ==================== 带容错的网络请求执行器 ====================
+        async function safeExecute(fn, maxRetries = 2) {
+            let attempts = 0;
+            while (attempts < maxRetries) {
+                try {
+                    return await fn();
+                } catch (e) {
+                    attempts++;
+                    if (attempts >= maxRetries) throw e;
+                    console.warn(`网络请求失败，${attempts} 秒后重试...`);
+                    await new Promise(r => setTimeout(r, 1000 * attempts)); // 1秒/2秒间隔重试
+                }
+            }
+        }
+
         // ==================== 站长留言模态框控制 ====================
         function openOwnerMessage() {
             closeAllModals();
@@ -1215,10 +1238,12 @@
                 document.body.classList.add('night-mode');
             }
 
-            initializeSiteAge(); // 已从数据库获取问候语
+            // ★★★ 用 safeExecute 包裹可能因网络波动的启动项 ★★★
+            await safeExecute(() => initializeUserProfile());
+            await safeExecute(() => initializeSiteAge());
+            
             initializeSearch();
             initializeNavigation();
-            await initializeUserProfile();
             setupCrossTabSync();
             setupLoginMessageListener();
             bindUserMenuActions();
