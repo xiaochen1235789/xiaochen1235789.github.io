@@ -346,94 +346,86 @@
 
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
-        // ==================== 网站运行天数 (优先数据库，兜底本地缓存) ====================
+        // ==================== 网站运行天数 + 节日 + 时段祝福（方案B） ====================
         async function fetchSiteMessages() {
             const launchDate = new Date(2025, 10, 1);
             const today = new Date();
             const days = Math.floor((today - launchDate) / (1000 * 60 * 60 * 24));
-            const chinaHour = (new Date().getUTCHours() + 8) % 24;
-            const cacheKey = `site_msg_${days}_${chinaHour}`;
 
-            // 防网络崩溃/未初始化的前置兜底
-            if (!supabaseClient) {
-                console.warn('Supabase 未初始化或网络断开，尝试读取本地缓存。');
-                const cached = localStorage.getItem(cacheKey);
-                if (cached) {
-                    try { return JSON.parse(cached); } catch { /* 忽略 */ }
-                }
-                // 终极硬编码兜底
-                const fallback = "世界很大，感谢你在这里停留片刻。";
-                localStorage.setItem(cacheKey, JSON.stringify({ message: fallback, isSpecialDay: false }));
-                return { message: fallback, isSpecialDay: false };
+            const rawHour = (new Date().getUTCHours() + 8) % 24;
+            let hourSlot;
+            if (rawHour >= 0 && rawHour < 5) hourSlot = 0;
+            else if (rawHour >= 5 && rawHour < 8) hourSlot = 5;
+            else if (rawHour >= 8 && rawHour < 11) hourSlot = 8;
+            else if (rawHour >= 11 && rawHour < 17) hourSlot = 11;
+            else if (rawHour >= 17 && rawHour < 19) hourSlot = 17;
+            else if (rawHour >= 19 && rawHour < 24) hourSlot = 19;
+            else hourSlot = 0;
+
+            const cacheKey = `site_msg_${days}_${hourSlot}`;
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                try { return JSON.parse(cached); } catch (e) { /* 忽略 */ }
             }
 
-            // 1. 优先从数据库拉取最新数据
-            let greeting = "";
+            let specialMessage = null;
             let isSpecialDay = false;
-            let fetchSuccess = false;
+            let hourlyGreeting = null;
 
-            try {
-                const { data: specialData } = await supabaseClient
-                    .from('site_special_messages')
-                    .select('message')
-                    .eq('day_offset', days)
-                    .maybeSingle();
+            if (supabaseClient) {
+                try {
+                    const { data: specialData } = await supabaseClient
+                        .from('site_special_messages')
+                        .select('message')
+                        .eq('day_offset', days)
+                        .maybeSingle();
+                    if (specialData) {
+                        specialMessage = specialData.message;
+                        isSpecialDay = true;
+                    }
 
-                if (specialData) {
-                    greeting = specialData.message;
-                    isSpecialDay = true;
-                    fetchSuccess = true;
-                } else {
                     const { data: hourlyData } = await supabaseClient
                         .from('site_hourly_greetings')
                         .select('greetings')
-                        .eq('hour_start', chinaHour)
+                        .eq('hour_start', hourSlot)
                         .maybeSingle();
-
                     if (hourlyData && hourlyData.greetings && hourlyData.greetings.length > 0) {
                         const arr = hourlyData.greetings;
-                        greeting = arr[Math.floor(Math.random() * arr.length)];
-                        fetchSuccess = true;
+                        hourlyGreeting = arr[Math.floor(Math.random() * arr.length)];
                     }
+                } catch (e) {
+                    console.warn("数据库查询失败，尝试读取本地缓存...");
                 }
-
-                // 2. 如果成功从数据库拿到，立刻覆盖本地缓存
-                if (fetchSuccess) {
-                    const result = { message: greeting, isSpecialDay };
-                    localStorage.setItem(cacheKey, JSON.stringify(result));
-                    return result;
-                }
-            } catch (e) {
-                console.warn("访问数据库失败，尝试读取本地缓存...");
             }
 
-            // 3. 如果数据库失败，读取本地缓存兜底
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                try { return JSON.parse(cached); } catch { /* 忽略 */ }
-            }
-
-            // 4. 如果连本地缓存都没有（首次访问），写入终极硬编码兜底
-            const fallback = "世界很大，感谢你在这里停留片刻。";
-            localStorage.setItem(cacheKey, JSON.stringify({ message: fallback, isSpecialDay: false }));
-            return { message: fallback, isSpecialDay: false };
+            const result = { days, specialMessage, isSpecialDay, hourlyGreeting };
+            localStorage.setItem(cacheKey, JSON.stringify(result));
+            return result;
         }
 
         function initializeSiteAge() {
             const siteAgeElem = document.getElementById('site-age');
 
             async function updateUI() {
+                if (!siteAgeElem) return;
                 const res = await fetchSiteMessages();
-                if (res.isSpecialDay) {
-                    siteAgeElem.innerHTML = res.message;
-                    siteAgeElem.classList.add('special');
+
+                let htmlLines = [];
+                if (res.isSpecialDay && res.specialMessage) {
+                    htmlLines.push(`✨ ${res.specialMessage} ✨`);
                 } else {
-                    siteAgeElem.innerHTML = res.message;
-                    siteAgeElem.classList.remove('special');
+                    htmlLines.push(`📅 运营天数：${res.days} 天`);
                 }
+                if (res.hourlyGreeting) {
+                    htmlLines.push(`💬 ${res.hourlyGreeting}`);
+                }
+
+                siteAgeElem.innerHTML = htmlLines.join('<br>');
+                siteAgeElem.classList.toggle('special', res.isSpecialDay);
             }
+
             updateUI();
-            // 每小时刷新一次问候语
+            // 每小时刷新一次（免得跨时段缓存不更新）
             setInterval(updateUI, 3600000);
         }
 
@@ -1212,7 +1204,7 @@
                     attempts++;
                     if (attempts >= maxRetries) throw e;
                     console.warn(`网络请求失败，${attempts} 秒后重试...`);
-                    await new Promise(r => setTimeout(r, 1000 * attempts)); // 1秒/2秒间隔重试
+                    await new Promise(r => setTimeout(r, 1000 * attempts));
                 }
             }
         }
@@ -1238,7 +1230,6 @@
                 document.body.classList.add('night-mode');
             }
 
-            // ★★★ 用 safeExecute 包裹可能因网络波动的启动项 ★★★
             await safeExecute(() => initializeUserProfile());
             await safeExecute(() => initializeSiteAge());
             
