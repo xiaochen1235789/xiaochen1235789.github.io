@@ -21,7 +21,7 @@ import {
     loadAllGachaTables
 } from './gacha.js';
 import { refreshLogs, clearAllLogs } from './logs.js';
-import './admin_char_detail.js';
+import './char_detail.js';
 
 // ----- 日志刷新回调（供 logAction 触发） -----
 window._refreshLogsCallback = refreshLogs;
