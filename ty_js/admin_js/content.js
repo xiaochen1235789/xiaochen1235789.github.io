@@ -98,12 +98,14 @@ export function renderContentTable(table, data) {
             }
             html += `<td title="${val}">${val}</td>`;
         }
+        // ★★★ 修改点：详情按钮传参改为 detail_id || name ★★★
+        const detailId = row.detail_id || row.name || row.id;
         html += `
             <td class="action-buttons">
                 <button class="edit-btn" onclick="window.editContentItem('${table}', ${row.id})">
                     <i class="fas fa-edit"></i> 编辑
                 </button>
-                <button class="edit-btn" style="background:#8b5cf6;" onclick="window._openCharDetail('${row.id}')">
+                <button class="edit-btn" style="background:#8b5cf6;" onclick="window._openCharDetail('${detailId}')">
                     <i class="fas fa-file-alt"></i> 详情
                 </button>
                 <button class="delete-btn" onclick="window.deleteContentItem('${table}', ${row.id})">
@@ -298,8 +300,13 @@ window.deleteContentItem = async function (table, id) {
 };
 
 // ============================================================
-// ★★★ 角色详情编辑器入口 ★★★
+// ★★★ 角色详情编辑器入口（已修改传参） ★★★
 // ============================================================
 window._openCharDetail = function(charId) {
+    // 如果传入的是数字或空值，尝试用 name 作为 fallback
+    if (!charId || charId === 'undefined' || charId === 'null') {
+        showNotification('无法获取角色标识，请检查数据', 'error');
+        return;
+    }
     openCharDetailEditor(charId);
 };
