@@ -1,10 +1,17 @@
-// ========== 角色详情编辑器（纯文本表单版，无 JSON 手写） ==========
+// ========== 角色详情编辑器（修复版：强制显示全部9技能） ==========
 import { getSupabase } from './auth.js';
 import { showNotification, logAction, openModal, closeModal, escapeHtml } from './utils.js';
 
 let currentEditCharId = null;
 let currentEditCharData = null;
 let expandedSections = {};
+
+// 所有技能键（固定9个）
+const ALL_SKILL_KEYS = [
+    'normal', 'skill', 'ultimate', 'talent',
+    'enhanced_normal', 'enhanced_skill', 'enhanced_ultimate',
+    'memetic_skill', 'memetic_talent'
+];
 
 const DEFAULT_SKILL_TEMPLATE = {
     name: '技能名',
@@ -55,6 +62,13 @@ export async function openCharDetailEditor(charId) {
             };
         }
 
+        // ★ 强制补全所有技能键
+        ALL_SKILL_KEYS.forEach(key => {
+            if (!currentEditCharData.skills[key]) {
+                currentEditCharData.skills[key] = {};
+            }
+        });
+
         currentEditCharId = charId;
         expandedSections = {};
         renderDetailEditor();
@@ -81,42 +95,38 @@ function isSkillPopulated(sk) {
 function renderDetailEditor() {
     const d = currentEditCharData;
     const skills = d.skills || {};
-    const skillKeys = Object.keys(skills);
+    const skillKeys = ALL_SKILL_KEYS; // ★ 直接用固定9个
 
     // ---- 技能列表 ----
     let skillsListHtml = '';
-    if (skillKeys.length === 0) {
-        skillsListHtml = `<p style="color:var(--text-secondary); font-size:0.9rem;">暂无技能，点下方「添加技能键」创建</p>`;
-    } else {
-        for (const key of skillKeys) {
-            const sk = skills[key] || {};
-            const isPopulated = isSkillPopulated(sk);
-            const statusLabel = isPopulated ? '✅ 已配置' : '🟡 空占位';
-            const statusColor = isPopulated ? '#4ade80' : 'var(--text-secondary)';
-            const isExpanded = expandedSections[`skill_${key}`] || false;
+    for (const key of skillKeys) {
+        const sk = skills[key] || {};
+        const isPopulated = isSkillPopulated(sk);
+        const statusLabel = isPopulated ? '✅ 已配置' : '🟡 空占位';
+        const statusColor = isPopulated ? '#4ade80' : 'var(--text-secondary)';
+        const isExpanded = expandedSections[`skill_${key}`] || false;
 
-            skillsListHtml += `
-                <div class="skill-item" style="border:1px solid ${isPopulated ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.1)'}; border-radius:8px; margin-bottom:8px; overflow:hidden;">
-                    <div onclick="window._toggleSkill('${key}')" style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; cursor:pointer; background:rgba(255,255,255,0.03);">
-                        <div>
-                            <strong style="color:${isPopulated ? '#E8C96B' : 'var(--text-secondary)'};">${escapeHtml(key)}</strong>
-                            <span style="font-size:0.8rem; margin-left:12px; color:${statusColor};">${statusLabel}</span>
-                            ${isPopulated ? `<span style="font-size:0.7rem; color:var(--text-secondary); margin-left:8px;">Lv.${sk.maxLevel || 10}</span>` : ''}
-                            ${isPopulated && sk.name ? `<span style="font-size:0.7rem; color:var(--text-secondary); margin-left:8px;">${escapeHtml(sk.name)}</span>` : ''}
-                        </div>
-                        <div>
-                            <span style="font-size:0.8rem; color:var(--text-secondary); margin-right:8px;">${isExpanded ? '收起 ▲' : '展开 ▼'}</span>
-                            ${isPopulated ? `<button type="button" class="delete-btn" onclick="event.stopPropagation(); window._clearSkill('${key}')" style="padding:2px 10px; font-size:0.7rem;">清空</button>` : ''}
-                            ${!isPopulated ? `<button type="button" class="edit-btn" onclick="event.stopPropagation(); window._populateSkill('${key}')" style="padding:2px 10px; font-size:0.7rem;">填充模板</button>` : ''}
-                        </div>
+        skillsListHtml += `
+            <div class="skill-item" style="border:1px solid ${isPopulated ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.1)'}; border-radius:8px; margin-bottom:8px; overflow:hidden;">
+                <div onclick="window._toggleSkill('${key}')" style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; cursor:pointer; background:rgba(255,255,255,0.03);">
+                    <div>
+                        <strong style="color:${isPopulated ? '#E8C96B' : 'var(--text-secondary)'};">${escapeHtml(key)}</strong>
+                        <span style="font-size:0.8rem; margin-left:12px; color:${statusColor};">${statusLabel}</span>
+                        ${isPopulated ? `<span style="font-size:0.7rem; color:var(--text-secondary); margin-left:8px;">Lv.${sk.maxLevel || 10}</span>` : ''}
+                        ${isPopulated && sk.name ? `<span style="font-size:0.7rem; color:var(--text-secondary); margin-left:8px;">${escapeHtml(sk.name)}</span>` : ''}
                     </div>
-                    ${isExpanded ? renderSkillDetail(key, sk) : ''}
+                    <div>
+                        <span style="font-size:0.8rem; color:var(--text-secondary); margin-right:8px;">${isExpanded ? '收起 ▲' : '展开 ▼'}</span>
+                        ${isPopulated ? `<button type="button" class="delete-btn" onclick="event.stopPropagation(); window._clearSkill('${key}')" style="padding:2px 10px; font-size:0.7rem;">清空</button>` : ''}
+                        ${!isPopulated ? `<button type="button" class="edit-btn" onclick="event.stopPropagation(); window._populateSkill('${key}')" style="padding:2px 10px; font-size:0.7rem;">填充模板</button>` : ''}
+                    </div>
                 </div>
-            `;
-        }
+                ${isExpanded ? renderSkillDetail(key, sk) : ''}
+            </div>
+        `;
     }
 
-    // ---- 行迹加成（纯文本列表） ----
+    // ---- 行迹加成 ----
     const traceList = d.trace_stats || [];
     let traceHtml = traceList.length === 0 ? '<p style="color:var(--text-secondary); font-size:0.85rem;">暂无行迹</p>' :
         traceList.map((item, i) => `
@@ -128,7 +138,7 @@ function renderDetailEditor() {
             </div>
         `).join('');
 
-    // ---- 额外能力（纯文本列表） ----
+    // ---- 额外能力 ----
     const extraList = d.extra_abilities || [];
     let extraHtml = extraList.length === 0 ? '<p style="color:var(--text-secondary); font-size:0.85rem;">暂无额外能力</p>' :
         extraList.map((item, i) => `
@@ -181,7 +191,7 @@ function renderDetailEditor() {
             `;
         }).join('');
 
-    // ---- 完整 HTML（JSON 全部删除，换成纯文本列表） ----
+    // ---- 完整 HTML ----
     const html = `
         <div style="max-height:70vh; overflow-y:auto; padding-right:4px;">
 
@@ -207,7 +217,7 @@ function renderDetailEditor() {
                 </div>
             </div>
 
-            <!-- 行迹加成（纯文本列表） -->
+            <!-- 行迹加成 -->
             <div class="form-section" style="margin-bottom:16px;">
                 <h4 style="color:#E8C96B; margin-bottom:8px;">📈 行迹加成</h4>
                 <div id="trace-list">${traceHtml}</div>
@@ -216,7 +226,7 @@ function renderDetailEditor() {
                 </button>
             </div>
 
-            <!-- 额外能力（纯文本列表） -->
+            <!-- 额外能力 -->
             <div class="form-section" style="margin-bottom:16px;">
                 <h4 style="color:#E8C96B; margin-bottom:8px;">✨ 额外能力</h4>
                 <div id="extra-list">${extraHtml}</div>
@@ -225,15 +235,9 @@ function renderDetailEditor() {
                 </button>
             </div>
 
-            <!-- 技能 -->
+            <!-- 技能（9个全部显示） -->
             <div class="form-section" style="margin-bottom:16px;">
-                <h4 style="color:#E8C96B; margin-bottom:8px;">⚔️ 技能</h4>
-                <div style="margin-bottom:8px;">
-                    <button type="button" class="add-btn" onclick="window._addSkillKey()" style="padding:4px 16px; font-size:0.85rem;">
-                        <i class="fas fa-plus"></i> 添加技能键
-                    </button>
-                    <span style="color:var(--text-secondary); font-size:0.8rem; margin-left:8px;">${skillKeys.length} 个技能</span>
-                </div>
+                <h4 style="color:#E8C96B; margin-bottom:8px;">⚔️ 技能（9个固定位）</h4>
                 <div id="skillsEditArea">${skillsListHtml}</div>
             </div>
 
@@ -327,7 +331,7 @@ function renderSkillDetail(key, sk) {
 }
 
 // ============================================================
-// 保存全部（从纯文本列表收集数据）
+// 保存全部
 // ============================================================
 async function saveDetailEditor() {
     try {
@@ -339,10 +343,8 @@ async function saveDetailEditor() {
         const spd = parseInt(document.getElementById('base_spd').value) || 100;
         const energy = parseInt(document.getElementById('base_energy').value) || 100;
 
-        // ---- 收集行迹（从 DOM 读取） ----
         const traceStats = [];
-        const traceRows = document.querySelectorAll('#trace-list > div');
-        traceRows.forEach(row => {
+        document.querySelectorAll('#trace-list > div').forEach(row => {
             const label = row.querySelector('.trace-label')?.value?.trim();
             const value = row.querySelector('.trace-value')?.value?.trim();
             const icon = row.querySelector('.trace-icon')?.value?.trim();
@@ -351,10 +353,8 @@ async function saveDetailEditor() {
             }
         });
 
-        // ---- 收集额外能力（从 DOM 读取） ----
         const extraAbilities = [];
-        const extraRows = document.querySelectorAll('#extra-list > div');
-        extraRows.forEach(row => {
+        document.querySelectorAll('#extra-list > div').forEach(row => {
             const nameVal = row.querySelector('.extra-name')?.value?.trim();
             const desc = row.querySelector('.extra-desc')?.value?.trim();
             if (nameVal || desc) {
@@ -442,17 +442,6 @@ window._removeExtra = function(index) {
 // ============================================================
 window._toggleSkill = function(key) {
     expandedSections[`skill_${key}`] = !expandedSections[`skill_${key}`];
-    renderDetailEditor();
-};
-
-window._addSkillKey = function() {
-    const key = prompt('请输入技能键名（如 enhanced_normal）：');
-    if (!key) return;
-    if (currentEditCharData.skills[key]) {
-        showNotification('技能键已存在', 'error');
-        return;
-    }
-    currentEditCharData.skills[key] = {};
     renderDetailEditor();
 };
 
@@ -555,7 +544,7 @@ window._removeCons = function(index) {
 };
 
 // ============================================================
-// 配队操作（纯文本表单）
+// 配队操作
 // ============================================================
 window._addTeam = function() {
     const html = `
@@ -584,7 +573,6 @@ window._addTeam = function() {
     document.getElementById('modalTitle').innerText = '添加配队';
     document.getElementById('modalFields').innerHTML = html;
 
-    // 添加角色行函数（挂到 window 临时用）
     window.addTeamRoleRow = function() {
         const container = document.getElementById('teamRolesContainer');
         if (!container) return;
@@ -717,7 +705,7 @@ window._removeTeam = function(index) {
 };
 
 // ============================================================
-// 晋级材料操作（纯文本表单）
+// 晋级材料操作
 // ============================================================
 window._addStage = function() {
     const html = `
