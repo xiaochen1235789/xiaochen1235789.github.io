@@ -52,6 +52,10 @@ export function closeModal(id) {
     document.body.style.overflow = '';
 }
 
+// ★★★ 挂载到 window，供 HTML 内联 onclick 调用 ★★★
+window.openModal = openModal;
+window.closeModal = closeModal;
+
 // ----- 缓存管理 -----
 export function getCachedProfile() {
     try {
