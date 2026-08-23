@@ -5,13 +5,11 @@
     <title>鹿将军角色详情页 · 六哥荣耀WIKI</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <meta name="description" content="鹿将军 · 巡猎·风·限定五星">
-    <link rel="icon" href="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/avatars/icon.webp" type="image/png">
+    <link rel="icon" href="https://xiaochen1235789.github.io/images/wangzhantupian.png" type="image/png">
     <link rel="preconnect" href="https://xiaochen1235789.github.io">
-    <link rel="stylesheet" href="./css/tongyi.css">
+    <link rel="stylesheet" href="https://xiaochen1235789.github.io/css/tongyi.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
     </script>
-
-    
     <style>
         .const-val,
         .skill-val {
@@ -35,7 +33,11 @@
 
     <!-- ===== 立绘区 ===== -->
     <section class="hero-section">
-        <img class="hero-image" id="hero-image" src="" alt="鹿将军" onerror="this.style.display='none'">
+        <img class="hero-image" id="hero-image" src="" alt="鹿将军"
+             onerror="this.style.display='none'; document.getElementById('hero-placeholder').style.display='flex';">
+        <div id="hero-placeholder" style="display:none; width:100%; height:100%; align-items:center; justify-content:center; background:#1a1a2e; color:#666; font-size:1.2rem;">
+            🖼️ 立绘加载失败
+        </div>
         <div class="hero-overlay">
             <div class="hero-name" id="hero-name">鹿将军</div>
             <div class="tag-container" id="hero-tags">
@@ -79,9 +81,7 @@
 
     <!-- 晋级材料 -->
     <section class="card promotion-card" id="promotion-card" data-group="base">
-        <div class="skill-header">
-            <div class="skill-name">📦 晋级材料</div>
-        </div>
+        <div class="skill-header"><div class="skill-name">📦 晋级材料</div></div>
         <div class="skill-content">
             <div class="promotion-materials" id="promotion-materials"></div>
             <div class="promotion-next" id="promotion-next"></div>
@@ -104,10 +104,7 @@
         </div>
         <div class="skill-content">
             <div id="normal-desc">技能描述</div>
-            <table class="data-table">
-                <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
-                <tbody id="normal-details"></tbody>
-            </table>
+            <table class="data-table"><thead><tr><th>隐藏数值</th><th>数值</th></tr></thead><tbody id="normal-details"></tbody></table>
         </div>
     </section>
 
@@ -122,10 +119,7 @@
         </div>
         <div class="skill-content">
             <div id="skill-desc">技能描述</div>
-            <table class="data-table">
-                <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
-                <tbody id="skill-details"></tbody>
-            </table>
+            <table class="data-table"><thead><tr><th>隐藏数值</th><th>数值</th></tr></thead><tbody id="skill-details"></tbody></table>
         </div>
     </section>
 
@@ -140,10 +134,7 @@
         </div>
         <div class="skill-content">
             <div id="ultimate-desc">技能描述</div>
-            <table class="data-table">
-                <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
-                <tbody id="ultimate-details"></tbody>
-            </table>
+            <table class="data-table"><thead><tr><th>隐藏数值</th><th>数值</th></tr></thead><tbody id="ultimate-details"></tbody></table>
         </div>
     </section>
 
@@ -158,10 +149,7 @@
         </div>
         <div class="skill-content">
             <div id="talent-desc">技能描述</div>
-            <table class="data-table">
-                <thead><tr><th>隐藏数值</th><th>数值</th></tr></thead>
-                <tbody id="talent-details"></tbody>
-            </table>
+            <table class="data-table"><thead><tr><th>隐藏数值</th><th>数值</th></tr></thead><tbody id="talent-details"></tbody></table>
         </div>
     </section>
 
@@ -209,7 +197,7 @@
     <button class="back-top" id="backTop" aria-label="回到顶部" title="回到顶部">↑</button>
 
     <!-- ============================================================ -->
-    <!-- ===== JavaScript（仅改数据源，保留原版样式） ===== -->
+    <!-- ===== JavaScript（插值功能恢复） ===== -->
     <!-- ============================================================ -->
     <script>
         // ======================== 配置 ========================
@@ -217,16 +205,63 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
         const CHAR_ID = 'deer-general';
 
+        // ★★★ 硬编码插值表（鹿将军专属） ★★★
+        const BASE_LEVEL_PRESETS = [1, 20, 30, 40, 50, 60, 70, 80, 90];
+        const BASE_STATS_MAP = {
+            1: { hp: 126, atk: 87, def: 49 },
+            20: { hp: 297, atk: 204, def: 116 },
+            30: { hp: 411, atk: 283, def: 160 },
+            40: { hp: 525, atk: 361, def: 205 },
+            50: { hp: 639, atk: 439, def: 249 },
+            60: { hp: 753, atk: 518, def: 294 },
+            70: { hp: 868, atk: 596, def: 339 },
+            80: { hp: 931, atk: 640, def: 363 },
+            90: { hp: 1024.1, atk: 704, def: 399.3 }
+        };
+        // 插值函数
+        function interpolateStats(level) {
+            if (level <= 1) return { ...BASE_STATS_MAP[1] };
+            if (level >= 90) return { hp: Math.round(BASE_STATS_MAP[90].hp), atk: Math.round(BASE_STATS_MAP[90].atk), def: Math.round(BASE_STATS_MAP[90].def) };
+            let lower = 1,
+                upper = 90;
+            for (let i = 0; i < BASE_LEVEL_PRESETS.length - 1; i++) {
+                if (level >= BASE_LEVEL_PRESETS[i] && level <= BASE_LEVEL_PRESETS[i + 1]) {
+                    lower = BASE_LEVEL_PRESETS[i];
+                    upper = BASE_LEVEL_PRESETS[i + 1];
+                    break;
+                }
+            }
+            const lowStats = BASE_STATS_MAP[lower];
+            const highStats = BASE_STATS_MAP[upper];
+            const t = (level - lower) / (upper - lower);
+            return {
+                hp: Math.round(lowStats.hp + t * (highStats.hp - lowStats.hp)),
+                atk: Math.round(lowStats.atk + t * (highStats.atk - lowStats.atk)),
+                def: Math.round(lowStats.def + t * (highStats.def - lowStats.def))
+            };
+        }
+
         let supabaseClient = null;
         let currentUser = null;
         let charData = null;
         let userProgress = null;
         let globalMaterials = {}; // { 'sugar': {name, image_url, rarity} }
+        let currentBaseLevel = 90;
 
-        // ======================== DOM 引用 ========================
+        // ======================== 硬编码中文回退 ========================
+        const FALLBACK_MATERIALS = {
+            'sugar': { name: '糖果碎', image_url: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Crushed_sugar.webp' },
+            'candy': { name: '超级棒糖', image_url: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Super_Sweet.webp' },
+            'wind_shard': { name: '清风碎片', image_url: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/materials/wind_jinji_1.webp' },
+            'wind_chip': { name: '御风晶片', image_url: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/materials/wind_jinji_2.webp' },
+            'wind_core': { name: '万风核心', image_url: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/materials/wind_jinji_3.webp' },
+            'crystal': { name: '纯白祈愿结晶', image_url: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/materials/none_tongyong_001.webp' }
+        };
+
+        // ======================== DOM ========================
         function $(id) { return document.getElementById(id); }
 
-        // ======================== 初始化 Supabase ========================
+        // ======================== Supabase ========================
         async function initSupabase() {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
                 auth: { persistSession: true }
@@ -237,8 +272,8 @@
 
         // ======================== 加载数据 ========================
         async function loadCharacterData() {
-            // 1. 拉取角色静态数据
-            const { data: detail, error: detailErr } = await supabaseClient
+            const sb = supabaseClient;
+            const { data: detail, error: detailErr } = await sb
                 .from('character_details')
                 .select('*')
                 .eq('id', CHAR_ID)
@@ -246,17 +281,24 @@
             if (detailErr) throw new Error('角色数据加载失败: ' + detailErr.message);
             charData = detail;
 
-            // 2. 拉取全局材料表
-            const { data: mats, error: matErr } = await supabaseClient
+            // 加载全局材料
+            const { data: mats, error: matErr } = await sb
                 .from('global_materials')
                 .select('*');
-            if (!matErr && mats) {
+            if (!matErr && mats && mats.length > 0) {
                 mats.forEach(m => { globalMaterials[m.id] = m; });
+            } else {
+                globalMaterials = { ...FALLBACK_MATERIALS };
             }
+            const merged = { ...FALLBACK_MATERIALS };
+            if (!matErr && mats) {
+                mats.forEach(m => { merged[m.id] = m; });
+            }
+            globalMaterials = merged;
 
-            // 3. 拉取用户进度
+            // 拉取用户进度
             if (currentUser) {
-                const { data: prog, error: progErr } = await supabaseClient
+                const { data: prog, error: progErr } = await sb
                     .from('user_char_progress')
                     .select('*')
                     .eq('user_id', currentUser.id)
@@ -280,8 +322,8 @@
                     base_level: 90
                 };
             }
+            currentBaseLevel = userProgress.base_level || 90;
 
-            // 4. 渲染
             renderPage();
         }
 
@@ -293,7 +335,16 @@
             document.title = charData.name + ' · 六哥荣耀WIKI';
             $('header-title').textContent = charData.name + ' · 六哥荣耀.WIKI';
             $('hero-name').textContent = charData.name;
-            $('hero-image').src = charData.image_url || '';
+            const img = $('hero-image');
+            const placeholder = $('hero-placeholder');
+            if (charData.image_url) {
+                img.src = charData.image_url;
+                img.style.display = '';
+                placeholder.style.display = 'none';
+            } else {
+                img.style.display = 'none';
+                placeholder.style.display = 'flex';
+            }
             $('hero-rarity').textContent = '稀有度 ✮✮✮✮✮';
 
             // ---- 命途/属性 ----
@@ -303,21 +354,8 @@
                 <div class="attr-icon"><div class="attr-label">限定五星</div></div>
             `;
 
-            // ---- 基础属性 ----
-            const stats = charData.base_stats;
-            $('base-stats').innerHTML = `
-                <div class="attr-icon"><img src="https://xiaochen1235789.github.io/attribute_image/HP.webp" alt="生命"><div class="attr-value" id="base-hp">${stats.hp}</div><div class="attr-label">生命</div></div>
-                <div class="attr-icon"><img src="https://xiaochen1235789.github.io/attribute_image/ATK.webp" alt="攻击"><div class="attr-value" id="base-atk">${stats.atk}</div><div class="attr-label">攻击</div></div>
-                <div class="attr-icon"><img src="https://xiaochen1235789.github.io/attribute_image/DEF.webp" alt="防御"><div class="attr-value" id="base-def">${stats.def}</div><div class="attr-label">防御</div></div>
-                <div class="attr-icon"><img src="https://xiaochen1235789.github.io/attribute_image/SPD.webp" alt="速度"><div class="attr-value" id="base-spd">${stats.spd}</div><div class="attr-label">速度</div></div>
-                <div class="attr-icon"><img src="https://xiaochen1235789.github.io/attribute_image/ENERGY.webp" alt="能量"><div class="attr-value" id="base-energy">${stats.energy}</div><div class="attr-label">能量</div></div>
-            `;
-
-            // ---- 基础等级 ----
-            const baseLevel = userProgress.base_level || 90;
-            $('base-level-label').innerText = `基础属性 Lv.${baseLevel}`;
-            $('base-level-display').textContent = baseLevel;
-            $('base-level-slider').value = baseLevel;
+            // ---- ★★★ 基础属性（插值） ★★★ ----
+            updateBaseAttributes(currentBaseLevel);
 
             // ---- 行迹 ----
             if (charData.trace_stats) {
@@ -340,7 +378,7 @@
                 `).join('');
             }
 
-            // ---- 原版 4 技能 ----
+            // ---- 技能 ----
             const skillKeys = ['normal', 'skill', 'ultimate', 'talent'];
             skillKeys.forEach(key => {
                 const skill = charData.skills[key];
@@ -365,7 +403,6 @@
                     detailsEl.innerHTML = skill.details.map(d => `<tr><td>${d.label}</td><td>${d.value}</td></tr>`).join('');
                 }
 
-                // 更新动态数值
                 if (skill.values) {
                     skill.values.forEach(v => {
                         const el = document.getElementById(v.id);
@@ -383,27 +420,20 @@
                     });
                 }
 
-                // 按钮状态
                 const downBtn = $(`${key}-down`);
                 const upBtn = $(`${key}-up`);
-                if (downBtn) downBtn.disabled = level <= 1;
-                if (upBtn) upBtn.disabled = level >= maxLevel;
-
-                // 绑定按钮事件（移除旧的，重新绑定）
-                const newDown = downBtn?.cloneNode(true);
-                const newUp = upBtn?.cloneNode(true);
-                if (newDown && downBtn) {
-                    downBtn.parentNode.replaceChild(newDown, downBtn);
-                    newDown.onclick = () => changeSkillLevel(key, -1);
+                if (downBtn) {
+                    downBtn.onclick = () => changeSkillLevel(key, -1);
+                    downBtn.disabled = level <= 1;
                 }
-                if (newUp && upBtn) {
-                    upBtn.parentNode.replaceChild(newUp, upBtn);
-                    newUp.onclick = () => changeSkillLevel(key, 1);
+                if (upBtn) {
+                    upBtn.onclick = () => changeSkillLevel(key, 1);
+                    upBtn.disabled = level >= maxLevel;
                 }
             });
 
             // ---- 材料 ----
-            renderMaterials(baseLevel);
+            renderMaterials(currentBaseLevel);
 
             // ---- 配队 ----
             if (charData.teams) {
@@ -412,6 +442,78 @@
 
             // ---- 基础等级事件 ----
             bindBaseLevelEvents();
+
+            // 导航
+            setupNavigation();
+            setupBackTop();
+            $('year').textContent = new Date().getFullYear();
+        }
+
+        // ============================================================
+        // ★★★ 更新基础属性显示（插值） ★★★
+        // ============================================================
+        function updateBaseAttributes(level) {
+            currentBaseLevel = level;
+            const stats = interpolateStats(level);
+            $('base-level-label').innerText = `基础属性 Lv.${level}`;
+            $('base-level-display').textContent = level;
+            $('base-level-slider').value = level;
+
+            // 更新属性值
+            const hpEl = document.getElementById('base-hp');
+            const atkEl = document.getElementById('base-atk');
+            const defEl = document.getElementById('base-def');
+            const spdEl = document.getElementById('base-spd');
+            const energyEl = document.getElementById('base-energy');
+
+            if (hpEl) hpEl.textContent = stats.hp;
+            if (atkEl) atkEl.textContent = stats.atk;
+            if (defEl) defEl.textContent = stats.def;
+            if (spdEl) spdEl.textContent = charData.base_stats.spd || 115; // 速度、能量不随等级变化
+            if (energyEl) energyEl.textContent = charData.base_stats.energy || 120;
+
+            // 更新材料
+            renderMaterials(level);
+        }
+
+        // ======================== 基础等级控件 ========================
+        function bindBaseLevelEvents() {
+            const slider = $('base-level-slider');
+            const downBtn = $('base-level-down');
+            const upBtn = $('base-level-up');
+
+            const updateBase = (val) => {
+                let level = Math.min(90, Math.max(1, parseInt(val, 10) || 90));
+                if (level === currentBaseLevel) return;
+                // 更新用户进度
+                userProgress.base_level = level;
+                updateBaseAttributes(level);
+                // 存数据库（如果登录）
+                if (currentUser) {
+                    supabaseClient
+                        .from('user_char_progress')
+                        .upsert({
+                            user_id: currentUser.id,
+                            char_id: CHAR_ID,
+                            base_level: level
+                        }, { onConflict: 'user_id, char_id' })
+                        .then(({ error }) => {
+                            if (error) console.warn('基础等级保存失败', error);
+                        });
+                }
+            };
+
+            if (slider) {
+                slider.oninput = (e) => updateBase(e.target.value);
+            }
+            if (downBtn) {
+                downBtn.onclick = () => updateBase(currentBaseLevel - 1);
+                downBtn.disabled = currentBaseLevel <= 1;
+            }
+            if (upBtn) {
+                upBtn.onclick = () => updateBase(currentBaseLevel + 1);
+                upBtn.disabled = currentBaseLevel >= 90;
+            }
         }
 
         // ======================== 材料渲染 ========================
@@ -422,7 +524,12 @@
             const consumedContainer = $('consumed-materials');
             const titleEl = $('consumed-title');
 
-            // 找下一阶段
+            function getMaterialInfo(key) {
+                if (globalMaterials[key]) return globalMaterials[key];
+                if (FALLBACK_MATERIALS[key]) return FALLBACK_MATERIALS[key];
+                return { name: key, image_url: null };
+            }
+
             let nextStage = null;
             for (let s of stages) {
                 if (level < s.targetLevel) { nextStage = s; break; }
@@ -434,15 +541,14 @@
             } else {
                 let html = '';
                 for (let mat of nextStage.materials) {
-                    const material = globalMaterials[mat.key];
-                    const imgHtml = material?.image_url ?
+                    const material = getMaterialInfo(mat.key);
+                    const imgHtml = material.image_url ?
                         `<img src="${material.image_url}" alt="${material.name}" style="width:40px;height:40px;object-fit:contain;" onerror="this.parentNode.innerHTML='❓'">` :
                         `<span style="font-size:28px;">❓</span>`;
-                    const name = material?.name || mat.key;
                     html += `
                         <div class="material-item" style="display:inline-block;margin:8px;text-align:center;">
                             <div class="material-img">${imgHtml}</div>
-                            <div class="material-name">${name}</div>
+                            <div class="material-name">${material.name}</div>
                             <div class="material-count">× ${mat.count}</div>
                         </div>
                     `;
@@ -451,7 +557,6 @@
                 nextText.innerHTML = `⬆ 等级上限提高至 Lv.${nextStage.targetLevel + 10} 所需材料`;
             }
 
-            // 已消耗
             const consumed = stages.filter(s => s.targetLevel <= level);
             if (consumed.length === 0) {
                 if (titleEl) titleEl.textContent = '📜 已消耗材料（Lv.1）';
@@ -468,15 +573,14 @@
             });
             let html = '';
             for (let [key, count] of Object.entries(total)) {
-                const material = globalMaterials[key];
-                const imgHtml = material?.image_url ?
+                const material = getMaterialInfo(key);
+                const imgHtml = material.image_url ?
                     `<img src="${material.image_url}" alt="${material.name}" style="width:40px;height:40px;object-fit:contain;" onerror="this.parentNode.innerHTML='❓'">` :
                     `<span style="font-size:28px;">❓</span>`;
-                const name = material?.name || key;
                 html += `
                     <div class="material-item" style="display:inline-block;margin:8px;text-align:center;">
                         <div class="material-img">${imgHtml}</div>
-                        <div class="material-name">${name}</div>
+                        <div class="material-name">${material.name}</div>
                         <div class="material-count">× ${count}</div>
                     </div>
                 `;
@@ -519,7 +623,6 @@
                 </div>
             `).join('');
 
-            // 绑定 tab 切换
             tabsContainer.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.onclick = () => {
                     tabsContainer.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -532,7 +635,7 @@
             });
         }
 
-        // ======================== 改变技能等级 ========================
+        // ======================== 技能等级 ========================
         async function changeSkillLevel(key, delta) {
             const skill = charData.skills[key];
             if (!skill) return;
@@ -541,11 +644,9 @@
             const newLevel = currentLevel + delta;
             if (newLevel < 1 || newLevel > skill.maxLevel) return;
 
-            // 乐观更新
             userProgress[levelKey] = newLevel;
             renderPage();
 
-            // 存库
             if (!currentUser) {
                 showToast('请先登录，否则等级不会保存！', 'warning');
                 return;
@@ -570,41 +671,6 @@
             }
         }
 
-        // ======================== 基础等级事件 ========================
-        function bindBaseLevelEvents() {
-            const slider = $('base-level-slider');
-            const downBtn = $('base-level-down');
-            const upBtn = $('base-level-up');
-
-            const updateBase = (val) => {
-                const level = Math.min(90, Math.max(1, parseInt(val, 10) || 90));
-                userProgress.base_level = level;
-                renderPage();
-                if (currentUser) {
-                    supabaseClient
-                        .from('user_char_progress')
-                        .upsert({
-                            user_id: currentUser.id,
-                            char_id: CHAR_ID,
-                            base_level: level
-                        }, { onConflict: 'user_id, char_id' })
-                        .then(({ error }) => {
-                            if (error) console.warn('基础等级保存失败', error);
-                        });
-                }
-            };
-
-            if (slider) {
-                slider.oninput = (e) => updateBase(e.target.value);
-            }
-            if (downBtn) {
-                downBtn.onclick = () => updateBase(parseInt(slider?.value || 90, 10) - 1);
-            }
-            if (upBtn) {
-                upBtn.onclick = () => updateBase(parseInt(slider?.value || 90, 10) + 1);
-            }
-        }
-
         // ======================== Toast ========================
         function showToast(msg, type = 'info') {
             const old = document.querySelector('.custom-toast');
@@ -622,7 +688,7 @@
             setTimeout(() => div.remove(), 3000);
         }
 
-        // ======================== 导航切换 ========================
+        // ======================== 导航 ========================
         function setupNavigation() {
             const navItems = document.querySelectorAll('.sticky-nav .nav-item');
             const allCards = document.querySelectorAll('section.card[data-group]');
@@ -648,7 +714,6 @@
             showGroup('base');
         }
 
-        // ======================== 回到顶部 ========================
         function setupBackTop() {
             const backTop = $('backTop');
             window.addEventListener('scroll', () => {
@@ -661,9 +726,6 @@
         async function init() {
             await initSupabase();
             await loadCharacterData();
-            setupNavigation();
-            setupBackTop();
-            $('year').textContent = new Date().getFullYear();
         }
 
         document.addEventListener('DOMContentLoaded', init);
