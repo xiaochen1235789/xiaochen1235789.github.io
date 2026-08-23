@@ -5,6 +5,7 @@ import {
     escapeHtml
 } from './utils.js';
 import { TABLE_SCHEMA } from './config.js';
+import { openCharDetailEditor } from './admin_char_detail.js';
 
 // ----- 缓存数据 -----
 const currentDataCache = {
@@ -101,6 +102,9 @@ export function renderContentTable(table, data) {
             <td class="action-buttons">
                 <button class="edit-btn" onclick="window.editContentItem('${table}', ${row.id})">
                     <i class="fas fa-edit"></i> 编辑
+                </button>
+                <button class="edit-btn" style="background:#8b5cf6;" onclick="window._openCharDetail('${row.id}')">
+                    <i class="fas fa-file-alt"></i> 详情
                 </button>
                 <button class="delete-btn" onclick="window.deleteContentItem('${table}', ${row.id})">
                     <i class="fas fa-trash"></i> 删除
@@ -291,4 +295,11 @@ window.deleteContentItem = async function (table, id) {
     } catch (err) {
         showNotification('删除失败: ' + err.message, 'error');
     }
+};
+
+// ============================================================
+// ★★★ 角色详情编辑器入口 ★★★
+// ============================================================
+window._openCharDetail = function(charId) {
+    openCharDetailEditor(charId);
 };
