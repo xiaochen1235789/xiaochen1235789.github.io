@@ -197,7 +197,7 @@
     <button class="back-top" id="backTop" aria-label="回到顶部" title="回到顶部">↑</button>
 
     <!-- ============================================================ -->
-    <!-- ===== JavaScript（修复基础属性显示） ===== -->
+    <!-- ===== JavaScript（修复：技能点击不再跳转） ===== -->
     <!-- ============================================================ -->
     <script>
         // ======================== 配置 ========================
@@ -365,7 +365,6 @@
             $('base-level-display').textContent = level;
             $('base-level-slider').value = level;
 
-            // 直接更新 DOM 元素的值
             const hpEl = document.getElementById('base-hp');
             const atkEl = document.getElementById('base-atk');
             const defEl = document.getElementById('base-def');
@@ -373,13 +372,11 @@
             if (atkEl) atkEl.textContent = stats.atk;
             if (defEl) defEl.textContent = stats.def;
 
-            // 速度、能量不随等级变化
             const spdEl = document.getElementById('base-spd');
             const energyEl = document.getElementById('base-energy');
             if (spdEl && charData) spdEl.textContent = charData.base_stats?.spd || 115;
             if (energyEl && charData) energyEl.textContent = charData.base_stats?.energy || 120;
 
-            // 材料（等级变化时材料也要更新）
             renderMaterials(level);
         }
 
@@ -410,7 +407,7 @@
                 <div class="attr-icon"><div class="attr-label">限定五星</div></div>
             `;
 
-            // ---- ★★★ 基础属性（插值） ★★★ ----
+            // ---- 基础属性（插值） ----
             renderBaseStatsRow(currentBaseLevel);
 
             // ---- 行迹 ----
@@ -499,10 +496,8 @@
             // ---- 基础等级事件 ----
             bindBaseLevelEvents();
 
-            // 导航
-            setupNavigation();
-            setupBackTop();
-            $('year').textContent = new Date().getFullYear();
+            // ★★★ 移除这里的 setupNavigation() 调用，避免重置导航 ★★★
+            // 但需要确保 backTop 事件只绑定一次，所以在 init 中绑定
         }
 
         // ======================== 基础等级控件 ========================
@@ -715,7 +710,7 @@
             setTimeout(() => div.remove(), 3000);
         }
 
-        // ======================== 导航 ========================
+        // ======================== 导航（只绑定一次，不重置） ========================
         function setupNavigation() {
             const navItems = document.querySelectorAll('.sticky-nav .nav-item');
             const allCards = document.querySelectorAll('section.card[data-group]');
@@ -738,6 +733,7 @@
                 });
             });
 
+            // 默认显示 base
             showGroup('base');
         }
 
@@ -753,6 +749,10 @@
         async function init() {
             await initSupabase();
             await loadCharacterData();
+            // ★★★ 导航只初始化一次，不再由 renderPage 重置 ★★★
+            setupNavigation();
+            setupBackTop();
+            $('year').textContent = new Date().getFullYear();
         }
 
         document.addEventListener('DOMContentLoaded', init);
