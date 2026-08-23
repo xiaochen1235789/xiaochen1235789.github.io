@@ -5,7 +5,7 @@ import {
     escapeHtml
 } from './utils.js';
 import { TABLE_SCHEMA } from './config.js';
-import { openCharDetailEditor } from './admin_char_detail.js';
+import { openCharDetailEditor } from './char_detail.js';
 
 // ----- 缓存数据 -----
 const currentDataCache = {
