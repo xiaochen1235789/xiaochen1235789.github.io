@@ -1,4 +1,4 @@
-// ========== 角色详情编辑器（修复版：强制显示全部9技能） ==========
+// ========== 角色详情编辑器（带调试日志版） ==========
 import { getSupabase } from './auth.js';
 import { showNotification, logAction, openModal, closeModal, escapeHtml } from './utils.js';
 
@@ -6,7 +6,6 @@ let currentEditCharId = null;
 let currentEditCharData = null;
 let expandedSections = {};
 
-// 所有技能键（固定9个）
 const ALL_SKILL_KEYS = [
     'normal', 'skill', 'ultimate', 'talent',
     'enhanced_normal', 'enhanced_skill', 'enhanced_ultimate',
@@ -25,6 +24,7 @@ const DEFAULT_SKILL_TEMPLATE = {
 // 主入口
 // ============================================================
 export async function openCharDetailEditor(charId) {
+    console.log('🔍 openCharDetailEditor 被调用，charId =', charId);
     try {
         const sb = getSupabase();
         const { data, error } = await sb
@@ -34,6 +34,7 @@ export async function openCharDetailEditor(charId) {
             .single();
 
         if (error && error.code === 'PGRST116') {
+            console.warn('⚠️ 数据库中无此角色，创建空数据');
             currentEditCharData = {
                 id: charId,
                 name: '未命名',
@@ -49,6 +50,7 @@ export async function openCharDetailEditor(charId) {
         } else if (error) {
             throw error;
         } else {
+            console.log('✅ 从数据库读取到数据:', data);
             currentEditCharData = {
                 ...data,
                 base_stats: data.base_stats || { hp: 0, atk: 0, def: 0, spd: 100, energy: 100 },
@@ -69,10 +71,14 @@ export async function openCharDetailEditor(charId) {
             }
         });
 
+        console.log('📦 最终 currentEditCharData:', currentEditCharData);
+        console.log('📊 技能列表:', Object.keys(currentEditCharData.skills));
+
         currentEditCharId = charId;
         expandedSections = {};
         renderDetailEditor();
     } catch (err) {
+        console.error('❌ 加载角色详情失败:', err);
         showNotification('加载角色详情失败: ' + err.message, 'error');
     }
 }
@@ -94,8 +100,15 @@ function isSkillPopulated(sk) {
 // ============================================================
 function renderDetailEditor() {
     const d = currentEditCharData;
+    if (!d) {
+        console.error('❌ renderDetailEditor: currentEditCharData 为空！');
+        document.getElementById('modalFields').innerHTML = '<p style="color:red;">数据加载失败，请重新打开</p>';
+        return;
+    }
+
+    console.log('🖌️ renderDetailEditor 渲染数据:', d);
     const skills = d.skills || {};
-    const skillKeys = ALL_SKILL_KEYS; // ★ 直接用固定9个
+    const skillKeys = ALL_SKILL_KEYS;
 
     // ---- 技能列表 ----
     let skillsListHtml = '';
