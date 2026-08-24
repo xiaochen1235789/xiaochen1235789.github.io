@@ -1,10 +1,11 @@
-// ========== 角色详情编辑器（带调试日志版） ==========
+// ========== 角色详情编辑器（修复滚动丢失 + 可视化模板） ==========
 import { getSupabase } from './auth.js';
 import { showNotification, logAction, openModal, closeModal, escapeHtml } from './utils.js';
 
 let currentEditCharId = null;
 let currentEditCharData = null;
 let expandedSections = {};
+let savedScrollTop = 0; // 保存主详情页滚动位置
 
 const ALL_SKILL_KEYS = [
     'normal', 'skill', 'ultimate', 'talent',
@@ -21,10 +22,22 @@ const DEFAULT_SKILL_TEMPLATE = {
 };
 
 // ============================================================
+// 辅助：模板转换
+// ============================================================
+function parseEffectTemplate(rawText) {
+    if (!rawText) return '';
+    return rawText.replace(/【([^】]+)】/g, '<span class="const-val">$1</span>');
+}
+
+function unparseEffectTemplate(htmlText) {
+    if (!htmlText) return '';
+    return htmlText.replace(/<span class="const-val">([^<]+)<\/span>/g, '【$1】');
+}
+
+// ============================================================
 // 主入口
 // ============================================================
 export async function openCharDetailEditor(charId) {
-    console.log('🔍 openCharDetailEditor 被调用，charId =', charId);
     try {
         const sb = getSupabase();
         const { data, error } = await sb
@@ -34,7 +47,6 @@ export async function openCharDetailEditor(charId) {
             .single();
 
         if (error && error.code === 'PGRST116') {
-            console.warn('⚠️ 数据库中无此角色，创建空数据');
             currentEditCharData = {
                 id: charId,
                 name: '未命名',
@@ -50,7 +62,6 @@ export async function openCharDetailEditor(charId) {
         } else if (error) {
             throw error;
         } else {
-            console.log('✅ 从数据库读取到数据:', data);
             currentEditCharData = {
                 ...data,
                 base_stats: data.base_stats || { hp: 0, atk: 0, def: 0, spd: 100, energy: 100 },
@@ -64,21 +75,17 @@ export async function openCharDetailEditor(charId) {
             };
         }
 
-        // ★ 强制补全所有技能键
         ALL_SKILL_KEYS.forEach(key => {
             if (!currentEditCharData.skills[key]) {
                 currentEditCharData.skills[key] = {};
             }
         });
 
-        console.log('📦 最终 currentEditCharData:', currentEditCharData);
-        console.log('📊 技能列表:', Object.keys(currentEditCharData.skills));
-
         currentEditCharId = charId;
         expandedSections = {};
+        savedScrollTop = 0;
         renderDetailEditor();
     } catch (err) {
-        console.error('❌ 加载角色详情失败:', err);
         showNotification('加载角色详情失败: ' + err.message, 'error');
     }
 }
@@ -96,17 +103,22 @@ function isSkillPopulated(sk) {
 }
 
 // ============================================================
-// 渲染主界面
+// 渲染主界面（保留滚动位置）
 // ============================================================
 function renderDetailEditor() {
     const d = currentEditCharData;
     if (!d) {
-        console.error('❌ renderDetailEditor: currentEditCharData 为空！');
         document.getElementById('modalFields').innerHTML = '<p style="color:red;">数据加载失败，请重新打开</p>';
         return;
     }
 
-    console.log('🖌️ renderDetailEditor 渲染数据:', d);
+    // ★ 保存当前滚动位置（在重新渲染前）
+    const scrollContainer = document.querySelector('#genericModal .modal-body') || 
+                           document.querySelector('#genericModal .modal-content');
+    if (scrollContainer) {
+        savedScrollTop = scrollContainer.scrollTop || 0;
+    }
+
     const skills = d.skills || {};
     const skillKeys = ALL_SKILL_KEYS;
 
@@ -151,18 +163,18 @@ function renderDetailEditor() {
             </div>
         `).join('');
 
-    // ---- 额外能力 ----
+    // ---- 额外能力（textarea 支持拖动） ----
     const extraList = d.extra_abilities || [];
     let extraHtml = extraList.length === 0 ? '<p style="color:var(--text-secondary); font-size:0.85rem;">暂无额外能力</p>' :
         extraList.map((item, i) => `
             <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px; flex-wrap:wrap;">
                 <input type="text" class="extra-name" value="${escapeHtml(item.name || '')}" placeholder="能力名" style="flex:1; min-width:80px;">
-                <input type="text" class="extra-desc" value="${escapeHtml(item.desc || '')}" placeholder="描述（支持HTML）" style="flex:2; min-width:120px;">
+                <textarea class="extra-desc" rows="2" placeholder="描述（支持HTML）" style="flex:2; min-width:120px; resize:vertical; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px 6px; color:#ccc;">${escapeHtml(item.desc || '')}</textarea>
                 <button type="button" class="delete-btn" onclick="window._removeExtra(${i})" style="padding:2px 10px; font-size:0.7rem;">✕</button>
             </div>
         `).join('');
 
-    // ---- 星魂 ----
+    // ---- 星魂（列表显示，编辑时使用可视化模板） ----
     const cons = d.constellations || [];
     let consListHtml = cons.length === 0 ? '<p style="color:var(--text-secondary); font-size:0.9rem;">暂无星魂</p>' :
         cons.map((c, i) => `
@@ -239,7 +251,7 @@ function renderDetailEditor() {
                 </button>
             </div>
 
-            <!-- 额外能力 -->
+            <!-- 额外能力（textarea 支持拖动） -->
             <div class="form-section" style="margin-bottom:16px;">
                 <h4 style="color:#E8C96B; margin-bottom:8px;">✨ 额外能力</h4>
                 <div id="extra-list">${extraHtml}</div>
@@ -293,10 +305,24 @@ function renderDetailEditor() {
         </div>
     `;
 
-    openModal('genericModal');
+    // 打开模态框（如果已打开则只更新内容）
+    const modal = document.getElementById('genericModal');
+    const isAlreadyOpen = modal && modal.classList.contains('show');
+
+    if (!isAlreadyOpen) {
+        openModal('genericModal');
+    }
+
     document.getElementById('modalTitle').innerText = `📝 编辑角色详情 - ${d.name}`;
     document.getElementById('modalFields').innerHTML = html;
     document.getElementById('modalSubmitBtn').innerText = '💾 保存全部';
+
+    // ★ 恢复滚动位置（在渲染完成后）
+    if (scrollContainer) {
+        setTimeout(() => {
+            scrollContainer.scrollTop = savedScrollTop || 0;
+        }, 50);
+    }
 
     document.getElementById('modalForm').onsubmit = async (e) => {
         e.preventDefault();
@@ -430,7 +456,7 @@ window._removeTrace = function(index) {
 };
 
 // ============================================================
-// 额外能力操作
+// 额外能力操作（textarea 支持拖动）
 // ============================================================
 window._addExtra = function() {
     const container = document.getElementById('extra-list');
@@ -439,7 +465,7 @@ window._addExtra = function() {
     div.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:6px; flex-wrap:wrap;';
     div.innerHTML = `
         <input type="text" class="extra-name" placeholder="能力名" style="flex:1; min-width:80px;">
-        <input type="text" class="extra-desc" placeholder="描述（支持HTML）" style="flex:2; min-width:120px;">
+        <textarea class="extra-desc" rows="2" placeholder="描述（支持HTML）" style="flex:2; min-width:120px; resize:vertical; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px 6px; color:#ccc;"></textarea>
         <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 10px; font-size:0.7rem;">✕</button>
     `;
     container.appendChild(div);
@@ -501,25 +527,47 @@ window._clearSkill = function(key) {
 };
 
 // ============================================================
-// 星魂操作
+// 星魂操作（可视化模板版）
 // ============================================================
 window._addCons = function() {
     const html = `
         <div class="form-field"><label>层数（如 1命）</label><input type="text" id="cons_level" placeholder="1命"></div>
         <div class="form-field"><label>名称</label><input type="text" id="cons_name" placeholder="疾风追影"></div>
-        <div class="form-field"><label>效果（支持HTML）</label><textarea id="cons_effect" rows="2">效果描述</textarea></div>
+        <div class="form-field">
+            <label>效果描述</label>
+            <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">
+                💡 用 <strong>【数字+单位】</strong> 标记需要高亮的数值，如：<code>【20%】</code>、<code>【50%】</code>、<code>【144%】</code>
+            </div>
+            <textarea id="cons_effect" rows="3" placeholder="攻击敌方目标时，若该敌方目标当前生命值≥当前生命上限的【20%】，则该敌方目标受到的伤害提高【50%】。" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:8px; color:#ccc; font-size:0.9rem; resize:vertical;"></textarea>
+            <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px;">
+                📌 预览效果：<span id="consPreview" style="color:#E8C96B;">等待输入...</span>
+            </div>
+        </div>
     `;
     openModal('genericModal');
     document.getElementById('modalTitle').innerText = '添加星魂';
     document.getElementById('modalFields').innerHTML = html;
+
+    const textarea = document.getElementById('cons_effect');
+    const preview = document.getElementById('consPreview');
+    if (textarea && preview) {
+        textarea.oninput = function() {
+            preview.innerHTML = parseEffectTemplate(this.value) || '等待输入...';
+        };
+    }
+
     document.getElementById('modalForm').onsubmit = (e) => {
         e.preventDefault();
         const level = document.getElementById('cons_level').value.trim();
         const name = document.getElementById('cons_name').value.trim();
-        const effect = document.getElementById('cons_effect').value;
+        const rawEffect = document.getElementById('cons_effect').value;
         if (!level || !name) { showNotification('层数和名称不能为空', 'error'); return; }
         if (!currentEditCharData.constellations) currentEditCharData.constellations = [];
-        currentEditCharData.constellations.push({ level, name, effect });
+        currentEditCharData.constellations.push({
+            level,
+            name,
+            effect: parseEffectTemplate(rawEffect)
+        });
         closeModal('genericModal');
         renderDetailEditor();
         showNotification('星魂已添加', 'success');
@@ -529,20 +577,41 @@ window._addCons = function() {
 window._editCons = function(index) {
     const c = currentEditCharData.constellations[index];
     if (!c) return;
+    const rawEffect = unparseEffectTemplate(c.effect || '');
+
     const html = `
         <div class="form-field"><label>层数</label><input type="text" id="cons_level" value="${escapeHtml(c.level)}"></div>
         <div class="form-field"><label>名称</label><input type="text" id="cons_name" value="${escapeHtml(c.name)}"></div>
-        <div class="form-field"><label>效果</label><textarea id="cons_effect" rows="2">${escapeHtml(c.effect)}</textarea></div>
+        <div class="form-field">
+            <label>效果描述</label>
+            <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">
+                💡 用 <strong>【数字+单位】</strong> 标记需要高亮的数值，如：<code>【20%】</code>、<code>【50%】</code>、<code>【144%】</code>
+            </div>
+            <textarea id="cons_effect" rows="3" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:8px; color:#ccc; font-size:0.9rem; resize:vertical;">${escapeHtml(rawEffect)}</textarea>
+            <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px;">
+                📌 预览效果：<span id="consPreview" style="color:#E8C96B;">${escapeHtml(c.effect || '等待输入...')}</span>
+            </div>
+        </div>
     `;
     openModal('genericModal');
     document.getElementById('modalTitle').innerText = '编辑星魂';
     document.getElementById('modalFields').innerHTML = html;
+
+    const textarea = document.getElementById('cons_effect');
+    const preview = document.getElementById('consPreview');
+    if (textarea && preview) {
+        textarea.oninput = function() {
+            preview.innerHTML = parseEffectTemplate(this.value) || '等待输入...';
+        };
+    }
+
     document.getElementById('modalForm').onsubmit = (e) => {
         e.preventDefault();
+        const rawEffect = document.getElementById('cons_effect').value;
         currentEditCharData.constellations[index] = {
             level: document.getElementById('cons_level').value.trim(),
             name: document.getElementById('cons_name').value.trim(),
-            effect: document.getElementById('cons_effect').value
+            effect: parseEffectTemplate(rawEffect)
         };
         closeModal('genericModal');
         renderDetailEditor();
@@ -557,7 +626,7 @@ window._removeCons = function(index) {
 };
 
 // ============================================================
-// 配队操作
+// 配队操作（纯文本表单）
 // ============================================================
 window._addTeam = function() {
     const html = `
