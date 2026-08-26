@@ -1,4 +1,4 @@
-// ========== 角色详情编辑器（修复子模态框 + 滚动 + 字符串ID） ==========
+// ========== 角色详情编辑器（修复子模态框 + 滚动 + 字符串ID + 编辑按钮安全） ==========
 import { getSupabase } from './auth.js';
 import { showNotification, logAction, openModal, closeModal, escapeHtml } from './utils.js';
 
@@ -37,7 +37,6 @@ function unparseEffectTemplate(htmlText) {
 export async function openCharDetailEditor(charId) {
     try {
         const sb = getSupabase();
-        // charId 是字符串，如 "deer-general"
         const { data, error } = await sb
             .from('character_details')
             .select('*')
@@ -45,7 +44,6 @@ export async function openCharDetailEditor(charId) {
             .single();
 
         if (error && error.code === 'PGRST116') {
-            // 未找到，创建新记录
             currentEditCharData = {
                 id: charId,
                 name: '未命名',
@@ -63,7 +61,7 @@ export async function openCharDetailEditor(charId) {
         } else {
             currentEditCharData = {
                 ...data,
-                id: data.id, // 保留原字符串
+                id: data.id,
                 base_stats: data.base_stats || { hp: 0, atk: 0, def: 0, spd: 100, energy: 100 },
                 trace_stats: data.trace_stats || [],
                 extra_abilities: data.extra_abilities || [],
@@ -401,7 +399,7 @@ async function saveDetailEditor() {
         });
 
         const updateData = {
-            id: currentEditCharId, // 字符串
+            id: currentEditCharId,
             name,
             base_stats: { hp, atk, def, spd, energy },
             trace_stats: traceStats,
@@ -574,55 +572,88 @@ window._addCons = function() {
     };
 };
 
+// ★★★ 修复：编辑星魂（加入空值保护） ★★★
 window._editCons = function(index) {
-    const c = currentEditCharData.constellations[index];
-    if (!c) return;
-    const rawEffect = unparseEffectTemplate(c.effect || '');
+    try {
+        const cons = currentEditCharData.constellations;
+        if (!cons || !Array.isArray(cons) || index < 0 || index >= cons.length) {
+            showNotification('未找到要编辑的星魂', 'error');
+            return;
+        }
+        const c = cons[index];
+        if (!c) {
+            showNotification('星魂数据无效', 'error');
+            return;
+        }
 
-    const html = `
-        <div class="form-field"><label>层数</label><input type="text" id="cons_level" value="${escapeHtml(c.level)}"></div>
-        <div class="form-field"><label>名称</label><input type="text" id="cons_name" value="${escapeHtml(c.name)}"></div>
-        <div class="form-field">
-            <label>效果描述</label>
-            <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">
-                💡 用 <strong>【数字+单位】</strong> 标记需要高亮的数值，如：<code>【20%】</code>、<code>【50%】</code>、<code>【144%】</code>
-            </div>
-            <textarea id="cons_effect" rows="3" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:8px; color:#ccc; font-size:0.9rem; resize:vertical;">${escapeHtml(rawEffect)}</textarea>
-            <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px;">
-                📌 预览效果：<span id="consPreview" style="color:#E8C96B;">${escapeHtml(c.effect || '等待输入...')}</span>
-            </div>
-        </div>
-    `;
-    openModal('subModal');
-    document.getElementById('subModalTitle').innerText = '编辑星魂';
-    document.getElementById('subModalFields').innerHTML = html;
+        const rawEffect = unparseEffectTemplate(c.effect || '');
 
-    const textarea = document.getElementById('cons_effect');
-    const preview = document.getElementById('consPreview');
-    if (textarea && preview) {
-        textarea.oninput = function() {
-            preview.innerHTML = parseEffectTemplate(this.value) || '等待输入...';
+        const html = `
+            <div class="form-field"><label>层数</label><input type="text" id="cons_level" value="${escapeHtml(c.level)}"></div>
+            <div class="form-field"><label>名称</label><input type="text" id="cons_name" value="${escapeHtml(c.name)}"></div>
+            <div class="form-field">
+                <label>效果描述</label>
+                <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">
+                    💡 用 <strong>【数字+单位】</strong> 标记需要高亮的数值，如：<code>【20%】</code>、<code>【50%】</code>、<code>【144%】</code>
+                </div>
+                <textarea id="cons_effect" rows="3" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:8px; color:#ccc; font-size:0.9rem; resize:vertical;">${escapeHtml(rawEffect)}</textarea>
+                <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px;">
+                    📌 预览效果：<span id="consPreview" style="color:#E8C96B;">${escapeHtml(c.effect || '等待输入...')}</span>
+                </div>
+            </div>
+        `;
+        openModal('subModal');
+        document.getElementById('subModalTitle').innerText = '编辑星魂';
+        document.getElementById('subModalFields').innerHTML = html;
+
+        const textarea = document.getElementById('cons_effect');
+        const preview = document.getElementById('consPreview');
+        if (textarea && preview) {
+            textarea.oninput = function() {
+                preview.innerHTML = parseEffectTemplate(this.value) || '等待输入...';
+            };
+        }
+
+        document.getElementById('subModalForm').onsubmit = (e) => {
+            e.preventDefault();
+            try {
+                const rawEffect = document.getElementById('cons_effect').value;
+                const newLevel = document.getElementById('cons_level').value.trim();
+                const newName = document.getElementById('cons_name').value.trim();
+                if (!newLevel || !newName) {
+                    showNotification('层数和名称不能为空', 'error');
+                    return;
+                }
+                currentEditCharData.constellations[index] = {
+                    level: newLevel,
+                    name: newName,
+                    effect: parseEffectTemplate(rawEffect)
+                };
+                closeModal('subModal');
+                renderDetailEditor();
+                showNotification('星魂已更新', 'success');
+            } catch (err) {
+                showNotification('更新星魂失败: ' + err.message, 'error');
+            }
         };
+    } catch (err) {
+        showNotification('编辑星魂出错: ' + err.message, 'error');
     }
-
-    document.getElementById('subModalForm').onsubmit = (e) => {
-        e.preventDefault();
-        const rawEffect = document.getElementById('cons_effect').value;
-        currentEditCharData.constellations[index] = {
-            level: document.getElementById('cons_level').value.trim(),
-            name: document.getElementById('cons_name').value.trim(),
-            effect: parseEffectTemplate(rawEffect)
-        };
-        closeModal('subModal');
-        renderDetailEditor();
-        showNotification('星魂已更新', 'success');
-    };
 };
 
 window._removeCons = function(index) {
     if (!confirm('删除这条星魂？')) return;
-    currentEditCharData.constellations.splice(index, 1);
-    renderDetailEditor();
+    try {
+        if (!Array.isArray(currentEditCharData.constellations) || index < 0 || index >= currentEditCharData.constellations.length) {
+            showNotification('无效的索引', 'error');
+            return;
+        }
+        currentEditCharData.constellations.splice(index, 1);
+        renderDetailEditor();
+        showNotification('星魂已删除', 'success');
+    } catch (err) {
+        showNotification('删除星魂失败: ' + err.message, 'error');
+    }
 };
 
 // ============================================================
@@ -671,119 +702,149 @@ window._addTeam = function() {
 
     document.getElementById('subModalForm').onsubmit = (e) => {
         e.preventDefault();
-        const roles = [];
-        document.querySelectorAll('#teamRolesContainer > div').forEach(row => {
-            const char = row.querySelector('.tr-char')?.value?.trim();
-            const role = row.querySelector('.tr-role')?.value?.trim();
-            const initial = row.querySelector('.tr-initial')?.value?.trim();
-            if (char) {
-                roles.push({ char, role: role || '辅', initial: initial || char.charAt(0) });
-            }
-        });
-        if (roles.length === 0) { showNotification('至少添加一个角色', 'error'); return; }
+        try {
+            const roles = [];
+            document.querySelectorAll('#teamRolesContainer > div').forEach(row => {
+                const char = row.querySelector('.tr-char')?.value?.trim();
+                const role = row.querySelector('.tr-role')?.value?.trim();
+                const initial = row.querySelector('.tr-initial')?.value?.trim();
+                if (char) {
+                    roles.push({ char, role: role || '辅', initial: initial || char.charAt(0) });
+                }
+            });
+            if (roles.length === 0) { showNotification('至少添加一个角色', 'error'); return; }
 
-        const team = {
-            id: String(currentEditCharData.teams?.length || 0),
-            icon: document.getElementById('team_icon').value.trim() || '🤝',
-            name: document.getElementById('team_name').value.trim() || '未命名',
-            desc: document.getElementById('team_desc').value.trim(),
-            core: document.getElementById('team_core').value.trim(),
-            survival: document.getElementById('team_survival').value.trim(),
-            lightcone: document.getElementById('team_lightcone').value.trim(),
-            relic: document.getElementById('team_relic').value.trim(),
-            roles: roles
-        };
-        if (!currentEditCharData.teams) currentEditCharData.teams = [];
-        currentEditCharData.teams.push(team);
-        closeModal('subModal');
-        renderDetailEditor();
-        showNotification('配队已添加', 'success');
+            const team = {
+                id: String(currentEditCharData.teams?.length || 0),
+                icon: document.getElementById('team_icon').value.trim() || '🤝',
+                name: document.getElementById('team_name').value.trim() || '未命名',
+                desc: document.getElementById('team_desc').value.trim(),
+                core: document.getElementById('team_core').value.trim(),
+                survival: document.getElementById('team_survival').value.trim(),
+                lightcone: document.getElementById('team_lightcone').value.trim(),
+                relic: document.getElementById('team_relic').value.trim(),
+                roles: roles
+            };
+            if (!currentEditCharData.teams) currentEditCharData.teams = [];
+            currentEditCharData.teams.push(team);
+            closeModal('subModal');
+            renderDetailEditor();
+            showNotification('配队已添加', 'success');
+        } catch (err) {
+            showNotification('添加配队失败: ' + err.message, 'error');
+        }
     };
 };
 
+// ★★★ 修复：编辑配队（加入空值保护） ★★★
 window._editTeam = function(index) {
-    const t = currentEditCharData.teams[index];
-    if (!t) return;
+    try {
+        const teams = currentEditCharData.teams;
+        if (!teams || !Array.isArray(teams) || index < 0 || index >= teams.length) {
+            showNotification('未找到要编辑的配队', 'error');
+            return;
+        }
+        const t = teams[index];
+        if (!t) {
+            showNotification('配队数据无效', 'error');
+            return;
+        }
 
-    let rolesHtml = '';
-    (t.roles || []).forEach(r => {
-        rolesHtml += `
-            <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-                <input type="text" class="tr-char" value="${escapeHtml(r.char || '')}" placeholder="角色名" style="flex:1; min-width:80px;">
-                <input type="text" class="tr-role" value="${escapeHtml(r.role || '')}" placeholder="定位" style="flex:1; min-width:60px;">
-                <input type="text" class="tr-initial" value="${escapeHtml(r.initial || '')}" placeholder="缩写" style="flex:1; min-width:50px;">
-                <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 8px; font-size:0.7rem;">✕</button>
+        let rolesHtml = '';
+        (t.roles || []).forEach(r => {
+            rolesHtml += `
+                <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                    <input type="text" class="tr-char" value="${escapeHtml(r.char || '')}" placeholder="角色名" style="flex:1; min-width:80px;">
+                    <input type="text" class="tr-role" value="${escapeHtml(r.role || '')}" placeholder="定位" style="flex:1; min-width:60px;">
+                    <input type="text" class="tr-initial" value="${escapeHtml(r.initial || '')}" placeholder="缩写" style="flex:1; min-width:50px;">
+                    <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 8px; font-size:0.7rem;">✕</button>
+                </div>
+            `;
+        });
+
+        const html = `
+            <div class="form-field"><label>图标</label><input type="text" id="team_icon" value="${escapeHtml(t.icon || '')}"></div>
+            <div class="form-field"><label>名称</label><input type="text" id="team_name" value="${escapeHtml(t.name)}"></div>
+            <div class="form-field"><label>描述</label><input type="text" id="team_desc" value="${escapeHtml(t.desc || '')}"></div>
+            <div class="form-field"><label>核心</label><input type="text" id="team_core" value="${escapeHtml(t.core || '')}"></div>
+            <div class="form-field"><label>生存</label><input type="text" id="team_survival" value="${escapeHtml(t.survival || '')}"></div>
+            <div class="form-field"><label>光锥</label><input type="text" id="team_lightcone" value="${escapeHtml(t.lightcone || '')}"></div>
+            <div class="form-field"><label>遗器</label><input type="text" id="team_relic" value="${escapeHtml(t.relic || '')}"></div>
+            <div class="form-field"><label>角色列表</label>
+                <div id="teamRolesContainer">${rolesHtml}</div>
+                <button type="button" class="add-btn" onclick="addTeamRoleRow()" style="padding:2px 12px; font-size:0.7rem; margin-top:4px;">
+                    <i class="fas fa-plus"></i> 添加角色
+                </button>
             </div>
         `;
-    });
+        openModal('subModal');
+        document.getElementById('subModalTitle').innerText = '编辑配队';
+        document.getElementById('subModalFields').innerHTML = html;
 
-    const html = `
-        <div class="form-field"><label>图标</label><input type="text" id="team_icon" value="${escapeHtml(t.icon || '')}"></div>
-        <div class="form-field"><label>名称</label><input type="text" id="team_name" value="${escapeHtml(t.name)}"></div>
-        <div class="form-field"><label>描述</label><input type="text" id="team_desc" value="${escapeHtml(t.desc || '')}"></div>
-        <div class="form-field"><label>核心</label><input type="text" id="team_core" value="${escapeHtml(t.core || '')}"></div>
-        <div class="form-field"><label>生存</label><input type="text" id="team_survival" value="${escapeHtml(t.survival || '')}"></div>
-        <div class="form-field"><label>光锥</label><input type="text" id="team_lightcone" value="${escapeHtml(t.lightcone || '')}"></div>
-        <div class="form-field"><label>遗器</label><input type="text" id="team_relic" value="${escapeHtml(t.relic || '')}"></div>
-        <div class="form-field"><label>角色列表</label>
-            <div id="teamRolesContainer">${rolesHtml}</div>
-            <button type="button" class="add-btn" onclick="addTeamRoleRow()" style="padding:2px 12px; font-size:0.7rem; margin-top:4px;">
-                <i class="fas fa-plus"></i> 添加角色
-            </button>
-        </div>
-    `;
-    openModal('subModal');
-    document.getElementById('subModalTitle').innerText = '编辑配队';
-    document.getElementById('subModalFields').innerHTML = html;
-
-    window.addTeamRoleRow = function() {
-        const container = document.getElementById('teamRolesContainer');
-        if (!container) return;
-        const div = document.createElement('div');
-        div.style.cssText = 'display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;';
-        div.innerHTML = `
-            <input type="text" class="tr-char" placeholder="角色名" style="flex:1; min-width:80px;">
-            <input type="text" class="tr-role" placeholder="定位" style="flex:1; min-width:60px;">
-            <input type="text" class="tr-initial" placeholder="缩写" style="flex:1; min-width:50px;">
-            <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 8px; font-size:0.7rem;">✕</button>
-        `;
-        container.appendChild(div);
-    };
-
-    document.getElementById('subModalForm').onsubmit = (e) => {
-        e.preventDefault();
-        const roles = [];
-        document.querySelectorAll('#teamRolesContainer > div').forEach(row => {
-            const char = row.querySelector('.tr-char')?.value?.trim();
-            const role = row.querySelector('.tr-role')?.value?.trim();
-            const initial = row.querySelector('.tr-initial')?.value?.trim();
-            if (char) {
-                roles.push({ char, role: role || '辅', initial: initial || char.charAt(0) });
-            }
-        });
-        if (roles.length === 0) { showNotification('至少添加一个角色', 'error'); return; }
-
-        currentEditCharData.teams[index] = {
-            id: String(index),
-            icon: document.getElementById('team_icon').value.trim() || '🤝',
-            name: document.getElementById('team_name').value.trim(),
-            desc: document.getElementById('team_desc').value.trim(),
-            core: document.getElementById('team_core').value.trim(),
-            survival: document.getElementById('team_survival').value.trim(),
-            lightcone: document.getElementById('team_lightcone').value.trim(),
-            relic: document.getElementById('team_relic').value.trim(),
-            roles: roles
+        window.addTeamRoleRow = function() {
+            const container = document.getElementById('teamRolesContainer');
+            if (!container) return;
+            const div = document.createElement('div');
+            div.style.cssText = 'display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;';
+            div.innerHTML = `
+                <input type="text" class="tr-char" placeholder="角色名" style="flex:1; min-width:80px;">
+                <input type="text" class="tr-role" placeholder="定位" style="flex:1; min-width:60px;">
+                <input type="text" class="tr-initial" placeholder="缩写" style="flex:1; min-width:50px;">
+                <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 8px; font-size:0.7rem;">✕</button>
+            `;
+            container.appendChild(div);
         };
-        closeModal('subModal');
-        renderDetailEditor();
-        showNotification('配队已更新', 'success');
-    };
+
+        document.getElementById('subModalForm').onsubmit = (e) => {
+            e.preventDefault();
+            try {
+                const roles = [];
+                document.querySelectorAll('#teamRolesContainer > div').forEach(row => {
+                    const char = row.querySelector('.tr-char')?.value?.trim();
+                    const role = row.querySelector('.tr-role')?.value?.trim();
+                    const initial = row.querySelector('.tr-initial')?.value?.trim();
+                    if (char) {
+                        roles.push({ char, role: role || '辅', initial: initial || char.charAt(0) });
+                    }
+                });
+                if (roles.length === 0) { showNotification('至少添加一个角色', 'error'); return; }
+
+                currentEditCharData.teams[index] = {
+                    id: String(index),
+                    icon: document.getElementById('team_icon').value.trim() || '🤝',
+                    name: document.getElementById('team_name').value.trim(),
+                    desc: document.getElementById('team_desc').value.trim(),
+                    core: document.getElementById('team_core').value.trim(),
+                    survival: document.getElementById('team_survival').value.trim(),
+                    lightcone: document.getElementById('team_lightcone').value.trim(),
+                    relic: document.getElementById('team_relic').value.trim(),
+                    roles: roles
+                };
+                closeModal('subModal');
+                renderDetailEditor();
+                showNotification('配队已更新', 'success');
+            } catch (err) {
+                showNotification('更新配队失败: ' + err.message, 'error');
+            }
+        };
+    } catch (err) {
+        showNotification('编辑配队出错: ' + err.message, 'error');
+    }
 };
 
 window._removeTeam = function(index) {
     if (!confirm('删除这条配队？')) return;
-    currentEditCharData.teams.splice(index, 1);
-    renderDetailEditor();
+    try {
+        if (!Array.isArray(currentEditCharData.teams) || index < 0 || index >= currentEditCharData.teams.length) {
+            showNotification('无效的索引', 'error');
+            return;
+        }
+        currentEditCharData.teams.splice(index, 1);
+        renderDetailEditor();
+        showNotification('配队已删除', 'success');
+    } catch (err) {
+        showNotification('删除配队失败: ' + err.message, 'error');
+    }
 };
 
 // ============================================================
@@ -849,74 +910,96 @@ window._addStage = function() {
     };
 };
 
+// ★★★ 修复：编辑晋级材料（加入空值保护） ★★★
 window._editStage = function(index) {
-    const s = currentEditCharData.promotion_stages[index];
-    if (!s) return;
+    try {
+        const stages = currentEditCharData.promotion_stages;
+        if (!stages || !Array.isArray(stages) || index < 0 || index >= stages.length) {
+            showNotification('未找到要编辑的晋级阶段', 'error');
+            return;
+        }
+        const s = stages[index];
+        if (!s) {
+            showNotification('晋级阶段数据无效', 'error');
+            return;
+        }
 
-    let matsHtml = '';
-    (s.materials || []).forEach(m => {
-        matsHtml += `
-            <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-                <input type="text" class="sm-key" value="${escapeHtml(m.key)}" placeholder="材料key" style="flex:1; min-width:80px;">
-                <input type="number" class="sm-count" value="${m.count}" placeholder="数量" style="flex:1; min-width:60px;">
-                <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 8px; font-size:0.7rem;">✕</button>
+        let matsHtml = '';
+        (s.materials || []).forEach(m => {
+            matsHtml += `
+                <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                    <input type="text" class="sm-key" value="${escapeHtml(m.key)}" placeholder="材料key" style="flex:1; min-width:80px;">
+                    <input type="number" class="sm-count" value="${m.count}" placeholder="数量" style="flex:1; min-width:60px;">
+                    <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 8px; font-size:0.7rem;">✕</button>
+                </div>
+            `;
+        });
+
+        const html = `
+            <div class="form-field"><label>目标等级</label><input type="number" id="stage_level" value="${s.targetLevel}"></div>
+            <div class="form-field"><label>材料列表</label>
+                <div id="stageMatsContainer">${matsHtml}</div>
+                <button type="button" class="add-btn" onclick="addStageMatRow()" style="padding:2px 12px; font-size:0.7rem; margin-top:4px;">
+                    <i class="fas fa-plus"></i> 添加材料
+                </button>
             </div>
         `;
-    });
+        openModal('subModal');
+        document.getElementById('subModalTitle').innerText = '编辑晋级阶段';
+        document.getElementById('subModalFields').innerHTML = html;
 
-    const html = `
-        <div class="form-field"><label>目标等级</label><input type="number" id="stage_level" value="${s.targetLevel}"></div>
-        <div class="form-field"><label>材料列表</label>
-            <div id="stageMatsContainer">${matsHtml}</div>
-            <button type="button" class="add-btn" onclick="addStageMatRow()" style="padding:2px 12px; font-size:0.7rem; margin-top:4px;">
-                <i class="fas fa-plus"></i> 添加材料
-            </button>
-        </div>
-    `;
-    openModal('subModal');
-    document.getElementById('subModalTitle').innerText = '编辑晋级阶段';
-    document.getElementById('subModalFields').innerHTML = html;
+        window.addStageMatRow = function() {
+            const container = document.getElementById('stageMatsContainer');
+            if (!container) return;
+            const div = document.createElement('div');
+            div.style.cssText = 'display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;';
+            div.innerHTML = `
+                <input type="text" class="sm-key" placeholder="材料key" style="flex:1; min-width:80px;">
+                <input type="number" class="sm-count" placeholder="数量" style="flex:1; min-width:60px;">
+                <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 8px; font-size:0.7rem;">✕</button>
+            `;
+            container.appendChild(div);
+        };
 
-    window.addStageMatRow = function() {
-        const container = document.getElementById('stageMatsContainer');
-        if (!container) return;
-        const div = document.createElement('div');
-        div.style.cssText = 'display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;';
-        div.innerHTML = `
-            <input type="text" class="sm-key" placeholder="材料key" style="flex:1; min-width:80px;">
-            <input type="number" class="sm-count" placeholder="数量" style="flex:1; min-width:60px;">
-            <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 8px; font-size:0.7rem;">✕</button>
-        `;
-        container.appendChild(div);
-    };
-
-    document.getElementById('subModalForm').onsubmit = (e) => {
-        e.preventDefault();
-        try {
-            const targetLevel = parseInt(document.getElementById('stage_level').value);
-            if (isNaN(targetLevel) || targetLevel <= 0) throw new Error('请输入有效等级');
-            const materials = [];
-            document.querySelectorAll('#stageMatsContainer > div').forEach(row => {
-                const key = row.querySelector('.sm-key')?.value?.trim();
-                const count = parseInt(row.querySelector('.sm-count')?.value);
-                if (key && count > 0) {
-                    materials.push({ key, count });
-                }
-            });
-            if (materials.length === 0) throw new Error('至少添加一种材料');
-            currentEditCharData.promotion_stages[index] = { targetLevel, materials };
-            currentEditCharData.promotion_stages.sort((a, b) => a.targetLevel - b.targetLevel);
-            closeModal('subModal');
-            renderDetailEditor();
-            showNotification('晋级阶段已更新', 'success');
-        } catch (err) {
-            showNotification('错误: ' + err.message, 'error');
-        }
-    };
+        document.getElementById('subModalForm').onsubmit = (e) => {
+            e.preventDefault();
+            try {
+                const targetLevel = parseInt(document.getElementById('stage_level').value);
+                if (isNaN(targetLevel) || targetLevel <= 0) throw new Error('请输入有效等级');
+                const materials = [];
+                document.querySelectorAll('#stageMatsContainer > div').forEach(row => {
+                    const key = row.querySelector('.sm-key')?.value?.trim();
+                    const count = parseInt(row.querySelector('.sm-count')?.value);
+                    if (key && count > 0) {
+                        materials.push({ key, count });
+                    }
+                });
+                if (materials.length === 0) throw new Error('至少添加一种材料');
+                currentEditCharData.promotion_stages[index] = { targetLevel, materials };
+                currentEditCharData.promotion_stages.sort((a, b) => a.targetLevel - b.targetLevel);
+                closeModal('subModal');
+                renderDetailEditor();
+                showNotification('晋级阶段已更新', 'success');
+            } catch (err) {
+                showNotification('错误: ' + err.message, 'error');
+            }
+        };
+    } catch (err) {
+        showNotification('编辑晋级阶段出错: ' + err.message, 'error');
+    }
 };
 
 window._removeStage = function(index) {
     if (!confirm('删除这个晋级阶段？')) return;
-    currentEditCharData.promotion_stages.splice(index, 1);
-    renderDetailEditor();
+    try {
+        if (!Array.isArray(currentEditCharData.promotion_stages) || index < 0 || index >= currentEditCharData.promotion_stages.length) {
+            showNotification('无效的索引', 'error');
+            return;
+        }
+        currentEditCharData.promotion_stages.splice(index, 1);
+        renderDetailEditor();
+        showNotification('晋级阶段已删除', 'success');
+    } catch (err) {
+        showNotification('删除晋级阶段失败: ' + err.message, 'error');
+    }
 };
