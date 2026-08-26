@@ -1,4 +1,4 @@
-// ========== 角色详情编辑器（修复子模态框 + 滚动 + ID类型兼容） ==========
+// ========== 角色详情编辑器（修复子模态框 + 滚动 + 字符串ID） ==========
 import { getSupabase } from './auth.js';
 import { showNotification, logAction, openModal, closeModal, escapeHtml } from './utils.js';
 
@@ -21,9 +21,6 @@ const DEFAULT_SKILL_TEMPLATE = {
     values: [{ id: 'val1', base: 100, step: 10, suffix: '%' }]
 };
 
-// ============================================================
-// 辅助：模板转换
-// ============================================================
 function parseEffectTemplate(rawText) {
     if (!rawText) return '';
     return rawText.replace(/【([^】]+)】/g, '<span class="const-val">$1</span>');
@@ -35,22 +32,22 @@ function unparseEffectTemplate(htmlText) {
 }
 
 // ============================================================
-// 主入口（ID 强制转为字符串）
+// 主入口（直接使用字符串ID）
 // ============================================================
 export async function openCharDetailEditor(charId) {
     try {
         const sb = getSupabase();
-        const idStr = String(charId); // ★ 确保为字符串，匹配数据库 text 类型
-
+        // charId 是字符串，如 "deer-general"
         const { data, error } = await sb
             .from('character_details')
             .select('*')
-            .eq('id', idStr)
+            .eq('id', charId)
             .single();
 
         if (error && error.code === 'PGRST116') {
+            // 未找到，创建新记录
             currentEditCharData = {
-                id: idStr, // 字符串
+                id: charId,
                 name: '未命名',
                 base_stats: { hp: 0, atk: 0, def: 0, spd: 100, energy: 100 },
                 trace_stats: [],
@@ -66,7 +63,7 @@ export async function openCharDetailEditor(charId) {
         } else {
             currentEditCharData = {
                 ...data,
-                id: String(data.id), // 保证字符串
+                id: data.id, // 保留原字符串
                 base_stats: data.base_stats || { hp: 0, atk: 0, def: 0, spd: 100, energy: 100 },
                 trace_stats: data.trace_stats || [],
                 extra_abilities: data.extra_abilities || [],
@@ -84,7 +81,7 @@ export async function openCharDetailEditor(charId) {
             }
         });
 
-        currentEditCharId = idStr; // 保存为字符串
+        currentEditCharId = charId;
         expandedSections = {};
         savedScrollTop = 0;
         renderDetailEditor();
@@ -106,7 +103,7 @@ function isSkillPopulated(sk) {
 }
 
 // ============================================================
-// 渲染主界面（保留滚动位置）- 使用 requestAnimationFrame
+// 渲染主界面（保留滚动位置）
 // ============================================================
 function renderDetailEditor() {
     const d = currentEditCharData;
@@ -308,7 +305,6 @@ function renderDetailEditor() {
         </div>
     `;
 
-    // 打开模态框
     const modal = document.getElementById('genericModal');
     const isAlreadyOpen = modal && modal.classList.contains('show');
 
@@ -320,7 +316,6 @@ function renderDetailEditor() {
     document.getElementById('modalFields').innerHTML = html;
     document.getElementById('modalSubmitBtn').innerText = '💾 保存全部';
 
-    // 恢复滚动位置
     if (scrollContainer && savedScroll > 0) {
         requestAnimationFrame(() => {
             const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
@@ -374,7 +369,7 @@ function renderSkillDetail(key, sk) {
 }
 
 // ============================================================
-// 保存全部（ID 保持字符串）
+// 保存全部
 // ============================================================
 async function saveDetailEditor() {
     try {
@@ -406,7 +401,7 @@ async function saveDetailEditor() {
         });
 
         const updateData = {
-            id: currentEditCharId, // 已经是字符串
+            id: currentEditCharId, // 字符串
             name,
             base_stats: { hp, atk, def, spd, energy },
             trace_stats: traceStats,
@@ -532,7 +527,7 @@ window._clearSkill = function(key) {
 };
 
 // ============================================================
-// 星魂操作（使用子模态框 subModal）
+// ★★★★★ 星魂操作（使用子模态框 subModal） ★★★★★
 // ============================================================
 window._addCons = function() {
     const html = `
@@ -631,7 +626,7 @@ window._removeCons = function(index) {
 };
 
 // ============================================================
-// 配队操作（使用子模态框 subModal）
+// ★★★★★ 配队操作（使用子模态框 subModal） ★★★★★
 // ============================================================
 window._addTeam = function() {
     const html = `
@@ -792,7 +787,7 @@ window._removeTeam = function(index) {
 };
 
 // ============================================================
-// 晋级材料操作（使用子模态框 subModal）
+// ★★★★★ 晋级材料操作（使用子模态框 subModal） ★★★★★
 // ============================================================
 window._addStage = function() {
     const html = `
