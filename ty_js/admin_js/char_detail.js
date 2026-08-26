@@ -1,4 +1,4 @@
-// ========== 角色详情编辑器（修复子模态框 + 滚动 + 字符串ID + 编辑按钮安全） ==========
+// ========== 角色详情编辑器（纯文本编辑 + 子模态框 + 滚动 + 字符串ID） ==========
 import { getSupabase } from './auth.js';
 import { showNotification, logAction, openModal, closeModal, escapeHtml } from './utils.js';
 
@@ -16,10 +16,50 @@ const ALL_SKILL_KEYS = [
 const DEFAULT_SKILL_TEMPLATE = {
     name: '技能名',
     maxLevel: 10,
-    desc: '技能描述',
+    desc: '技能描述，用 【高亮】 标记高亮，用 {数值ID} 引用下方数值',
     details: [{ label: '示例', value: '示例值' }],
     values: [{ id: 'val1', base: 100, step: 10, suffix: '%' }]
 };
+
+// ============================================================
+// ★ 增强的标记转换工具（完全移除HTML标签） ★
+// ============================================================
+function htmlToMarkdown(html) {
+    if (!html) return '';
+    let text = html;
+
+    // 1. 将 <span class="const-val">内容</span> 转为 【内容】
+    text = text.replace(/<span class="const-val">([^<]*)<\/span>/g, '【$1】');
+    // 2. 将 <span id="xxx">内容</span> 转为 {xxx}
+    text = text.replace(/<span id="([^"]+)"[^>]*>([^<]*)<\/span>/g, '{$1}');
+    // 3. 移除所有其他 HTML 标签，只保留文本内容（<br> 转为换行）
+    text = text.replace(/<br\s*\/?>/gi, '\n');
+    text = text.replace(/<[^>]+>/g, '');
+    // 4. 处理 &nbsp; 等实体
+    text = text.replace(/&nbsp;/g, ' ');
+    text = text.replace(/&lt;/g, '<');
+    text = text.replace(/&gt;/g, '>');
+    text = text.replace(/&amp;/g, '&');
+    // 5. 清理多余的空白行
+    text = text.replace(/\n\s*\n/g, '\n\n');
+    return text.trim();
+}
+
+function markdownToHtml(markdown, values) {
+    if (!markdown) return '';
+    let html = markdown;
+    // 1. 转换 【高亮】 → <span class="const-val">高亮</span>
+    html = html.replace(/【([^】]+)】/g, '<span class="const-val">$1</span>');
+    // 2. 转换 {数值ID} → <span id="ID" class="skill-val">数值</span>
+    html = html.replace(/\{([^}]+)\}/g, (match, id) => {
+        const valObj = (values || []).find(v => v.id === id);
+        const display = valObj ? `${valObj.base}${valObj.suffix || ''}` : match;
+        return `<span id="${id}" class="skill-val">${display}</span>`;
+    });
+    // 3. 换行转为 <br>（保留段落）
+    html = html.replace(/\n/g, '<br>');
+    return html;
+}
 
 function parseEffectTemplate(rawText) {
     if (!rawText) return '';
@@ -28,11 +68,14 @@ function parseEffectTemplate(rawText) {
 
 function unparseEffectTemplate(htmlText) {
     if (!htmlText) return '';
-    return htmlText.replace(/<span class="const-val">([^<]+)<\/span>/g, '【$1】');
+    // 先转换 const-val，再移除其他标签（保留文本）
+    let text = htmlText.replace(/<span class="const-val">([^<]*)<\/span>/g, '【$1】');
+    text = text.replace(/<[^>]+>/g, '');
+    return text;
 }
 
 // ============================================================
-// 主入口（直接使用字符串ID）
+// 主入口（加载时自动转换为纯文本标记）
 // ============================================================
 export async function openCharDetailEditor(charId) {
     try {
@@ -59,14 +102,31 @@ export async function openCharDetailEditor(charId) {
         } else if (error) {
             throw error;
         } else {
+            // ★ 转换所有描述为纯文本标记
+            const skills = data.skills || {};
+            Object.keys(skills).forEach(key => {
+                const skill = skills[key];
+                if (skill && skill.desc) {
+                    skill.desc = htmlToMarkdown(skill.desc);
+                }
+            });
+            const extraAbilities = (data.extra_abilities || []).map(item => ({
+                ...item,
+                desc: htmlToMarkdown(item.desc || '')
+            }));
+            const constellations = (data.constellations || []).map(item => ({
+                ...item,
+                effect: htmlToMarkdown(item.effect || '')
+            }));
+
             currentEditCharData = {
                 ...data,
                 id: data.id,
                 base_stats: data.base_stats || { hp: 0, atk: 0, def: 0, spd: 100, energy: 100 },
                 trace_stats: data.trace_stats || [],
-                extra_abilities: data.extra_abilities || [],
-                constellations: data.constellations || [],
-                skills: data.skills || {},
+                extra_abilities: extraAbilities,
+                constellations: constellations,
+                skills: skills,
                 promotion_stages: data.promotion_stages || [],
                 teams: data.teams || [],
                 image_url: data.image_url || ''
@@ -161,18 +221,18 @@ function renderDetailEditor() {
             </div>
         `).join('');
 
-    // ---- 额外能力 ----
+    // ---- 额外能力（纯文本） ----
     const extraList = d.extra_abilities || [];
     let extraHtml = extraList.length === 0 ? '<p style="color:var(--text-secondary); font-size:0.85rem;">暂无额外能力</p>' :
         extraList.map((item, i) => `
             <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px; flex-wrap:wrap;">
                 <input type="text" class="extra-name" value="${escapeHtml(item.name || '')}" placeholder="能力名" style="flex:1; min-width:80px;">
-                <textarea class="extra-desc" rows="2" placeholder="描述（支持HTML）" style="flex:2; min-width:120px; resize:vertical; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px 6px; color:#ccc;">${escapeHtml(item.desc || '')}</textarea>
+                <textarea class="extra-desc" rows="2" placeholder="用 【数字】 高亮显示" style="flex:2; min-width:120px; resize:vertical; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px 6px; color:#ccc;">${escapeHtml(item.desc || '')}</textarea>
                 <button type="button" class="delete-btn" onclick="window._removeExtra(${i})" style="padding:2px 10px; font-size:0.7rem;">✕</button>
             </div>
         `).join('');
 
-    // ---- 星魂 ----
+    // ---- 星魂（纯文本） ----
     const cons = d.constellations || [];
     let consListHtml = cons.length === 0 ? '<p style="color:var(--text-secondary); font-size:0.9rem;">暂无星魂</p>' :
         cons.map((c, i) => `
@@ -328,7 +388,7 @@ function renderDetailEditor() {
 }
 
 // ============================================================
-// 渲染技能详情（展开后的编辑区）
+// 渲染技能详情（纯文本编辑，带标记提示）
 // ============================================================
 function renderSkillDetail(key, sk) {
     if (!isSkillPopulated(sk)) {
@@ -342,12 +402,20 @@ function renderSkillDetail(key, sk) {
     const detailsStr = (sk.details || []).map(d => `${d.label}:${d.value}`).join('\n');
     const valuesStr = (sk.values || []).map(v => `${v.id},${v.base},${v.step},${v.suffix||''}`).join('\n');
 
+    const tip = `
+        <div style="font-size:0.75rem; color:var(--text-secondary); background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px; margin-bottom:6px;">
+            💡 纯文本编辑：<strong>【文字】</strong> 高亮显示 · <strong>{数值ID}</strong> 引用下方数值（如 {skill-val1}）
+        </div>
+    `;
+
     return `
         <div style="padding:12px 16px; background:rgba(255,255,255,0.03); border-top:1px solid rgba(255,255,255,0.05);">
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                 <div class="form-field"><label>技能名</label><input type="text" id="sk_name_${key}" value="${escapeHtml(sk.name || '')}"></div>
                 <div class="form-field"><label>最大等级</label><input type="number" id="sk_max_${key}" value="${sk.maxLevel || 10}"></div>
-                <div class="form-field" style="grid-column:span 2;"><label>描述（支持HTML）</label>
+                <div class="form-field" style="grid-column:span 2;">
+                    <label>描述（纯文本，支持标记）</label>
+                    ${tip}
                     <textarea id="sk_desc_${key}" rows="2" style="width:100%;">${escapeHtml(sk.desc || '')}</textarea>
                 </div>
                 <div class="form-field" style="grid-column:span 2;"><label>细节（每行 label:value）</label>
@@ -367,7 +435,7 @@ function renderSkillDetail(key, sk) {
 }
 
 // ============================================================
-// 保存全部
+// 保存全部（将标记转换为HTML）
 // ============================================================
 async function saveDetailEditor() {
     try {
@@ -389,14 +457,38 @@ async function saveDetailEditor() {
             }
         });
 
+        // 额外能力：转换标记
         const extraAbilities = [];
         document.querySelectorAll('#extra-list > div').forEach(row => {
             const nameVal = row.querySelector('.extra-name')?.value?.trim();
             const desc = row.querySelector('.extra-desc')?.value?.trim();
             if (nameVal || desc) {
-                extraAbilities.push({ name: nameVal || '', desc: desc || '' });
+                extraAbilities.push({ 
+                    name: nameVal || '', 
+                    desc: markdownToHtml(desc || '', []) 
+                });
             }
         });
+
+        // 技能：转换标记
+        const skills = {};
+        Object.keys(currentEditCharData.skills).forEach(key => {
+            const sk = currentEditCharData.skills[key];
+            if (sk) {
+                const desc = document.getElementById(`sk_desc_${key}`)?.value;
+                if (desc !== undefined) {
+                    const values = sk.values || [];
+                    sk.desc = markdownToHtml(desc, values);
+                }
+                skills[key] = sk;
+            }
+        });
+
+        // 星魂：转换标记
+        const constellations = (currentEditCharData.constellations || []).map(c => ({
+            ...c,
+            effect: markdownToHtml(c.effect || '', [])
+        }));
 
         const updateData = {
             id: currentEditCharId,
@@ -404,8 +496,8 @@ async function saveDetailEditor() {
             base_stats: { hp, atk, def, spd, energy },
             trace_stats: traceStats,
             extra_abilities: extraAbilities,
-            constellations: currentEditCharData.constellations || [],
-            skills: currentEditCharData.skills || {},
+            constellations: constellations,
+            skills: skills,
             promotion_stages: currentEditCharData.promotion_stages || [],
             teams: currentEditCharData.teams || [],
             image_url: imageUrl,
@@ -463,7 +555,7 @@ window._addExtra = function() {
     div.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:6px; flex-wrap:wrap;';
     div.innerHTML = `
         <input type="text" class="extra-name" placeholder="能力名" style="flex:1; min-width:80px;">
-        <textarea class="extra-desc" rows="2" placeholder="描述（支持HTML）" style="flex:2; min-width:120px; resize:vertical; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px 6px; color:#ccc;"></textarea>
+        <textarea class="extra-desc" rows="2" placeholder="用 【数字】 高亮显示" style="flex:2; min-width:120px; resize:vertical; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:4px 6px; color:#ccc;"></textarea>
         <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 10px; font-size:0.7rem;">✕</button>
     `;
     container.appendChild(div);
@@ -489,33 +581,42 @@ window._populateSkill = function(key) {
 };
 
 window._saveSkill = function(key) {
-    const sk = currentEditCharData.skills[key];
-    if (!sk) return;
+    try {
+        const sk = currentEditCharData.skills[key];
+        if (!sk) {
+            showNotification('技能数据未初始化', 'error');
+            return;
+        }
 
-    const name = document.getElementById(`sk_name_${key}`).value.trim();
-    const maxLevel = parseInt(document.getElementById(`sk_max_${key}`).value) || 10;
-    const desc = document.getElementById(`sk_desc_${key}`).value;
-    const detailsRaw = document.getElementById(`sk_details_${key}`).value;
-    const valuesRaw = document.getElementById(`sk_values_${key}`).value;
+        const name = document.getElementById(`sk_name_${key}`).value.trim();
+        const maxLevel = parseInt(document.getElementById(`sk_max_${key}`).value) || 10;
+        const descRaw = document.getElementById(`sk_desc_${key}`).value;
+        const detailsRaw = document.getElementById(`sk_details_${key}`).value;
+        const valuesRaw = document.getElementById(`sk_values_${key}`).value;
 
-    const details = detailsRaw.split('\n').filter(Boolean).map(line => {
-        const [label, value] = line.split(':').map(s => s.trim());
-        return { label: label || '未知', value: value || '' };
-    });
+        const details = detailsRaw.split('\n').filter(Boolean).map(line => {
+            const [label, value] = line.split(':').map(s => s.trim());
+            return { label: label || '未知', value: value || '' };
+        });
 
-    const values = valuesRaw.split('\n').filter(Boolean).map(line => {
-        const parts = line.split(',').map(s => s.trim());
-        return {
-            id: parts[0] || 'val',
-            base: parseFloat(parts[1]) || 0,
-            step: parseFloat(parts[2]) || 0,
-            suffix: parts[3] || ''
-        };
-    });
+        const values = valuesRaw.split('\n').filter(Boolean).map(line => {
+            const parts = line.split(',').map(s => s.trim());
+            return {
+                id: parts[0] || 'val',
+                base: parseFloat(parts[1]) || 0,
+                step: parseFloat(parts[2]) || 0,
+                suffix: parts[3] || ''
+            };
+        });
 
-    currentEditCharData.skills[key] = { name, maxLevel, desc, details, values };
-    showNotification('技能已保存', 'success');
-    renderDetailEditor();
+        const desc = markdownToHtml(descRaw, values);
+
+        currentEditCharData.skills[key] = { name, maxLevel, desc, details, values };
+        showNotification('技能已保存', 'success');
+        renderDetailEditor();
+    } catch (err) {
+        showNotification('保存技能失败: ' + err.message, 'error');
+    }
 };
 
 window._clearSkill = function(key) {
@@ -525,7 +626,7 @@ window._clearSkill = function(key) {
 };
 
 // ============================================================
-// ★★★★★ 星魂操作（使用子模态框 subModal） ★★★★★
+// ★★★★★ 星魂操作（使用子模态框，效果用纯文本标记） ★★★★★
 // ============================================================
 window._addCons = function() {
     const html = `
@@ -534,7 +635,7 @@ window._addCons = function() {
         <div class="form-field">
             <label>效果描述</label>
             <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">
-                💡 用 <strong>【数字+单位】</strong> 标记需要高亮的数值，如：<code>【20%】</code>、<code>【50%】</code>、<code>【144%】</code>
+                💡 用 <strong>【数字+单位】</strong> 标记高亮，如：<code>【20%】</code>
             </div>
             <textarea id="cons_effect" rows="3" placeholder="攻击敌方目标时，若该敌方目标当前生命值≥当前生命上限的【20%】，则该敌方目标受到的伤害提高【50%】。" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:8px; color:#ccc; font-size:0.9rem; resize:vertical;"></textarea>
             <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px;">
@@ -556,23 +657,26 @@ window._addCons = function() {
 
     document.getElementById('subModalForm').onsubmit = (e) => {
         e.preventDefault();
-        const level = document.getElementById('cons_level').value.trim();
-        const name = document.getElementById('cons_name').value.trim();
-        const rawEffect = document.getElementById('cons_effect').value;
-        if (!level || !name) { showNotification('层数和名称不能为空', 'error'); return; }
-        if (!currentEditCharData.constellations) currentEditCharData.constellations = [];
-        currentEditCharData.constellations.push({
-            level,
-            name,
-            effect: parseEffectTemplate(rawEffect)
-        });
-        closeModal('subModal');
-        renderDetailEditor();
-        showNotification('星魂已添加', 'success');
+        try {
+            const level = document.getElementById('cons_level').value.trim();
+            const name = document.getElementById('cons_name').value.trim();
+            const rawEffect = document.getElementById('cons_effect').value;
+            if (!level || !name) { showNotification('层数和名称不能为空', 'error'); return; }
+            if (!currentEditCharData.constellations) currentEditCharData.constellations = [];
+            currentEditCharData.constellations.push({
+                level,
+                name,
+                effect: rawEffect // 存标记
+            });
+            closeModal('subModal');
+            renderDetailEditor();
+            showNotification('星魂已添加', 'success');
+        } catch (err) {
+            showNotification('添加星魂失败: ' + err.message, 'error');
+        }
     };
 };
 
-// ★★★ 修复：编辑星魂（加入空值保护） ★★★
 window._editCons = function(index) {
     try {
         const cons = currentEditCharData.constellations;
@@ -586,7 +690,8 @@ window._editCons = function(index) {
             return;
         }
 
-        const rawEffect = unparseEffectTemplate(c.effect || '');
+        // 如果存的是HTML，转为纯文本标记
+        const effectMarkdown = c.effect && c.effect.includes('<span') ? unparseEffectTemplate(c.effect) : c.effect;
 
         const html = `
             <div class="form-field"><label>层数</label><input type="text" id="cons_level" value="${escapeHtml(c.level)}"></div>
@@ -594,9 +699,9 @@ window._editCons = function(index) {
             <div class="form-field">
                 <label>效果描述</label>
                 <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">
-                    💡 用 <strong>【数字+单位】</strong> 标记需要高亮的数值，如：<code>【20%】</code>、<code>【50%】</code>、<code>【144%】</code>
+                    💡 用 <strong>【数字+单位】</strong> 标记高亮
                 </div>
-                <textarea id="cons_effect" rows="3" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:8px; color:#ccc; font-size:0.9rem; resize:vertical;">${escapeHtml(rawEffect)}</textarea>
+                <textarea id="cons_effect" rows="3" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:8px; color:#ccc; font-size:0.9rem; resize:vertical;">${escapeHtml(effectMarkdown)}</textarea>
                 <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px;">
                     📌 预览效果：<span id="consPreview" style="color:#E8C96B;">${escapeHtml(c.effect || '等待输入...')}</span>
                 </div>
@@ -627,7 +732,7 @@ window._editCons = function(index) {
                 currentEditCharData.constellations[index] = {
                     level: newLevel,
                     name: newName,
-                    effect: parseEffectTemplate(rawEffect)
+                    effect: rawEffect // 存标记
                 };
                 closeModal('subModal');
                 renderDetailEditor();
@@ -657,7 +762,7 @@ window._removeCons = function(index) {
 };
 
 // ============================================================
-// ★★★★★ 配队操作（使用子模态框 subModal） ★★★★★
+// ★★★★★ 配队操作（已加固，不变） ★★★★★
 // ============================================================
 window._addTeam = function() {
     const html = `
@@ -736,7 +841,6 @@ window._addTeam = function() {
     };
 };
 
-// ★★★ 修复：编辑配队（加入空值保护） ★★★
 window._editTeam = function(index) {
     try {
         const teams = currentEditCharData.teams;
@@ -848,7 +952,7 @@ window._removeTeam = function(index) {
 };
 
 // ============================================================
-// ★★★★★ 晋级材料操作（使用子模态框 subModal） ★★★★★
+// ★★★★★ 晋级材料操作（已加固，不变） ★★★★★
 // ============================================================
 window._addStage = function() {
     const html = `
@@ -910,7 +1014,6 @@ window._addStage = function() {
     };
 };
 
-// ★★★ 修复：编辑晋级材料（加入空值保护） ★★★
 window._editStage = function(index) {
     try {
         const stages = currentEditCharData.promotion_stages;
