@@ -98,8 +98,8 @@ export function renderContentTable(table, data) {
             }
             html += `<td title="${val}">${val}</td>`;
         }
-        // ★★★ 修改点：详情按钮传参改为 detail_id || name ★★★
-        const detailId = row.detail_id || row.name || row.id;
+        // ★★★ 修复：直接使用数字ID ★★★
+        const detailId = row.id;
         html += `
             <td class="action-buttons">
                 <button class="edit-btn" onclick="window.editContentItem('${table}', ${row.id})">
@@ -300,13 +300,14 @@ window.deleteContentItem = async function (table, id) {
 };
 
 // ============================================================
-// ★★★ 角色详情编辑器入口（已修改传参） ★★★
+// ★★★ 角色详情编辑器入口（已健壮化） ★★★
 // ============================================================
 window._openCharDetail = function(charId) {
-    // 如果传入的是数字或空值，尝试用 name 作为 fallback
-    if (!charId || charId === 'undefined' || charId === 'null') {
-        showNotification('无法获取角色标识，请检查数据', 'error');
+    // 转换并校验 ID
+    const id = Number(charId);
+    if (!charId || isNaN(id) || id <= 0) {
+        showNotification('无效的角色标识，请检查数据', 'error');
         return;
     }
-    openCharDetailEditor(charId);
+    openCharDetailEditor(id);
 };
