@@ -98,7 +98,7 @@ export function renderContentTable(table, data) {
             }
             html += `<td title="${val}">${val}</td>`;
         }
-        // ★★★ 修复：直接使用数字ID ★★★
+        // ★★★ 修复：直接使用数字ID，由 _openCharDetail 转为字符串 ★★★
         const detailId = row.id;
         html += `
             <td class="action-buttons">
@@ -300,14 +300,13 @@ window.deleteContentItem = async function (table, id) {
 };
 
 // ============================================================
-// ★★★ 角色详情编辑器入口（已健壮化） ★★★
+// ★★★ 角色详情编辑器入口（强制转为字符串） ★★★
 // ============================================================
 window._openCharDetail = function(charId) {
-    // 转换并校验 ID
-    const id = Number(charId);
-    if (!charId || isNaN(id) || id <= 0) {
+    if (charId === undefined || charId === null || charId === '') {
         showNotification('无效的角色标识，请检查数据', 'error');
         return;
     }
-    openCharDetailEditor(id);
+    // 强制转为字符串，匹配 character_details.id 的 text 类型
+    openCharDetailEditor(String(charId));
 };
