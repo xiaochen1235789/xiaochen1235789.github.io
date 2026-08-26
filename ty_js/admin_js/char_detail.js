@@ -1,4 +1,4 @@
-// ========== 角色详情编辑器（修复滚动丢失 + 可视化模板） ==========
+// ========== 角色详情编辑器（修复子模态框 + 滚动恢复） ==========
 import { getSupabase } from './auth.js';
 import { showNotification, logAction, openModal, closeModal, escapeHtml } from './utils.js';
 
@@ -103,7 +103,7 @@ function isSkillPopulated(sk) {
 }
 
 // ============================================================
-// 渲染主界面（保留滚动位置）
+// 渲染主界面（保留滚动位置）- 修复版
 // ============================================================
 function renderDetailEditor() {
     const d = currentEditCharData;
@@ -112,11 +112,13 @@ function renderDetailEditor() {
         return;
     }
 
-    // ★ 保存当前滚动位置（在重新渲染前）
+    // ★ 获取滚动容器
     const scrollContainer = document.querySelector('#genericModal .modal-body') || 
                            document.querySelector('#genericModal .modal-content');
+    // ★ 保存当前滚动位置（在重新渲染前）
+    let savedScroll = 0;
     if (scrollContainer) {
-        savedScrollTop = scrollContainer.scrollTop || 0;
+        savedScroll = scrollContainer.scrollTop || 0;
     }
 
     const skills = d.skills || {};
@@ -317,11 +319,12 @@ function renderDetailEditor() {
     document.getElementById('modalFields').innerHTML = html;
     document.getElementById('modalSubmitBtn').innerText = '💾 保存全部';
 
-    // ★ 恢复滚动位置（在渲染完成后）
-    if (scrollContainer) {
-        setTimeout(() => {
-            scrollContainer.scrollTop = savedScrollTop || 0;
-        }, 50);
+    // ★ 恢复滚动位置（使用 requestAnimationFrame 确保渲染完成）
+    if (scrollContainer && savedScroll > 0) {
+        requestAnimationFrame(() => {
+            const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+            scrollContainer.scrollTop = Math.min(savedScroll, maxScroll);
+        });
     }
 
     document.getElementById('modalForm').onsubmit = async (e) => {
@@ -527,7 +530,7 @@ window._clearSkill = function(key) {
 };
 
 // ============================================================
-// 星魂操作（可视化模板版）
+// ★★★★★ 星魂操作（使用子模态框 subModal） ★★★★★
 // ============================================================
 window._addCons = function() {
     const html = `
@@ -544,9 +547,9 @@ window._addCons = function() {
             </div>
         </div>
     `;
-    openModal('genericModal');
-    document.getElementById('modalTitle').innerText = '添加星魂';
-    document.getElementById('modalFields').innerHTML = html;
+    openModal('subModal');
+    document.getElementById('subModalTitle').innerText = '添加星魂';
+    document.getElementById('subModalFields').innerHTML = html;
 
     const textarea = document.getElementById('cons_effect');
     const preview = document.getElementById('consPreview');
@@ -556,7 +559,7 @@ window._addCons = function() {
         };
     }
 
-    document.getElementById('modalForm').onsubmit = (e) => {
+    document.getElementById('subModalForm').onsubmit = (e) => {
         e.preventDefault();
         const level = document.getElementById('cons_level').value.trim();
         const name = document.getElementById('cons_name').value.trim();
@@ -568,7 +571,7 @@ window._addCons = function() {
             name,
             effect: parseEffectTemplate(rawEffect)
         });
-        closeModal('genericModal');
+        closeModal('subModal');
         renderDetailEditor();
         showNotification('星魂已添加', 'success');
     };
@@ -593,9 +596,9 @@ window._editCons = function(index) {
             </div>
         </div>
     `;
-    openModal('genericModal');
-    document.getElementById('modalTitle').innerText = '编辑星魂';
-    document.getElementById('modalFields').innerHTML = html;
+    openModal('subModal');
+    document.getElementById('subModalTitle').innerText = '编辑星魂';
+    document.getElementById('subModalFields').innerHTML = html;
 
     const textarea = document.getElementById('cons_effect');
     const preview = document.getElementById('consPreview');
@@ -605,7 +608,7 @@ window._editCons = function(index) {
         };
     }
 
-    document.getElementById('modalForm').onsubmit = (e) => {
+    document.getElementById('subModalForm').onsubmit = (e) => {
         e.preventDefault();
         const rawEffect = document.getElementById('cons_effect').value;
         currentEditCharData.constellations[index] = {
@@ -613,7 +616,7 @@ window._editCons = function(index) {
             name: document.getElementById('cons_name').value.trim(),
             effect: parseEffectTemplate(rawEffect)
         };
-        closeModal('genericModal');
+        closeModal('subModal');
         renderDetailEditor();
         showNotification('星魂已更新', 'success');
     };
@@ -626,7 +629,7 @@ window._removeCons = function(index) {
 };
 
 // ============================================================
-// 配队操作（纯文本表单）
+// ★★★★★ 配队操作（使用子模态框 subModal） ★★★★★
 // ============================================================
 window._addTeam = function() {
     const html = `
@@ -651,9 +654,9 @@ window._addTeam = function() {
             </button>
         </div>
     `;
-    openModal('genericModal');
-    document.getElementById('modalTitle').innerText = '添加配队';
-    document.getElementById('modalFields').innerHTML = html;
+    openModal('subModal');
+    document.getElementById('subModalTitle').innerText = '添加配队';
+    document.getElementById('subModalFields').innerHTML = html;
 
     window.addTeamRoleRow = function() {
         const container = document.getElementById('teamRolesContainer');
@@ -669,7 +672,7 @@ window._addTeam = function() {
         container.appendChild(div);
     };
 
-    document.getElementById('modalForm').onsubmit = (e) => {
+    document.getElementById('subModalForm').onsubmit = (e) => {
         e.preventDefault();
         const roles = [];
         document.querySelectorAll('#teamRolesContainer > div').forEach(row => {
@@ -695,7 +698,7 @@ window._addTeam = function() {
         };
         if (!currentEditCharData.teams) currentEditCharData.teams = [];
         currentEditCharData.teams.push(team);
-        closeModal('genericModal');
+        closeModal('subModal');
         renderDetailEditor();
         showNotification('配队已添加', 'success');
     };
@@ -732,9 +735,9 @@ window._editTeam = function(index) {
             </button>
         </div>
     `;
-    openModal('genericModal');
-    document.getElementById('modalTitle').innerText = '编辑配队';
-    document.getElementById('modalFields').innerHTML = html;
+    openModal('subModal');
+    document.getElementById('subModalTitle').innerText = '编辑配队';
+    document.getElementById('subModalFields').innerHTML = html;
 
     window.addTeamRoleRow = function() {
         const container = document.getElementById('teamRolesContainer');
@@ -750,7 +753,7 @@ window._editTeam = function(index) {
         container.appendChild(div);
     };
 
-    document.getElementById('modalForm').onsubmit = (e) => {
+    document.getElementById('subModalForm').onsubmit = (e) => {
         e.preventDefault();
         const roles = [];
         document.querySelectorAll('#teamRolesContainer > div').forEach(row => {
@@ -774,7 +777,7 @@ window._editTeam = function(index) {
             relic: document.getElementById('team_relic').value.trim(),
             roles: roles
         };
-        closeModal('genericModal');
+        closeModal('subModal');
         renderDetailEditor();
         showNotification('配队已更新', 'success');
     };
@@ -787,7 +790,7 @@ window._removeTeam = function(index) {
 };
 
 // ============================================================
-// 晋级材料操作
+// ★★★★★ 晋级材料操作（使用子模态框 subModal） ★★★★★
 // ============================================================
 window._addStage = function() {
     const html = `
@@ -805,9 +808,9 @@ window._addStage = function() {
             </button>
         </div>
     `;
-    openModal('genericModal');
-    document.getElementById('modalTitle').innerText = '添加晋级阶段';
-    document.getElementById('modalFields').innerHTML = html;
+    openModal('subModal');
+    document.getElementById('subModalTitle').innerText = '添加晋级阶段';
+    document.getElementById('subModalFields').innerHTML = html;
 
     window.addStageMatRow = function() {
         const container = document.getElementById('stageMatsContainer');
@@ -822,7 +825,7 @@ window._addStage = function() {
         container.appendChild(div);
     };
 
-    document.getElementById('modalForm').onsubmit = (e) => {
+    document.getElementById('subModalForm').onsubmit = (e) => {
         e.preventDefault();
         try {
             const targetLevel = parseInt(document.getElementById('stage_level').value);
@@ -840,7 +843,7 @@ window._addStage = function() {
             if (!currentEditCharData.promotion_stages) currentEditCharData.promotion_stages = [];
             currentEditCharData.promotion_stages.push({ targetLevel, materials });
             currentEditCharData.promotion_stages.sort((a, b) => a.targetLevel - b.targetLevel);
-            closeModal('genericModal');
+            closeModal('subModal');
             renderDetailEditor();
             showNotification('晋级阶段已添加', 'success');
         } catch (err) {
@@ -873,9 +876,9 @@ window._editStage = function(index) {
             </button>
         </div>
     `;
-    openModal('genericModal');
-    document.getElementById('modalTitle').innerText = '编辑晋级阶段';
-    document.getElementById('modalFields').innerHTML = html;
+    openModal('subModal');
+    document.getElementById('subModalTitle').innerText = '编辑晋级阶段';
+    document.getElementById('subModalFields').innerHTML = html;
 
     window.addStageMatRow = function() {
         const container = document.getElementById('stageMatsContainer');
@@ -890,7 +893,7 @@ window._editStage = function(index) {
         container.appendChild(div);
     };
 
-    document.getElementById('modalForm').onsubmit = (e) => {
+    document.getElementById('subModalForm').onsubmit = (e) => {
         e.preventDefault();
         try {
             const targetLevel = parseInt(document.getElementById('stage_level').value);
@@ -906,7 +909,7 @@ window._editStage = function(index) {
             if (materials.length === 0) throw new Error('至少添加一种材料');
             currentEditCharData.promotion_stages[index] = { targetLevel, materials };
             currentEditCharData.promotion_stages.sort((a, b) => a.targetLevel - b.targetLevel);
-            closeModal('genericModal');
+            closeModal('subModal');
             renderDetailEditor();
             showNotification('晋级阶段已更新', 'success');
         } catch (err) {
