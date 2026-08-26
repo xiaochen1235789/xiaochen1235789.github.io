@@ -1,12 +1,12 @@
-// ========== 角色详情编辑器（最终修复：子模态框不关父模态框 + 滚动精确恢复） ==========
+// ========== 角色详情编辑器（纯文本编辑 + 子模态框 + 滚动恢复 + 完整功能） ==========
 import { getSupabase } from './auth.js';
 import { showNotification, logAction, openModal, closeModal, escapeHtml } from './utils.js';
 
 let currentEditCharId = null;
 let currentEditCharData = null;
 let expandedSections = {};
-let savedScrollTop = 0;          // 保存像素值
-let savedScrollRatio = 0;        // 保存百分比
+let savedScrollTop = 0;
+let savedScrollRatio = 0;
 
 const ALL_SKILL_KEYS = [
     'normal', 'skill', 'ultimate', 'talent',
@@ -66,7 +66,7 @@ function unparseEffectTemplate(htmlText) {
 }
 
 // ============================================================
-// 主入口
+// 主入口（加载数据并转换标记）
 // ============================================================
 export async function openCharDetailEditor(charId) {
     try {
@@ -152,7 +152,7 @@ function isSkillPopulated(sk) {
 }
 
 // ============================================================
-// 渲染主界面（保留滚动：像素+百分比双重保障）
+// 渲染主界面（滚动恢复：像素+百分比双重保障）
 // ============================================================
 function renderDetailEditor() {
     const d = currentEditCharData;
@@ -172,7 +172,6 @@ function renderDetailEditor() {
             savedScrollRatio = 0;
         }
     } else {
-        // 如果容器不存在（初次渲染），重置状态
         savedScrollTop = 0;
         savedScrollRatio = 0;
     }
@@ -180,7 +179,7 @@ function renderDetailEditor() {
     const skills = d.skills || {};
     const skillKeys = ALL_SKILL_KEYS;
 
-    // ---- 技能列表（同之前） ----
+    // ---- 技能列表 ----
     let skillsListHtml = '';
     for (const key of skillKeys) {
         const sk = skills[key] || {};
@@ -374,34 +373,29 @@ function renderDetailEditor() {
     document.getElementById('modalFields').innerHTML = html;
     document.getElementById('modalSubmitBtn').innerText = '💾 保存全部';
 
-    // 3. 恢复滚动（优先使用像素值，如果失败则使用百分比）
+    // 3. 恢复滚动（优先使用像素值，兜底使用百分比）
     const restoredContainer = document.getElementById('detailScrollContainer');
     if (restoredContainer) {
         const restoreScroll = () => {
             const maxScroll = restoredContainer.scrollHeight - restoredContainer.clientHeight;
             if (maxScroll > 0) {
-                // 先尝试用保存的像素值
                 let target = savedScrollTop;
-                // 如果像素值太大（超过最大滚动），则使用百分比
                 if (target > maxScroll) {
                     target = Math.round(savedScrollRatio * maxScroll);
                 }
-                // 如果 target 还是无效，用百分比兜底
                 if (target <= 0 || target > maxScroll) {
                     target = Math.round(savedScrollRatio * maxScroll);
                 }
-                // 最终限制范围
                 target = Math.min(Math.max(target, 0), maxScroll);
                 restoredContainer.scrollTop = target;
             }
         };
 
-        // 使用双重延迟确保 DOM 更新完成
+        // 多重延迟确保 DOM 更新完成
         setTimeout(restoreScroll, 50);
         requestAnimationFrame(() => {
             setTimeout(restoreScroll, 100);
         });
-        // 再兜底一次
         setTimeout(restoreScroll, 300);
     }
 
@@ -412,7 +406,7 @@ function renderDetailEditor() {
 }
 
 // ============================================================
-// 渲染技能详情（同之前）
+// 渲染技能详情（纯文本编辑，带标记提示）
 // ============================================================
 function renderSkillDetail(key, sk) {
     if (!isSkillPopulated(sk)) {
@@ -545,7 +539,7 @@ async function saveDetailEditor() {
 }
 
 // ============================================================
-// 行迹操作（同之前）
+// 行迹操作
 // ============================================================
 window._addTrace = function() {
     const container = document.getElementById('trace-list');
@@ -647,7 +641,7 @@ window._clearSkill = function(key) {
 };
 
 // ============================================================
-// ★★★★★ 星魂操作（子模态框，保存后刷新父模态框） ★★★★★
+// ★★★★★ 星魂操作（子模态框） ★★★★★
 // ============================================================
 window._addCons = function() {
     const html = `
@@ -785,29 +779,344 @@ window._removeCons = function(index) {
 // ★★★★★ 配队操作（子模态框） ★★★★★
 // ============================================================
 window._addTeam = function() {
-    // ... 完整代码同之前，省略以节省篇幅，实际应包含完整逻辑
-    // 注意：所有子操作保存后都调用 renderDetailEditor() 刷新父界面
+    const html = `
+        <div class="form-field"><label>图标</label><input type="text" id="team_icon" placeholder="🌪️"></div>
+        <div class="form-field"><label>名称</label><input type="text" id="team_name" placeholder="风猎追击"></div>
+        <div class="form-field"><label>描述</label><input type="text" id="team_desc" placeholder="三保一极致输出"></div>
+        <div class="form-field"><label>核心</label><input type="text" id="team_core" placeholder="布洛妮娅拉条..."></div>
+        <div class="form-field"><label>生存</label><input type="text" id="team_survival" placeholder="罗刹提供治疗"></div>
+        <div class="form-field"><label>光锥</label><input type="text" id="team_lightcone" placeholder="「于夜色中」"></div>
+        <div class="form-field"><label>遗器</label><input type="text" id="team_relic" placeholder="风套 + 繁星"></div>
+        <div class="form-field"><label>角色列表（纯文本表单）</label>
+            <div id="teamRolesContainer">
+                <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                    <input type="text" class="tr-char" placeholder="角色名" style="flex:1; min-width:80px;">
+                    <input type="text" class="tr-role" placeholder="定位（主C/辅）" style="flex:1; min-width:60px;">
+                    <input type="text" class="tr-initial" placeholder="缩写" style="flex:1; min-width:50px;">
+                    <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 8px; font-size:0.7rem;">✕</button>
+                </div>
+            </div>
+            <button type="button" class="add-btn" onclick="addTeamRoleRow()" style="padding:2px 12px; font-size:0.7rem; margin-top:4px;">
+                <i class="fas fa-plus"></i> 添加角色
+            </button>
+        </div>
+    `;
+    openModal('subModal');
+    document.getElementById('subModalTitle').innerText = '添加配队';
+    document.getElementById('subModalFields').innerHTML = html;
+
+    window.addTeamRoleRow = function() {
+        const container = document.getElementById('teamRolesContainer');
+        if (!container) return;
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;';
+        div.innerHTML = `
+            <input type="text" class="tr-char" placeholder="角色名" style="flex:1; min-width:80px;">
+            <input type="text" class="tr-role" placeholder="定位（主C/辅）" style="flex:1; min-width:60px;">
+            <input type="text" class="tr-initial" placeholder="缩写" style="flex:1; min-width:50px;">
+            <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 8px; font-size:0.7rem;">✕</button>
+        `;
+        container.appendChild(div);
+    };
+
+    document.getElementById('subModalForm').onsubmit = (e) => {
+        e.preventDefault();
+        try {
+            const roles = [];
+            document.querySelectorAll('#teamRolesContainer > div').forEach(row => {
+                const char = row.querySelector('.tr-char')?.value?.trim();
+                const role = row.querySelector('.tr-role')?.value?.trim();
+                const initial = row.querySelector('.tr-initial')?.value?.trim();
+                if (char) {
+                    roles.push({ char, role: role || '辅', initial: initial || char.charAt(0) });
+                }
+            });
+            if (roles.length === 0) { showNotification('至少添加一个角色', 'error'); return; }
+
+            const team = {
+                id: String(currentEditCharData.teams?.length || 0),
+                icon: document.getElementById('team_icon').value.trim() || '🤝',
+                name: document.getElementById('team_name').value.trim() || '未命名',
+                desc: document.getElementById('team_desc').value.trim(),
+                core: document.getElementById('team_core').value.trim(),
+                survival: document.getElementById('team_survival').value.trim(),
+                lightcone: document.getElementById('team_lightcone').value.trim(),
+                relic: document.getElementById('team_relic').value.trim(),
+                roles: roles
+            };
+            if (!currentEditCharData.teams) currentEditCharData.teams = [];
+            currentEditCharData.teams.push(team);
+            closeModal('subModal');
+            renderDetailEditor();
+            showNotification('配队已添加', 'success');
+        } catch (err) {
+            showNotification('添加配队失败: ' + err.message, 'error');
+        }
+    };
 };
 
 window._editTeam = function(index) {
-    // ... 完整代码
+    try {
+        const teams = currentEditCharData.teams;
+        if (!teams || !Array.isArray(teams) || index < 0 || index >= teams.length) {
+            showNotification('未找到要编辑的配队', 'error');
+            return;
+        }
+        const t = teams[index];
+        if (!t) {
+            showNotification('配队数据无效', 'error');
+            return;
+        }
+
+        let rolesHtml = '';
+        (t.roles || []).forEach(r => {
+            rolesHtml += `
+                <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                    <input type="text" class="tr-char" value="${escapeHtml(r.char || '')}" placeholder="角色名" style="flex:1; min-width:80px;">
+                    <input type="text" class="tr-role" value="${escapeHtml(r.role || '')}" placeholder="定位" style="flex:1; min-width:60px;">
+                    <input type="text" class="tr-initial" value="${escapeHtml(r.initial || '')}" placeholder="缩写" style="flex:1; min-width:50px;">
+                    <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 8px; font-size:0.7rem;">✕</button>
+                </div>
+            `;
+        });
+
+        const html = `
+            <div class="form-field"><label>图标</label><input type="text" id="team_icon" value="${escapeHtml(t.icon || '')}"></div>
+            <div class="form-field"><label>名称</label><input type="text" id="team_name" value="${escapeHtml(t.name)}"></div>
+            <div class="form-field"><label>描述</label><input type="text" id="team_desc" value="${escapeHtml(t.desc || '')}"></div>
+            <div class="form-field"><label>核心</label><input type="text" id="team_core" value="${escapeHtml(t.core || '')}"></div>
+            <div class="form-field"><label>生存</label><input type="text" id="team_survival" value="${escapeHtml(t.survival || '')}"></div>
+            <div class="form-field"><label>光锥</label><input type="text" id="team_lightcone" value="${escapeHtml(t.lightcone || '')}"></div>
+            <div class="form-field"><label>遗器</label><input type="text" id="team_relic" value="${escapeHtml(t.relic || '')}"></div>
+            <div class="form-field"><label>角色列表</label>
+                <div id="teamRolesContainer">${rolesHtml}</div>
+                <button type="button" class="add-btn" onclick="addTeamRoleRow()" style="padding:2px 12px; font-size:0.7rem; margin-top:4px;">
+                    <i class="fas fa-plus"></i> 添加角色
+                </button>
+            </div>
+        `;
+        openModal('subModal');
+        document.getElementById('subModalTitle').innerText = '编辑配队';
+        document.getElementById('subModalFields').innerHTML = html;
+
+        window.addTeamRoleRow = function() {
+            const container = document.getElementById('teamRolesContainer');
+            if (!container) return;
+            const div = document.createElement('div');
+            div.style.cssText = 'display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;';
+            div.innerHTML = `
+                <input type="text" class="tr-char" placeholder="角色名" style="flex:1; min-width:80px;">
+                <input type="text" class="tr-role" placeholder="定位" style="flex:1; min-width:60px;">
+                <input type="text" class="tr-initial" placeholder="缩写" style="flex:1; min-width:50px;">
+                <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 8px; font-size:0.7rem;">✕</button>
+            `;
+            container.appendChild(div);
+        };
+
+        document.getElementById('subModalForm').onsubmit = (e) => {
+            e.preventDefault();
+            try {
+                const roles = [];
+                document.querySelectorAll('#teamRolesContainer > div').forEach(row => {
+                    const char = row.querySelector('.tr-char')?.value?.trim();
+                    const role = row.querySelector('.tr-role')?.value?.trim();
+                    const initial = row.querySelector('.tr-initial')?.value?.trim();
+                    if (char) {
+                        roles.push({ char, role: role || '辅', initial: initial || char.charAt(0) });
+                    }
+                });
+                if (roles.length === 0) { showNotification('至少添加一个角色', 'error'); return; }
+
+                currentEditCharData.teams[index] = {
+                    id: String(index),
+                    icon: document.getElementById('team_icon').value.trim() || '🤝',
+                    name: document.getElementById('team_name').value.trim(),
+                    desc: document.getElementById('team_desc').value.trim(),
+                    core: document.getElementById('team_core').value.trim(),
+                    survival: document.getElementById('team_survival').value.trim(),
+                    lightcone: document.getElementById('team_lightcone').value.trim(),
+                    relic: document.getElementById('team_relic').value.trim(),
+                    roles: roles
+                };
+                closeModal('subModal');
+                renderDetailEditor();
+                showNotification('配队已更新', 'success');
+            } catch (err) {
+                showNotification('更新配队失败: ' + err.message, 'error');
+            }
+        };
+    } catch (err) {
+        showNotification('编辑配队出错: ' + err.message, 'error');
+    }
 };
 
 window._removeTeam = function(index) {
-    // ... 完整代码
+    if (!confirm('删除这条配队？')) return;
+    try {
+        if (!Array.isArray(currentEditCharData.teams) || index < 0 || index >= currentEditCharData.teams.length) {
+            showNotification('无效的索引', 'error');
+            return;
+        }
+        currentEditCharData.teams.splice(index, 1);
+        renderDetailEditor();
+        showNotification('配队已删除', 'success');
+    } catch (err) {
+        showNotification('删除配队失败: ' + err.message, 'error');
+    }
 };
 
 // ============================================================
 // ★★★★★ 晋级材料操作（子模态框） ★★★★★
 // ============================================================
 window._addStage = function() {
-    // ... 完整代码
+    const html = `
+        <div class="form-field"><label>目标等级</label><input type="number" id="stage_level" placeholder="20"></div>
+        <div class="form-field"><label>材料列表（纯文本表单）</label>
+            <div id="stageMatsContainer">
+                <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                    <input type="text" class="sm-key" placeholder="材料key（如 sugar）" style="flex:1; min-width:80px;">
+                    <input type="number" class="sm-count" placeholder="数量" style="flex:1; min-width:60px;">
+                    <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 8px; font-size:0.7rem;">✕</button>
+                </div>
+            </div>
+            <button type="button" class="add-btn" onclick="addStageMatRow()" style="padding:2px 12px; font-size:0.7rem; margin-top:4px;">
+                <i class="fas fa-plus"></i> 添加材料
+            </button>
+        </div>
+    `;
+    openModal('subModal');
+    document.getElementById('subModalTitle').innerText = '添加晋级阶段';
+    document.getElementById('subModalFields').innerHTML = html;
+
+    window.addStageMatRow = function() {
+        const container = document.getElementById('stageMatsContainer');
+        if (!container) return;
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;';
+        div.innerHTML = `
+            <input type="text" class="sm-key" placeholder="材料key" style="flex:1; min-width:80px;">
+            <input type="number" class="sm-count" placeholder="数量" style="flex:1; min-width:60px;">
+            <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 8px; font-size:0.7rem;">✕</button>
+        `;
+        container.appendChild(div);
+    };
+
+    document.getElementById('subModalForm').onsubmit = (e) => {
+        e.preventDefault();
+        try {
+            const targetLevel = parseInt(document.getElementById('stage_level').value);
+            if (isNaN(targetLevel) || targetLevel <= 0) throw new Error('请输入有效等级');
+            const materials = [];
+            document.querySelectorAll('#stageMatsContainer > div').forEach(row => {
+                const key = row.querySelector('.sm-key')?.value?.trim();
+                const count = parseInt(row.querySelector('.sm-count')?.value);
+                if (key && count > 0) {
+                    materials.push({ key, count });
+                }
+            });
+            if (materials.length === 0) throw new Error('至少添加一种材料');
+
+            if (!currentEditCharData.promotion_stages) currentEditCharData.promotion_stages = [];
+            currentEditCharData.promotion_stages.push({ targetLevel, materials });
+            currentEditCharData.promotion_stages.sort((a, b) => a.targetLevel - b.targetLevel);
+            closeModal('subModal');
+            renderDetailEditor();
+            showNotification('晋级阶段已添加', 'success');
+        } catch (err) {
+            showNotification('错误: ' + err.message, 'error');
+        }
+    };
 };
 
 window._editStage = function(index) {
-    // ... 完整代码
+    try {
+        const stages = currentEditCharData.promotion_stages;
+        if (!stages || !Array.isArray(stages) || index < 0 || index >= stages.length) {
+            showNotification('未找到要编辑的晋级阶段', 'error');
+            return;
+        }
+        const s = stages[index];
+        if (!s) {
+            showNotification('晋级阶段数据无效', 'error');
+            return;
+        }
+
+        let matsHtml = '';
+        (s.materials || []).forEach(m => {
+            matsHtml += `
+                <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                    <input type="text" class="sm-key" value="${escapeHtml(m.key)}" placeholder="材料key" style="flex:1; min-width:80px;">
+                    <input type="number" class="sm-count" value="${m.count}" placeholder="数量" style="flex:1; min-width:60px;">
+                    <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 8px; font-size:0.7rem;">✕</button>
+                </div>
+            `;
+        });
+
+        const html = `
+            <div class="form-field"><label>目标等级</label><input type="number" id="stage_level" value="${s.targetLevel}"></div>
+            <div class="form-field"><label>材料列表</label>
+                <div id="stageMatsContainer">${matsHtml}</div>
+                <button type="button" class="add-btn" onclick="addStageMatRow()" style="padding:2px 12px; font-size:0.7rem; margin-top:4px;">
+                    <i class="fas fa-plus"></i> 添加材料
+                </button>
+            </div>
+        `;
+        openModal('subModal');
+        document.getElementById('subModalTitle').innerText = '编辑晋级阶段';
+        document.getElementById('subModalFields').innerHTML = html;
+
+        window.addStageMatRow = function() {
+            const container = document.getElementById('stageMatsContainer');
+            if (!container) return;
+            const div = document.createElement('div');
+            div.style.cssText = 'display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap;';
+            div.innerHTML = `
+                <input type="text" class="sm-key" placeholder="材料key" style="flex:1; min-width:80px;">
+                <input type="number" class="sm-count" placeholder="数量" style="flex:1; min-width:60px;">
+                <button type="button" class="delete-btn" onclick="this.parentElement.remove()" style="padding:2px 8px; font-size:0.7rem;">✕</button>
+            `;
+            container.appendChild(div);
+        };
+
+        document.getElementById('subModalForm').onsubmit = (e) => {
+            e.preventDefault();
+            try {
+                const targetLevel = parseInt(document.getElementById('stage_level').value);
+                if (isNaN(targetLevel) || targetLevel <= 0) throw new Error('请输入有效等级');
+                const materials = [];
+                document.querySelectorAll('#stageMatsContainer > div').forEach(row => {
+                    const key = row.querySelector('.sm-key')?.value?.trim();
+                    const count = parseInt(row.querySelector('.sm-count')?.value);
+                    if (key && count > 0) {
+                        materials.push({ key, count });
+                    }
+                });
+                if (materials.length === 0) throw new Error('至少添加一种材料');
+                currentEditCharData.promotion_stages[index] = { targetLevel, materials };
+                currentEditCharData.promotion_stages.sort((a, b) => a.targetLevel - b.targetLevel);
+                closeModal('subModal');
+                renderDetailEditor();
+                showNotification('晋级阶段已更新', 'success');
+            } catch (err) {
+                showNotification('错误: ' + err.message, 'error');
+            }
+        };
+    } catch (err) {
+        showNotification('编辑晋级阶段出错: ' + err.message, 'error');
+    }
 };
 
 window._removeStage = function(index) {
-    // ... 完整代码
+    if (!confirm('删除这个晋级阶段？')) return;
+    try {
+        if (!Array.isArray(currentEditCharData.promotion_stages) || index < 0 || index >= currentEditCharData.promotion_stages.length) {
+            showNotification('无效的索引', 'error');
+            return;
+        }
+        currentEditCharData.promotion_stages.splice(index, 1);
+        renderDetailEditor();
+        showNotification('晋级阶段已删除', 'success');
+    } catch (err) {
+        showNotification('删除晋级阶段失败: ' + err.message, 'error');
+    }
 };
