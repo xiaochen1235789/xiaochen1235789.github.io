@@ -1,11 +1,11 @@
-// ========== 角色详情编辑器（纯文本编辑 + 子模态框 + 滚动百分比恢复 + 字符串ID） ==========
+// ========== 角色详情编辑器（纯文本编辑 + 子模态框 + 精确滚动恢复 + 字符串ID） ==========
 import { getSupabase } from './auth.js';
 import { showNotification, logAction, openModal, closeModal, escapeHtml } from './utils.js';
 
 let currentEditCharId = null;
 let currentEditCharData = null;
 let expandedSections = {};
-let savedScrollRatio = 0; // 改用百分比
+let savedScrollRatio = 0;
 
 const ALL_SKILL_KEYS = [
     'normal', 'skill', 'ultimate', 'talent',
@@ -22,7 +22,7 @@ const DEFAULT_SKILL_TEMPLATE = {
 };
 
 // ============================================================
-// ★ 增强的标记转换工具（完全移除HTML标签） ★
+// 标记转换工具（纯文本 ↔ HTML）
 // ============================================================
 function htmlToMarkdown(html) {
     if (!html) return '';
@@ -65,7 +65,7 @@ function unparseEffectTemplate(htmlText) {
 }
 
 // ============================================================
-// 主入口（加载时自动转换为纯文本标记）
+// 主入口（加载数据并转换标记）
 // ============================================================
 export async function openCharDetailEditor(charId) {
     try {
@@ -150,7 +150,7 @@ function isSkillPopulated(sk) {
 }
 
 // ============================================================
-// 渲染主界面（保留滚动位置 - 使用百分比恢复）
+// 渲染主界面（修复滚动：使用专属容器ID）
 // ============================================================
 function renderDetailEditor() {
     const d = currentEditCharData;
@@ -159,10 +159,8 @@ function renderDetailEditor() {
         return;
     }
 
-    // 1. 获取滚动容器
-    const scrollContainer = document.querySelector('#genericModal .modal-body') || 
-                           document.querySelector('#genericModal .modal-content');
-    // 2. 保存当前滚动百分比（而不是像素）
+    // ★ 获取滚动容器（使用专属ID）
+    const scrollContainer = document.getElementById('detailScrollContainer');
     if (scrollContainer) {
         const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
         if (maxScroll > 0) {
@@ -269,9 +267,9 @@ function renderDetailEditor() {
             `;
         }).join('');
 
-    // ---- 完整 HTML ----
+    // ---- 完整 HTML（★ 添加 id="detailScrollContainer" ★） ----
     const html = `
-        <div style="max-height:70vh; overflow-y:auto; padding-right:4px;">
+        <div id="detailScrollContainer" style="max-height:70vh; overflow-y:auto; padding-right:4px;">
 
             <!-- 基础信息 -->
             <div class="form-section" style="margin-bottom:16px;">
@@ -369,20 +367,20 @@ function renderDetailEditor() {
     document.getElementById('modalFields').innerHTML = html;
     document.getElementById('modalSubmitBtn').innerText = '💾 保存全部';
 
-    // ★★★ 恢复滚动位置（使用百分比） ★★★
-    if (scrollContainer && savedScrollRatio > 0) {
-        // 使用双重延迟确保布局完成
+    // ★ 恢复滚动（使用专属容器）
+    const restoredContainer = document.getElementById('detailScrollContainer');
+    if (restoredContainer && savedScrollRatio > 0) {
+        // 双重延迟确保布局完成
         setTimeout(() => {
-            const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+            const maxScroll = restoredContainer.scrollHeight - restoredContainer.clientHeight;
             if (maxScroll > 0) {
-                scrollContainer.scrollTop = Math.min(Math.round(savedScrollRatio * maxScroll), maxScroll);
+                restoredContainer.scrollTop = Math.min(Math.round(savedScrollRatio * maxScroll), maxScroll);
             }
         }, 50);
-        // 再用 requestAnimationFrame 兜底
         requestAnimationFrame(() => {
-            const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+            const maxScroll = restoredContainer.scrollHeight - restoredContainer.clientHeight;
             if (maxScroll > 0) {
-                scrollContainer.scrollTop = Math.min(Math.round(savedScrollRatio * maxScroll), maxScroll);
+                restoredContainer.scrollTop = Math.min(Math.round(savedScrollRatio * maxScroll), maxScroll);
             }
         });
     }
@@ -441,7 +439,7 @@ function renderSkillDetail(key, sk) {
 }
 
 // ============================================================
-// 保存全部（将标记转换为HTML）
+// 保存全部（转换标记为HTML）
 // ============================================================
 async function saveDetailEditor() {
     try {
@@ -629,7 +627,7 @@ window._clearSkill = function(key) {
 };
 
 // ============================================================
-// ★★★★★ 星魂操作（使用子模态框，效果用纯文本标记） ★★★★★
+// ★★★★★ 星魂操作（子模态框） ★★★★★
 // ============================================================
 window._addCons = function() {
     const html = `
@@ -764,7 +762,7 @@ window._removeCons = function(index) {
 };
 
 // ============================================================
-// ★★★★★ 配队操作（已加固） ★★★★★
+// ★★★★★ 配队操作（子模态框） ★★★★★
 // ============================================================
 window._addTeam = function() {
     const html = `
@@ -954,7 +952,7 @@ window._removeTeam = function(index) {
 };
 
 // ============================================================
-// ★★★★★ 晋级材料操作（已加固） ★★★★★
+// ★★★★★ 晋级材料操作（子模态框） ★★★★★
 // ============================================================
 window._addStage = function() {
     const html = `
