@@ -1,11 +1,11 @@
-// ========== 角色详情编辑器（纯文本编辑 + 子模态框 + 滚动 + 字符串ID） ==========
+// ========== 角色详情编辑器（纯文本编辑 + 子模态框 + 滚动百分比恢复 + 字符串ID） ==========
 import { getSupabase } from './auth.js';
 import { showNotification, logAction, openModal, closeModal, escapeHtml } from './utils.js';
 
 let currentEditCharId = null;
 let currentEditCharData = null;
 let expandedSections = {};
-let savedScrollTop = 0;
+let savedScrollRatio = 0; // 改用百分比
 
 const ALL_SKILL_KEYS = [
     'normal', 'skill', 'ultimate', 'talent',
@@ -27,20 +27,14 @@ const DEFAULT_SKILL_TEMPLATE = {
 function htmlToMarkdown(html) {
     if (!html) return '';
     let text = html;
-
-    // 1. 将 <span class="const-val">内容</span> 转为 【内容】
     text = text.replace(/<span class="const-val">([^<]*)<\/span>/g, '【$1】');
-    // 2. 将 <span id="xxx">内容</span> 转为 {xxx}
     text = text.replace(/<span id="([^"]+)"[^>]*>([^<]*)<\/span>/g, '{$1}');
-    // 3. 移除所有其他 HTML 标签，只保留文本内容（<br> 转为换行）
     text = text.replace(/<br\s*\/?>/gi, '\n');
     text = text.replace(/<[^>]+>/g, '');
-    // 4. 处理 &nbsp; 等实体
     text = text.replace(/&nbsp;/g, ' ');
     text = text.replace(/&lt;/g, '<');
     text = text.replace(/&gt;/g, '>');
     text = text.replace(/&amp;/g, '&');
-    // 5. 清理多余的空白行
     text = text.replace(/\n\s*\n/g, '\n\n');
     return text.trim();
 }
@@ -48,15 +42,12 @@ function htmlToMarkdown(html) {
 function markdownToHtml(markdown, values) {
     if (!markdown) return '';
     let html = markdown;
-    // 1. 转换 【高亮】 → <span class="const-val">高亮</span>
     html = html.replace(/【([^】]+)】/g, '<span class="const-val">$1</span>');
-    // 2. 转换 {数值ID} → <span id="ID" class="skill-val">数值</span>
     html = html.replace(/\{([^}]+)\}/g, (match, id) => {
         const valObj = (values || []).find(v => v.id === id);
         const display = valObj ? `${valObj.base}${valObj.suffix || ''}` : match;
         return `<span id="${id}" class="skill-val">${display}</span>`;
     });
-    // 3. 换行转为 <br>（保留段落）
     html = html.replace(/\n/g, '<br>');
     return html;
 }
@@ -68,7 +59,6 @@ function parseEffectTemplate(rawText) {
 
 function unparseEffectTemplate(htmlText) {
     if (!htmlText) return '';
-    // 先转换 const-val，再移除其他标签（保留文本）
     let text = htmlText.replace(/<span class="const-val">([^<]*)<\/span>/g, '【$1】');
     text = text.replace(/<[^>]+>/g, '');
     return text;
@@ -102,7 +92,6 @@ export async function openCharDetailEditor(charId) {
         } else if (error) {
             throw error;
         } else {
-            // ★ 转换所有描述为纯文本标记
             const skills = data.skills || {};
             Object.keys(skills).forEach(key => {
                 const skill = skills[key];
@@ -141,7 +130,7 @@ export async function openCharDetailEditor(charId) {
 
         currentEditCharId = charId;
         expandedSections = {};
-        savedScrollTop = 0;
+        savedScrollRatio = 0;
         renderDetailEditor();
     } catch (err) {
         showNotification('加载角色详情失败: ' + err.message, 'error');
@@ -161,7 +150,7 @@ function isSkillPopulated(sk) {
 }
 
 // ============================================================
-// 渲染主界面（保留滚动位置）
+// 渲染主界面（保留滚动位置 - 使用百分比恢复）
 // ============================================================
 function renderDetailEditor() {
     const d = currentEditCharData;
@@ -170,11 +159,17 @@ function renderDetailEditor() {
         return;
     }
 
+    // 1. 获取滚动容器
     const scrollContainer = document.querySelector('#genericModal .modal-body') || 
                            document.querySelector('#genericModal .modal-content');
-    let savedScroll = 0;
+    // 2. 保存当前滚动百分比（而不是像素）
     if (scrollContainer) {
-        savedScroll = scrollContainer.scrollTop || 0;
+        const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+        if (maxScroll > 0) {
+            savedScrollRatio = scrollContainer.scrollTop / maxScroll;
+        } else {
+            savedScrollRatio = 0;
+        }
     }
 
     const skills = d.skills || {};
@@ -221,7 +216,7 @@ function renderDetailEditor() {
             </div>
         `).join('');
 
-    // ---- 额外能力（纯文本） ----
+    // ---- 额外能力 ----
     const extraList = d.extra_abilities || [];
     let extraHtml = extraList.length === 0 ? '<p style="color:var(--text-secondary); font-size:0.85rem;">暂无额外能力</p>' :
         extraList.map((item, i) => `
@@ -232,7 +227,7 @@ function renderDetailEditor() {
             </div>
         `).join('');
 
-    // ---- 星魂（纯文本） ----
+    // ---- 星魂 ----
     const cons = d.constellations || [];
     let consListHtml = cons.length === 0 ? '<p style="color:var(--text-secondary); font-size:0.9rem;">暂无星魂</p>' :
         cons.map((c, i) => `
@@ -374,10 +369,21 @@ function renderDetailEditor() {
     document.getElementById('modalFields').innerHTML = html;
     document.getElementById('modalSubmitBtn').innerText = '💾 保存全部';
 
-    if (scrollContainer && savedScroll > 0) {
+    // ★★★ 恢复滚动位置（使用百分比） ★★★
+    if (scrollContainer && savedScrollRatio > 0) {
+        // 使用双重延迟确保布局完成
+        setTimeout(() => {
+            const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+            if (maxScroll > 0) {
+                scrollContainer.scrollTop = Math.min(Math.round(savedScrollRatio * maxScroll), maxScroll);
+            }
+        }, 50);
+        // 再用 requestAnimationFrame 兜底
         requestAnimationFrame(() => {
             const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
-            scrollContainer.scrollTop = Math.min(savedScroll, maxScroll);
+            if (maxScroll > 0) {
+                scrollContainer.scrollTop = Math.min(Math.round(savedScrollRatio * maxScroll), maxScroll);
+            }
         });
     }
 
@@ -457,7 +463,6 @@ async function saveDetailEditor() {
             }
         });
 
-        // 额外能力：转换标记
         const extraAbilities = [];
         document.querySelectorAll('#extra-list > div').forEach(row => {
             const nameVal = row.querySelector('.extra-name')?.value?.trim();
@@ -470,7 +475,6 @@ async function saveDetailEditor() {
             }
         });
 
-        // 技能：转换标记
         const skills = {};
         Object.keys(currentEditCharData.skills).forEach(key => {
             const sk = currentEditCharData.skills[key];
@@ -484,7 +488,6 @@ async function saveDetailEditor() {
             }
         });
 
-        // 星魂：转换标记
         const constellations = (currentEditCharData.constellations || []).map(c => ({
             ...c,
             effect: markdownToHtml(c.effect || '', [])
@@ -666,7 +669,7 @@ window._addCons = function() {
             currentEditCharData.constellations.push({
                 level,
                 name,
-                effect: rawEffect // 存标记
+                effect: rawEffect
             });
             closeModal('subModal');
             renderDetailEditor();
@@ -690,7 +693,6 @@ window._editCons = function(index) {
             return;
         }
 
-        // 如果存的是HTML，转为纯文本标记
         const effectMarkdown = c.effect && c.effect.includes('<span') ? unparseEffectTemplate(c.effect) : c.effect;
 
         const html = `
@@ -732,7 +734,7 @@ window._editCons = function(index) {
                 currentEditCharData.constellations[index] = {
                     level: newLevel,
                     name: newName,
-                    effect: rawEffect // 存标记
+                    effect: rawEffect
                 };
                 closeModal('subModal');
                 renderDetailEditor();
@@ -762,7 +764,7 @@ window._removeCons = function(index) {
 };
 
 // ============================================================
-// ★★★★★ 配队操作（已加固，不变） ★★★★★
+// ★★★★★ 配队操作（已加固） ★★★★★
 // ============================================================
 window._addTeam = function() {
     const html = `
@@ -952,7 +954,7 @@ window._removeTeam = function(index) {
 };
 
 // ============================================================
-// ★★★★★ 晋级材料操作（已加固，不变） ★★★★★
+// ★★★★★ 晋级材料操作（已加固） ★★★★★
 // ============================================================
 window._addStage = function() {
     const html = `
