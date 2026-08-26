@@ -1,11 +1,11 @@
-// ========== 角色详情编辑器（修复子模态框 + 滚动恢复） ==========
+// ========== 角色详情编辑器（修复子模态框 + 滚动 + ID类型兼容） ==========
 import { getSupabase } from './auth.js';
 import { showNotification, logAction, openModal, closeModal, escapeHtml } from './utils.js';
 
 let currentEditCharId = null;
 let currentEditCharData = null;
 let expandedSections = {};
-let savedScrollTop = 0; // 保存主详情页滚动位置
+let savedScrollTop = 0;
 
 const ALL_SKILL_KEYS = [
     'normal', 'skill', 'ultimate', 'talent',
@@ -35,20 +35,22 @@ function unparseEffectTemplate(htmlText) {
 }
 
 // ============================================================
-// 主入口
+// 主入口（ID 强制转为字符串）
 // ============================================================
 export async function openCharDetailEditor(charId) {
     try {
         const sb = getSupabase();
+        const idStr = String(charId); // ★ 确保为字符串，匹配数据库 text 类型
+
         const { data, error } = await sb
             .from('character_details')
             .select('*')
-            .eq('id', charId)
+            .eq('id', idStr)
             .single();
 
         if (error && error.code === 'PGRST116') {
             currentEditCharData = {
-                id: charId,
+                id: idStr, // 字符串
                 name: '未命名',
                 base_stats: { hp: 0, atk: 0, def: 0, spd: 100, energy: 100 },
                 trace_stats: [],
@@ -64,6 +66,7 @@ export async function openCharDetailEditor(charId) {
         } else {
             currentEditCharData = {
                 ...data,
+                id: String(data.id), // 保证字符串
                 base_stats: data.base_stats || { hp: 0, atk: 0, def: 0, spd: 100, energy: 100 },
                 trace_stats: data.trace_stats || [],
                 extra_abilities: data.extra_abilities || [],
@@ -81,7 +84,7 @@ export async function openCharDetailEditor(charId) {
             }
         });
 
-        currentEditCharId = charId;
+        currentEditCharId = idStr; // 保存为字符串
         expandedSections = {};
         savedScrollTop = 0;
         renderDetailEditor();
@@ -103,7 +106,7 @@ function isSkillPopulated(sk) {
 }
 
 // ============================================================
-// 渲染主界面（保留滚动位置）- 修复版
+// 渲染主界面（保留滚动位置）- 使用 requestAnimationFrame
 // ============================================================
 function renderDetailEditor() {
     const d = currentEditCharData;
@@ -112,10 +115,8 @@ function renderDetailEditor() {
         return;
     }
 
-    // ★ 获取滚动容器
     const scrollContainer = document.querySelector('#genericModal .modal-body') || 
                            document.querySelector('#genericModal .modal-content');
-    // ★ 保存当前滚动位置（在重新渲染前）
     let savedScroll = 0;
     if (scrollContainer) {
         savedScroll = scrollContainer.scrollTop || 0;
@@ -165,7 +166,7 @@ function renderDetailEditor() {
             </div>
         `).join('');
 
-    // ---- 额外能力（textarea 支持拖动） ----
+    // ---- 额外能力 ----
     const extraList = d.extra_abilities || [];
     let extraHtml = extraList.length === 0 ? '<p style="color:var(--text-secondary); font-size:0.85rem;">暂无额外能力</p>' :
         extraList.map((item, i) => `
@@ -176,7 +177,7 @@ function renderDetailEditor() {
             </div>
         `).join('');
 
-    // ---- 星魂（列表显示，编辑时使用可视化模板） ----
+    // ---- 星魂 ----
     const cons = d.constellations || [];
     let consListHtml = cons.length === 0 ? '<p style="color:var(--text-secondary); font-size:0.9rem;">暂无星魂</p>' :
         cons.map((c, i) => `
@@ -253,7 +254,7 @@ function renderDetailEditor() {
                 </button>
             </div>
 
-            <!-- 额外能力（textarea 支持拖动） -->
+            <!-- 额外能力 -->
             <div class="form-section" style="margin-bottom:16px;">
                 <h4 style="color:#E8C96B; margin-bottom:8px;">✨ 额外能力</h4>
                 <div id="extra-list">${extraHtml}</div>
@@ -262,7 +263,7 @@ function renderDetailEditor() {
                 </button>
             </div>
 
-            <!-- 技能（9个全部显示） -->
+            <!-- 技能 -->
             <div class="form-section" style="margin-bottom:16px;">
                 <h4 style="color:#E8C96B; margin-bottom:8px;">⚔️ 技能（9个固定位）</h4>
                 <div id="skillsEditArea">${skillsListHtml}</div>
@@ -307,7 +308,7 @@ function renderDetailEditor() {
         </div>
     `;
 
-    // 打开模态框（如果已打开则只更新内容）
+    // 打开模态框
     const modal = document.getElementById('genericModal');
     const isAlreadyOpen = modal && modal.classList.contains('show');
 
@@ -319,7 +320,7 @@ function renderDetailEditor() {
     document.getElementById('modalFields').innerHTML = html;
     document.getElementById('modalSubmitBtn').innerText = '💾 保存全部';
 
-    // ★ 恢复滚动位置（使用 requestAnimationFrame 确保渲染完成）
+    // 恢复滚动位置
     if (scrollContainer && savedScroll > 0) {
         requestAnimationFrame(() => {
             const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
@@ -373,7 +374,7 @@ function renderSkillDetail(key, sk) {
 }
 
 // ============================================================
-// 保存全部
+// 保存全部（ID 保持字符串）
 // ============================================================
 async function saveDetailEditor() {
     try {
@@ -405,6 +406,7 @@ async function saveDetailEditor() {
         });
 
         const updateData = {
+            id: currentEditCharId, // 已经是字符串
             name,
             base_stats: { hp, atk, def, spd, energy },
             trace_stats: traceStats,
@@ -420,7 +422,7 @@ async function saveDetailEditor() {
         const sb = getSupabase();
         const { error } = await sb
             .from('character_details')
-            .upsert({ id: currentEditCharId, ...updateData }, { onConflict: 'id' });
+            .upsert(updateData, { onConflict: 'id' });
 
         if (error) throw error;
 
@@ -459,7 +461,7 @@ window._removeTrace = function(index) {
 };
 
 // ============================================================
-// 额外能力操作（textarea 支持拖动）
+// 额外能力操作
 // ============================================================
 window._addExtra = function() {
     const container = document.getElementById('extra-list');
@@ -530,7 +532,7 @@ window._clearSkill = function(key) {
 };
 
 // ============================================================
-// ★★★★★ 星魂操作（使用子模态框 subModal） ★★★★★
+// 星魂操作（使用子模态框 subModal）
 // ============================================================
 window._addCons = function() {
     const html = `
@@ -629,7 +631,7 @@ window._removeCons = function(index) {
 };
 
 // ============================================================
-// ★★★★★ 配队操作（使用子模态框 subModal） ★★★★★
+// 配队操作（使用子模态框 subModal）
 // ============================================================
 window._addTeam = function() {
     const html = `
@@ -790,7 +792,7 @@ window._removeTeam = function(index) {
 };
 
 // ============================================================
-// ★★★★★ 晋级材料操作（使用子模态框 subModal） ★★★★★
+// 晋级材料操作（使用子模态框 subModal）
 // ============================================================
 window._addStage = function() {
     const html = `
