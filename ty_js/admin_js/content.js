@@ -98,17 +98,17 @@ export function renderContentTable(table, data) {
             }
             html += `<td title="${val}">${val}</td>`;
         }
-        // ★★★ 修复：直接使用数字ID，由 _openCharDetail 转为字符串 ★★★
+        // ★★★ 关键修复：直接使用 row.id（字符串 ID） ★★★
         const detailId = row.id;
         html += `
             <td class="action-buttons">
-                <button class="edit-btn" onclick="window.editContentItem('${table}', ${row.id})">
+                <button class="edit-btn" onclick="window.editContentItem('${table}', '${row.id}')">
                     <i class="fas fa-edit"></i> 编辑
                 </button>
                 <button class="edit-btn" style="background:#8b5cf6;" onclick="window._openCharDetail('${detailId}')">
                     <i class="fas fa-file-alt"></i> 详情
                 </button>
-                <button class="delete-btn" onclick="window.deleteContentItem('${table}', ${row.id})">
+                <button class="delete-btn" onclick="window.deleteContentItem('${table}', '${row.id}')">
                     <i class="fas fa-trash"></i> 删除
                 </button>
             </td>
@@ -168,7 +168,6 @@ export function showContentForm(table, existingData = null) {
             }
             inputHtml += `</select>`;
         } else {
-            // text / number
             const type = field.type === 'number' ? 'number' : 'text';
             const required = field.required ? 'required' : '';
             const step = field.type === 'number' ? 'step="any"' : '';
@@ -183,12 +182,10 @@ export function showContentForm(table, existingData = null) {
         `;
     }
 
-    // 打开模态框
     openModal('genericModal');
     document.getElementById('modalTitle').innerText = isEdit ? '编辑 ' + getTableChinese(table) : '添加 ' + getTableChinese(table);
     document.getElementById('modalFields').innerHTML = html;
 
-    // 绑定提交事件
     document.getElementById('modalForm').onsubmit = async (e) => {
         e.preventDefault();
 
@@ -234,7 +231,6 @@ export function showContentForm(table, existingData = null) {
             showNotification(isEdit ? '更新成功' : '添加成功', 'success');
             closeModal('genericModal');
 
-            // 刷新列表
             await loadContentTable(table);
             filterContentTable(table);
         } catch (err) {
@@ -244,10 +240,9 @@ export function showContentForm(table, existingData = null) {
 }
 
 // ============================================================
-// ★★★ 以下函数挂载到 window，供 HTML onclick 调用 ★★★
+// ★★★ 以下函数挂载到 window ★★★
 // ============================================================
 
-// ----- 编辑（通过点击表格中的编辑按钮触发） -----
 window.editContentItem = async function (table, id) {
     try {
         const sb = getSupabase();
@@ -264,12 +259,10 @@ window.editContentItem = async function (table, id) {
     }
 };
 
-// ----- 删除 -----
 window.deleteContentItem = async function (table, id) {
     if (!confirm('确定删除这条记录吗？')) return;
 
     try {
-        // 先获取名称用于日志
         const sb = getSupabase();
         const { data: item } = await sb
             .from(table)
@@ -291,7 +284,6 @@ window.deleteContentItem = async function (table, id) {
             '删除了 ' + targetName
         );
 
-        // 刷新列表
         await loadContentTable(table);
         filterContentTable(table);
     } catch (err) {
@@ -299,14 +291,11 @@ window.deleteContentItem = async function (table, id) {
     }
 };
 
-// ============================================================
-// ★★★ 角色详情编辑器入口（强制转为字符串） ★★★
-// ============================================================
+// ★★★ 角色详情编辑器入口（直接传递字符串 ID） ★★★
 window._openCharDetail = function(charId) {
-    if (charId === undefined || charId === null || charId === '') {
-        showNotification('无效的角色标识，请检查数据', 'error');
+    if (!charId) {
+        showNotification('无效的角色标识', 'error');
         return;
     }
-    // 强制转为字符串，匹配 character_details.id 的 text 类型
-    openCharDetailEditor(String(charId));
+    openCharDetailEditor(charId);
 };
