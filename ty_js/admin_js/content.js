@@ -98,8 +98,8 @@ export function renderContentTable(table, data) {
             }
             html += `<td title="${val}">${val}</td>`;
         }
-        // ★★★ 关键修复：直接使用 row.id（字符串 ID） ★★★
-        const detailId = row.id;
+        // ★★★ 关键修复：优先使用 slug（文本标识），若无则回退到数字 id ★★★
+        const detailId = row.slug || row.id;
         html += `
             <td class="action-buttons">
                 <button class="edit-btn" onclick="window.editContentItem('${table}', '${row.id}')">
