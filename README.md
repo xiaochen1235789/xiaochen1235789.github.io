@@ -1,1 +1,1 @@
-https://xiaochen1235789.github.io
+https://ixzzzz.top/index.html
