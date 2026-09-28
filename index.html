@@ -44,14 +44,14 @@
 
     <!-- 顶部导航栏 -->
     <nav class="top-nav" aria-label="主要导航">
-        <button class="menu-btn" id="menuToggleBtn">
+        <button class="menu-btn" id="menuToggleBtn" aria-label="打开菜单">
             <i class="fas fa-bars"></i>
         </button>
         <div class="nav-title"><span>六哥荣耀WIKI</span></div>
         <!-- 导航栏右侧：邮箱按钮 + 用户区域 -->
         <div class="nav-right">
             <!-- 邮箱入口按钮（带角标） -->
-            <button class="nav-email-btn" id="navEmailBtn" title="邮箱">
+            <button class="nav-email-btn" id="navEmailBtn" title="邮箱" aria-label="邮箱">
                 <i class="fas fa-envelope"></i>
                 <span class="email-badge" id="emailBadge">0</span>
             </button>
@@ -137,7 +137,7 @@
                 <h3 style="color: var(--text-highlight); margin: 0; font-size: 1.2rem;">
                     <i class="fas fa-pen-fancy" style="margin-right: 10px; color: var(--special-color);"></i>站长想说的话
                 </h3>
-                <button onclick="closeOwnerMessage()" style="background:none; border:none; color:var(--text-secondary); font-size:1.8rem; cursor:pointer; line-height:1; padding:0 8px;">&times;</button>
+                <button onclick="closeOwnerMessage()" style="background:none; border:none; color:var(--text-secondary); font-size:1.8rem; cursor:pointer; line-height:1; padding:0 8px;" aria-label="关闭">&times;</button>
             </div>
             <div style="line-height: 2.1; color: var(--text-main); font-size: 0.95rem; padding: 4px 0;">
                 <p>🎈 大家好，我是六哥荣耀WIKI的站长。</p>
@@ -154,8 +154,8 @@
         </div>
     </div>
 
-    <!-- 邮箱模态框 -->
-    <div id="email-modal" class="modal" style="display: none;">
+    <!-- 邮箱模态框（移除了行内 display: none，通过 CSS 类控制） -->
+    <div id="email-modal" class="modal">
         <div class="modal-overlay" id="emailModalOverlay"></div>
         <div class="modal-content">
             <div class="modal-header">
@@ -255,6 +255,7 @@
         let emailBadgeTimer = null;
         let isEmailModalOpen = false;
         let isLoadingLazy = {}; // 标记各区域是否已加载
+        let globalNotificationTimer = null; // ★ 修复：用于统一管理普通通知的定时器
 
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
@@ -274,6 +275,11 @@
             const notification = document.getElementById('notification');
             if (!notification) return;
 
+            // ★ 修复：清理普通通知的定时器，避免上一个通知的定时器误杀新通知
+            if (globalNotificationTimer) {
+                clearTimeout(globalNotificationTimer);
+                globalNotificationTimer = null;
+            }
             if (autoSignNotificationTimer) {
                 clearTimeout(autoSignNotificationTimer);
                 autoSignNotificationTimer = null;
@@ -306,7 +312,11 @@
                     autoSignNotificationTimer = null;
                 }, 6000);
             } else {
-                setTimeout(() => notification.classList.remove('show'), 3000);
+                // ★ 修复：普通通知使用全局定时器
+                globalNotificationTimer = setTimeout(() => {
+                    notification.classList.remove('show');
+                    globalNotificationTimer = null;
+                }, 3000);
             }
 
             setTimeout(() => notification.classList.add('show'), 10);
@@ -346,22 +356,24 @@
 
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
-        // ==================== 网站运行天数 + 节日 + 时段祝福（方案B） ====================
+        // ==================== 网站运行天数 + 节日 + 时段祝福 ====================
         async function fetchSiteMessages() {
             const launchDate = new Date(2025, 10, 1);
             const today = new Date();
             const days = Math.floor((today - launchDate) / (1000 * 60 * 60 * 24));
 
-            const rawHour = (new Date().getUTCHours() + 8) % 24;
-let hourSlot;
-if (rawHour >= 0 && rawHour < 5) hourSlot = 0;
-else if (rawHour >= 5 && rawHour < 8) hourSlot = 5;
-else if (rawHour >= 8 && rawHour < 11) hourSlot = 8;
-else if (rawHour >= 11 && rawHour < 14) hourSlot = 11;  // ★ 午餐：11-13点
-else if (rawHour >= 14 && rawHour < 17) hourSlot = 14;  // ★ 新增下午：14-16点
-else if (rawHour >= 17 && rawHour < 19) hourSlot = 17;
-else if (rawHour >= 19 && rawHour < 24) hourSlot = 19;
-else hourSlot = 0;
+            // ★ 修复：直接使用浏览器本地时间，自动适应时区和夏令时
+            const rawHour = new Date().getHours(); 
+            
+            let hourSlot;
+            if (rawHour >= 0 && rawHour < 5) hourSlot = 0;
+            else if (rawHour >= 5 && rawHour < 8) hourSlot = 5;
+            else if (rawHour >= 8 && rawHour < 11) hourSlot = 8;
+            else if (rawHour >= 11 && rawHour < 14) hourSlot = 11;
+            else if (rawHour >= 14 && rawHour < 17) hourSlot = 14;
+            else if (rawHour >= 17 && rawHour < 19) hourSlot = 17;
+            else if (rawHour >= 19 && rawHour < 24) hourSlot = 19;
+            else hourSlot = 0;
 
             const cacheKey = `site_msg_${days}_${hourSlot}`;
             const cached = localStorage.getItem(cacheKey);
@@ -415,7 +427,7 @@ else hourSlot = 0;
                 if (res.isSpecialDay && res.specialMessage) {
                     htmlLines.push(`✨ ${res.specialMessage} ✨`);
                 } else {
-                    htmlLines.push(`六哥荣耀WIKI已存在  ${res.days}  天啦꒰˶>ᗜ<˶꒱`);
+                    htmlLines.push(`六哥荣耀WIKI已存在：${res.days} 天啦꒰˶>ᗜ<˶꒱`);
                 }
                 if (res.hourlyGreeting) {
                     htmlLines.push(`💬 ${res.hourlyGreeting}`);
@@ -426,7 +438,6 @@ else hourSlot = 0;
             }
 
             updateUI();
-            // 每小时刷新一次（免得跨时段缓存不更新）
             setInterval(updateUI, 3600000);
         }
 
@@ -637,7 +648,8 @@ else hourSlot = 0;
                     .select('owned')
                     .eq('user_id', currentUser.id)
                     .maybeSingle();
-                if (error && error.code !== 'PGRST116') return null;
+                // ★ 修复：maybeSingle 找不到数据时 error 为 null，直接判断 error 即可
+                if (error) return null;
                 return data?.owned === true;
             } catch (e) {
                 return null;
@@ -945,16 +957,17 @@ else hourSlot = 0;
         async function getUnreadMailCount() {
             if (!supabaseClient || !currentUser) return 0;
             try {
-                const { data, error } = await supabaseClient
+                // ★ 修复：使用 count 精确统计，data 在 head:true 时永远为 null
+                const { count, error } = await supabaseClient
                     .from('user_mails')
-                    .select('id', { count: 'exact', head: true })
+                    .select('*', { count: 'exact', head: true })
                     .eq('to_user_id', currentUser.id)
                     .is('read_at', null);
                 if (error) {
                     console.warn('获取未读邮件数失败:', error);
                     return 0;
                 }
-                return data?.length || 0;
+                return count || 0;
             } catch (e) {
                 console.warn('获取未读邮件数异常:', e);
                 return 0;
@@ -984,17 +997,19 @@ else hourSlot = 0;
         }
 
         // ==================== 邮箱模态框控制 ====================
+        // ★ 修复：统一使用 class="active" 控制显示，避免 display 冲突导致动画失效
         function openEmailModal() {
             const modal = document.getElementById('email-modal');
             const iframe = document.getElementById('emailIframe');
             const errorDiv = document.getElementById('email-error');
             if (!modal || !iframe) return;
-            if (modal.style.display === 'flex' && !modal.classList.contains('closing')) {
+            
+            if (modal.classList.contains('active')) {
                 closeEmailModal();
                 return;
             }
-            modal.classList.remove('closing');
-            modal.style.display = 'flex';
+            
+            modal.classList.add('active');
             document.body.classList.add('modal-open');
             errorDiv.style.display = 'none';
             iframe.style.display = 'block';
@@ -1016,16 +1031,15 @@ else hourSlot = 0;
 
         function closeEmailModal() {
             const modal = document.getElementById('email-modal');
-            if (!modal) return;
-            modal.classList.add('closing');
+            if (!modal || !modal.classList.contains('active')) return;
+            
+            modal.classList.remove('active');
+            document.body.classList.remove('modal-open');
             setTimeout(() => {
-                modal.style.display = 'none';
-                modal.classList.remove('closing');
-                document.body.classList.remove('modal-open');
                 const iframe = document.getElementById('emailIframe');
                 if (iframe) iframe.src = 'about:blank';
                 updateEmailBadge();
-            }, 300);
+            }, 300); // 等待 CSS 过渡动画结束
         }
 
         function reloadEmailIframe() {
@@ -1074,19 +1088,16 @@ else hourSlot = 0;
                 card.innerHTML = imgHtml + nameHtml + descHtml;
                 container.appendChild(card);
             });
-            // 渲染完后，触发搜索框重新检索当前关键字
             const searchInput = document.getElementById('search-input');
             if (searchInput && searchInput.value.trim() !== '') {
                 searchInput.dispatchEvent(new Event('input'));
             }
         }
 
-        // 核心数据加载函数
         async function loadTableData(tableName, containerId, typeLabel, extraClass = '', isMaterial = false) {
             const container = document.getElementById(containerId);
             if (!container) return;
-            
-            // 放入骨架屏占位，防止页面跳动
+
             container.innerHTML = Array(6).fill('<div class="content-card skeleton" style="height:200px; background:var(--bg-secondary); border-radius:12px;"></div>').join('');
 
             const { data, error } = await supabaseClient
@@ -1102,9 +1113,8 @@ else hourSlot = 0;
             renderCards(data, containerId, typeLabel, extraClass, isMaterial);
         }
 
-        // 建立区域懒加载观察者
         function setupLazyLoading(sectionId, containerId, tableName, typeLabel, extraClass = '', isMaterial = false) {
-            if (isLoadingLazy[sectionId]) return; // 防止重复绑定
+            if (isLoadingLazy[sectionId]) return;
             const section = document.getElementById(sectionId);
             if (!section) return;
 
@@ -1114,7 +1124,7 @@ else hourSlot = 0;
                     observer.disconnect();
                     loadTableData(tableName, containerId, typeLabel, extraClass, isMaterial);
                 }
-            }, { threshold: 0.1 }); // 露出 10% 即触发
+            }, { threshold: 0.1 });
 
             observer.observe(section);
         }
@@ -1160,8 +1170,7 @@ else hourSlot = 0;
             }
             const emptyResult = document.querySelector('.empty-result');
             if (emptyResult) emptyResult.style.display = 'none';
-            
-            // 如果切到未加载的页面，手动触发加载
+
             if (sectionId === 'lightcone' && !isLoadingLazy['lightconeSection']) {
                 setupLazyLoading('lightconeSection', 'lightcone-container', 'light_cones', '光锥', 'lightcone-card', false);
                 loadTableData('light_cones', 'lightcone-container', '光锥', 'lightcone-card', false);
@@ -1233,7 +1242,7 @@ else hourSlot = 0;
 
             await safeExecute(() => initializeUserProfile());
             await safeExecute(() => initializeSiteAge());
-            
+
             initializeSearch();
             initializeNavigation();
             setupCrossTabSync();
@@ -1360,18 +1369,15 @@ else hourSlot = 0;
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     const emailModal = document.getElementById('email-modal');
-                    if (emailModal && emailModal.style.display === 'flex') {
+                    if (emailModal && emailModal.classList.contains('active')) {
                         closeEmailModal();
                     }
                 }
             });
 
-            // =========================================================
-            // ★★★ 核心加载逻辑：首屏直接加载，其他区域滚动懒加载 ★★★
-            // =========================================================
             // 1. 立即加载角色区（首屏）
             await loadTableData('characters', 'character-container', '角色');
-            
+
             // 2. 用 IntersectionObserver 监听另外三个区域
             setupLazyLoading('lightconeSection', 'lightcone-container', 'light_cones', '光锥', 'lightcone-card', false);
             setupLazyLoading('materialSection', 'material-container', 'materials', '材料', null, true);
