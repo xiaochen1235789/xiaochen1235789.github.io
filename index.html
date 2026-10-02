@@ -23,15 +23,12 @@
             "url": "https://ixzzzz.top"
         }
     </script>
-    <!-- 图标 -->
     <link rel="icon" href="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/avatars/icon.webp" type="image/png">
     <link rel="icon" href="https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/avatars/icon.webp" type="image/x-icon">
     <title>六哥荣耀WIKI</title>
-    <!-- 外部样式表 -->
     <link rel="stylesheet" href="./css/zhuye0.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div id="global-loading">
@@ -48,9 +45,7 @@
             <i class="fas fa-bars"></i>
         </button>
         <div class="nav-title"><span>六哥荣耀WIKI</span></div>
-        <!-- 导航栏右侧：邮箱按钮 + 用户区域 -->
         <div class="nav-right">
-            <!-- 邮箱入口按钮（带角标） -->
             <button class="nav-email-btn" id="navEmailBtn" title="邮箱" aria-label="邮箱">
                 <i class="fas fa-envelope"></i>
                 <span class="email-badge" id="emailBadge">0</span>
@@ -81,7 +76,6 @@
             </div>
         </div>
 
-        <!-- 自动签到卡状态 -->
         <div class="menu-auto-sign-card" id="menuAutoSignCard">
             <i class="fas fa-id-card"></i>
             <span>自动签到卡: <span id="autoSignCardStatus" class="status-loading">加载中...</span></span>
@@ -154,7 +148,7 @@
         </div>
     </div>
 
-    <!-- 邮箱模态框（移除了行内 display: none，通过 CSS 类控制） -->
+    <!-- 邮箱模态框，修复：使用通用 .modal 类并默认隐藏 -->
     <div id="email-modal" class="modal">
         <div class="modal-overlay" id="emailModalOverlay"></div>
         <div class="modal-content">
@@ -253,9 +247,8 @@
         let autoSignNotificationTimer = null;
         let isJumping = false;
         let emailBadgeTimer = null;
-        let isEmailModalOpen = false;
-        let isLoadingLazy = {}; // 标记各区域是否已加载
-        let globalNotificationTimer = null; // ★ 修复：用于统一管理普通通知的定时器
+        let isLoadingLazy = {};
+        let globalNotificationTimer = null;
 
         const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
@@ -263,10 +256,12 @@
         // ==================== 辅助函数 ====================
         function escapeHtml(str) {
             if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
+            return String(str).replace(/[&<>"']/g, function(m) {
                 if (m === '&') return '&amp;';
                 if (m === '<') return '&lt;';
                 if (m === '>') return '&gt;';
+                if (m === '"') return '&quot;';
+                if (m === "'") return '&#39;';
                 return m;
             });
         }
@@ -275,7 +270,6 @@
             const notification = document.getElementById('notification');
             if (!notification) return;
 
-            // ★ 修复：清理普通通知的定时器，避免上一个通知的定时器误杀新通知
             if (globalNotificationTimer) {
                 clearTimeout(globalNotificationTimer);
                 globalNotificationTimer = null;
@@ -312,7 +306,6 @@
                     autoSignNotificationTimer = null;
                 }, 6000);
             } else {
-                // ★ 修复：普通通知使用全局定时器
                 globalNotificationTimer = setTimeout(() => {
                     notification.classList.remove('show');
                     globalNotificationTimer = null;
@@ -335,7 +328,7 @@
                 placeholder.className = 'img-placeholder';
                 placeholder.textContent = '🖼️';
                 placeholder.style.cssText =
-                    'display:flex; align-items:center; justify-content:center; width:100%; height:100%; background:#2a4a3a; color:#ccc; font-size:2rem;';
+                    'display:flex; align-items:center; justify-content:center; width:100%; height:100%; background:rgba(124,155,255,.08); color:var(--text-secondary); font-size:2rem;';
                 img.style.display = 'none';
                 parent.appendChild(placeholder);
             }
@@ -362,8 +355,7 @@
             const today = new Date();
             const days = Math.floor((today - launchDate) / (1000 * 60 * 60 * 24));
 
-            // ★ 修复：直接使用浏览器本地时间，自动适应时区和夏令时
-            const rawHour = new Date().getHours(); 
+            const rawHour = new Date().getHours();
 
             let hourSlot;
             if (rawHour >= 0 && rawHour < 5) hourSlot = 0;
@@ -451,7 +443,7 @@
                 clearBtn.className = 'search-clear';
                 clearBtn.innerHTML = '✕';
                 clearBtn.style.cssText =
-                    'position:absolute; right:40px; top:50%; transform:translateY(-50%); cursor:pointer; color:#999; display:none; font-size:1.2rem;';
+                    'position:absolute; right:44px; top:50%; transform:translateY(-50%); cursor:pointer; color:#8a9bb5; display:none; font-size:1rem;';
                 clearBtn.addEventListener('click', () => {
                     searchInput.value = '';
                     searchInput.dispatchEvent(new Event('input'));
@@ -476,7 +468,7 @@
                         const name = card.dataset.name?.toLowerCase() || '';
                         const desc = card.dataset.desc?.toLowerCase() || '';
                         const isMatch = !keyword || name.includes(keyword) || desc.includes(keyword);
-                        card.style.display = isMatch ? 'block' : 'none';
+                        card.style.display = isMatch ? '' : 'none';
                         if (isMatch) matchCount++;
                     });
                     if (matchCount === 0 && keyword) {
@@ -648,7 +640,6 @@
                     .select('owned')
                     .eq('user_id', currentUser.id)
                     .maybeSingle();
-                // ★ 修复：maybeSingle 找不到数据时 error 为 null，直接判断 error 即可
                 if (error) return null;
                 return data?.owned === true;
             } catch (e) {
@@ -719,7 +710,7 @@
                 }
                 currentUser = session.user;
                 const { data: profile } = await supabaseClient.from('user_profiles').select('username, avatar_url').eq('id',
-                    currentUser.id).single();
+                    currentUser.id).maybeSingle();
                 if (profile) {
                     const username = profile.username || currentUser.email.split('@')[0];
                     localStorage.setItem('cachedUsername', username);
@@ -727,7 +718,7 @@
                     updateNavbar(username, profile.avatar_url);
                     updateMenuUserInfo(username, profile.avatar_url, currentUser.email);
                     const { data: stats } = await supabaseClient.from('user_stats').select('*').eq('user_id', currentUser.id)
-                        .single();
+                        .maybeSingle();
                     if (stats) {
                         userStats = stats;
                         localStorage.setItem('cachedUserStats', JSON.stringify(stats));
@@ -957,7 +948,6 @@
         async function getUnreadMailCount() {
             if (!supabaseClient || !currentUser) return 0;
             try {
-                // ★ 修复：使用 count 精确统计，data 在 head:true 时永远为 null
                 const { count, error } = await supabaseClient
                     .from('user_mails')
                     .select('*', { count: 'exact', head: true })
@@ -997,7 +987,6 @@
         }
 
         // ==================== 邮箱模态框控制 ====================
-        // ★ 修复：统一使用 class="active" 控制显示，避免 display 冲突导致动画失效
         function openEmailModal() {
             const modal = document.getElementById('email-modal');
             const iframe = document.getElementById('emailIframe');
@@ -1039,7 +1028,7 @@
                 const iframe = document.getElementById('emailIframe');
                 if (iframe) iframe.src = 'about:blank';
                 updateEmailBadge();
-            }, 300); // 等待 CSS 过渡动画结束
+            }, 300);
         }
 
         function reloadEmailIframe() {
@@ -1053,7 +1042,7 @@
         }
 
         // =========================================================
-        // ★★★ 核心进化：区域懒加载与数据渲染 ★★★
+        // 区域懒加载与数据渲染
         // =========================================================
         function renderCards(items, containerId, typeLabel, extraClass = '', isMaterial = false) {
             const container = document.getElementById(containerId);
@@ -1098,7 +1087,12 @@
             const container = document.getElementById(containerId);
             if (!container) return;
 
-            container.innerHTML = Array(6).fill('<div class="content-card skeleton" style="height:200px; background:var(--bg-secondary); border-radius:12px;"></div>').join('');
+            if (!supabaseClient) {
+                container.innerHTML = `<div style="text-align:center;color:#f87171;padding:20px;">${typeLabel}加载失败：数据库未连接</div>`;
+                return;
+            }
+
+            container.innerHTML = Array(6).fill('<div class="content-card skeleton" style="height:200px; background:var(--card-bg-2); border-radius:var(--radius);"></div>').join('');
 
             const { data, error } = await supabaseClient
                 .from(tableName)
@@ -1172,17 +1166,14 @@
             if (emptyResult) emptyResult.style.display = 'none';
 
             if (sectionId === 'lightcone' && !isLoadingLazy['lightconeSection']) {
-                setupLazyLoading('lightconeSection', 'lightcone-container', 'light_cones', '光锥', 'lightcone-card', false);
-                loadTableData('light_cones', 'lightcone-container', '光锥', 'lightcone-card', false);
                 isLoadingLazy['lightconeSection'] = true;
+                loadTableData('light_cones', 'lightcone-container', '光锥', 'lightcone-card', false);
             } else if (sectionId === 'material' && !isLoadingLazy['materialSection']) {
-                setupLazyLoading('materialSection', 'material-container', 'materials', '材料', null, true);
-                loadTableData('materials', 'material-container', '材料', null, true);
                 isLoadingLazy['materialSection'] = true;
+                loadTableData('materials', 'material-container', '材料', null, true);
             } else if (sectionId === 'item' && !isLoadingLazy['itemSection']) {
-                setupLazyLoading('itemSection', 'item-container', 'items', '道具', null, true);
-                loadTableData('items', 'item-container', '道具', null, true);
                 isLoadingLazy['itemSection'] = true;
+                loadTableData('items', 'item-container', '道具', null, true);
             }
         }
 
@@ -1233,82 +1224,70 @@
 
         // ==================== 页面初始化 ====================
         async function initializePage() {
-            document.getElementById('year').textContent = new Date().getFullYear();
+            try {
+                document.getElementById('year').textContent = new Date().getFullYear();
 
-            const savedTheme = localStorage.getItem('wiki_theme');
-            if (savedTheme === 'night') {
-                document.body.classList.add('night-mode');
-            }
-
-            await safeExecute(() => initializeUserProfile());
-            await safeExecute(() => initializeSiteAge());
-
-            initializeSearch();
-            initializeNavigation();
-            setupCrossTabSync();
-            setupLoginMessageListener();
-            bindUserMenuActions();
-
-            const menuToggle = document.getElementById('menuToggleBtn');
-            const menuOverlay = document.getElementById('menuOverlay');
-            menuToggle.addEventListener('click', openMenu);
-            menuOverlay.addEventListener('click', closeMenu);
-            document.querySelectorAll('.menu-item[data-section]').forEach(item => {
-                item.addEventListener('click', () => {
-                    const section = item.dataset.section;
-                    if (section) switchContent(section);
-                });
-            });
-            const gachaItem = document.getElementById('menuGacha');
-            if (gachaItem) {
-                gachaItem.addEventListener('click', () => {
-                    closeMenu();
-                    window.open('chouka.html', '_blank');
-                });
-            }
-            const changelogItem = document.getElementById('menuChangelog');
-            if (changelogItem) {
-                changelogItem.addEventListener('click', () => {
-                    closeMenu();
-                    openChangelogModal();
-                });
-            }
-            const friendItem = document.getElementById('menuFriend');
-            if (friendItem) {
-                friendItem.addEventListener('click', () => {
-                    closeMenu();
-                    window.open('friend.html', '_blank');
-                });
-            }
-
-            const ownerMsgItem = document.getElementById('menuOwnerMessage');
-            if (ownerMsgItem) {
-                ownerMsgItem.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    closeMenu();
-                    openOwnerMessage();
-                });
-            }
-
-            const menuNightToggle = document.getElementById('menuNightToggle');
-            if (menuNightToggle) {
-                const menuIcon = document.getElementById('menuNightIcon');
-                const menuLabel = document.getElementById('menuNightLabel');
-
-                if (document.body.classList.contains('night-mode')) {
-                    menuIcon.className = 'fas fa-sun';
-                    menuLabel.textContent = '白天模式';
-                } else {
-                    menuIcon.className = 'fas fa-moon';
-                    menuLabel.textContent = '黑夜模式';
+                const savedTheme = localStorage.getItem('wiki_theme');
+                if (savedTheme === 'night') {
+                    document.body.classList.add('night-mode');
                 }
 
-                menuNightToggle.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    document.body.classList.toggle('night-mode');
-                    const isNight = document.body.classList.contains('night-mode');
+                await safeExecute(() => initializeUserProfile());
+                await safeExecute(() => initializeSiteAge());
 
-                    if (isNight) {
+                initializeSearch();
+                initializeNavigation();
+                setupCrossTabSync();
+                setupLoginMessageListener();
+                bindUserMenuActions();
+
+                const menuToggle = document.getElementById('menuToggleBtn');
+                const menuOverlay = document.getElementById('menuOverlay');
+                menuToggle.addEventListener('click', openMenu);
+                menuOverlay.addEventListener('click', closeMenu);
+                document.querySelectorAll('.menu-item[data-section]').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const section = item.dataset.section;
+                        if (section) switchContent(section);
+                    });
+                });
+                const gachaItem = document.getElementById('menuGacha');
+                if (gachaItem) {
+                    gachaItem.addEventListener('click', () => {
+                        closeMenu();
+                        window.open('chouka.html', '_blank');
+                    });
+                }
+                const changelogItem = document.getElementById('menuChangelog');
+                if (changelogItem) {
+                    changelogItem.addEventListener('click', () => {
+                        closeMenu();
+                        openChangelogModal();
+                    });
+                }
+                const friendItem = document.getElementById('menuFriend');
+                if (friendItem) {
+                    friendItem.addEventListener('click', () => {
+                        closeMenu();
+                        window.open('friend.html', '_blank');
+                    });
+                }
+
+                const ownerMsgItem = document.getElementById('menuOwnerMessage');
+                if (ownerMsgItem) {
+                    ownerMsgItem.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        closeMenu();
+                        openOwnerMessage();
+                    });
+                }
+
+                const menuNightToggle = document.getElementById('menuNightToggle');
+                if (menuNightToggle) {
+                    const menuIcon = document.getElementById('menuNightIcon');
+                    const menuLabel = document.getElementById('menuNightLabel');
+
+                    if (document.body.classList.contains('night-mode')) {
                         menuIcon.className = 'fas fa-sun';
                         menuLabel.textContent = '白天模式';
                     } else {
@@ -1316,75 +1295,96 @@
                         menuLabel.textContent = '黑夜模式';
                     }
 
-                    localStorage.setItem('wiki_theme', isNight ? 'night' : 'day');
-                });
-            }
+                    menuNightToggle.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        document.body.classList.toggle('night-mode');
+                        const isNight = document.body.classList.contains('night-mode');
 
-            const defaultMenuItem = document.querySelector('.menu-item[data-section="character"]');
-            if (defaultMenuItem) defaultMenuItem.classList.add('active');
+                        if (isNight) {
+                            menuIcon.className = 'fas fa-sun';
+                            menuLabel.textContent = '白天模式';
+                        } else {
+                            menuIcon.className = 'fas fa-moon';
+                            menuLabel.textContent = '黑夜模式';
+                        }
 
-            const banner = document.getElementById('disclaimerBanner');
-            const closeBtn = document.getElementById('closeDisclaimer');
-            if (banner && closeBtn) {
-                if (localStorage.getItem('disclaimerClosed') === 'true') {
-                    banner.style.display = 'none';
+                        localStorage.setItem('wiki_theme', isNight ? 'night' : 'day');
+                    });
                 }
-                closeBtn.addEventListener('click', function() {
-                    banner.style.display = 'none';
-                    localStorage.setItem('disclaimerClosed', 'true');
-                });
-            }
 
-            const ownerModal = document.getElementById('ownerMessageModal');
-            if (ownerModal) {
-                ownerModal.addEventListener('click', function(e) {
-                    if (e.target === this) {
-                        closeOwnerMessage();
+                const defaultMenuItem = document.querySelector('.menu-item[data-section="character"]');
+                if (defaultMenuItem) defaultMenuItem.classList.add('active');
+
+                const banner = document.getElementById('disclaimerBanner');
+                const closeBtn = document.getElementById('closeDisclaimer');
+                if (banner && closeBtn) {
+                    if (localStorage.getItem('disclaimerClosed') === 'true') {
+                        banner.style.display = 'none';
                     }
-                });
-            }
-
-            const navEmailBtn = document.getElementById('navEmailBtn');
-            if (navEmailBtn) {
-                navEmailBtn.addEventListener('click', openEmailModal);
-            }
-            const emailModalClose = document.getElementById('emailModalClose');
-            const emailModalOverlay = document.getElementById('emailModalOverlay');
-            if (emailModalClose) {
-                emailModalClose.addEventListener('click', closeEmailModal);
-            }
-            if (emailModalOverlay) {
-                emailModalOverlay.addEventListener('click', closeEmailModal);
-            }
-
-            window.addEventListener('message', (event) => {
-                if (event.data && event.data.type === 'closeEmailModal') {
-                    closeEmailModal();
+                    closeBtn.addEventListener('click', function() {
+                        banner.style.display = 'none';
+                        localStorage.setItem('disclaimerClosed', 'true');
+                    });
                 }
-                if (event.data && event.data.type === 'refreshEmailBadge') {
-                    updateEmailBadge();
-                }
-            });
 
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    const emailModal = document.getElementById('email-modal');
-                    if (emailModal && emailModal.classList.contains('active')) {
+                const ownerModal = document.getElementById('ownerMessageModal');
+                if (ownerModal) {
+                    ownerModal.addEventListener('click', function(e) {
+                        if (e.target === this) {
+                            closeOwnerMessage();
+                        }
+                    });
+                }
+
+                const navEmailBtn = document.getElementById('navEmailBtn');
+                if (navEmailBtn) {
+                    navEmailBtn.addEventListener('click', openEmailModal);
+                }
+                const emailModalClose = document.getElementById('emailModalClose');
+                const emailModalOverlay = document.getElementById('emailModalOverlay');
+                if (emailModalClose) {
+                    emailModalClose.addEventListener('click', closeEmailModal);
+                }
+                if (emailModalOverlay) {
+                    emailModalOverlay.addEventListener('click', closeEmailModal);
+                }
+
+                window.addEventListener('message', (event) => {
+                    if (event.data && event.data.type === 'closeEmailModal') {
                         closeEmailModal();
                     }
+                    if (event.data && event.data.type === 'refreshEmailBadge') {
+                        updateEmailBadge();
+                    }
+                });
+
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        const emailModal = document.getElementById('email-modal');
+                        if (emailModal && emailModal.classList.contains('active')) {
+                            closeEmailModal();
+                        }
+                    }
+                });
+
+                // 1. 立即加载角色区
+                await loadTableData('characters', 'character-container', '角色');
+
+                // 2. 懒加载另外三个区域
+                setupLazyLoading('lightconeSection', 'lightcone-container', 'light_cones', '光锥', 'lightcone-card', false);
+                setupLazyLoading('materialSection', 'material-container', 'materials', '材料', null, true);
+                setupLazyLoading('itemSection', 'item-container', 'items', '道具', null, true);
+            } catch (e) {
+                console.error('页面初始化失败:', e);
+                showNotification('页面初始化出现异常', 'error');
+            } finally {
+                // 修复：无论成功与否，都隐藏 loading，避免卡死
+                const loadingEl = document.getElementById('global-loading');
+                if (loadingEl) {
+                    loadingEl.style.opacity = '0';
+                    setTimeout(() => { loadingEl.style.display = 'none'; }, 300);
                 }
-            });
-
-            // 1. 立即加载角色区（首屏）
-            await loadTableData('characters', 'character-container', '角色');
-
-            // 2. 用 IntersectionObserver 监听另外三个区域
-            setupLazyLoading('lightconeSection', 'lightcone-container', 'light_cones', '光锥', 'lightcone-card', false);
-            setupLazyLoading('materialSection', 'material-container', 'materials', '材料', null, true);
-            setupLazyLoading('itemSection', 'item-container', 'items', '道具', null, true);
-
-            // 移除全局 Loading
-            setTimeout(() => { document.getElementById('global-loading').style.display = 'none'; }, 300);
+            }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
