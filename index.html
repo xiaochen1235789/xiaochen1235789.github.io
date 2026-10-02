@@ -39,6 +39,7 @@
     </div>
     <div class="notification" id="notification"></div>
 
+    <!-- 顶部导航栏 -->
     <nav class="top-nav" aria-label="主要导航">
         <button class="menu-btn" id="menuToggleBtn" aria-label="打开菜单">
             <i class="fas fa-bars"></i>
@@ -58,12 +59,14 @@
         </div>
     </nav>
 
+    <!-- 用户下拉菜单 -->
     <div class="user-dropdown" id="userDropdown">
         <a href="profile.html" class="user-dropdown-item" target="_blank"><i class="fas fa-user"></i> 个人主页</a>
         <div class="user-dropdown-item" id="dailySigninItem"><i class="fas fa-calendar-check"></i> 每日签到</div>
         <div class="user-dropdown-item" id="logoutItem"><i class="fas fa-sign-out-alt"></i> 退出登录</div>
     </div>
 
+    <!-- 侧滑菜单 -->
     <div class="menu-overlay" id="menuOverlay"></div>
     <div class="side-menu" id="sideMenu">
         <div class="menu-header">
@@ -97,6 +100,7 @@
         <div class="menu-footer"><span>© 六哥荣耀WIKI</span></div>
     </div>
 
+    <!-- 签到确认模态框 -->
     <div class="modal-mask" id="signinModal">
         <div class="modal-container">
             <i class="fas fa-calendar-check" style="font-size: 2rem; color: var(--text-highlight);"></i>
@@ -109,6 +113,7 @@
         </div>
     </div>
 
+    <!-- 退出登录确认模态框 -->
     <div class="modal-mask" id="logoutModal">
         <div class="modal-container">
             <i class="fas fa-question-circle" style="font-size: 2rem; color: #f87171;"></i>
@@ -120,6 +125,7 @@
         </div>
     </div>
 
+    <!-- 站长留言模态框 -->
     <div class="modal-mask" id="ownerMessageModal">
         <div class="modal-container" style="max-width: 520px; text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
@@ -143,6 +149,7 @@
         </div>
     </div>
 
+    <!-- 邮箱模态框 -->
     <div id="email-modal" class="modal">
         <div class="modal-overlay" id="emailModalOverlay"></div>
         <div class="modal-content">
@@ -161,11 +168,13 @@
         </div>
     </div>
 
+    <!-- 搜索框 -->
     <div class="search-container">
         <input type="text" id="search-input" placeholder="搜索当前分类中的角色/光锥/材料/道具（支持模糊匹配）" aria-label="搜索内容">
         <div class="search-icon">🔍</div>
     </div>
 
+    <!-- 免责横幅 -->
     <div class="disclaimer-banner" id="disclaimerBanner">
         <span class="close-btn" id="closeDisclaimer">&times;</span>
         官方素材：本站展示的<strong>《崩坏：星穹铁道》</strong>角色/光锥/技能图标，其版权完全归 <strong>米哈游（miHoYo/HoYoverse）</strong> 所有，使用仅限于同人爱好者交流与介绍，不构成商业利用。<br><br>
@@ -182,6 +191,7 @@
         <p>试试更换关键词或检查拼写~</p>
     </div>
 
+    <!-- 内容区域 -->
     <div class="content-section active" id="characterSection">
         <h2 class="section-header" id="character">角色列表</h2>
         <div class="grid-container" id="character-container"></div>
@@ -209,6 +219,7 @@
     </footer>
     <button class="back-to-top" onclick="scrollToTop()" aria-label="回到顶部">↑</button>
 
+    <!-- 更新日志模态框 -->
     <div id="changelog-modal" class="modal" style="display: none;">
         <div class="modal-overlay" onclick="closeChangelogModal()"></div>
         <div class="modal-content">
@@ -256,7 +267,7 @@
             });
         }
 
-        // ★ 稀有度标准化
+        // ★ 稀有度标准化：兼容 integer / "5" / "五星" / "SSR" / "gold" 等格式
         function normalizeRarity(raw) {
             if (raw === null || raw === undefined) return 0;
             const s = String(raw).trim();
@@ -342,12 +353,13 @@
 
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
-        // ==================== 网站运行天数 ====================
+        // ==================== 网站运行天数 + 节日 + 时段祝福 ====================
         async function fetchSiteMessages() {
             const launchDate = new Date(2025, 10, 1);
             const today = new Date();
             const days = Math.floor((today - launchDate) / (1000 * 60 * 60 * 24));
             const rawHour = new Date().getHours();
+
             let hourSlot;
             if (rawHour >= 0 && rawHour < 5) hourSlot = 0;
             else if (rawHour >= 5 && rawHour < 8) hourSlot = 5;
@@ -357,21 +369,41 @@
             else if (rawHour >= 17 && rawHour < 19) hourSlot = 17;
             else if (rawHour >= 19 && rawHour < 24) hourSlot = 19;
             else hourSlot = 0;
+
             const cacheKey = `site_msg_${days}_${hourSlot}`;
             const cached = localStorage.getItem(cacheKey);
             if (cached) { try { return JSON.parse(cached); } catch (e) {} }
-            let specialMessage = null, isSpecialDay = false, hourlyGreeting = null;
+
+            let specialMessage = null;
+            let isSpecialDay = false;
+            let hourlyGreeting = null;
+
             if (supabaseClient) {
                 try {
-                    const { data: specialData } = await supabaseClient.from('site_special_messages').select('message').eq('day_offset', days).maybeSingle();
-                    if (specialData) { specialMessage = specialData.message; isSpecialDay = true; }
-                    const { data: hourlyData } = await supabaseClient.from('site_hourly_greetings').select('greetings').eq('hour_start', hourSlot).maybeSingle();
+                    const { data: specialData } = await supabaseClient
+                        .from('site_special_messages')
+                        .select('message')
+                        .eq('day_offset', days)
+                        .maybeSingle();
+                    if (specialData) {
+                        specialMessage = specialData.message;
+                        isSpecialDay = true;
+                    }
+
+                    const { data: hourlyData } = await supabaseClient
+                        .from('site_hourly_greetings')
+                        .select('greetings')
+                        .eq('hour_start', hourSlot)
+                        .maybeSingle();
                     if (hourlyData && hourlyData.greetings && hourlyData.greetings.length > 0) {
                         const arr = hourlyData.greetings;
                         hourlyGreeting = arr[Math.floor(Math.random() * arr.length)];
                     }
-                } catch (e) { console.warn("数据库查询失败，尝试读取本地缓存..."); }
+                } catch (e) {
+                    console.warn("数据库查询失败，尝试读取本地缓存...");
+                }
             }
+
             const result = { days, specialMessage, isSpecialDay, hourlyGreeting };
             localStorage.setItem(cacheKey, JSON.stringify(result));
             return result;
@@ -379,21 +411,30 @@
 
         function initializeSiteAge() {
             const siteAgeElem = document.getElementById('site-age');
+
             async function updateUI() {
                 if (!siteAgeElem) return;
                 const res = await fetchSiteMessages();
+
                 let htmlLines = [];
-                if (res.isSpecialDay && res.specialMessage) htmlLines.push(`✨ ${res.specialMessage} ✨`);
-                else htmlLines.push(`六哥荣耀WIKI已存在 ${res.days} 天啦꒰˶>ᗜ<˶꒱`);
-                if (res.hourlyGreeting) htmlLines.push(`💬 ${res.hourlyGreeting}🌸`);
+                if (res.isSpecialDay && res.specialMessage) {
+                    htmlLines.push(`✨ ${res.specialMessage} ✨`);
+                } else {
+                    htmlLines.push(`六哥荣耀WIKI已存在 ${res.days} 天啦꒰˶>ᗜ<˶꒱`);
+                }
+                if (res.hourlyGreeting) {
+                    htmlLines.push(`💬 ${res.hourlyGreeting}🌸`);
+                }
+
                 siteAgeElem.innerHTML = htmlLines.join('<br>');
                 siteAgeElem.classList.toggle('special', res.isSpecialDay);
             }
+
             updateUI();
             setInterval(updateUI, 3600000);
         }
 
-        // ==================== 搜索 ====================
+        // ==================== 搜索功能 ====================
         function initializeSearch() {
             const searchInput = document.getElementById('search-input');
             const emptyResult = document.querySelector('.empty-result');
@@ -432,6 +473,7 @@
                     });
                     if (matchCount === 0 && keyword) {
                         emptyResult.style.display = 'block';
+                        emptyResult.querySelector('h3').textContent = '当前分类未找到匹配结果';
                     } else {
                         emptyResult.style.display = 'none';
                     }
@@ -439,6 +481,7 @@
             });
         }
 
+        // ==================== 导航 ====================
         function initializeNavigation() {
             const backToTopBtn = document.querySelector('.back-to-top');
             window.addEventListener('scroll', function() {
@@ -460,6 +503,7 @@
             iframe.style.display = 'block';
             showNotification('正在加载更新日志...', 'info');
             iframe.src = 'changelog.html?t=' + Date.now();
+
             iframe.onload = function() {
                 showNotification('更新日志已加载', 'success');
                 errorDiv.style.display = 'none';
@@ -485,31 +529,51 @@
             }, 300);
         }
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeChangelogModal(); });
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'closeModal') closeChangelogModal();
+        });
 
         // ==================== 日期工具 ====================
         function getLocalDateString(date = new Date()) {
             return date.toLocaleDateString('sv-SE');
         }
 
-        // ==================== 签到核心 ====================
+        // ==================== 签到核心逻辑 ====================
         async function fetchCheckinReward(streak) {
-            const { data } = await supabaseClient.from('checkin_config').select('candy, rainbow, active').eq('day_num', streak).maybeSingle();
+            const { data, error } = await supabaseClient
+                .from('checkin_config')
+                .select('candy, rainbow, active')
+                .eq('day_num', streak)
+                .maybeSingle();
             if (!data) {
-                const { data: defaultData } = await supabaseClient.from('checkin_config').select('candy, rainbow, active').eq('day_num', 9999).maybeSingle();
-                if (!defaultData) return { candy: 0, rainbow: 0, active: 0 };
+                const { data: defaultData, error: defaultErr } = await supabaseClient
+                    .from('checkin_config')
+                    .select('candy, rainbow, active')
+                    .eq('day_num', 9999)
+                    .maybeSingle();
+                if (defaultErr || !defaultData) {
+                    return { candy: 0, rainbow: 0, active: 0 };
+                }
                 return defaultData;
             }
             return data;
         }
 
         async function executeCheckin(autoTriggered = false) {
-            if (!currentUser) { showNotification('请先登录', 'error'); return false; }
-            if (!userStats) { showNotification('用户统计未加载，请刷新页面重试', 'error'); return false; }
+            if (!currentUser) {
+                showNotification('请先登录', 'error');
+                return false;
+            }
+            if (!userStats) {
+                showNotification('用户统计未加载，请刷新页面重试', 'error');
+                return false;
+            }
             const today = getLocalDateString();
             if (userStats.last_checkin_date === today) {
                 if (!autoTriggered) showNotification('您今天已经签到过了亲，请明天再来吧ღ( ´･ᴗ･ )比心。', 'warning');
                 return false;
             }
+
             let newStreak = 1;
             const last = userStats.last_checkin_date;
             if (last) {
@@ -518,38 +582,69 @@
                 const yesterdayStr = getLocalDateString(yesterday);
                 if (last === yesterdayStr) newStreak = (userStats.checkin_streak || 0) + 1;
             }
+
             const rewards = await fetchCheckinReward(newStreak);
-            if (!rewards) { showNotification('签到奖励配置错误', 'error'); return false; }
+            if (!rewards) {
+                showNotification('签到奖励配置错误', 'error');
+                return false;
+            }
+
             const newCandy = (userStats.candy_crumbles || 0) + rewards.candy;
             const newRainbow = (userStats.rainbow_lollipops || 0) + rewards.rainbow;
             const newActive = (userStats.active_points || 0) + rewards.active;
-            const { error: updateErr } = await supabaseClient.from('user_stats').update({
-                candy_crumbles: newCandy, rainbow_lollipops: newRainbow,
-                active_points: newActive, last_checkin_date: today, checkin_streak: newStreak
-            }).eq('user_id', currentUser.id);
-            if (updateErr) { showNotification('签到失败', 'error'); return false; }
+
+            const { error: updateErr } = await supabaseClient
+                .from('user_stats')
+                .update({
+                    candy_crumbles: newCandy,
+                    rainbow_lollipops: newRainbow,
+                    active_points: newActive,
+                    last_checkin_date: today,
+                    checkin_streak: newStreak
+                })
+                .eq('user_id', currentUser.id);
+
+            if (updateErr) {
+                showNotification('签到失败', 'error');
+                return false;
+            }
+
             userStats.candy_crumbles = newCandy;
             userStats.rainbow_lollipops = newRainbow;
             userStats.active_points = newActive;
             userStats.last_checkin_date = today;
             userStats.checkin_streak = newStreak;
             localStorage.setItem('cachedUserStats', JSON.stringify(userStats));
-            const rewardMsg = `+${rewards.candy.toLocaleString()}🍬 ${rewards.rainbow>0?`+${rewards.rainbow}🌈 `:''}+${rewards.active}⚡`;
-            if (autoTriggered) showNotification(`✨ 自动签到卡已为您签到！获得 ${rewardMsg}`, 'auto-sign');
-            else showNotification(`签到成功！获得 ${rewardMsg} 明天记得再来！`, 'success');
+
+            const rewardMsg =
+                `+${rewards.candy.toLocaleString()}🍬 ${rewards.rainbow>0?`+${rewards.rainbow}🌈 `:''}+${rewards.active}⚡`;
+
+            if (autoTriggered) {
+                showNotification(`✨ 自动签到卡已为您签到！获得 ${rewardMsg}`, 'auto-sign');
+            } else {
+                showNotification(`签到成功！获得 ${rewardMsg} 明天记得再来！`, 'success');
+            }
             return true;
         }
 
-        async function performCheckin() { await executeCheckin(false); }
+        async function performCheckin() {
+            await executeCheckin(false);
+        }
 
-        // ==================== 自动签到卡 ====================
+        // ==================== 自动签到卡功能 ====================
         async function loadAutoSignCardStatus() {
             if (!supabaseClient || !currentUser) return null;
             try {
-                const { data, error } = await supabaseClient.from('user_auto_sign_card').select('owned').eq('user_id', currentUser.id).maybeSingle();
+                const { data, error } = await supabaseClient
+                    .from('user_auto_sign_card')
+                    .select('owned')
+                    .eq('user_id', currentUser.id)
+                    .maybeSingle();
                 if (error) return null;
                 return data?.owned === true;
-            } catch (e) { return null; }
+            } catch (e) {
+                return null;
+            }
         }
 
         async function updateAutoSignCardStatusUI() {
@@ -568,8 +663,13 @@
                     return;
                 }
                 hasAutoSignCard = owned;
-                statusElem.className = owned ? 'status-owned' : 'status-unowned';
-                statusElem.textContent = owned ? '✅ 已拥有' : '❌ 未拥有';
+                if (owned) {
+                    statusElem.className = 'status-owned';
+                    statusElem.textContent = '✅ 已拥有';
+                } else {
+                    statusElem.className = 'status-unowned';
+                    statusElem.textContent = '❌ 未拥有';
+                }
             } catch (e) {
                 statusElem.className = 'status-error';
                 statusElem.textContent = '❌ 加载失败';
@@ -581,7 +681,9 @@
             autoSignAttempted = true;
             const today = getLocalDateString();
             const owned = await loadAutoSignCardStatus();
-            if (owned === null) return;
+            if (owned === null) {
+                return;
+            }
             hasAutoSignCard = owned;
             if (hasAutoSignCard && userStats.last_checkin_date !== today) {
                 showNotification('🃏 检测到自动签到卡，正在自动签到...', 'auto-sign');
@@ -594,8 +696,8 @@
         async function refreshUserState() {
             if (!supabaseClient) return;
             try {
-                const { data: { session } } = await supabaseClient.auth.getSession();
-                if (!session || !session.user) {
+                const { data: { session }, error: sessionErr } = await supabaseClient.auth.getSession();
+                if (sessionErr || !session || !session.user) {
                     if (currentUser) {
                         currentUser = null;
                         userStats = null;
@@ -607,14 +709,16 @@
                     return;
                 }
                 currentUser = session.user;
-                const { data: profile } = await supabaseClient.from('user_profiles').select('username, avatar_url').eq('id', currentUser.id).maybeSingle();
+                const { data: profile } = await supabaseClient.from('user_profiles').select('username, avatar_url').eq('id',
+                    currentUser.id).maybeSingle();
                 if (profile) {
                     const username = profile.username || currentUser.email.split('@')[0];
                     localStorage.setItem('cachedUsername', username);
                     if (profile.avatar_url) localStorage.setItem('cachedAvatar', profile.avatar_url);
                     updateNavbar(username, profile.avatar_url);
                     updateMenuUserInfo(username, profile.avatar_url, currentUser.email);
-                    const { data: stats } = await supabaseClient.from('user_stats').select('*').eq('user_id', currentUser.id).maybeSingle();
+                    const { data: stats } = await supabaseClient.from('user_stats').select('*').eq('user_id', currentUser.id)
+                        .maybeSingle();
                     if (stats) {
                         userStats = stats;
                         localStorage.setItem('cachedUserStats', JSON.stringify(stats));
@@ -627,6 +731,7 @@
                 await updateEmailBadge();
             } catch (err) {
                 console.warn('refreshUserState error:', err);
+                showNotification('用户状态刷新失败，请重试', 'error');
             }
         }
 
@@ -634,10 +739,13 @@
             try {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 await refreshUserState();
-                if (currentUser && userStats) await tryAutoSign();
+                if (currentUser && userStats) {
+                    await tryAutoSign();
+                }
                 startEmailBadgePolling();
             } catch (error) {
                 console.error('用户初始化失败:', error);
+                showNotification('用户初始化失败，部分功能可能受限', 'error');
             }
         }
 
@@ -645,18 +753,31 @@
             const userNavSection = document.getElementById('userNavSection');
             if (!userNavSection) return;
             const dropdown = document.getElementById('userDropdown');
+
             if (username) {
                 const safeUsername = escapeHtml(username);
                 const avatarLetter = safeUsername.charAt(0).toUpperCase();
-                let avatarHtml = avatarUrl
-                    ? `<img src="${escapeHtml(avatarUrl)}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">`
-                    : `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${avatarLetter}</div>`;
+                let avatarHtml = '';
+                if (avatarUrl) {
+                    avatarHtml =
+                        `<img src="${escapeHtml(avatarUrl)}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" onerror="this.onerror=null; this.parentNode.innerHTML='<div style=\\'width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;\\'>${avatarLetter}</div>';">`;
+                } else {
+                    avatarHtml =
+                        `<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3ecf8e,#8a4baf);display:flex;align-items:center;justify-content:center;color:white;font-weight:600;">${avatarLetter}</div>`;
+                }
                 userNavSection.innerHTML = `
-                    <div class="user-menu-trigger" id="userMenuTrigger">
-                        ${avatarHtml}<span>${safeUsername}</span>
-                        <i class="fas fa-chevron-down" style="font-size: 0.8rem;"></i>
-                    </div>`;
-                if (dropdown) { dropdown.style.display = ''; dropdown.classList.remove('show'); }
+                        <div class="user-menu-trigger" id="userMenuTrigger">
+                            ${avatarHtml}
+                            <span>${safeUsername}</span>
+                            <i class="fas fa-chevron-down" style="font-size: 0.8rem;"></i>
+                        </div>
+                    `;
+
+                if (dropdown) {
+                    dropdown.style.display = '';
+                    dropdown.classList.remove('show');
+                }
+
                 const trigger = document.getElementById('userMenuTrigger');
                 if (trigger && !trigger._listenerAdded) {
                     trigger.addEventListener('click', function(e) {
@@ -681,11 +802,15 @@
                     };
                     document.addEventListener('click', closeMenuHandler);
                     window.addEventListener('scroll', closeMenuHandler);
+                    window.addEventListener('resize', closeMenuHandler);
                     window._closeMenuBound = true;
                 }
             } else {
                 userNavSection.innerHTML = `<a href="login-real.html" class="nav-link" id="loginLink">登录/注册</a>`;
-                if (dropdown) { dropdown.classList.remove('show'); dropdown.style.display = 'none'; }
+                if (dropdown) {
+                    dropdown.classList.remove('show');
+                    dropdown.style.display = 'none';
+                }
             }
         }
 
@@ -696,15 +821,20 @@
             if (!menuAvatar || !menuUsername || !menuEmail) return;
             if (username) {
                 const avatarLetter = username.charAt(0).toUpperCase();
-                menuAvatar.innerHTML = avatarUrl
-                    ? `<img src="${escapeHtml(avatarUrl)}" alt="avatar" style="width:100%;height:100%;object-fit:cover;">`
-                    : `<div class="avatar-placeholder" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">${avatarLetter}</div>`;
+                if (avatarUrl) {
+                    menuAvatar.innerHTML =
+                        `<img src="${escapeHtml(avatarUrl)}" alt="avatar" style="width:100%;height:100%;object-fit:cover;">`;
+                } else {
+                    menuAvatar.innerHTML =
+                        `<div class="avatar-placeholder" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">${avatarLetter}</div>`;
+                }
                 menuUsername.textContent = username;
                 menuEmail.textContent = email || '';
                 menuAvatar.style.cursor = 'pointer';
                 menuAvatar.onclick = () => window.open('profile.html', '_blank');
             } else {
-                menuAvatar.innerHTML = `<div class="avatar-placeholder" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">U</div>`;
+                menuAvatar.innerHTML =
+                    `<div class="avatar-placeholder" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">U</div>`;
                 menuUsername.textContent = '未登录';
                 menuEmail.textContent = '点击登录';
                 menuAvatar.onclick = () => window.location.href = 'login-real.html';
@@ -724,36 +854,55 @@
             const cancelSignin = document.getElementById('cancelSigninBtn');
             const confirmLogout = document.getElementById('confirmLogoutBtn');
             const cancelLogout = document.getElementById('cancelLogoutBtn');
+
             if (signinItem) {
                 signinItem.onclick = async (e) => {
                     e.stopPropagation();
                     document.getElementById('userDropdown').classList.remove('show');
-                    if (!currentUser) { showNotification('请先登录', 'error'); return; }
+                    if (!currentUser) {
+                        showNotification('请先登录', 'error');
+                        return;
+                    }
                     closeAllModals();
                     const nextStreak = (userStats?.checkin_streak || 0) + 1;
                     const reward = await fetchCheckinReward(nextStreak);
-                    document.getElementById('signinRewardPreview').innerHTML = `签到可获得 🍬${reward.candy.toLocaleString()} ${reward.rainbow>0?`🌈${reward.rainbow} `:''}⚡${reward.active.toLocaleString()}`;
+                    const previewText =
+                        `签到可获得 🍬${reward.candy.toLocaleString()} ${reward.rainbow>0?`🌈${reward.rainbow} `:''}⚡${reward.active.toLocaleString()}`;
+                    document.getElementById('signinRewardPreview').innerHTML = previewText;
+
                     const today = getLocalDateString();
                     const alreadyChecked = userStats?.last_checkin_date === today;
                     if (alreadyChecked) {
                         confirmSignin.textContent = '今日已签到';
                         confirmSignin.style.background = '#6b7280';
                         confirmSignin.style.cursor = 'default';
+                        confirmSignin.style.opacity = '0.8';
                     } else {
                         confirmSignin.textContent = '签到';
                         confirmSignin.style.background = '';
                         confirmSignin.style.cursor = 'pointer';
+                        confirmSignin.style.opacity = '1';
                     }
                     signinModal.classList.add('active');
                 };
             }
-            if (confirmSignin) confirmSignin.onclick = async () => { signinModal.classList.remove('active'); await performCheckin(); };
-            if (cancelSignin) cancelSignin.onclick = () => signinModal.classList.remove('active');
+            if (confirmSignin) {
+                confirmSignin.onclick = async () => {
+                    signinModal.classList.remove('active');
+                    await performCheckin();
+                };
+            }
+            if (cancelSignin) {
+                cancelSignin.onclick = () => signinModal.classList.remove('active');
+            }
             if (logoutItem) {
                 logoutItem.onclick = (e) => {
                     e.stopPropagation();
                     document.getElementById('userDropdown').classList.remove('show');
-                    if (!currentUser) { showNotification('未登录', 'error'); return; }
+                    if (!currentUser) {
+                        showNotification('未登录', 'error');
+                        return;
+                    }
                     closeAllModals();
                     logoutModal.classList.add('active');
                 };
@@ -764,17 +913,25 @@
                     if (supabaseClient) await supabaseClient.auth.signOut();
                     localStorage.removeItem('cachedUsername');
                     localStorage.removeItem('cachedAvatar');
+                    localStorage.removeItem('cachedUserProfile');
                     localStorage.removeItem('cachedUserStats');
-                    currentUser = null; userStats = null;
-                    updateNavbar(null); updateMenuUserInfo(null);
-                    updateAutoSignCardStatusUI(); updateEmailBadge();
+                    currentUser = null;
+                    userStats = null;
+                    updateNavbar(null);
+                    updateMenuUserInfo(null);
+                    updateAutoSignCardStatusUI();
+                    updateEmailBadge();
                     showNotification('已退出登录', 'success');
                     setTimeout(() => window.location.reload(), 500);
                 };
             }
-            if (cancelLogout) cancelLogout.onclick = () => logoutModal.classList.remove('active');
+            if (cancelLogout) {
+                cancelLogout.onclick = () => logoutModal.classList.remove('active');
+            }
             document.querySelectorAll('.modal-mask').forEach(mask => {
-                mask.addEventListener('click', (e) => { if (e.target === mask) mask.classList.remove('active'); });
+                mask.addEventListener('click', (e) => {
+                    if (e.target === mask) mask.classList.remove('active');
+                });
             });
         }
 
@@ -787,44 +944,67 @@
             });
         }
 
-        // ==================== 邮箱角标 ====================
+        // ==================== 邮箱角标功能 ====================
         async function getUnreadMailCount() {
             if (!supabaseClient || !currentUser) return 0;
             try {
-                const { count, error } = await supabaseClient.from('user_mails').select('*', { count: 'exact', head: true }).eq('to_user_id', currentUser.id).is('read_at', null);
-                if (error) return 0;
+                const { count, error } = await supabaseClient
+                    .from('user_mails')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('to_user_id', currentUser.id)
+                    .is('read_at', null);
+                if (error) {
+                    console.warn('获取未读邮件数失败:', error);
+                    return 0;
+                }
                 return count || 0;
-            } catch (e) { return 0; }
+            } catch (e) {
+                console.warn('获取未读邮件数异常:', e);
+                return 0;
+            }
         }
 
         async function updateEmailBadge() {
             const badge = document.getElementById('emailBadge');
             if (!badge) return;
-            if (!currentUser) { badge.textContent = '0'; badge.style.display = 'none'; return; }
+            if (!currentUser) {
+                badge.textContent = '0';
+                badge.style.display = 'none';
+                return;
+            }
             const count = await getUnreadMailCount();
             badge.textContent = count;
             badge.style.display = count > 0 ? 'flex' : 'none';
         }
 
         function startEmailBadgePolling() {
-            if (emailBadgeTimer) clearInterval(emailBadgeTimer);
+            if (emailBadgeTimer) {
+                clearInterval(emailBadgeTimer);
+                emailBadgeTimer = null;
+            }
             updateEmailBadge();
             emailBadgeTimer = setInterval(updateEmailBadge, 30000);
         }
 
-        // ==================== 邮箱模态框 ====================
+        // ==================== 邮箱模态框控制 ====================
         function openEmailModal() {
             const modal = document.getElementById('email-modal');
             const iframe = document.getElementById('emailIframe');
             const errorDiv = document.getElementById('email-error');
             if (!modal || !iframe) return;
-            if (modal.classList.contains('active')) { closeEmailModal(); return; }
+
+            if (modal.classList.contains('active')) {
+                closeEmailModal();
+                return;
+            }
+
             modal.classList.add('active');
             document.body.classList.add('modal-open');
             errorDiv.style.display = 'none';
             iframe.style.display = 'block';
             showNotification('正在加载邮箱...', 'info');
             iframe.src = 'email_address.html?embedded=true&t=' + Date.now();
+
             iframe.onload = function() {
                 showNotification('邮箱已加载', 'success');
                 errorDiv.style.display = 'none';
@@ -841,6 +1021,7 @@
         function closeEmailModal() {
             const modal = document.getElementById('email-modal');
             if (!modal || !modal.classList.contains('active')) return;
+
             modal.classList.remove('active');
             document.body.classList.remove('modal-open');
             setTimeout(() => {
@@ -860,7 +1041,9 @@
             showNotification('重新加载中...', 'info');
         }
 
-        // ==================== 卡片渲染 ====================
+        // =========================================================
+        // 区域懒加载与数据渲染
+        // =========================================================
         function renderCards(items, containerId, typeLabel, extraClass = '', isMaterial = false) {
             const container = document.getElementById(containerId);
             if (!container) return;
@@ -882,21 +1065,28 @@
                 card.setAttribute('role', 'button');
                 card.setAttribute('tabindex', '0');
                 card.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); }
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        card.click();
+                    }
                 });
                 const detailUrl = item.detail_url || '#';
                 card.onclick = () => jumpToDetail(detailUrl, item.name);
                 const imgSrc = item.image_url || '';
 
+                // 材料：图片右上角叠「金/紫/蓝」角标
+                // 其他：图片下方独立 meta 行显示「星级 + 限定」
                 let imgOverlayHtml = '';
                 let metaHtml = '';
                 if (isMaterial && rarity >= 1) {
                     imgOverlayHtml = `<span class="mat-rarity">${RARITY_LABEL[rarity]}</span>`;
                 } else {
                     const starsHtml = rarity >= 1
-                        ? `<span class="meta-stars">${'★'.repeat(rarity)}</span>` : '';
+                        ? `<span class="meta-stars">${'★'.repeat(rarity)}</span>`
+                        : '';
                     const limitedHtml = item.is_limited
-                        ? `<span class="meta-limited">限定</span>` : '';
+                        ? `<span class="meta-limited">限定</span>`
+                        : '';
                     if (starsHtml || limitedHtml) {
                         metaHtml = `<div class="card-meta">${starsHtml}${limitedHtml}</div>`;
                     }
@@ -924,12 +1114,19 @@
         async function loadTableData(tableName, containerId, typeLabel, extraClass = '', isMaterial = false) {
             const container = document.getElementById(containerId);
             if (!container) return;
+
             if (!supabaseClient) {
                 container.innerHTML = `<div style="text-align:center;color:#f87171;padding:20px;">${typeLabel}加载失败：数据库未连接</div>`;
                 return;
             }
-            container.innerHTML = Array(6).fill('<div class="content-card skeleton" style="height:200px;"></div>').join('');
-            const { data, error } = await supabaseClient.from(tableName).select('*').order('display_order', { ascending: true });
+
+            container.innerHTML = Array(6).fill('<div class="content-card skeleton" style="height:200px; background:var(--bg-secondary); border-radius:12px;"></div>').join('');
+
+            const { data, error } = await supabaseClient
+                .from(tableName)
+                .select('*')
+                .order('display_order', { ascending: true });
+
             if (error) {
                 console.error(`${typeLabel}加载失败:`, error);
                 container.innerHTML = `<div style="text-align:center;color:#f87171;padding:20px;">${typeLabel}加载失败，请稍后重试</div>`;
@@ -942,6 +1139,7 @@
             if (isLoadingLazy[sectionId]) return;
             const section = document.getElementById(sectionId);
             if (!section) return;
+
             const observer = new IntersectionObserver((entries) => {
                 if (entries[0].isIntersecting) {
                     isLoadingLazy[sectionId] = true;
@@ -949,33 +1147,49 @@
                     loadTableData(tableName, containerId, typeLabel, extraClass, isMaterial);
                 }
             }, { threshold: 0.1 });
+
             observer.observe(section);
         }
 
-        // ==================== 侧滑菜单 ====================
+        // ==================== 侧滑菜单控制 ====================
         let isMenuOpen = false;
+
         function openMenu() {
-            document.getElementById('sideMenu').classList.add('open');
-            document.getElementById('menuOverlay').classList.add('active');
+            const sideMenu = document.getElementById('sideMenu');
+            const overlay = document.getElementById('menuOverlay');
+            sideMenu.classList.add('open');
+            overlay.classList.add('active');
             isMenuOpen = true;
             document.body.style.overflow = 'hidden';
         }
+
         function closeMenu() {
-            document.getElementById('sideMenu').classList.remove('open');
-            document.getElementById('menuOverlay').classList.remove('active');
+            const sideMenu = document.getElementById('sideMenu');
+            const overlay = document.getElementById('menuOverlay');
+            sideMenu.classList.remove('open');
+            overlay.classList.remove('active');
             isMenuOpen = false;
             document.body.style.overflow = '';
         }
 
         function switchContent(sectionId) {
-            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
             document.getElementById(sectionId + 'Section').classList.add('active');
             document.querySelectorAll('.menu-item[data-section]').forEach(item => {
-                item.classList.toggle('active', item.dataset.section === sectionId);
+                if (item.dataset.section === sectionId) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
             });
             closeMenu();
             const searchInput = document.getElementById('search-input');
-            if (searchInput) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+            }
             const emptyResult = document.querySelector('.empty-result');
             if (emptyResult) emptyResult.style.display = 'none';
 
@@ -991,33 +1205,46 @@
             }
         }
 
+        // ==================== 跨页签同步 ====================
         function setupCrossTabSync() {
             window.addEventListener('storage', (e) => {
-                if (e.key === 'cachedUsername' || e.key === 'cachedAvatar' || e.key === 'forceRefreshUserState') {
+                if (e.key === 'cachedUsername' || e.key === 'cachedAvatar') {
+                    refreshUserState();
+                }
+                if (e.key === 'forceRefreshUserState') {
                     refreshUserState();
                 }
             });
-            document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshUserState(); });
-            window.addEventListener('pageshow', (event) => { if (event.persisted) refreshUserState(); });
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) refreshUserState();
+            });
+            window.addEventListener('pageshow', (event) => {
+                if (event.persisted) refreshUserState();
+            });
         }
 
+        // ==================== 带容错的网络请求执行器 ====================
         async function safeExecute(fn, maxRetries = 2) {
             let attempts = 0;
             while (attempts < maxRetries) {
-                try { return await fn(); }
-                catch (e) {
+                try {
+                    return await fn();
+                } catch (e) {
                     attempts++;
                     if (attempts >= maxRetries) throw e;
+                    console.warn(`网络请求失败，${attempts} 秒后重试...`);
                     await new Promise(r => setTimeout(r, 1000 * attempts));
                 }
             }
         }
 
+        // ==================== 站长留言模态框控制 ====================
         function openOwnerMessage() {
             closeAllModals();
             document.getElementById('ownerMessageModal').classList.add('active');
             document.body.style.overflow = 'hidden';
         }
+
         function closeOwnerMessage() {
             document.getElementById('ownerMessageModal').classList.remove('active');
             document.body.style.overflow = '';
@@ -1027,8 +1254,11 @@
         async function initializePage() {
             try {
                 document.getElementById('year').textContent = new Date().getFullYear();
+
                 const savedTheme = localStorage.getItem('wiki_theme');
-                if (savedTheme === 'night') document.body.classList.add('night-mode');
+                if (savedTheme === 'night') {
+                    document.body.classList.add('night-mode');
+                }
 
                 await safeExecute(() => initializeUserProfile());
                 await safeExecute(() => initializeSiteAge());
@@ -1039,8 +1269,10 @@
                 setupLoginMessageListener();
                 bindUserMenuActions();
 
-                document.getElementById('menuToggleBtn').addEventListener('click', openMenu);
-                document.getElementById('menuOverlay').addEventListener('click', closeMenu);
+                const menuToggle = document.getElementById('menuToggleBtn');
+                const menuOverlay = document.getElementById('menuOverlay');
+                menuToggle.addEventListener('click', openMenu);
+                menuOverlay.addEventListener('click', closeMenu);
                 document.querySelectorAll('.menu-item[data-section]').forEach(item => {
                     item.addEventListener('click', () => {
                         const section = item.dataset.section;
@@ -1048,33 +1280,62 @@
                     });
                 });
                 const gachaItem = document.getElementById('menuGacha');
-                if (gachaItem) gachaItem.addEventListener('click', () => { closeMenu(); window.open('chouka.html', '_blank'); });
+                if (gachaItem) {
+                    gachaItem.addEventListener('click', () => {
+                        closeMenu();
+                        window.open('chouka.html', '_blank');
+                    });
+                }
                 const changelogItem = document.getElementById('menuChangelog');
-                if (changelogItem) changelogItem.addEventListener('click', () => { closeMenu(); openChangelogModal(); });
+                if (changelogItem) {
+                    changelogItem.addEventListener('click', () => {
+                        closeMenu();
+                        openChangelogModal();
+                    });
+                }
                 const friendItem = document.getElementById('menuFriend');
-                if (friendItem) friendItem.addEventListener('click', () => { closeMenu(); window.open('friend.html', '_blank'); });
+                if (friendItem) {
+                    friendItem.addEventListener('click', () => {
+                        closeMenu();
+                        window.open('friend.html', '_blank');
+                    });
+                }
+
                 const ownerMsgItem = document.getElementById('menuOwnerMessage');
-                if (ownerMsgItem) ownerMsgItem.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    closeMenu();
-                    openOwnerMessage();
-                });
+                if (ownerMsgItem) {
+                    ownerMsgItem.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        closeMenu();
+                        openOwnerMessage();
+                    });
+                }
 
                 const menuNightToggle = document.getElementById('menuNightToggle');
                 if (menuNightToggle) {
                     const menuIcon = document.getElementById('menuNightIcon');
                     const menuLabel = document.getElementById('menuNightLabel');
+
                     if (document.body.classList.contains('night-mode')) {
-                        menuIcon.className = 'fas fa-sun'; menuLabel.textContent = '白天模式';
+                        menuIcon.className = 'fas fa-sun';
+                        menuLabel.textContent = '白天模式';
                     } else {
-                        menuIcon.className = 'fas fa-moon'; menuLabel.textContent = '黑夜模式';
+                        menuIcon.className = 'fas fa-moon';
+                        menuLabel.textContent = '黑夜模式';
                     }
+
                     menuNightToggle.addEventListener('click', function(e) {
                         e.stopPropagation();
                         document.body.classList.toggle('night-mode');
                         const isNight = document.body.classList.contains('night-mode');
-                        menuIcon.className = isNight ? 'fas fa-sun' : 'fas fa-moon';
-                        menuLabel.textContent = isNight ? '白天模式' : '黑夜模式';
+
+                        if (isNight) {
+                            menuIcon.className = 'fas fa-sun';
+                            menuLabel.textContent = '白天模式';
+                        } else {
+                            menuIcon.className = 'fas fa-moon';
+                            menuLabel.textContent = '黑夜模式';
+                        }
+
                         localStorage.setItem('wiki_theme', isNight ? 'night' : 'day');
                     });
                 }
@@ -1085,7 +1346,9 @@
                 const banner = document.getElementById('disclaimerBanner');
                 const closeBtn = document.getElementById('closeDisclaimer');
                 if (banner && closeBtn) {
-                    if (localStorage.getItem('disclaimerClosed') === 'true') banner.style.display = 'none';
+                    if (localStorage.getItem('disclaimerClosed') === 'true') {
+                        banner.style.display = 'none';
+                    }
                     closeBtn.addEventListener('click', function() {
                         banner.style.display = 'none';
                         localStorage.setItem('disclaimerClosed', 'true');
@@ -1093,33 +1356,55 @@
                 }
 
                 const ownerModal = document.getElementById('ownerMessageModal');
-                if (ownerModal) ownerModal.addEventListener('click', function(e) { if (e.target === this) closeOwnerMessage(); });
+                if (ownerModal) {
+                    ownerModal.addEventListener('click', function(e) {
+                        if (e.target === this) {
+                            closeOwnerMessage();
+                        }
+                    });
+                }
 
                 const navEmailBtn = document.getElementById('navEmailBtn');
-                if (navEmailBtn) navEmailBtn.addEventListener('click', openEmailModal);
+                if (navEmailBtn) {
+                    navEmailBtn.addEventListener('click', openEmailModal);
+                }
                 const emailModalClose = document.getElementById('emailModalClose');
                 const emailModalOverlay = document.getElementById('emailModalOverlay');
-                if (emailModalClose) emailModalClose.addEventListener('click', closeEmailModal);
-                if (emailModalOverlay) emailModalOverlay.addEventListener('click', closeEmailModal);
+                if (emailModalClose) {
+                    emailModalClose.addEventListener('click', closeEmailModal);
+                }
+                if (emailModalOverlay) {
+                    emailModalOverlay.addEventListener('click', closeEmailModal);
+                }
 
                 window.addEventListener('message', (event) => {
-                    if (event.data && event.data.type === 'closeEmailModal') closeEmailModal();
-                    if (event.data && event.data.type === 'refreshEmailBadge') updateEmailBadge();
+                    if (event.data && event.data.type === 'closeEmailModal') {
+                        closeEmailModal();
+                    }
+                    if (event.data && event.data.type === 'refreshEmailBadge') {
+                        updateEmailBadge();
+                    }
                 });
 
                 document.addEventListener('keydown', (e) => {
                     if (e.key === 'Escape') {
                         const emailModal = document.getElementById('email-modal');
-                        if (emailModal && emailModal.classList.contains('active')) closeEmailModal();
+                        if (emailModal && emailModal.classList.contains('active')) {
+                            closeEmailModal();
+                        }
                     }
                 });
 
+                // 1. 立即加载角色区
                 await loadTableData('characters', 'character-container', '角色');
+
+                // 2. 懒加载另外三个区域
                 setupLazyLoading('lightconeSection', 'lightcone-container', 'light_cones', '光锥', 'lightcone-card', false);
                 setupLazyLoading('materialSection', 'material-container', 'materials', '材料', null, true);
                 setupLazyLoading('itemSection', 'item-container', 'items', '道具', null, true);
             } catch (e) {
                 console.error('页面初始化失败:', e);
+                showNotification('页面初始化出现异常', 'error');
             } finally {
                 const loadingEl = document.getElementById('global-loading');
                 if (loadingEl) {
@@ -1129,8 +1414,11 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() { initializePage(); });
+        document.addEventListener('DOMContentLoaded', function() {
+            initializePage();
+        });
 
+        // 暴露函数给全局
         window.closeOwnerMessage = closeOwnerMessage;
         window.openOwnerMessage = openOwnerMessage;
         window.scrollToTop = scrollToTop;
