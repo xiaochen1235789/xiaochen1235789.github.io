@@ -16,22 +16,34 @@ export function safeSetText(id, text) {
 // ===== 通知系统 =====
 let notificationTimeout = null;
 
-export function showNotification(msg, type = 'info') {
+export function showNotification(msg, type = 'info', duration = 6000) {
     let n = document.getElementById('notification');
     if (!n) {
         n = document.createElement('div');
         n.id = 'notification';
         document.body.appendChild(n);
     }
+
+    // ★ 清旧的定时器，避免连续通知时互相打架
+    if (notificationTimeout) {
+        clearTimeout(notificationTimeout);
+        notificationTimeout = null;
+    }
+
+    // ★ 先重置 class，避免上一次的 type 残留（例如 warning 挂在 success 上）
+    n.className = 'notification';
     n.textContent = msg;
-    n.className = 'notification ' + type;
-    n.classList.remove('show');
+
+    // 强制重排，让移除→添加 show 的动作能重启动画
     void n.offsetWidth;
-    n.classList.add('show');
-    if (notificationTimeout) clearTimeout(notificationTimeout);
+
+    n.classList.add(type, 'show');
+
+    // ★ 6 秒后自动关闭
     notificationTimeout = setTimeout(() => {
         if (n) n.classList.remove('show');
-    }, 3000);
+        notificationTimeout = null;
+    }, duration);
 }
 
 export function showSyncNotice() {
@@ -42,7 +54,7 @@ export function showSyncNotice() {
     }
 }
 
-// ===== ★★★ 模态框控制（已修复重复打开问题） ★★★ =====
+// ===== 模态框控制 =====
 export function openModal(id) {
     const m = document.getElementById(id);
     if (!m) return;
