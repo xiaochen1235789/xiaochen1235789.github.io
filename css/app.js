@@ -30,17 +30,18 @@ let userProfile = null;
 let userStats = null;
 let hasAutoSignCard = false;
 let autoSignAttempted = false;
-let isProcessing = false;
+
+// ★ 统一用 window.isProcessing，避免模块内/全局双变量互相看不见
+window.isProcessing = false;
 
 window.currentUser = currentUser;
 window.userStats = userStats;
 window.userProfile = userProfile;
-window.isProcessing = isProcessing;
 
 function updateAppState() {
-    setAppState({ 
-        currentUser, 
-        userProfile, 
+    setAppState({
+        currentUser,
+        userProfile,
         userStats,
         hasAutoSignCard
     });
@@ -262,10 +263,13 @@ async function executeCheckin(autoTriggered = false) {
 }
 
 async function performCheckin() {
-    if (isProcessing) return;
-    isProcessing = true;
-    await executeCheckin(false);
-    isProcessing = false;
+    if (window.isProcessing) return;
+    window.isProcessing = true;
+    try {
+        await executeCheckin(false);
+    } finally {
+        window.isProcessing = false;
+    }
 }
 
 async function tryAutoSign() {
@@ -282,26 +286,36 @@ async function tryAutoSign() {
 async function doLowExchange(direction) {
     const amount = parseInt(document.getElementById('lowExchangeAmount').value);
     if (!amount || amount < 1) return showNotification('请输入正确数量', 'error');
-    if (isProcessing) return;
-    const sb = getSupabase();
-    const { data, error } = await sb.rpc('exchange_low_level', { p_user_id: currentUser.id, p_direction: direction, p_amount: amount });
-    if (error) return showNotification('兑换失败: ' + error.message, 'error');
-    if (!data) return showNotification('余额不足，无法兑换！', 'error');
-    showNotification('✅ 双向兑换成功！', 'success');
-    await refreshUserStats();
+    if (window.isProcessing) return;
+    window.isProcessing = true;
+    try {
+        const sb = getSupabase();
+        const { data, error } = await sb.rpc('exchange_low_level', { p_user_id: currentUser.id, p_direction: direction, p_amount: amount });
+        if (error) return showNotification('兑换失败: ' + error.message, 'error');
+        if (!data) return showNotification('余额不足，无法兑换！', 'error');
+        showNotification('✅ 双向兑换成功！', 'success');
+        await refreshUserStats();
+    } finally {
+        window.isProcessing = false;
+    }
 }
 window.doLowExchange = doLowExchange;
 
 async function doSyrupExchange(direction) {
     const amount = parseInt(document.getElementById('syrupExchangeAmount').value);
     if (!amount || amount < 1) return showNotification('请输入正确数量', 'error');
-    if (isProcessing) return;
-    const sb = getSupabase();
-    const { data, error } = await sb.rpc('exchange_syrup_down', { p_user_id: currentUser.id, p_target: direction, p_amount: amount });
-    if (error) return showNotification('兑换失败: ' + error.message, 'error');
-    if (!data) return showNotification('🌌 梦幻星河糖浆不足！', 'error');
-    showNotification('✨ 高阶货币向下兑换成功！', 'success');
-    await refreshUserStats();
+    if (window.isProcessing) return;
+    window.isProcessing = true;
+    try {
+        const sb = getSupabase();
+        const { data, error } = await sb.rpc('exchange_syrup_down', { p_user_id: currentUser.id, p_target: direction, p_amount: amount });
+        if (error) return showNotification('兑换失败: ' + error.message, 'error');
+        if (!data) return showNotification('🌌 梦幻星河糖浆不足！', 'error');
+        showNotification('✨ 高阶货币向下兑换成功！', 'success');
+        await refreshUserStats();
+    } finally {
+        window.isProcessing = false;
+    }
 }
 window.doSyrupExchange = doSyrupExchange;
 
@@ -423,6 +437,7 @@ async function confirmCropAndUpload() {
     const canvas = cropper.getCroppedCanvas({ width: CONFIG.AVATAR_SIZE, height: CONFIG.AVATAR_SIZE });
     canvas.toBlob(async (blob) => {
         if (blob) await uploadCroppedImage(blob);
+        else showNotification('裁剪失败，请重试', 'error');
         closeModal('cropModal');
         if (cropper) { cropper.destroy(); cropper = null; }
         document.getElementById('cropImage').removeAttribute('src');
@@ -443,12 +458,25 @@ async function uploadCroppedImage(blob) {
         const { error: uploadErr } = await getSupabase().storage.from('avatars').upload(filePath, blob, { contentType: 'image/png', upsert: true });
         if (uploadErr) throw uploadErr;
         const { data: { publicUrl } } = getSupabase().storage.from('avatars').getPublicUrl(filePath);
-        await updateUserProfile(currentUser.id, { avatar_url: publicUrl });
-        userProfile.avatar_url = publicUrl;
-        localStorage.setItem('userAvatar', publicUrl);
-        updateAvatarDisplay(publicUrl);
-        updateUsernameModalAvatar();
+        // ★ 加时间戳防浏览器缓存
+        const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
+        await updateUserProfile(currentUser.id, { avatar_url: cacheBustedUrl });
+
+        // ★ 同步到模块内 + window + ui-renderer 的 state
+        userProfile.avatar_url = cacheBustedUrl;
+        window.userProfile = userProfile;
+        updateAppState();
+        localStorage.setItem('userAvatar', cacheBustedUrl);
+
+        // ★ 1. 只改头像 img（不重拉 user_frames，瞬间生效）
+        updateAvatarDisplay(cacheBustedUrl);
+        // ★ 2. 头像框独立刷新
+        await applyFrameClassByFrameId(userProfile?.equipped_frame || 'nature');
+        // ★ 3. 顶部导航
         updateNavbar();
+        // ★ 4. 用户名弹窗里的预览也同步
+        updateUsernameModalAvatar();
+
         showNotification('头像已更新', 'success');
         return true;
     } catch (err) {
@@ -559,38 +587,30 @@ async function loadUserProfile() {
     userStats = fullData;
     updateAppState();
 
-    // ============================================================
-    // 1. 先渲染基础 UI（让用户尽快看到头像和名字）
-    // ============================================================
+    // 1. 先渲染基础 UI
     await renderProfile();
     await initFrameForUser(currentUser.id);
 
-    // ============================================================
-    // 2. 将互不依赖的操作【全部并行执行】，大幅提升加载速度
-    // ============================================================
+    // 2. 并行执行互不依赖的操作（每项独立兜底）
     const [ , hasCard, , granted ] = await Promise.all([
-        // 2.1 更新最后登录时间
-        updateUserStats(currentUser.id, { last_login: new Date().toISOString() }).then(() => {
-            safeSetText('lastLogin', new Date().toLocaleString());
-        }),
-        // 2.2 加载自动签到卡状态
-        loadAutoSignCardStatus(currentUser.id),
-        // 2.3 刷新称号（耗时操作）
-        refreshTitles(),
-        // 2.4 每日赠送宝箱
-        grantDailyChest(currentUser.id).catch(err => {
-            console.warn('每日宝箱赠送失败:', err);
-            return false;
-        })
+        updateUserStats(currentUser.id, { last_login: new Date().toISOString() })
+            .then(() => { safeSetText('lastLogin', new Date().toLocaleString()); })
+            .catch(err => console.warn('last_login 更新失败', err)),
+
+        loadAutoSignCardStatus(currentUser.id)
+            .catch(err => { console.warn('签到卡状态加载失败', err); return false; }),
+
+        refreshTitles()
+            .catch(err => { console.warn('称号刷新失败', err); }),
+
+        grantDailyChest(currentUser.id)
+            .catch(err => { console.warn('每日宝箱赠送失败:', err); return false; })
     ]);
 
-    // ============================================================
-    // 3. 处理并行执行的结果
-    // ============================================================
+    // 3. 处理结果
     hasAutoSignCard = hasCard;
-    updateAppState();  // ← 这里已经同步了 hasAutoSignCard，无需额外赋值
+    updateAppState();
 
-    // 尝试自动签到（依赖 hasAutoSignCard）
     await tryAutoSign();
 
     if (granted) {
@@ -601,7 +621,6 @@ async function loadUserProfile() {
         refreshUserStats().catch(() => {});
     }
 
-    // 隐藏加载状态，显示内容
     document.getElementById('loading').style.display = 'none';
     document.getElementById('profileContent').style.display = 'block';
 }
@@ -618,7 +637,7 @@ function bindEvents() {
     document.getElementById('closeCropModalBtn')?.addEventListener('click', cancelCrop);
 
     document.getElementById('openShopBtn')?.addEventListener('click', async () => {
-        if (isProcessing) return;
+        if (window.isProcessing) return;
         await renderShop();
         openModal('shopModal');
     });
