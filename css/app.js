@@ -1,4 +1,4 @@
-// ========== 主入口（完整版：集成宝箱系统，并行加载优化） ==========
+// ========== 主入口（完整版：集成宝箱系统 / 兑换码 / 并行加载优化） ==========
 import { CONFIG, getRoleDisplay, SPECIAL_TITLES } from './config.js';
 import {
     showNotification, openModal, closeModal,
@@ -372,6 +372,72 @@ window.openBackpackItemDetail = openBackpackItemDetail;
 window.openTitlesModal = renderTitlesModal;
 window.openRewardInfoModal = openRewardInfoModal;
 
+// ========== 兑换码 ==========
+window.openRedeemModal = function () {
+    const input = document.getElementById('redeemCodeInput');
+    const msg = document.getElementById('redeemResultMsg');
+    if (input) input.value = '';
+    if (msg) { msg.textContent = ''; msg.style.color = ''; }
+    openModal('redeemModal');
+    setTimeout(() => input?.focus(), 150);
+};
+
+async function submitRedeemCode() {
+    const input = document.getElementById('redeemCodeInput');
+    const msg = document.getElementById('redeemResultMsg');
+    const btn = document.getElementById('submitRedeemBtn');
+
+    const code = (input?.value || '').trim().toUpperCase();
+    if (!code) {
+        if (msg) { msg.textContent = '请输入兑换码'; msg.style.color = '#f87171'; }
+        return;
+    }
+    if (window.isProcessing) return;
+
+    window.isProcessing = true;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 兑换中...'; }
+    if (msg) { msg.textContent = ''; msg.style.color = ''; }
+
+    try {
+        const sb = getSupabase();
+        const { data, error } = await sb.rpc('redeem_code', {
+            p_user_id: currentUser.id,
+            p_code: code
+        });
+        if (error) throw new Error(error.message);
+
+        if (!data?.success) {
+            if (msg) { msg.textContent = data?.message || '兑换失败'; msg.style.color = '#f87171'; }
+            return;
+        }
+
+        const r = data.rewards || {};
+        const parts = [];
+        if (r.candy > 0)   parts.push(`🍬 +${r.candy.toLocaleString()}`);
+        if (r.rainbow > 0) parts.push(`🌈 +${r.rainbow.toLocaleString()}`);
+        if (r.syrup > 0)   parts.push(`🌌 +${r.syrup.toLocaleString()}`);
+        if (r.active > 0)  parts.push(`⚡ +${r.active.toLocaleString()}`);
+        if (r.chest > 0)   parts.push(`🎁 +${r.chest}`);
+        if (r.frame)       parts.push(`🖼️ 头像框`);
+        if (r.title)       parts.push(`🏅 称号`);
+
+        if (msg) {
+            msg.textContent = `✅ 兑换成功：${parts.join('  ') || '奖励已发放'}`;
+            msg.style.color = '#3ecf8e';
+        }
+
+        await refreshUserStats();
+        showNotification('🎉 兑换成功！', 'success');
+
+        setTimeout(() => closeModal('redeemModal'), 1500);
+    } catch (err) {
+        if (msg) { msg.textContent = err.message || '兑换失败'; msg.style.color = '#f87171'; }
+    } finally {
+        window.isProcessing = false;
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> 兑换'; }
+    }
+}
+
 // ========== 头像上传 ==========
 let cropper = null;
 let longPressTimer = null;
@@ -644,6 +710,13 @@ function bindEvents() {
     document.getElementById('openBackpackBtn')?.addEventListener('click', renderBackpack);
     document.getElementById('openTitlesBtn')?.addEventListener('click', renderTitlesModal);
     document.getElementById('openHelpBtn')?.addEventListener('click', () => openModal('helpModal'));
+
+    // ★ 兑换码
+    document.getElementById('openRedeemBtn')?.addEventListener('click', window.openRedeemModal);
+    document.getElementById('submitRedeemBtn')?.addEventListener('click', submitRedeemCode);
+    document.getElementById('redeemCodeInput')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); submitRedeemCode(); }
+    });
 
     document.getElementById('changeAvatarFromUsernameBtn')?.addEventListener('click', function() {
         closeModal('usernameModal');
