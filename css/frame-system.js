@@ -9,21 +9,21 @@ export async function purchaseFrame(frameId, stats, onSuccess) {
     const sb = getSupabase();
     const frame = getFrameById(frameId);
     if (!frame || (frame.price_candy === 0 && frame.price_rainbow === 0)) throw new Error('无效头像框');
-    
+
     const { owned } = await loadUserFrames(window.currentUser.id);
     if (owned.includes(frameId)) throw new Error('已拥有');
     if (stats.candy_crumbles < frame.price_candy) throw new Error(`糖果碎不足，需 ${frame.price_candy.toLocaleString()}`);
     if (stats.rainbow_lollipops < frame.price_rainbow) throw new Error(`超级棒糖不足，需 ${frame.price_rainbow.toLocaleString()}`);
-    
+
     let newCandy = stats.candy_crumbles - frame.price_candy;
     let newRainbow = stats.rainbow_lollipops - frame.price_rainbow;
     await sb.from('user_stats').update({ candy_crumbles: newCandy, rainbow_lollipops: newRainbow }).eq('user_id', window.currentUser.id);
-    
+
     const { data: profile } = await sb.from('user_profiles').select('owned_frames').eq('id', window.currentUser.id).maybeSingle();
     let currentOwned = profile?.owned_frames || ['nature'];
     if (!currentOwned.includes(frameId)) currentOwned.push(frameId);
     await sb.from('user_profiles').update({ owned_frames: currentOwned }).eq('id', window.currentUser.id);
-    
+
     if (window.userStats) {
         window.userStats.candy_crumbles = newCandy;
         window.userStats.rainbow_lollipops = newRainbow;
@@ -39,18 +39,23 @@ export async function equipFrame(frameId) {
     await applyFrameClassByFrameId(frameId);
 }
 
+// ★ 防抖：src 没变就不重设
 export async function applyFrameClassByFrameId(frameId) {
     const frameImg = document.getElementById('avatarFrameImg');
     if (!frameImg) return;
-    
+
     const frame = getFrameById(frameId);
     if (frame && frame.imageUrl) {
-        frameImg.src = frame.imageUrl;
+        if (frameImg.dataset.frameId !== frameId) {
+            frameImg.src = frame.imageUrl;
+            frameImg.dataset.frameId = frameId;
+        }
         frameImg.style.display = 'block';
-        const scale = frame.scale || 1.0; 
+        const scale = frame.scale || 1.0;
         frameImg.style.transform = `scale(${scale})`;
     } else {
         frameImg.src = '';
+        frameImg.dataset.frameId = '';
         frameImg.style.display = 'none';
         frameImg.style.transform = 'scale(1.0)';
     }
