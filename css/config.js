@@ -97,7 +97,7 @@ export const CHEST_CONFIG = {
     price_candy: 100,           // 【仅用于前端展示】购买宝箱所需糖果碎
     max_purchase: 99999,          // 单次最多购买数量（前端限制）
     pity_limit: 100,            // 【仅用于前端展示】保底次数
-    image_url: 'https://cdn-icons-png.flaticon.com/512/2720/2720633.png', // 宝箱图标
+    image_url: 'https://ysmijycsyzpjoieaknmb.supabase.co/storage/v1/object/public/items/props/Box.webp', // 宝箱图标
     
     // 数据库不可用时的后备概率配置（与数据库 chest_probs 表结构一致）
     default_probs: [
