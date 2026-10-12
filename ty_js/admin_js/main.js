@@ -21,6 +21,7 @@ import {
     loadAllGachaTables
 } from './gacha.js';
 import { refreshLogs, clearAllLogs } from './logs.js';
+import { loadAnnouncements, showAddAnnouncementForm } from './announcement.js';   // ★ 公告模块
 import './char_detail.js';
 
 // ----- 日志刷新回调（供 logAction 触发） -----
@@ -45,6 +46,7 @@ window._switchTabCallbacks = {
         loadThreeStar();
         loadGachaConfig();
     },
+    announcement: loadAnnouncements,   // ★ 公告面板
     logs: refreshLogs
 };
 
@@ -61,13 +63,13 @@ function bindEvents() {
         }
     });
 
-    // 3. 内容管理“添加”按钮
+    // 3. 内容管理"添加"按钮
     document.getElementById('addCharacterBtn')?.addEventListener('click', () => showContentForm('characters'));
     document.getElementById('addLightconeBtn')?.addEventListener('click', () => showContentForm('light_cones'));
     document.getElementById('addMaterialBtn')?.addEventListener('click', () => showContentForm('materials'));
     document.getElementById('addItemBtn')?.addEventListener('click', () => showContentForm('items'));
 
-    // 4. 签到配置“添加”按钮
+    // 4. 签到配置"添加"按钮
     document.getElementById('addCheckinBtn')?.addEventListener('click', () => showCheckinForm(null));
 
     // 5. 抽卡配置按钮
@@ -83,12 +85,15 @@ function bindEvents() {
     );
     document.getElementById('saveConfigBtn')?.addEventListener('click', saveGachaConfig);
 
-    // 6. 日志管理
+    // 6. 公告管理按钮 ★
+    document.getElementById('addAnnouncementBtn')?.addEventListener('click', showAddAnnouncementForm);
+
+    // 7. 日志管理
     document.getElementById('clearLogsBtn')?.addEventListener('click', clearAllLogs);
     document.getElementById('logSearch')?.addEventListener('input', refreshLogs);
     document.getElementById('logActionFilter')?.addEventListener('change', refreshLogs);
 
-    // 7. 退出登录
+    // 8. 退出登录
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
         const sb = getSupabase();
         await sb.auth.signOut();
@@ -105,8 +110,8 @@ async function init() {
     setupSidebar();
     bindEvents();
 
-    // 默认加载用户管理
-    await refreshUserList();
+    // ★★★ Bug 修复：switchTab('user') 内部会调用 refreshUserList，
+    //     旧代码在它前面又调一次，导致用户列表加载两次
     switchTab('user');
 }
 
