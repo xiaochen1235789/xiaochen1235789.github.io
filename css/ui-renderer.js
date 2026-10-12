@@ -1,4 +1,4 @@
-// ========== UI 渲染器（完整版 v2.1） ==========
+// ========== UI 渲染器（完整版 v2.2 - 缓存修复版） ==========
 import { CONFIG, CHEST_CONFIG, getRoleDisplay } from './config.js';
 import {
     safeSetText, showNotification, openModal, closeModal,
@@ -351,7 +351,11 @@ async function loadFramesList() {
                     state.userStats.rainbow_lollipops = newRainbow;
                     updateShopBalanceDisplay();
                     clearProfileCache();
-                    setCachedProfile(state.userStats);
+                    // ★ 缓存：合并 profile + stats，并绑定当前 userId
+                    setCachedProfile(
+                        { ...(state.userProfile || {}), ...(state.userStats || {}) },
+                        state.currentUser?.id
+                    );
                     invalidateFramesCache();   // ★ 购买后清缓存
                     showNotification('🎉 购买成功！', 'success');
                     loadFramesList();
@@ -417,7 +421,11 @@ async function loadAutoSignCardUI() {
                 state.userStats.candy_crumbles = newCandy;
                 state.hasAutoSignCard = true;
                 clearProfileCache();
-                setCachedProfile(state.userStats);
+                // ★ 缓存：合并 profile + stats，并绑定当前 userId
+                setCachedProfile(
+                    { ...(state.userProfile || {}), ...(state.userStats || {}) },
+                    state.currentUser?.id
+                );
                 updateShopBalanceDisplay();
                 showNotification('🎉 自动签到卡购买成功！', 'success');
                 loadAutoSignCardUI();
@@ -474,6 +482,12 @@ async function loadChestShopUI() {
             state.userStats.candy_crumbles = newCandy;
             state.userStats.chest_count = newChest;
             window.userStats = state.userStats;
+            // ★ 缓存同步：让下次读缓存时拿到最新宝箱数
+            clearProfileCache();
+            setCachedProfile(
+                { ...(state.userProfile || {}), ...(state.userStats || {}) },
+                state.currentUser?.id
+            );
             updateShopBalanceDisplay();
             window.updateChestDisplay?.();
             loadChestShopUI();
@@ -815,6 +829,12 @@ export async function openBatchChestModal(maxCount) {
             const { results, newStats } = await batchOpenChests(state.currentUser.id, amount);
             state.userStats = newStats;
             window.userStats = newStats;
+            // ★ 开箱后同步缓存，避免下次读旧数据
+            clearProfileCache();
+            setCachedProfile(
+                { ...(state.userProfile || {}), ...(state.userStats || {}) },
+                state.currentUser?.id
+            );
             updateChestCountDisplay();
             updatePityDisplay();
             showChestResultModal(results);
