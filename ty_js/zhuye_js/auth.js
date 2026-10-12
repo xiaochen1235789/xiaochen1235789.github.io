@@ -1,4 +1,10 @@
-// ==================== 用户认证 ====================
+// ==================== 用户认证（修复版） ====================
+// 修复内容：
+// ★ 1. refreshUserState 中 user_stats 缺失时主动补建
+//      （防止新用户 handle_new_user 触发器失效导致签到/购买/宝箱功能崩溃）
+// ★ 2. user_profiles 缺失时也做兜底补建（防御性）
+// ★ 3. 加 console 日志便于排查
+
 async function refreshUserState() {
     if (!supabaseClient) return;
     try {
@@ -15,30 +21,81 @@ async function refreshUserState() {
             return;
         }
         currentUser = session.user;
-        const { data: profile } = await supabaseClient
+
+        // ========== 拉取用户资料 ==========
+        let { data: profile } = await supabaseClient
             .from('user_profiles')
             .select('username, avatar_url')
             .eq('id', currentUser.id)
             .maybeSingle();
-        if (profile) {
-            const username = profile.username || currentUser.email.split('@')[0];
-            localStorage.setItem('cachedUsername', username);
-            if (profile.avatar_url) localStorage.setItem('cachedAvatar', profile.avatar_url);
-            updateNavbar(username, profile.avatar_url);
-            updateMenuUserInfo(username, profile.avatar_url, currentUser.email);
-            const { data: stats } = await supabaseClient
-                .from('user_stats')
-                .select('*')
-                .eq('user_id', currentUser.id)
+
+        // ★ 兜底：profile 缺失（极端情况，触发器完全没跑）
+        if (!profile) {
+            console.warn('[auth] user_profiles 缺失，尝试补建');
+            const { data: createdProfile, error: profileErr } = await supabaseClient
+                .from('user_profiles')
+                .insert({
+                    id: currentUser.id,
+                    username: currentUser.email?.split('@')[0] || '用户'
+                })
+                .select('username, avatar_url')
                 .maybeSingle();
-            if (stats) {
-                userStats = stats;
-                localStorage.setItem('cachedUserStats', JSON.stringify(stats));
+            if (profileErr) {
+                console.error('[auth] user_profiles 补建失败:', profileErr);
+            } else {
+                profile = createdProfile;
             }
+        }
+
+        const username = profile?.username || currentUser.email.split('@')[0];
+        const avatarUrl = profile?.avatar_url || null;
+
+        if (username) {
+            localStorage.setItem('cachedUsername', username);
+            if (avatarUrl) localStorage.setItem('cachedAvatar', avatarUrl);
+            updateNavbar(username, avatarUrl);
+            updateMenuUserInfo(username, avatarUrl, currentUser.email);
         } else {
             updateNavbar(currentUser.email.split('@')[0], null);
             updateMenuUserInfo(currentUser.email.split('@')[0], null, currentUser.email);
         }
+
+        // ========== 拉取用户统计 ==========
+        let { data: stats } = await supabaseClient
+            .from('user_stats')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .maybeSingle();
+
+        // ★ 核心修复：stats 缺失时主动补建
+        //    场景：新用户注册时 handle_new_user 触发器只建了 user_profiles，
+        //         用户不打开 profile.html 直接来主页 → userStats = null
+        //         → 签到/购买/宝箱全部失效
+        if (!stats) {
+            console.warn('[auth] user_stats 缺失，尝试补建');
+            const { data: createdStats, error: createErr } = await supabaseClient
+                .from('user_stats')
+                .upsert({ user_id: currentUser.id }, { onConflict: 'user_id' })
+                .select('*')
+                .maybeSingle();
+
+            if (createErr) {
+                console.error('[auth] user_stats 补建失败:', createErr);
+            } else {
+                stats = createdStats;
+                console.log('[auth] user_stats 补建成功');
+            }
+        }
+
+        if (stats) {
+            userStats = stats;
+            localStorage.setItem('cachedUserStats', JSON.stringify(stats));
+        } else {
+            // 补建也失败了，明确设置 null，避免用上一个账号的残留数据
+            userStats = null;
+            console.error('[auth] user_stats 无法加载，签到/购买/宝箱功能将不可用');
+        }
+
         await updateAutoSignCardStatusUI();
         await updateEmailBadge();
     } catch (err) {
@@ -176,6 +233,10 @@ function bindUserMenuActions() {
             document.getElementById('userDropdown').classList.remove('show');
             if (!currentUser) {
                 showNotification('请先登录', 'error');
+                return;
+            }
+            if (!userStats) {
+                showNotification('用户数据未加载，请稍后重试或刷新页面', 'error');
                 return;
             }
             closeAllModals();
