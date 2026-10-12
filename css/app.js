@@ -1,4 +1,4 @@
-// ========== 主入口（完整版：集成宝箱系统 / 兑换码 / 并行加载优化） ==========
+// ========== 主入口（完整版：集成宝箱系统 / 兑换码 / 并行加载优化 / RPC 化） ==========
 import { CONFIG, getRoleDisplay, SPECIAL_TITLES } from './config.js';
 import {
     showNotification, openModal, closeModal,
@@ -8,7 +8,7 @@ import {
 } from './utils.js';
 import {
     initSupabase, getSupabase, fetchUserFullData,
-    updateUserProfile, updateUserStats, getCheckinConfig,
+    updateUserProfile, updateUserStats,
     loadAutoSignCardStatus, loadAllTitles, loadUserOwnedTitles,
     grantTitle, loadUserFrames,
     grantDailyChest, getChestCount, getPityCounter
@@ -75,18 +75,16 @@ function clearUserState() {
     window.userProfile = null;
     window.userStats = null;
     window.isProcessing = false;
-    sessionToken++; // 让所有进行中的异步任务失效
+    sessionToken++;
 
-    // 只清理本模块相关的 key，避免误伤其他模块
     clearProfileCache();
     try {
         Object.keys(localStorage).forEach(k => {
             if (k.startsWith('userAvatar_')) localStorage.removeItem(k);
         });
-        localStorage.removeItem('userAvatar'); // 兼容旧版本遗留 key
+        localStorage.removeItem('userAvatar');
     } catch (e) { /* ignore */ }
 
-    // 让商店头像框缓存也失效（防止后台改数据后读到旧值）
     try { invalidateFramesCache(); } catch (e) { /* ignore */ }
 }
 window.clearUserState = clearUserState;
@@ -103,7 +101,6 @@ async function refreshUserStats() {
         sb.from('user_stats').select('*').eq('user_id', myUserId).maybeSingle()
     ]);
 
-    // ★ 期间切换了账号 / 登出，丢弃这次响应
     if (sessionToken !== myToken || currentUser?.id !== myUserId) return;
 
     if (!profileRes.error && profileRes.data) {
@@ -125,7 +122,6 @@ function updateNavbar() {
     if (!currentUser) { navDiv.innerHTML = '<a href="login-real.html">登录</a>'; return; }
 
     const username = userProfile?.username || currentUser?.email?.split('@')[0] || '用户';
-    // ★ 完全依赖 userProfile.avatar_url，不再 fallback 到全局 localStorage
     const avatarUrl = userProfile?.avatar_url || null;
     const equippedFrameId = userProfile?.equipped_frame || 'nature';
     const frame = CONFIG.FRAMES.find(f => f.id === equippedFrameId);
@@ -268,45 +264,46 @@ async function unequipTitle() {
     showNotification('已卸下称号', 'success');
 }
 
-// ========== 签到 ==========
+// ========== 签到（RPC 版） ==========
 async function executeCheckin(autoTriggered = false) {
-    const today = getLocalDateString();
-    if (userStats?.last_checkin_date === today) {
-        if (!autoTriggered) showNotification('今日已签到', 'warning');
+    const sb = getSupabase();
+    const { data, error } = await sb.rpc('do_checkin');
+
+    if (error) {
+        showNotification('签到失败: ' + error.message, 'error');
+        return false;
+    }
+
+    // success = false 表示业务拒绝（如今日已签到）
+    if (!data?.success) {
+        if (!autoTriggered) {
+            showNotification(data?.error || '签到失败', 'warning');
+        }
         updateCheckinButtonState();
         return false;
     }
-    let newStreak = 1;
-    const last = userStats?.last_checkin_date;
-    if (last) {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = getLocalDateString(yesterday);
-        if (last === yesterdayStr) newStreak = (userStats.checkin_streak || 0) + 1;
+
+    // 同步内存状态（服务端返回的 new_* 是权威值）
+    if (userStats) {
+        userStats.candy_crumbles    = data.new_candy;
+        userStats.rainbow_lollipops = data.new_rainbow;
+        userStats.active_points     = data.new_active;
+        userStats.checkin_streak    = data.new_streak;
+        userStats.last_checkin_date = data.today;
     }
-    const rewards = await getCheckinConfig(newStreak);
-    const newCandy = (userStats?.candy_crumbles || 0) + rewards.candy;
-    const newRainbow = (userStats?.rainbow_lollipops || 0) + rewards.rainbow;
-    const newActive = (userStats?.active_points || 0) + rewards.active;
-
-    const sb = getSupabase();
-    const { error: updateError } = await sb.from('user_stats').update({
-        candy_crumbles: newCandy,
-        rainbow_lollipops: newRainbow,
-        active_points: newActive,
-        last_checkin_date: today,
-        checkin_streak: newStreak
-    }).eq('user_id', currentUser.id);
-    if (updateError) { showNotification('签到失败', 'error'); return false; }
-
-    userStats = { ...(userStats || {}), candy_crumbles: newCandy, rainbow_lollipops: newRainbow, active_points: newActive, last_checkin_date: today, checkin_streak: newStreak };
     updateAppState();
     updateActivePointsDisplay();
     updateShopBalanceDisplay();
-    document.getElementById('streakDays').innerText = newStreak.toLocaleString();
+
+    const streakEl = document.getElementById('streakDays');
+    if (streakEl) streakEl.innerText = (data.new_streak || 0).toLocaleString();
+
     updateCheckinButtonState();
 
-    showNotification(autoTriggered ? `✨ 自动签到卡已为您签到 +${rewards.candy.toLocaleString()}🍬` : `签到 +${rewards.candy.toLocaleString()}🍬`, 'success');
+    const msg = autoTriggered
+        ? `✨ 自动签到卡已为您签到 +${data.reward_candy.toLocaleString()}🍬`
+        : `签到 +${data.reward_candy.toLocaleString()}🍬`;
+    showNotification(msg, 'success');
     return true;
 }
 
@@ -323,9 +320,8 @@ async function performCheckin() {
 async function tryAutoSign() {
     if (autoSignAttempted) return;
     autoSignAttempted = true;
-    const today = getLocalDateString();
-    if (hasAutoSignCard && userStats?.last_checkin_date !== today) {
-        showNotification('🃏 检测到自动签到卡，正在自动签到...', 'info');
+    // 有卡就交给 RPC 判断（RPC 内部会校验今天是否已签）
+    if (hasAutoSignCard) {
         await executeCheckin(true);
     }
 }
@@ -374,7 +370,6 @@ function updateUsernameModalAvatar() {
     const frameImg = document.getElementById('usernameModalFrameImg');
     if (!img || !placeholder || !frameImg) return;
 
-    // ★ 只信任 userProfile.avatar_url
     const avatarUrl = userProfile?.avatar_url || null;
     if (avatarUrl) {
         img.src = avatarUrl;
@@ -580,7 +575,6 @@ async function uploadCroppedImage(blob) {
         window.userProfile = userProfile;
         updateAppState();
 
-        // ★ 不再写入全局 'userAvatar'，只按 userId 存（供极端场景下的 UI 兜底）
         try {
             localStorage.setItem(`userAvatar_${currentUser.id}`, cacheBustedUrl);
         } catch (e) { /* ignore */ }
@@ -650,7 +644,6 @@ async function updatePassword() {
     else {
         showNotification('密码已更新，请重新登录', 'success');
         setTimeout(async () => {
-            // ★ 清空状态再跳转
             clearUserState();
             await sb.auth.signOut();
             window.location.href = 'login-real.html';
@@ -668,7 +661,6 @@ async function deleteAccount() {
 
 async function performLogout() {
     closeModal('logoutConfirmModal');
-    // ★ 先清空所有用户状态，再退出，最后跳转
     clearUserState();
     try {
         await getSupabase().auth.signOut();
@@ -693,7 +685,6 @@ async function loadUserProfile() {
         await new Promise(r => setTimeout(r, 300));
     }
     if (!session || !session.user) {
-        // ★ 未登录：先清掉可能残留的旧账号缓存，避免登录页/回跳后读到
         clearUserState();
         window.location.href = `login-real.html?redirect=${encodeURIComponent(window.location.href)}`;
         return;
@@ -705,15 +696,13 @@ async function loadUserProfile() {
     const myToken = sessionToken;
     const myUserId = currentUser.id;
 
-    // ★ 缓存必须按 userId 校验；不匹配/过期一律忽略
     let fullData = getCachedProfile(myUserId);
     if (!fullData) {
         fullData = await fetchUserFullData(myUserId);
-        if (sessionToken !== myToken) return; // 期间已切换
+        if (sessionToken !== myToken) return;
         setCachedProfile(fullData, myUserId);
     }
 
-    // ★ 拆成两份独立副本，避免引用共享
     userProfile = { ...fullData };
     userStats = { ...fullData };
     updateAppState();
