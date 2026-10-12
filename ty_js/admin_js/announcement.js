@@ -1,9 +1,9 @@
-// ========== 公告管理（含傻瓜编辑器） ==========
+// ========== 公告管理（含傻瓜编辑器 + 图片插入） ==========
 import { getSupabase } from './auth.js';
 import { showNotification, logAction, openModal, closeModal, escapeHtml } from './utils.js';
 
 let announcementsCache = [];
-let currentEditorMode = 'simple'; // 'simple' | 'html'
+let currentEditorMode = 'simple';
 
 const ANNOUNCEMENT_TYPES = [
     { value: 'update', label: '更新公告', color: '#60a5fa' },
@@ -48,6 +48,31 @@ function simpleTextToHtml(text) {
             continue;
         }
 
+        // ★ 图片（整行）：![描述](URL) 或 [图片:URL]
+        // 注意：转义过后的 & 会变成 &amp;，需要还原回来再解析
+        const unescapedLine = trimmed
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>');
+
+        const imgMatch = unescapedLine.match(/^!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)$/)
+                       || unescapedLine.match(/^\[图片:(https?:\/\/[^\]]+)\]$/);
+        if (imgMatch) {
+            closeList(); flushParagraph();
+            let alt, url;
+            if (imgMatch.length === 3 && imgMatch[1] !== undefined && unescapedLine.startsWith('![')) {
+                // ![描述](URL) 格式
+                alt = imgMatch[1] || '公告图片';
+                url = imgMatch[2];
+            } else {
+                // [图片:URL] 格式
+                alt = '公告图片';
+                url = imgMatch[1];
+            }
+            blocks.push({ type: 'img', url, alt });
+            continue;
+        }
+
         // 分隔线 ---
         if (/^-{3,}$/.test(trimmed)) {
             closeList(); flushParagraph();
@@ -59,7 +84,7 @@ function simpleTextToHtml(text) {
         const hMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
         if (hMatch) {
             closeList(); flushParagraph();
-            const level = Math.min(hMatch[1].length + 2, 5); // ## → h4
+            const level = Math.min(hMatch[1].length + 2, 5);
             blocks.push({ type: 'h', level, content: hMatch[2] });
             continue;
         }
@@ -91,6 +116,10 @@ function simpleTextToHtml(text) {
     let html = '';
     for (const b of blocks) {
         switch (b.type) {
+            // ★ 图片
+            case 'img':
+                html += `<img src="${b.url}" alt="${b.alt}" style="max-width:100%;border-radius:10px;display:block;margin:12px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);">`;
+                break;
             case 'hr':
                 html += '<hr style="border:none;border-top:1px dashed rgba(255,255,255,0.15);margin:16px 0;">';
                 break;
@@ -120,20 +149,11 @@ function simpleTextToHtml(text) {
 // 行内标记（输入已经是转义过的）
 function inlineMarkup(text) {
     let r = text;
-
-    // 【高亮】
     r = r.replace(/【([^】]+)】/g, '<span style="color:#facc15;font-weight:bold;">$1</span>');
-
-    // **加粗**
     r = r.replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#fff;">$1</strong>');
-
-    // *斜体*（避免与加粗冲突）
     r = r.replace(/(^|[^*])\*([^*\n]+)\*([^*]|$)/g, '$1<em>$2</em>$3');
-
-    // `行内代码`
     r = r.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:0.9em;">$1</code>');
 
-    // {color:xxx} 颜色标记
     const colorMap = {
         red: '#f87171', blue: '#60a5fa', green: '#4ade80',
         yellow: '#facc15', pink: '#f472b6', purple: '#a78bfa', orange: '#fb923c'
@@ -150,14 +170,11 @@ function inlineMarkup(text) {
 function sanitizeHtml(html) {
     if (!html) return '';
     let r = html;
-    // 干掉 script / iframe / object / embed
     r = r.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
     r = r.replace(/<iframe\b[^>]*>.*?<\/iframe>/gis, '');
     r = r.replace(/<object\b[^>]*>.*?<\/object>/gis, '');
     r = r.replace(/<embed\b[^>]*>/gi, '');
-    // 干掉 on* 事件
     r = r.replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-    // 干掉 javascript: 协议
     r = r.replace(/javascript\s*:/gi, '');
     return r;
 }
@@ -201,10 +218,40 @@ window._annInsert = function(before, after = '', placeholder = '') {
     ta.value = ta.value.substring(0, start) + insertText + ta.value.substring(end);
 
     ta.focus();
-    // 选中插入的文本（去掉前后标记）
     const selStart = start + before.length;
     ta.selectionStart = selStart;
     ta.selectionEnd = selStart + selected.length;
+
+    updateAnnPreview();
+};
+
+// ★ 图片插入：弹出输入框让用户粘 URL
+window._annInsertImage = function() {
+    const url = prompt('请输入图片链接（必须以 http:// 或 https:// 开头）：\n\n建议先用 Supabase Storage 上传图片后复制公开链接。');
+    if (!url) return;
+
+    const trimmed = url.trim();
+    if (!/^https?:\/\//i.test(trimmed)) {
+        alert('图片链接必须以 http:// 或 https:// 开头');
+        return;
+    }
+
+    // 整行插入图片语法（前后各加空行，保证独占一行）
+    const ta = document.getElementById('annContentInput');
+    if (!ta) return;
+
+    const start = ta.selectionStart;
+    const before = ta.value.substring(0, start);
+    const after = ta.value.substring(start);
+    const prefix = before && !before.endsWith('\n\n') ? (before.endsWith('\n') ? '\n' : '\n\n') : '';
+    const suffix = after && !after.startsWith('\n\n') ? (after.startsWith('\n') ? '\n' : '\n\n') : '';
+
+    const snippet = `${prefix}![公告图片](${trimmed})${suffix}`;
+    ta.value = before + snippet + after;
+
+    const newCursor = (before + snippet).length;
+    ta.focus();
+    ta.selectionStart = ta.selectionEnd = newCursor;
 
     updateAnnPreview();
 };
@@ -228,8 +275,8 @@ window._annSwitchMode = function(mode) {
         btnSimple.style.cssText = `padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:0.85rem;${activeStyle}`;
         btnHtml.style.cssText = `padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:0.85rem;${inactiveStyle}`;
         toolbar.style.display = 'flex';
-        hint.innerHTML = '💡 直接写文字即可，空行分段落。<strong>**加粗**</strong> · <strong>【高亮】</strong> · <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">- 列表</code> · <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">&gt; 引用</code> · <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">---</code> 分隔线';
-        ta.placeholder = '六哥荣耀WIKI 更新公告\n\n好久不见，星启者们\n\n【本次更新内容】\n\n- 修复了签到按钮不刷新的问题\n- 优化了买宝箱的速度\n\n---\n\n接下来，周年庆准备正式开始！🎂';
+        hint.innerHTML = '💡 直接写文字即可，空行分段落。<strong>**加粗**</strong> · <strong>【高亮】</strong> · <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">- 列表</code> · <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">&gt; 引用</code> · <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">---</code> 分隔线 · <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">![图](URL)</code> 图片';
+        ta.placeholder = '六哥荣耀WIKI 更新公告\n\n好久不见，星启者们\n\n【本次更新内容】\n\n- 修复了签到按钮不刷新的问题\n- 优化了买宝箱的速度\n\n![公告配图](https://example.com/img.png)\n\n---\n\n接下来，周年庆准备正式开始！🎂';
         ta.style.fontFamily = 'inherit';
         ta.style.fontSize = '0.95rem';
     } else {
@@ -237,7 +284,7 @@ window._annSwitchMode = function(mode) {
         btnHtml.style.cssText = `padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:0.85rem;${activeStyle}`;
         toolbar.style.display = 'none';
         hint.innerHTML = '⚠️ 高级模式：直接写 HTML。系统会过滤 <code>&lt;script&gt;</code> 和 <code>on*</code> 事件，但请谨慎使用。';
-        ta.placeholder = '<p>本次更新内容...</p>\n<p><strong>重要提示：</strong>...</p>';
+        ta.placeholder = '<p>本次更新内容...</p>\n<img src="https://example.com/img.png" style="max-width:100%;">';
         ta.style.fontFamily = 'monospace';
         ta.style.fontSize = '0.85rem';
     }
@@ -345,7 +392,6 @@ function showAnnouncementForm(existingData = null) {
 
     const initialContent = existingData?.content || '';
     const hasHtml = /<\w+/.test(initialContent);
-    // 编辑已有公告：如果内容含 HTML 标签，默认 HTML 模式；否则简易模式
     currentEditorMode = (isEdit && hasHtml) ? 'html' : 'simple';
 
     const html = `
@@ -362,11 +408,9 @@ function showAnnouncementForm(existingData = null) {
             <input type="text" name="title" value="${escapeHtml(existingData?.title || '')}" placeholder="例如：🎉 六哥荣耀WIKI 更新公告" required maxlength="100">
         </div>
 
-        <!-- ★ 编辑器区域 ★ -->
         <div class="form-field">
             <label>公告内容 <span style="color:#f87171;">*</span></label>
 
-            <!-- 模式切换 -->
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
                 <button type="button" id="annModeSimple" onclick="window._annSwitchMode('simple')"
                     style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:0.85rem;">
@@ -378,7 +422,7 @@ function showAnnouncementForm(existingData = null) {
                 </button>
             </div>
 
-            <!-- 工具栏（仅简易模式显示） -->
+            <!-- 工具栏 -->
             <div id="annSimpleToolbar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;padding:8px 10px;background:rgba(0,0,0,0.2);border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
                 <button type="button" onclick="window._annInsert('**', '**', '加粗文字')" title="加粗" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#e0e0e0;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:0.85rem;">B</button>
                 <button type="button" onclick="window._annInsert('*', '*', '斜体文字')" title="斜体" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#e0e0e0;padding:4px 12px;border-radius:6px;cursor:pointer;font-style:italic;font-size:0.85rem;">I</button>
@@ -391,9 +435,10 @@ function showAnnouncementForm(existingData = null) {
                 <button type="button" onclick="window._annInsert('{pink:', '}', '粉色文字')" title="粉色" style="background:rgba(244,114,182,0.1);border:1px solid rgba(244,114,182,0.2);color:#f472b6;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;">🎨 粉</button>
                 <button type="button" onclick="window._annInsert('{green:', '}', '绿色文字')" title="绿色" style="background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);color:#4ade80;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;">🎨 绿</button>
                 <button type="button" onclick="window._annInsert('{blue:', '}', '蓝色文字')" title="蓝色" style="background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2);color:#60a5fa;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;">🎨 蓝</button>
+                <!-- ★ 新增：图片按钮 -->
+                <button type="button" onclick="window._annInsertImage()" title="插入图片" style="background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.3);color:#60a5fa;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;">🖼️ 图片</button>
             </div>
 
-            <!-- 输入区 + 预览区（左右并排） -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                 <div>
                     <div style="font-size:0.75rem;color:#9ca3af;margin-bottom:4px;">输入区</div>
@@ -405,7 +450,6 @@ function showAnnouncementForm(existingData = null) {
                 </div>
             </div>
 
-            <!-- 语法提示 -->
             <div id="annModeHint" style="font-size:0.75rem;color:#9ca3af;background:rgba(0,0,0,0.2);padding:8px 12px;border-radius:6px;margin-top:8px;line-height:1.7;"></div>
         </div>
 
@@ -433,11 +477,9 @@ function showAnnouncementForm(existingData = null) {
     document.getElementById('modalTitle').innerText = isEdit ? '编辑公告' : '发布公告';
     document.getElementById('modalFields').innerHTML = html;
 
-    // 初始化编辑器
     window._annUpdatePreview = updateAnnPreview;
     window._annSwitchMode(currentEditorMode);
 
-    // 提交
     document.getElementById('modalForm').onsubmit = async (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
@@ -450,7 +492,6 @@ function showAnnouncementForm(existingData = null) {
             return;
         }
 
-        // ★ 根据模式生成最终 HTML
         let finalContent;
         if (currentEditorMode === 'simple') {
             finalContent = simpleTextToHtml(rawContent);
@@ -496,9 +537,6 @@ function showAnnouncementForm(existingData = null) {
     };
 }
 
-// ============================================================
-// 导出：新增按钮入口
-// ============================================================
 export function showAddAnnouncementForm() {
     showAnnouncementForm(null);
 }
