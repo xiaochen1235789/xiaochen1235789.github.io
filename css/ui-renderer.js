@@ -1,4 +1,4 @@
-// ========== UI 渲染器（完整版 v2.2 - 缓存修复版） ==========
+// ========== UI 渲染器（完整版 v2.3 - RPC 化 + 缓存修复） ==========
 import { CONFIG, CHEST_CONFIG, getRoleDisplay } from './config.js';
 import {
     safeSetText, showNotification, openModal, closeModal,
@@ -287,7 +287,6 @@ async function loadFramesList() {
     const container = document.getElementById('framesList');
     if (!container) return;
 
-    // ★ frames 和 userFrames 并行
     const [frames, userFrames] = await Promise.all([
         (async () => {
             if (cachedFrames && Date.now() - framesCacheTime <= FRAMES_CACHE_TTL) return cachedFrames;
@@ -351,12 +350,11 @@ async function loadFramesList() {
                     state.userStats.rainbow_lollipops = newRainbow;
                     updateShopBalanceDisplay();
                     clearProfileCache();
-                    // ★ 缓存：合并 profile + stats，并绑定当前 userId
                     setCachedProfile(
                         { ...(state.userProfile || {}), ...(state.userStats || {}) },
                         state.currentUser?.id
                     );
-                    invalidateFramesCache();   // ★ 购买后清缓存
+                    invalidateFramesCache();
                     showNotification('🎉 购买成功！', 'success');
                     loadFramesList();
                 });
@@ -389,7 +387,6 @@ async function loadAutoSignCardUI() {
     const container = document.getElementById('autoSignCardItem');
     if (!container) return;
     const hasCard = await loadAutoSignCardStatus(state.currentUser.id);
-    const canBuy = (state.userStats?.candy_crumbles || 0) >= CONFIG.AUTO_CARD_PRICE && !hasCard;
     let html = `
         <div class="frame-item-wrap" style="display:block; text-align:center; padding:20px;">
             <div style="font-size:2rem;">📅</div>
@@ -405,23 +402,19 @@ async function loadAutoSignCardUI() {
     if (buyBtn) {
         buyBtn.addEventListener('click', async () => {
             if (window.isProcessing) return;
-            if (!canBuy) { showNotification(`糖果碎不足，需要 ${CONFIG.AUTO_CARD_PRICE.toLocaleString()}`, 'error'); return; }
             window.isProcessing = true;
             try {
                 const sb = getSupabase();
-                const { error: upsertError } = await sb.from('user_auto_sign_card').upsert({ user_id: state.currentUser.id, owned: true }, { onConflict: 'user_id' });
-                if (upsertError) { showNotification('购买失败: ' + upsertError.message, 'error'); return; }
-                const newCandy = (state.userStats?.candy_crumbles || 0) - CONFIG.AUTO_CARD_PRICE;
-                const { error: updateError } = await sb.from('user_stats').update({ candy_crumbles: newCandy }).eq('user_id', state.currentUser.id);
-                if (updateError) {
-                    await sb.from('user_auto_sign_card').upsert({ user_id: state.currentUser.id, owned: false }, { onConflict: 'user_id' });
-                    showNotification('购买失败: ' + updateError.message, 'error');
+                const { data, error } = await sb.rpc('purchase_auto_card', {
+                    p_user_id: state.currentUser.id
+                });
+                if (error) {
+                    showNotification(error.message, 'error');
                     return;
                 }
-                state.userStats.candy_crumbles = newCandy;
+                state.userStats.candy_crumbles = data.new_candy;
                 state.hasAutoSignCard = true;
                 clearProfileCache();
-                // ★ 缓存：合并 profile + stats，并绑定当前 userId
                 setCachedProfile(
                     { ...(state.userProfile || {}), ...(state.userStats || {}) },
                     state.currentUser?.id
@@ -466,23 +459,17 @@ async function loadChestShopUI() {
         window.isProcessing = true;
         try {
             const sb = getSupabase();
-            const price = await getChestPrice();
-            const totalCost = price * amount;
-            if (state.userStats.candy_crumbles < totalCost) {
-                showNotification(`糖果碎不足，需要 ${totalCost.toLocaleString()}`, 'error');
+            const { data, error } = await sb.rpc('purchase_chests', {
+                p_user_id: state.currentUser.id,
+                p_amount: amount
+            });
+            if (error) {
+                showNotification(error.message, 'error');
                 return;
             }
-            const newCandy = state.userStats.candy_crumbles - totalCost;
-            const newChest = (state.userStats.chest_count || 0) + amount;
-            const { error } = await sb.from('user_stats').update({
-                candy_crumbles: newCandy,
-                chest_count: newChest
-            }).eq('user_id', state.currentUser.id);
-            if (error) throw error;
-            state.userStats.candy_crumbles = newCandy;
-            state.userStats.chest_count = newChest;
+            state.userStats.candy_crumbles = data.new_candy;
+            state.userStats.chest_count    = data.new_chest;
             window.userStats = state.userStats;
-            // ★ 缓存同步：让下次读缓存时拿到最新宝箱数
             clearProfileCache();
             setCachedProfile(
                 { ...(state.userProfile || {}), ...(state.userStats || {}) },
@@ -492,8 +479,6 @@ async function loadChestShopUI() {
             window.updateChestDisplay?.();
             loadChestShopUI();
             showNotification(`✅ 成功购买 ${amount} 个宝箱`, 'success');
-        } catch (err) {
-            showNotification(err.message, 'error');
         } finally {
             window.isProcessing = false;
         }
@@ -505,7 +490,6 @@ export async function renderBackpack() {
     const container = document.getElementById('backpackContent');
     if (!container) return;
 
-    // ★ 三请求并行
     const [hasCard, userFrames, allFrames] = await Promise.all([
         loadAutoSignCardStatus(state.currentUser.id).catch(() => false),
         loadUserFrames(state.currentUser.id),
@@ -591,7 +575,6 @@ export async function renderBackpack() {
 
 // ===== 物品详情（本地优先） =====
 export async function openBackpackItemDetail(itemId) {
-    // 1. 头像框：先本地同步查
     let frame = getFrameByIdSync(itemId);
     if (!frame) {
         frame = await getFrameById(itemId);
@@ -645,7 +628,6 @@ export async function openBackpackItemDetail(itemId) {
         return;
     }
 
-    // 2. 普通物品
     const item = CONFIG.BACKPACK_ITEMS.find(i => i.id === itemId);
     if (item) {
         let count = 0;
@@ -665,7 +647,6 @@ export async function openBackpackItemDetail(itemId) {
         return;
     }
 
-    // 3. 宝箱
     if (itemId === 'chest') {
         const count = state.userStats?.chest_count || 0;
         if (count < 1) {
@@ -829,7 +810,6 @@ export async function openBatchChestModal(maxCount) {
             const { results, newStats } = await batchOpenChests(state.currentUser.id, amount);
             state.userStats = newStats;
             window.userStats = newStats;
-            // ★ 开箱后同步缓存，避免下次读旧数据
             clearProfileCache();
             setCachedProfile(
                 { ...(state.userProfile || {}), ...(state.userStats || {}) },
