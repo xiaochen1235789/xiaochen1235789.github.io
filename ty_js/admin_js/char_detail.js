@@ -391,7 +391,6 @@ function renderDetailEditor() {
             }
         };
 
-        // 多重延迟确保 DOM 更新完成
         setTimeout(restoreScroll, 50);
         requestAnimationFrame(() => {
             setTimeout(restoreScroll, 100);
@@ -480,22 +479,25 @@ async function saveDetailEditor() {
             const nameVal = row.querySelector('.extra-name')?.value?.trim();
             const desc = row.querySelector('.extra-desc')?.value?.trim();
             if (nameVal || desc) {
-                extraAbilities.push({ 
-                    name: nameVal || '', 
-                    desc: markdownToHtml(desc || '', []) 
+                extraAbilities.push({
+                    name: nameVal || '',
+                    desc: markdownToHtml(desc || '', [])
                 });
             }
         });
 
+        // ★★★ Bug 修复点：技能描述处理 ★★★
+        // 旧逻辑：仅当技能展开时（DOM 里有 textarea）才转换，未展开时 sk.desc 保持 markdown 格式被存回数据库
+        // 新逻辑：展开时用 textarea 值，未展开时用内存里已转成 markdown 的 sk.desc，统一转回 HTML
         const skills = {};
         Object.keys(currentEditCharData.skills).forEach(key => {
             const sk = currentEditCharData.skills[key];
             if (sk) {
-                const desc = document.getElementById(`sk_desc_${key}`)?.value;
-                if (desc !== undefined) {
-                    const values = sk.values || [];
-                    sk.desc = markdownToHtml(desc, values);
-                }
+                const descElem = document.getElementById(`sk_desc_${key}`);
+                // 展开时用 textarea 值；未展开时用内存里的 markdown
+                const rawDesc = descElem ? descElem.value : (sk.desc || '');
+                const values = sk.values || [];
+                sk.desc = markdownToHtml(rawDesc, values);
                 skills[key] = sk;
             }
         });
