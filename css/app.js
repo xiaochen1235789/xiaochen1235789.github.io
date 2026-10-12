@@ -21,7 +21,8 @@ import {
     setAppState, renderProfile, updateAvatarDisplay,
     updateCheckinButtonState, updateActivePointsDisplay,
     updateShopBalanceDisplay, renderShop, renderBackpack,
-    renderTitlesModal, openBackpackItemDetail, openRewardInfoModal
+    renderTitlesModal, openBackpackItemDetail, openRewardInfoModal,
+    invalidateFramesCache
 } from './ui-renderer.js';
 
 // ========== 全局状态 ==========
@@ -31,12 +32,21 @@ let userStats = null;
 let hasAutoSignCard = false;
 let autoSignAttempted = false;
 
-// ★ 统一用 window.isProcessing，避免模块内/全局双变量互相看不见
 window.isProcessing = false;
 
 window.currentUser = currentUser;
 window.userStats = userStats;
 window.userProfile = userProfile;
+
+// ★ 会话令牌：每次加载/登出都自增；异步任务完成后比对，避免"切号后旧响应污染新账号"
+let sessionToken = 0;
+
+// ★ bfcache 恢复时强制刷新，避免展示上一个账号的页面
+window.addEventListener('pageshow', (e) => {
+    if (e.persisted) {
+        window.location.reload();
+    }
+});
 
 function updateAppState() {
     setAppState({
@@ -48,17 +58,54 @@ function updateAppState() {
     window.currentUser = currentUser;
     window.userProfile = userProfile;
     window.userStats = userStats;
-    clearProfileCache();
-    setCachedProfile({ ...userProfile, ...userStats });
+    if (currentUser?.id) {
+        // ★ 写缓存带上 userId
+        setCachedProfile({ ...userProfile, ...userStats }, currentUser.id);
+    }
 }
+
+// ★ 统一清理所有用户相关状态（登出 / 切换账号 / 修改密码后跳转）
+function clearUserState() {
+    currentUser = null;
+    userProfile = null;
+    userStats = null;
+    hasAutoSignCard = false;
+    autoSignAttempted = false;
+    window.currentUser = null;
+    window.userProfile = null;
+    window.userStats = null;
+    window.isProcessing = false;
+    sessionToken++; // 让所有进行中的异步任务失效
+
+    // 只清理本模块相关的 key，避免误伤其他模块
+    clearProfileCache();
+    try {
+        Object.keys(localStorage).forEach(k => {
+            if (k.startsWith('userAvatar_')) localStorage.removeItem(k);
+        });
+        localStorage.removeItem('userAvatar'); // 兼容旧版本遗留 key
+    } catch (e) { /* ignore */ }
+
+    // 让商店头像框缓存也失效（防止后台改数据后读到旧值）
+    try { invalidateFramesCache(); } catch (e) { /* ignore */ }
+}
+window.clearUserState = clearUserState;
 
 // ========== 刷新用户统计（含宝箱） ==========
 async function refreshUserStats() {
+    if (!currentUser?.id) return;
+    const myToken = sessionToken;
+    const myUserId = currentUser.id;
     const sb = getSupabase();
+
     const [profileRes, statsRes] = await Promise.all([
-        sb.from('user_profiles').select('*').eq('id', currentUser.id).maybeSingle(),
-        sb.from('user_stats').select('*').eq('user_id', currentUser.id).maybeSingle()
+        sb.from('user_profiles').select('*').eq('id', myUserId).maybeSingle(),
+        sb.from('user_stats').select('*').eq('user_id', myUserId).maybeSingle()
     ]);
+
+    // ★ 期间切换了账号 / 登出，丢弃这次响应
+    if (sessionToken !== myToken || currentUser?.id !== myUserId) return;
+
     if (!profileRes.error && profileRes.data) {
         userProfile = { ...(userProfile || {}), ...profileRes.data };
     }
@@ -78,7 +125,8 @@ function updateNavbar() {
     if (!currentUser) { navDiv.innerHTML = '<a href="login-real.html">登录</a>'; return; }
 
     const username = userProfile?.username || currentUser?.email?.split('@')[0] || '用户';
-    const avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
+    // ★ 完全依赖 userProfile.avatar_url，不再 fallback 到全局 localStorage
+    const avatarUrl = userProfile?.avatar_url || null;
     const equippedFrameId = userProfile?.equipped_frame || 'nature';
     const frame = CONFIG.FRAMES.find(f => f.id === equippedFrameId);
     const frameImageUrl = frame?.imageUrl || '';
@@ -326,7 +374,8 @@ function updateUsernameModalAvatar() {
     const frameImg = document.getElementById('usernameModalFrameImg');
     if (!img || !placeholder || !frameImg) return;
 
-    const avatarUrl = userProfile?.avatar_url || localStorage.getItem('userAvatar');
+    // ★ 只信任 userProfile.avatar_url
+    const avatarUrl = userProfile?.avatar_url || null;
     if (avatarUrl) {
         img.src = avatarUrl;
         img.style.display = 'block';
@@ -524,23 +573,21 @@ async function uploadCroppedImage(blob) {
         const { error: uploadErr } = await getSupabase().storage.from('avatars').upload(filePath, blob, { contentType: 'image/png', upsert: true });
         if (uploadErr) throw uploadErr;
         const { data: { publicUrl } } = getSupabase().storage.from('avatars').getPublicUrl(filePath);
-        // ★ 加时间戳防浏览器缓存
         const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
         await updateUserProfile(currentUser.id, { avatar_url: cacheBustedUrl });
 
-        // ★ 同步到模块内 + window + ui-renderer 的 state
         userProfile.avatar_url = cacheBustedUrl;
         window.userProfile = userProfile;
         updateAppState();
-        localStorage.setItem('userAvatar', cacheBustedUrl);
 
-        // ★ 1. 只改头像 img（不重拉 user_frames，瞬间生效）
+        // ★ 不再写入全局 'userAvatar'，只按 userId 存（供极端场景下的 UI 兜底）
+        try {
+            localStorage.setItem(`userAvatar_${currentUser.id}`, cacheBustedUrl);
+        } catch (e) { /* ignore */ }
+
         updateAvatarDisplay(cacheBustedUrl);
-        // ★ 2. 头像框独立刷新
         await applyFrameClassByFrameId(userProfile?.equipped_frame || 'nature');
-        // ★ 3. 顶部导航
         updateNavbar();
-        // ★ 4. 用户名弹窗里的预览也同步
         updateUsernameModalAvatar();
 
         showNotification('头像已更新', 'success');
@@ -602,7 +649,12 @@ async function updatePassword() {
     if (error) showNotification('修改失败: ' + error.message, 'error');
     else {
         showNotification('密码已更新，请重新登录', 'success');
-        setTimeout(() => { sb.auth.signOut(); localStorage.clear(); window.location.href = 'login-real.html'; }, 1500);
+        setTimeout(async () => {
+            // ★ 清空状态再跳转
+            clearUserState();
+            await sb.auth.signOut();
+            window.location.href = 'login-real.html';
+        }, 1500);
     }
     closeModal('passwordModal');
 }
@@ -616,8 +668,11 @@ async function deleteAccount() {
 
 async function performLogout() {
     closeModal('logoutConfirmModal');
-    await getSupabase().auth.signOut();
-    localStorage.clear();
+    // ★ 先清空所有用户状态，再退出，最后跳转
+    clearUserState();
+    try {
+        await getSupabase().auth.signOut();
+    } catch (e) { console.warn('signOut 失败', e); }
     window.location.href = 'index.html';
 }
 
@@ -638,46 +693,59 @@ async function loadUserProfile() {
         await new Promise(r => setTimeout(r, 300));
     }
     if (!session || !session.user) {
+        // ★ 未登录：先清掉可能残留的旧账号缓存，避免登录页/回跳后读到
+        clearUserState();
         window.location.href = `login-real.html?redirect=${encodeURIComponent(window.location.href)}`;
         return;
     }
+
     currentUser = session.user;
     window.currentUser = currentUser;
+    sessionToken++;
+    const myToken = sessionToken;
+    const myUserId = currentUser.id;
 
-    let fullData = getCachedProfile();
+    // ★ 缓存必须按 userId 校验；不匹配/过期一律忽略
+    let fullData = getCachedProfile(myUserId);
     if (!fullData) {
-        fullData = await fetchUserFullData(currentUser.id);
-        setCachedProfile(fullData);
+        fullData = await fetchUserFullData(myUserId);
+        if (sessionToken !== myToken) return; // 期间已切换
+        setCachedProfile(fullData, myUserId);
     }
-    userProfile = fullData;
-    userStats = fullData;
+
+    // ★ 拆成两份独立副本，避免引用共享
+    userProfile = { ...fullData };
+    userStats = { ...fullData };
     updateAppState();
 
     // 1. 先渲染基础 UI
     await renderProfile();
-    await initFrameForUser(currentUser.id);
+    await initFrameForUser(myUserId);
+    if (sessionToken !== myToken) return;
 
     // 2. 并行执行互不依赖的操作（每项独立兜底）
     const [ , hasCard, , granted ] = await Promise.all([
-        updateUserStats(currentUser.id, { last_login: new Date().toISOString() })
+        updateUserStats(myUserId, { last_login: new Date().toISOString() })
             .then(() => { safeSetText('lastLogin', new Date().toLocaleString()); })
             .catch(err => console.warn('last_login 更新失败', err)),
 
-        loadAutoSignCardStatus(currentUser.id)
+        loadAutoSignCardStatus(myUserId)
             .catch(err => { console.warn('签到卡状态加载失败', err); return false; }),
 
         refreshTitles()
             .catch(err => { console.warn('称号刷新失败', err); }),
 
-        grantDailyChest(currentUser.id)
+        grantDailyChest(myUserId)
             .catch(err => { console.warn('每日宝箱赠送失败:', err); return false; })
     ]);
+    if (sessionToken !== myToken) return;
 
     // 3. 处理结果
     hasAutoSignCard = hasCard;
     updateAppState();
 
     await tryAutoSign();
+    if (sessionToken !== myToken) return;
 
     if (granted) {
         showNotification('🎁 每日宝箱已放入背包！', 'success');
@@ -711,7 +779,6 @@ function bindEvents() {
     document.getElementById('openTitlesBtn')?.addEventListener('click', renderTitlesModal);
     document.getElementById('openHelpBtn')?.addEventListener('click', () => openModal('helpModal'));
 
-    // ★ 兑换码
     document.getElementById('openRedeemBtn')?.addEventListener('click', window.openRedeemModal);
     document.getElementById('submitRedeemBtn')?.addEventListener('click', submitRedeemCode);
     document.getElementById('redeemCodeInput')?.addEventListener('keydown', (e) => {
