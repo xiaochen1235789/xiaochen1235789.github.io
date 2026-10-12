@@ -10,6 +10,9 @@ async function initializePage() {
 
         await safeExecute(() => initializeUserProfile());
         await safeExecute(() => initializeSiteAge());
+        // ★ 新增：公告系统
+        await safeExecute(() => autoShowLatestAnnouncement());
+        await safeExecute(() => updateAnnouncementBadge());
 
         initializeSearch();
         setupLogoEasterEgg();   // ★ 绑定 LOGO 彩蛋
@@ -47,6 +50,15 @@ async function initializePage() {
             friendItem.addEventListener('click', () => {
                 closeMenu();
                 window.open('friend.html', '_blank');
+            });
+        }
+
+        // ★ 新增：公告中心菜单点击
+        const announcementItem = document.getElementById('menuAnnouncement');
+        if (announcementItem) {
+            announcementItem.addEventListener('click', () => {
+                closeMenu();
+                openAnnouncementList();
             });
         }
 
