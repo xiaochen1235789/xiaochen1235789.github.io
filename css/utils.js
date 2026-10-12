@@ -24,22 +24,16 @@ export function showNotification(msg, type = 'info', duration = 6000) {
         document.body.appendChild(n);
     }
 
-    // ★ 清旧的定时器，避免连续通知时互相打架
     if (notificationTimeout) {
         clearTimeout(notificationTimeout);
         notificationTimeout = null;
     }
 
-    // ★ 先重置 class，避免上一次的 type 残留（例如 warning 挂在 success 上）
     n.className = 'notification';
     n.textContent = msg;
-
-    // 强制重排，让移除→添加 show 的动作能重启动画
     void n.offsetWidth;
-
     n.classList.add(type, 'show');
 
-    // ★ 6 秒后自动关闭
     notificationTimeout = setTimeout(() => {
         if (n) n.classList.remove('show');
         notificationTimeout = null;
@@ -58,7 +52,6 @@ export function showSyncNotice() {
 export function openModal(id) {
     const m = document.getElementById(id);
     if (!m) return;
-    // ★ 防重复：如果已经显示，则忽略本次请求
     if (m.classList.contains('show')) return;
     m.classList.add('show');
     document.body.style.overflow = 'hidden';
@@ -71,20 +64,50 @@ export function closeModal(id) {
 }
 
 // ===== 缓存管理 =====
-export function getCachedProfile() {
+// ★ 缓存必须绑定 userId，避免切换账号时读到上一个账号的数据
+const CACHE_KEY = 'userProfileCache';
+const CACHE_TTL = 3600000; // 1 小时
+
+/**
+ * 读取用户资料缓存
+ * @param {string} currentUserId 当前登录用户 ID（必须传入！）
+ * @returns {object|null}
+ */
+export function getCachedProfile(currentUserId) {
     try {
-        const raw = localStorage.getItem('userProfileCache');
+        const raw = localStorage.getItem(CACHE_KEY);
         if (!raw) return null;
-        const { data, timestamp } = JSON.parse(raw);
-        if (timestamp && (Date.now() - timestamp) < 3600000) return data;
+        const { data, timestamp, userId } = JSON.parse(raw);
+        if (!timestamp || (Date.now() - timestamp) >= CACHE_TTL) {
+            localStorage.removeItem(CACHE_KEY);
+            return null;
+        }
+        // ★ 缓存必须和当前登录账号一致，否则视为无效
+        if (!currentUserId || userId !== currentUserId) {
+            return null;
+        }
+        return data;
+    } catch (e) {
+        localStorage.removeItem(CACHE_KEY);
         return null;
-    } catch (e) { return null; }
+    }
 }
 
-export function setCachedProfile(data) {
-    localStorage.setItem('userProfileCache', JSON.stringify({ data, timestamp: Date.now() }));
+/**
+ * 写入用户资料缓存
+ * @param {object} data 要缓存的数据
+ * @param {string} userId 该数据所属的用户 ID（必须传入！）
+ */
+export function setCachedProfile(data, userId) {
+    const uid = userId || data?.id || data?.user_id;
+    if (!uid) return; // 没 userId 绝不写缓存，避免污染下一个账号
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+        data,
+        timestamp: Date.now(),
+        userId: uid
+    }));
 }
 
 export function clearProfileCache() {
-    localStorage.removeItem('userProfileCache');
+    localStorage.removeItem(CACHE_KEY);
 }
