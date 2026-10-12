@@ -77,10 +77,8 @@ export function renderUsersTable(users) {
         const isOwner = u.id === OWNER_ID;
         const isSelf = u.id === currentUser.id;
 
-        // 权限：能否改角色（站长可改任何人，管理员不可改站长和自己）
         const canEdit = (currentUserRole === 'owner' && !isOwner) ||
                         (currentUserRole === 'admin' && !isOwner && !isSelf);
-        // 权限：能否删除（仅站长可删，且不能删站长和自己）
         const canDel = (currentUserRole === 'owner' && !isOwner && !isSelf);
 
         html += `
@@ -107,7 +105,6 @@ export function renderUsersTable(users) {
     html += '</tbody></table>';
     container.innerHTML = html;
 
-    // 更新总用户数
     const totalEl = document.getElementById('totalUsers');
     if (totalEl) totalEl.innerText = users.length;
 }
@@ -122,7 +119,7 @@ export async function refreshUserList() {
     }
 }
 
-// ----- 搜索过滤（由搜索框触发） -----
+// ----- 搜索过滤 -----
 export function applyUserSearchFilter() {
     const keyword = document.getElementById('searchUsers')?.value?.trim()?.toLowerCase() || '';
     if (!keyword) {
@@ -134,18 +131,15 @@ export function applyUserSearchFilter() {
 }
 
 // ============================================================
-// ★★★ 以下函数挂载到 window，供 HTML onclick 调用 ★★★
+// window 挂载
 // ============================================================
 
-// ----- 打开修改角色模态框 -----
 window.openUserRoleModal = async function (userId, username, currentRole) {
-    // 权限二次校验
     if (userId === OWNER_ID || userId === currentUser.id) {
         showNotification('无法修改此用户角色', 'error');
         return;
     }
 
-    // 构建下拉选项
     let opts = `
         <option value="user" ${currentRole === 'user' ? 'selected' : ''}>普通用户</option>
         <option value="admin" ${currentRole === 'admin' ? 'selected' : ''}>管理员</option>
@@ -165,7 +159,6 @@ window.openUserRoleModal = async function (userId, username, currentRole) {
     document.getElementById('modalTitle').innerText = '修改用户角色';
     document.getElementById('modalFields').innerHTML = fieldsHtml;
 
-    // 提交事件
     document.getElementById('modalForm').onsubmit = async (e) => {
         e.preventDefault();
         const newRole = document.getElementById('newRoleSelect').value;
@@ -187,26 +180,65 @@ window.openUserRoleModal = async function (userId, username, currentRole) {
     };
 };
 
-// ----- 删除用户 -----
+// ★★★ Bug 修复：删除用户时级联清理所有子表 ★★★
 window.deleteUserById = async function (userId, username) {
     if (userId === OWNER_ID || userId === currentUser.id) {
         showNotification('无法删除此用户', 'error');
         return;
     }
-    if (!confirm(`确定永久删除「${username}」吗？此操作不可恢复！`)) return;
+
+    if (!confirm(
+        `确定永久删除「${username}」吗？此操作不可恢复！\n\n` +
+        `将同时删除：\n` +
+        `· 用户资料（user_profiles）\n` +
+        `· 资产数据（user_stats）\n` +
+        `· 拥有的称号（user_titles）\n` +
+        `· 签到卡（user_auto_sign_card）\n` +
+        `· 兑换记录（user_redeemed_codes）\n` +
+        `· 用户设置（user_settings）`
+    )) return;
 
     try {
         const sb = getSupabase();
-        await sb.from('user_profiles').delete().eq('id', userId);
+
+        // 1. 先并行清理所有子表
+        const deleteTasks = [
+            sb.from('user_stats').delete().eq('user_id', userId),
+            sb.from('user_titles').delete().eq('user_id', userId),
+            sb.from('user_auto_sign_card').delete().eq('user_id', userId),
+            sb.from('user_redeemed_codes').delete().eq('user_id', userId),
+            sb.from('user_settings').delete().eq('user_id', userId)
+        ];
+
+        const results = await Promise.all(deleteTasks);
+        // 忽略"表不存在"的错误（未来如果删了某表也不会炸）
+        for (const r of results) {
+            if (r.error && !String(r.error.message || '').includes('does not exist')) {
+                console.warn('[删除用户] 子表清理警告:', r.error);
+            }
+        }
+
+        // 2. 最后删主表
+        const { error } = await sb.from('user_profiles').delete().eq('id', userId);
+        if (error) throw error;
+
         showNotification('已删除用户', 'success');
         await refreshUserList();
-        // 如果杂项面板选中的用户被删了，重置选择
+
+        // 3. 如果杂项面板选中的用户被删了，重置选择
         const miscSelect = document.getElementById('miscUserSelect');
         if (miscSelect && miscSelect.value === userId) {
             miscSelect.value = '';
             if (window._resetMiscPanel) window._resetMiscPanel();
         }
-        await logAction('删除用户', 'user', userId, username, `删除了用户 ${username}`);
+
+        await logAction(
+            '删除用户',
+            'user',
+            userId,
+            username,
+            `彻底删除用户 ${username} 及其所有数据（stats/titles/card/codes/settings）`
+        );
     } catch (err) {
         showNotification('删除失败: ' + err.message, 'error');
     }
