@@ -62,6 +62,12 @@ export async function applyFrameClassByFrameId(frameId) {
 }
 
 export async function initFrameForUser(userId) {
+    // ★ 切换账号场景：清空 dataset，强制重设 src
+    const frameImg = document.getElementById('avatarFrameImg');
+    if (frameImg) {
+        frameImg.dataset.frameId = '';
+        frameImg.src = '';
+    }
     await ensureUserFrameFields(userId);
     const { equipped } = await loadUserFrames(userId);
     await applyFrameClassByFrameId(equipped);
