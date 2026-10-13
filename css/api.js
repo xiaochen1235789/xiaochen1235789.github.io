@@ -130,7 +130,6 @@ export async function getShopFrames() {
     });
 }
 
-// ★ 本地优先，零网络开销
 export async function getFrameById(frameId) {
     const local = CONFIG.FRAMES.find(f => f.id === frameId);
     if (local) {
