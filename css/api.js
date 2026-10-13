@@ -21,7 +21,7 @@ export async function fetchUserFullData(userId) {
         sb.from('user_profiles').select('*').eq('id', userId).maybeSingle(),
         sb.from('user_stats').select('*').eq('user_id', userId).maybeSingle()
     ]);
-    
+
     let profile = profileRes.data;
     if (!profile) {
         const { data: { user } } = await sb.auth.getUser();
@@ -37,7 +37,7 @@ export async function fetchUserFullData(userId) {
             equipped_title_id: null
         };
     }
-    
+
     let stats = statsRes.data;
     if (!stats) {
         stats = {
@@ -57,7 +57,6 @@ export async function fetchUserFullData(userId) {
     return { ...profile, ...stats };
 }
 
-// 注意：此函数仅供管理员调用（直接 UPDATE），普通用户应通过 RPC
 export async function updateUserProfile(userId, updates) {
     const sb = getSupabase();
     const { error } = await sb.from('user_profiles').update(updates).eq('id', userId);
@@ -65,7 +64,6 @@ export async function updateUserProfile(userId, updates) {
     clearProfileCache();
 }
 
-// 此函数仅供管理员调用，普通用户应通过 RPC
 export async function updateUserStats(userId, updates) {
     const sb = getSupabase();
     const { error } = await sb.from('user_stats').update(updates).eq('user_id', userId);
@@ -89,7 +87,6 @@ export async function loadAutoSignCardStatus(userId) {
     return data?.owned === true;
 }
 
-// 购买自动签到卡（改为 RPC）
 export async function purchaseAutoSignCard(userId, candyCost) {
     const sb = getSupabase();
     const { data, error } = await sb.rpc('purchase_auto_card', { p_user_id: userId });
@@ -98,40 +95,57 @@ export async function purchaseAutoSignCard(userId, candyCost) {
     return data.new_candy;
 }
 
-// ========== 头像框（迁移至数据库） ==========
+// ========== 头像框 ==========
 export async function getShopFrames() {
     const sb = getSupabase();
     const { data, error } = await sb.from('shop_frames')
         .select('*')
         .order('display_order', { ascending: true });
     if (error || !data || data.length === 0) {
-        // 回退到 CONFIG.FRAMES
         return CONFIG.FRAMES.map(f => ({
             id: f.id,
             name: f.name,
             description: f.description,
-            image_url: f.imageUrl,
+            imageUrl: f.imageUrl,
             price_candy: f.price_candy || 0,
             price_rainbow: f.price_rainbow || 0,
             is_purchasable: !(f.id === 'frame_fox' || (f.price_candy === 0 && f.price_rainbow === 0 && f.id !== 'nature')),
-            is_chest_exclusive: f.id === 'frame_fox' ? true : false,
+            is_chest_exclusive: f.id === 'frame_fox',
             scale: f.scale || 1.0
         }));
     }
-    return data.map(item => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        imageUrl: item.image_url,
-        price_candy: item.price_candy,
-        price_rainbow: item.price_rainbow,
-        is_purchasable: item.is_purchasable,
-        is_chest_exclusive: item.is_chest_exclusive,
-        scale: 1.12
-    }));
+    return data.map(item => {
+        const localFrame = CONFIG.FRAMES.find(f => f.id === item.id);
+        return {
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            imageUrl: item.image_url,
+            price_candy: item.price_candy,
+            price_rainbow: item.price_rainbow,
+            is_purchasable: item.is_purchasable,
+            is_chest_exclusive: item.is_chest_exclusive,
+            scale: item.scale ?? localFrame?.scale ?? 1.0
+        };
+    });
 }
 
+// ★ 本地优先，零网络开销
 export async function getFrameById(frameId) {
+    const local = CONFIG.FRAMES.find(f => f.id === frameId);
+    if (local) {
+        return {
+            id: local.id,
+            name: local.name,
+            description: local.description,
+            imageUrl: local.imageUrl,
+            price_candy: local.price_candy || 0,
+            price_rainbow: local.price_rainbow || 0,
+            scale: local.scale || 1.0,
+            is_purchasable: local.price_candy > 0 || local.price_rainbow > 0,
+            is_chest_exclusive: local.id === 'frame_fox'
+        };
+    }
     const frames = await getShopFrames();
     return frames.find(f => f.id === frameId);
 }
@@ -187,19 +201,15 @@ export async function grantTitle(userId, titleId) {
 }
 
 // =====================================================
-// ★★★ 宝箱系统 API（全部改为 RPC 调用） ★★★
+// 宝箱系统
 // =====================================================
-
-// ---- 从数据库读取价格和保底次数 ----
 export async function getChestPrice() {
     const sb = getSupabase();
     const { data, error } = await sb.from('system_config')
         .select('value')
         .eq('key', 'chest_price_candy')
         .maybeSingle();
-    if (error || !data) {
-        return CHEST_CONFIG.price_candy;
-    }
+    if (error || !data) return CHEST_CONFIG.price_candy;
     return parseInt(data.value) || 100;
 }
 
@@ -209,13 +219,10 @@ export async function getPityLimit() {
         .select('value')
         .eq('key', 'chest_pity_limit')
         .maybeSingle();
-    if (error || !data) {
-        return CHEST_CONFIG.pity_limit;
-    }
+    if (error || !data) return CHEST_CONFIG.pity_limit;
     return parseInt(data.value) || 100;
 }
 
-// ---- 概率配置 ----
 export async function getChestProbabilities() {
     const sb = getSupabase();
     const { data, error } = await sb.from('chest_probs').select('*');
@@ -231,7 +238,6 @@ export async function getChestProbabilities() {
     return data;
 }
 
-// ---- 宝箱数量（只读） ----
 export async function getChestCount(userId) {
     const sb = getSupabase();
     const { data, error } = await sb.from('user_stats')
@@ -242,26 +248,20 @@ export async function getChestCount(userId) {
     return data || { chest_count: 0, last_chest_grant_date: null, chest_pity_counter: 0 };
 }
 
-// 不再提供 updateChestCount，因为必须通过 RPC 修改
-
-// ---- 每日赠送（改为 RPC） ----
 export async function grantDailyChest(userId) {
     const sb = getSupabase();
     const { data, error } = await sb.rpc('grant_daily_chest', { p_user_id: userId });
     if (error) throw error;
-    return data.granted; // true/false
+    return data.granted;
 }
 
-// ---- 商店购买（改为 RPC） ----
 export async function purchaseChests(userId, amount, stats) {
-    // stats 仅用于前端显示，实际扣费由 RPC 内部计算
     const sb = getSupabase();
     const { data, error } = await sb.rpc('purchase_chests', { p_user_id: userId, p_amount: amount });
     if (error) throw new Error(error.message);
     return { newCandy: data.new_candy, newChest: data.new_chest };
 }
 
-// ---- 保底计数器（只读） ----
 export async function getPityCounter(userId) {
     const sb = getSupabase();
     const { data, error } = await sb.from('user_stats')
@@ -272,9 +272,6 @@ export async function getPityCounter(userId) {
     return data?.chest_pity_counter || 0;
 }
 
-// ---- 核心开箱（前端计算 + RPC 最终更新） ----
-// 注意：此函数保留前端随机计算，但最后调用 RPC 提交更新
-// RPC 会校验 chest_count 减少量是否等于 amount，防止用户少报消耗
 function calculateChestReward(probs, pityLimit, currentPity) {
     let selected = null;
     let isGuaranteed = false;
@@ -302,13 +299,11 @@ function calculateChestReward(probs, pityLimit, currentPity) {
 export async function batchOpenChests(userId, amount) {
     const sb = getSupabase();
 
-    // 1. 获取配置
     const [probs, pityLimit] = await Promise.all([
         getChestProbabilities(),
         getPityLimit()
     ]);
 
-    // 2. 获取当前用户数据（仅用于前端显示和计算）
     const { data: stats, error } = await sb.from('user_stats')
         .select('*')
         .eq('user_id', userId)
@@ -316,7 +311,6 @@ export async function batchOpenChests(userId, amount) {
     if (error) throw error;
     if (!stats || stats.chest_count < amount) throw new Error('宝箱数量不足');
 
-    // 3. 内存计算
     let pityCounter = stats.chest_pity_counter || 0;
     const results = [];
     const updates = {
@@ -378,7 +372,6 @@ export async function batchOpenChests(userId, amount) {
         results.push({ type: rewardDesc || rewardTypeForSummary, isGuaranteed });
     }
 
-    // 4. 处理框架和称号（直接在客户端完成，因为 RPC 只处理 stats 更新）
     if (frameRequests.length > 0) {
         const { data: profile } = await sb.from('user_profiles')
             .select('owned_frames')
@@ -422,11 +415,9 @@ export async function batchOpenChests(userId, amount) {
         }
     }
 
-    // 5. 更新保底和宝箱数
     updates.chest_pity_counter = pityCounter;
     updates.chest_count = (stats.chest_count || 0) - amount;
 
-    // 6. ★★★ 调用 RPC 提交最终更新 ★★★
     const { data: rpcResult, error: rpcError } = await sb.rpc('finalize_chest_open', {
         p_user_id: userId,
         p_amount: amount,
@@ -434,11 +425,27 @@ export async function batchOpenChests(userId, amount) {
     });
     if (rpcError) throw new Error(rpcError.message);
 
-    // 7. 获取最终数据
     const { data: finalStats } = await sb.from('user_stats')
         .select('*')
         .eq('user_id', userId)
         .single();
 
     return { results, newStats: finalStats };
+}
+
+// =====================================================
+// ★ 成就系统
+// =====================================================
+export async function getAchievementsStatus() {
+    const sb = getSupabase();
+    const { data, error } = await sb.rpc('get_achievements_status');
+    if (error) throw error;
+    return data?.achievements || [];
+}
+
+export async function checkAndUnlockAchievements() {
+    const sb = getSupabase();
+    const { data, error } = await sb.rpc('check_and_unlock_achievements');
+    if (error) throw error;
+    return data || { success: false, newly_unlocked: [] };
 }
