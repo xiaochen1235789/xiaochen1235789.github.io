@@ -1,4 +1,4 @@
-// ========== UI 渲染器（完整版 v2.3 - RPC 化 + 缓存修复） ==========
+// ========== UI 渲染器（完整版 v2.4 - 成就系统集成） ==========
 import { CONFIG, CHEST_CONFIG, getRoleDisplay } from './config.js';
 import {
     safeSetText, showNotification, openModal, closeModal,
@@ -11,7 +11,8 @@ import {
     loadUserFrames, updateUserProfile, updateUserStats,
     getShopFrames, getFrameById,
     getPityCounter, getChestProbabilities, batchOpenChests, getPityLimit,
-    getChestPrice
+    getChestPrice,
+    getAchievementsStatus
 } from './api.js';
 import { getSupabase } from './api.js';
 import {
@@ -59,7 +60,6 @@ export function updateCheckinButtonState() {
     btn.innerHTML = checked ? '<i class="fas fa-check-circle"></i> 已签到' : '<i class="fas fa-calendar-check"></i> 签到';
 }
 
-// ★ 只更新头像 img，不再拉 user_frames，不再重建 DOM
 export function updateAvatarDisplay(imageUrl) {
     const avatarDiv = document.getElementById('userAvatar');
     if (!avatarDiv) return;
@@ -248,7 +248,6 @@ export async function renderShop() {
 
     updateShopBalanceDisplay();
 
-    // ★ 三块并行加载，谁失败谁兜底
     await Promise.all([
         loadAutoSignCardUI().catch(e => {
             console.warn('加载签到卡失败', e);
@@ -356,6 +355,8 @@ async function loadFramesList() {
                     );
                     invalidateFramesCache();
                     showNotification('🎉 购买成功！', 'success');
+                    // ★ 检查成就
+                    window.refreshAchievements?.().catch(() => {});
                     loadFramesList();
                 });
             } catch (err) {
@@ -479,6 +480,8 @@ async function loadChestShopUI() {
             window.updateChestDisplay?.();
             loadChestShopUI();
             showNotification(`✅ 成功购买 ${amount} 个宝箱`, 'success');
+            // ★ 检查成就
+            window.refreshAchievements?.().catch(() => {});
         } finally {
             window.isProcessing = false;
         }
@@ -825,6 +828,8 @@ export async function openBatchChestModal(maxCount) {
                 }, 1500);
             }
             showNotification(`✅ 成功开启 ${amount} 个宝箱`, 'success');
+            // ★ 检查成就（通过全局调用，避免循环依赖）
+            window.refreshAchievements?.().catch(() => {});
         } catch (err) {
             showNotification('开箱失败：' + err.message, 'error');
         } finally {
@@ -1008,6 +1013,159 @@ export async function openRewardInfoModal() {
     let footerHtml = `<div style="margin-top:16px; border-top:1px solid var(--border-color); padding-top:12px; text-align:center; font-size:0.95rem; background:rgba(0,0,0,0.2); border-radius:8px; padding:12px;"><div style="color:var(--text-secondary); margin-bottom:4px;">您已连续签到 <strong style="color:#facc15; font-size:1.1rem;">${currentStreak.toLocaleString()}</strong> 天</div><div style="color:var(--text-highlight);">明天的奖励：🍬${tomorrowReward.candy.toLocaleString()} ${tomorrowReward.rainbow > 0 ? `🌈${tomorrowReward.rainbow.toLocaleString()} ` : ''}⚡${tomorrowReward.active.toLocaleString()}</div></div>`;
     const container = document.getElementById('rewardInfoContent');
     if (container) { container.innerHTML = html + footerHtml; openModal('rewardInfoModal'); }
+}
+
+// ============================================================
+// ★★★ 成就系统 UI ★★★
+// ============================================================
+const ACH_CATEGORY_NAME = {
+    checkin:    '📅 签到成就',
+    chest:      '📦 宝箱成就',
+    wealth:     '💰 财富成就',
+    collection: '🎨 收藏成就',
+    special:    '✨ 特殊成就',
+    general:    '🏆 综合成就'
+};
+
+export async function renderAchievementsModal() {
+    const container = document.getElementById('achievementsContent');
+    if (!container) return;
+
+    container.innerHTML = '<div style="text-align:center;padding:30px;opacity:0.6;">⏳ 加载成就中...</div>';
+    openModal('achievementsModal');
+
+    try {
+        const list = await getAchievementsStatus();
+
+        const groups = {};
+        let visibleTotal = 0, unlockedTotal = 0;
+
+        for (const a of list) {
+            if (a.is_hidden && !a.unlocked_at) {
+                const g = groups[a.category] || (groups[a.category] = []);
+                g.push({ ...a, _hiddenPlaceholder: true });
+                visibleTotal++;
+                continue;
+            }
+            const g = groups[a.category] || (groups[a.category] = []);
+            g.push(a);
+            visibleTotal++;
+            if (a.unlocked_at) unlockedTotal++;
+        }
+
+        let html = `
+            <div class="ach-summary">
+                <div class="ach-summary-num">
+                    <span style="color:#facc15;font-weight:bold;font-size:1.4rem;">${unlockedTotal}</span>
+                    <span style="opacity:0.6;"> / ${visibleTotal}</span>
+                </div>
+                <div class="ach-summary-label">已解锁成就</div>
+            </div>
+        `;
+
+        if (visibleTotal === 0) {
+            html += '<div style="text-align:center;padding:30px;opacity:0.5;">暂无成就</div>';
+            container.innerHTML = html;
+            return;
+        }
+
+        const order = ['checkin', 'chest', 'wealth', 'collection', 'special', 'general'];
+        for (const key of order) {
+            const arr = groups[key];
+            if (!arr || !arr.length) continue;
+            html += `<div class="ach-category"><div class="ach-cat-title">${ACH_CATEGORY_NAME[key] || key}</div><div class="ach-grid">`;
+            for (const a of arr) {
+                if (a._hiddenPlaceholder) {
+                    html += `
+                        <div class="ach-item locked hidden-ach">
+                            <div class="ach-icon">❓</div>
+                            <div class="ach-info">
+                                <div class="ach-name">神秘成就</div>
+                                <div class="ach-desc">继续探索以解锁</div>
+                            </div>
+                        </div>`;
+                    continue;
+                }
+                const unlocked = !!a.unlocked_at;
+                const progress = Math.min(Number(a.progress) || 0, Number(a.condition_value) || 0);
+                const pct = a.condition_value > 0 ? Math.floor((progress / a.condition_value) * 100) : 0;
+
+                const rewards = [];
+                if (a.reward_candy   > 0) rewards.push(`🍬${Number(a.reward_candy).toLocaleString()}`);
+                if (a.reward_rainbow > 0) rewards.push(`🌈${Number(a.reward_rainbow).toLocaleString()}`);
+                if (a.reward_syrup   > 0) rewards.push(`🌌${Number(a.reward_syrup).toLocaleString()}`);
+                if (a.reward_active  > 0) rewards.push(`⚡${Number(a.reward_active).toLocaleString()}`);
+
+                html += `
+                    <div class="ach-item ${unlocked ? 'unlocked' : 'locked'}">
+                        <div class="ach-icon">${a.icon || '🏆'}</div>
+                        <div class="ach-info">
+                            <div class="ach-name">${escapeHtml(a.name)}</div>
+                            <div class="ach-desc">${escapeHtml(a.description || '')}</div>
+                            ${!unlocked && a.condition_value > 1 ? `
+                                <div class="ach-progress-bar">
+                                    <div class="ach-progress-fill" style="width:${pct}%"></div>
+                                </div>
+                                <div class="ach-progress-text">${progress.toLocaleString()} / ${Number(a.condition_value).toLocaleString()}</div>
+                            ` : ''}
+                            ${rewards.length ? `<div class="ach-rewards">奖励：${rewards.join(' ')}</div>` : ''}
+                        </div>
+                        ${unlocked ? '<div class="ach-badge">✓</div>' : ''}
+                    </div>
+                `;
+            }
+            html += `</div></div>`;
+        }
+
+        container.innerHTML = html;
+    } catch (e) {
+        console.error('加载成就失败', e);
+        container.innerHTML = `<div style="text-align:center;padding:30px;color:#f87171;">加载失败：${escapeHtml(e.message || '未知错误')}</div>`;
+    }
+}
+
+export function showAchievementUnlockModal(achievements, rewards) {
+    if (!achievements || !achievements.length) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay show';
+    overlay.style.zIndex = '10000';
+
+    const rewardLines = [];
+    if (rewards.candy   > 0) rewardLines.push(`🍬 +${Number(rewards.candy).toLocaleString()} 糖果碎`);
+    if (rewards.rainbow > 0) rewardLines.push(`🌈 +${Number(rewards.rainbow).toLocaleString()} 超级棒糖`);
+    if (rewards.syrup   > 0) rewardLines.push(`🌌 +${Number(rewards.syrup).toLocaleString()} 星河糖浆`);
+    if (rewards.active  > 0) rewardLines.push(`⚡ +${Number(rewards.active).toLocaleString()} 活跃度`);
+
+    overlay.innerHTML = `
+        <div class="modal" style="max-width:380px;text-align:center;border:2px solid #facc15;box-shadow:0 0 40px rgba(250,204,21,0.4);">
+            <div style="padding:24px 16px 16px;">
+                <div style="font-size:2.5rem;margin-bottom:6px;">🎉</div>
+                <div style="font-size:1.2rem;font-weight:bold;color:#facc15;margin-bottom:16px;">成就解锁！</div>
+                <div style="max-height:260px;overflow-y:auto;text-align:left;padding:0 8px;margin-bottom:16px;">
+                    ${achievements.map(a => `
+                        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <div style="font-size:1.8rem;">${a.icon || '🏆'}</div>
+                            <div>
+                                <div style="font-weight:bold;">${escapeHtml(a.name)}</div>
+                                <div style="font-size:0.8rem;opacity:0.7;">${escapeHtml(a.description || '')}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                ${rewardLines.length ? `
+                    <div style="background:rgba(250,204,21,0.12);border-radius:10px;padding:10px;margin-bottom:14px;">
+                        <div style="font-size:0.85rem;opacity:0.7;margin-bottom:6px;">成就奖励</div>
+                        ${rewardLines.map(l => `<div style="font-size:0.95rem;padding:2px 0;">${l}</div>`).join('')}
+                    </div>
+                ` : ''}
+                <button class="btn-primary" id="closeAchUnlockBtn" style="width:100%;">太棒了！</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById('closeAchUnlockBtn').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
 }
 
 // 导出全局更新显示函数
