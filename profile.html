@@ -10,6 +10,90 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
+    <style>
+        /* ===== 成就系统样式 ===== */
+        .ach-summary {
+            text-align: center;
+            padding: 12px;
+            background: rgba(250,204,21,0.08);
+            border-radius: 12px;
+            margin-bottom: 14px;
+        }
+        .ach-summary-label { font-size: 0.85rem; opacity: 0.7; margin-top: 2px; }
+
+        .ach-category { margin-bottom: 18px; }
+        .ach-cat-title {
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin: 6px 4px 10px;
+            color: #facc15;
+        }
+
+        .ach-grid { display: flex; flex-direction: column; gap: 8px; }
+
+        .ach-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            position: relative;
+            transition: all 0.2s;
+        }
+        .ach-item.unlocked {
+            background: linear-gradient(90deg, rgba(250,204,21,0.12), rgba(250,204,21,0.03));
+            border-color: rgba(250,204,21,0.35);
+        }
+        .ach-item.locked .ach-icon { filter: grayscale(1); opacity: 0.55; }
+        .ach-item.hidden-ach .ach-icon { filter: none; opacity: 0.5; }
+
+        .ach-icon { font-size: 1.9rem; flex-shrink: 0; width: 42px; text-align: center; }
+        .ach-info { flex: 1; min-width: 0; }
+        .ach-name { font-weight: bold; font-size: 0.95rem; margin-bottom: 2px; }
+        .ach-desc { font-size: 0.78rem; opacity: 0.7; line-height: 1.3; }
+
+        .ach-progress-bar {
+            height: 5px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 3px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+        .ach-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            transition: width 0.3s;
+        }
+        .ach-progress-text {
+            font-size: 0.72rem;
+            opacity: 0.6;
+            margin-top: 2px;
+        }
+        .ach-rewards {
+            font-size: 0.75rem;
+            color: #facc15;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+
+        .ach-badge {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #facc15;
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+    </style>
 </head>
 <body>
     <!-- ====== 顶部导航 ====== -->
@@ -57,6 +141,7 @@
                             <div class="register-days"><i class="fas fa-calendar-alt"></i><span id="userDaysText">已来到 0 天</span></div>
                             <div class="active-points"><i class="fas fa-bolt"></i>活跃度: <span id="activePointsValue">0</span></div>
                             <button class="shop-button" id="openBackpackBtn" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6);"><i class="fas fa-shopping-bag"></i> 背包</button>
+                            <button class="shop-button" id="openAchievementsBtn" style="margin-left: 8px; background: linear-gradient(135deg, #facc15, #f59e0b);"><i class="fas fa-trophy"></i> 成就</button>
                             <button class="shop-button" id="openShopBtn"><i class="fas fa-store"></i> 商店</button>
                             <button class="shop-button my-title-btn" id="openTitlesBtn" style="margin-left: 8px;"><i class="fas fa-medal"></i> 我的称号</button>
                             <button class="shop-button my-title-btn" id="openRedeemBtn" style="margin-left: 8px; background: linear-gradient(135deg, #ec4899, #db2777);"><i class="fas fa-gift"></i> 兑换码</button>
@@ -333,6 +418,15 @@
                 </div>
 
                 <div class="help-section">
+                    <h3>🏆 成就系统</h3>
+                    <p>
+                        点击个人主页顶部的「成就」按钮查看所有成就。<br>
+                        <strong>自动追踪</strong>：签到、开箱、财富累计、头像框收藏等都会自动计入进度。<br>
+                        <strong>奖励发放</strong>：达成条件后自动解锁并发放奖励，部分成就有隐藏内容。
+                    </p>
+                </div>
+
+                <div class="help-section">
                     <h3>🎟️ 兑换码</h3>
                     <p>
                         点击个人主页顶部的「兑换码」按钮，输入官方发布的兑换码即可领取奖励。<br>
@@ -364,7 +458,7 @@
 
             </div>
             <div style="padding: 8px 0 4px 0; text-align: center; font-size: 0.7rem; color: #aaa; border-top: 1px solid rgba(255,255,255,0.06);">
-                版本 2.1 | 持续更新中
+                版本 2.2 | 持续更新中
             </div>
         </div>
     </div>
@@ -398,6 +492,17 @@
             <div id="bItemIcon" style="font-size: 4rem; margin: 15px 0;"></div>
             <div id="bItemDesc" style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;"></div>
             <div id="bItemCount" style="font-size: 0.85rem; color: var(--text-highlight); margin-bottom: 15px;"></div>
+        </div>
+    </div>
+
+    <!-- ====== 成就弹窗 ====== -->
+    <div class="modal-overlay" id="achievementsModal">
+        <div class="modal" style="max-width: 560px;">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-trophy"></i> 我的成就</div>
+                <button class="modal-close close-modal-btn" data-modal="achievementsModal">&times;</button>
+            </div>
+            <div id="achievementsContent" style="max-height: 62vh; overflow-y: auto; padding: 0 4px 8px;"></div>
         </div>
     </div>
 
