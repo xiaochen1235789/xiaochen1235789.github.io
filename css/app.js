@@ -1,4 +1,4 @@
-// ========== 主入口（完整版：集成宝箱系统 / 兑换码 / 并行加载优化 / RPC 化） ==========
+// ========== 主入口（完整版 v2.4：成就系统集成） ==========
 import { CONFIG, getRoleDisplay, SPECIAL_TITLES } from './config.js';
 import {
     showNotification, openModal, closeModal,
@@ -11,7 +11,8 @@ import {
     updateUserProfile, updateUserStats,
     loadAutoSignCardStatus, loadAllTitles, loadUserOwnedTitles,
     grantTitle, loadUserFrames,
-    grantDailyChest, getChestCount, getPityCounter
+    grantDailyChest, getChestCount, getPityCounter,
+    checkAndUnlockAchievements
 } from './api.js';
 import {
     getFrameById, purchaseFrame, equipFrame, applyFrameClassByFrameId,
@@ -22,7 +23,8 @@ import {
     updateCheckinButtonState, updateActivePointsDisplay,
     updateShopBalanceDisplay, renderShop, renderBackpack,
     renderTitlesModal, openBackpackItemDetail, openRewardInfoModal,
-    invalidateFramesCache
+    invalidateFramesCache,
+    renderAchievementsModal, showAchievementUnlockModal
 } from './ui-renderer.js';
 
 // ========== 全局状态 ==========
@@ -38,10 +40,10 @@ window.currentUser = currentUser;
 window.userStats = userStats;
 window.userProfile = userProfile;
 
-// ★ 会话令牌：每次加载/登出都自增；异步任务完成后比对，避免"切号后旧响应污染新账号"
+// ★ 会话令牌
 let sessionToken = 0;
 
-// ★ bfcache 恢复时强制刷新，避免展示上一个账号的页面
+// ★ bfcache 恢复时强制刷新
 window.addEventListener('pageshow', (e) => {
     if (e.persisted) {
         window.location.reload();
@@ -59,12 +61,11 @@ function updateAppState() {
     window.userProfile = userProfile;
     window.userStats = userStats;
     if (currentUser?.id) {
-        // ★ 写缓存带上 userId
         setCachedProfile({ ...userProfile, ...userStats }, currentUser.id);
     }
 }
 
-// ★ 统一清理所有用户相关状态（登出 / 切换账号 / 修改密码后跳转）
+// ★ 统一清理所有用户相关状态
 function clearUserState() {
     currentUser = null;
     userProfile = null;
@@ -89,7 +90,7 @@ function clearUserState() {
 }
 window.clearUserState = clearUserState;
 
-// ========== 刷新用户统计（含宝箱） ==========
+// ========== 刷新用户统计 ==========
 async function refreshUserStats() {
     if (!currentUser?.id) return;
     const myToken = sessionToken;
@@ -114,6 +115,30 @@ async function refreshUserStats() {
         if (window.updateChestDisplay) window.updateChestDisplay();
     }
 }
+
+// ========== ★ 成就检查 ==========
+async function refreshAchievements() {
+    if (!currentUser?.id) return;
+    try {
+        const result = await checkAndUnlockAchievements();
+        if (!result?.success) return;
+        const newly = result.newly_unlocked || [];
+        if (newly.length === 0) return;
+
+        showAchievementUnlockModal(newly, {
+            candy:   result.reward_candy   || 0,
+            rainbow: result.reward_rainbow || 0,
+            syrup:   result.reward_syrup   || 0,
+            active:  result.reward_active  || 0
+        });
+
+        await refreshUserStats();
+        if (window.updateChestDisplay) window.updateChestDisplay();
+    } catch (e) {
+        console.warn('成就检查失败:', e);
+    }
+}
+window.refreshAchievements = refreshAchievements;
 
 // ========== 导航栏 ==========
 function updateNavbar() {
@@ -274,7 +299,6 @@ async function executeCheckin(autoTriggered = false) {
         return false;
     }
 
-    // success = false 表示业务拒绝（如今日已签到）
     if (!data?.success) {
         if (!autoTriggered) {
             showNotification(data?.error || '签到失败', 'warning');
@@ -283,7 +307,6 @@ async function executeCheckin(autoTriggered = false) {
         return false;
     }
 
-    // 同步内存状态（服务端返回的 new_* 是权威值）
     if (userStats) {
         userStats.candy_crumbles    = data.new_candy;
         userStats.rainbow_lollipops = data.new_rainbow;
@@ -304,6 +327,10 @@ async function executeCheckin(autoTriggered = false) {
         ? `✨ 自动签到卡已为您签到 +${data.reward_candy.toLocaleString()}🍬`
         : `签到 +${data.reward_candy.toLocaleString()}🍬`;
     showNotification(msg, 'success');
+
+    // ★ 检查成就
+    refreshAchievements().catch(() => {});
+
     return true;
 }
 
@@ -320,7 +347,6 @@ async function performCheckin() {
 async function tryAutoSign() {
     if (autoSignAttempted) return;
     autoSignAttempted = true;
-    // 有卡就交给 RPC 判断（RPC 内部会校验今天是否已签）
     if (hasAutoSignCard) {
         await executeCheckin(true);
     }
@@ -339,6 +365,8 @@ async function doLowExchange(direction) {
         if (!data) return showNotification('余额不足，无法兑换！', 'error');
         showNotification('✅ 双向兑换成功！', 'success');
         await refreshUserStats();
+        // ★ 检查成就
+        refreshAchievements().catch(() => {});
     } finally {
         window.isProcessing = false;
     }
@@ -472,6 +500,9 @@ async function submitRedeemCode() {
 
         await refreshUserStats();
         showNotification('🎉 兑换成功！', 'success');
+
+        // ★ 检查成就
+        refreshAchievements().catch(() => {});
 
         setTimeout(() => closeModal('redeemModal'), 1500);
     } catch (err) {
@@ -669,7 +700,7 @@ async function performLogout() {
 }
 
 // =====================================================
-// ★★★ 核心：加载用户资料（集成每日宝箱赠送） ★★★
+// ★★★ 核心：加载用户资料（集成每日宝箱 + 成就检查） ★★★
 // =====================================================
 async function loadUserProfile() {
     const sb = initSupabase();
@@ -712,7 +743,7 @@ async function loadUserProfile() {
     await initFrameForUser(myUserId);
     if (sessionToken !== myToken) return;
 
-    // 2. 并行执行互不依赖的操作（每项独立兜底）
+    // 2. 并行执行互不依赖的操作
     const [ , hasCard, , granted ] = await Promise.all([
         updateUserStats(myUserId, { last_login: new Date().toISOString() })
             .then(() => { safeSetText('lastLogin', new Date().toLocaleString()); })
@@ -746,6 +777,9 @@ async function loadUserProfile() {
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('profileContent').style.display = 'block';
+
+    // ★ 登录后首检成就
+    refreshAchievements().catch(() => {});
 }
 
 // ========== 事件绑定 ==========
@@ -765,6 +799,10 @@ function bindEvents() {
         openModal('shopModal');
     });
     document.getElementById('openBackpackBtn')?.addEventListener('click', renderBackpack);
+    // ★ 成就按钮
+    document.getElementById('openAchievementsBtn')?.addEventListener('click', () => {
+        renderAchievementsModal();
+    });
     document.getElementById('openTitlesBtn')?.addEventListener('click', renderTitlesModal);
     document.getElementById('openHelpBtn')?.addEventListener('click', () => openModal('helpModal'));
 
