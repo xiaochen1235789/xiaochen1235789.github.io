@@ -1,4 +1,4 @@
-// ========== UI 渲染器（完整版 v2.4 - 成就系统集成） ==========
+// ========== UI 渲染器（完整版 v2.5 - 成就稀有度） ==========
 import { CONFIG, CHEST_CONFIG, getRoleDisplay } from './config.js';
 import {
     safeSetText, showNotification, openModal, closeModal,
@@ -355,7 +355,6 @@ async function loadFramesList() {
                     );
                     invalidateFramesCache();
                     showNotification('🎉 购买成功！', 'success');
-                    // ★ 检查成就
                     window.refreshAchievements?.().catch(() => {});
                     loadFramesList();
                 });
@@ -480,7 +479,6 @@ async function loadChestShopUI() {
             window.updateChestDisplay?.();
             loadChestShopUI();
             showNotification(`✅ 成功购买 ${amount} 个宝箱`, 'success');
-            // ★ 检查成就
             window.refreshAchievements?.().catch(() => {});
         } finally {
             window.isProcessing = false;
@@ -488,7 +486,7 @@ async function loadChestShopUI() {
     });
 }
 
-// ===== 背包（并行加载） =====
+// ===== 背包 =====
 export async function renderBackpack() {
     const container = document.getElementById('backpackContent');
     if (!container) return;
@@ -576,7 +574,7 @@ export async function renderBackpack() {
     openModal('backpackModal');
 }
 
-// ===== 物品详情（本地优先） =====
+// ===== 物品详情 =====
 export async function openBackpackItemDetail(itemId) {
     let frame = getFrameByIdSync(itemId);
     if (!frame) {
@@ -664,7 +662,7 @@ export async function openBackpackItemDetail(itemId) {
 }
 
 // ============================================================
-// ★★★ 宝箱开启界面 ★★★
+// 宝箱开启界面
 // ============================================================
 let batchModalOpen = false;
 let isOpeningChest = false;
@@ -828,7 +826,6 @@ export async function openBatchChestModal(maxCount) {
                 }, 1500);
             }
             showNotification(`✅ 成功开启 ${amount} 个宝箱`, 'success');
-            // ★ 检查成就（通过全局调用，避免循环依赖）
             window.refreshAchievements?.().catch(() => {});
         } catch (err) {
             showNotification('开箱失败：' + err.message, 'error');
@@ -1016,7 +1013,7 @@ export async function openRewardInfoModal() {
 }
 
 // ============================================================
-// ★★★ 成就系统 UI ★★★
+// ★★★ 成就系统 UI（含稀有度） ★★★
 // ============================================================
 const ACH_CATEGORY_NAME = {
     checkin:    '📅 签到成就',
@@ -1025,6 +1022,14 @@ const ACH_CATEGORY_NAME = {
     collection: '🎨 收藏成就',
     special:    '✨ 特殊成就',
     general:    '🏆 综合成就'
+};
+
+const ACH_RARITY = {
+    bronze:  { name: '铜',   color: '#cd7f32', bg: 'rgba(205,127,50,0.15)' },
+    silver:  { name: '银',   color: '#c0c0c0', bg: 'rgba(192,192,192,0.15)' },
+    gold:    { name: '金',   color: '#ffd700', bg: 'rgba(255,215,0,0.15)' },
+    diamond: { name: '钻',   color: '#67e8f9', bg: 'rgba(103,232,249,0.15)' },
+    legend:  { name: '传说', color: '#f472b6', bg: 'rgba(244,114,182,0.15)' }
 };
 
 export async function renderAchievementsModal() {
@@ -1089,6 +1094,7 @@ export async function renderAchievementsModal() {
                 const unlocked = !!a.unlocked_at;
                 const progress = Math.min(Number(a.progress) || 0, Number(a.condition_value) || 0);
                 const pct = a.condition_value > 0 ? Math.floor((progress / a.condition_value) * 100) : 0;
+                const rarityInfo = ACH_RARITY[a.rarity] || ACH_RARITY.bronze;
 
                 const rewards = [];
                 if (a.reward_candy   > 0) rewards.push(`🍬${Number(a.reward_candy).toLocaleString()}`);
@@ -1097,20 +1103,23 @@ export async function renderAchievementsModal() {
                 if (a.reward_active  > 0) rewards.push(`⚡${Number(a.reward_active).toLocaleString()}`);
 
                 html += `
-                    <div class="ach-item ${unlocked ? 'unlocked' : 'locked'}">
+                    <div class="ach-item ${unlocked ? 'unlocked' : 'locked'}" style="border-color: ${unlocked ? rarityInfo.color + '66' : ''};">
                         <div class="ach-icon">${a.icon || '🏆'}</div>
                         <div class="ach-info">
-                            <div class="ach-name">${escapeHtml(a.name)}</div>
+                            <div class="ach-name">
+                                ${escapeHtml(a.name)}
+                                <span style="font-size:0.7rem; padding:1px 6px; border-radius:8px; margin-left:6px; background:${rarityInfo.bg}; color:${rarityInfo.color}; border:1px solid ${rarityInfo.color}44;">${rarityInfo.name}</span>
+                            </div>
                             <div class="ach-desc">${escapeHtml(a.description || '')}</div>
                             ${!unlocked && a.condition_value > 1 ? `
                                 <div class="ach-progress-bar">
-                                    <div class="ach-progress-fill" style="width:${pct}%"></div>
+                                    <div class="ach-progress-fill" style="width:${pct}%; background:linear-gradient(90deg, ${rarityInfo.color}88, ${rarityInfo.color});"></div>
                                 </div>
                                 <div class="ach-progress-text">${progress.toLocaleString()} / ${Number(a.condition_value).toLocaleString()}</div>
                             ` : ''}
                             ${rewards.length ? `<div class="ach-rewards">奖励：${rewards.join(' ')}</div>` : ''}
                         </div>
-                        ${unlocked ? '<div class="ach-badge">✓</div>' : ''}
+                        ${unlocked ? `<div class="ach-badge" style="background:${rarityInfo.color};">✓</div>` : ''}
                     </div>
                 `;
             }
@@ -1143,15 +1152,20 @@ export function showAchievementUnlockModal(achievements, rewards) {
                 <div style="font-size:2.5rem;margin-bottom:6px;">🎉</div>
                 <div style="font-size:1.2rem;font-weight:bold;color:#facc15;margin-bottom:16px;">成就解锁！</div>
                 <div style="max-height:260px;overflow-y:auto;text-align:left;padding:0 8px;margin-bottom:16px;">
-                    ${achievements.map(a => `
+                    ${achievements.map(a => {
+                        const rarityInfo = ACH_RARITY[a.rarity] || ACH_RARITY.bronze;
+                        return `
                         <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
                             <div style="font-size:1.8rem;">${a.icon || '🏆'}</div>
                             <div>
-                                <div style="font-weight:bold;">${escapeHtml(a.name)}</div>
+                                <div style="font-weight:bold;">
+                                    ${escapeHtml(a.name)}
+                                    <span style="font-size:0.65rem; padding:1px 5px; border-radius:7px; margin-left:4px; background:${rarityInfo.bg}; color:${rarityInfo.color}; border:1px solid ${rarityInfo.color}44;">${rarityInfo.name}</span>
+                                </div>
                                 <div style="font-size:0.8rem;opacity:0.7;">${escapeHtml(a.description || '')}</div>
                             </div>
-                        </div>
-                    `).join('')}
+                        </div>`;
+                    }).join('')}
                 </div>
                 ${rewardLines.length ? `
                     <div style="background:rgba(250,204,21,0.12);border-radius:10px;padding:10px;margin-bottom:14px;">
