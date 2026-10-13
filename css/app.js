@@ -1,4 +1,4 @@
-// ========== 主入口（完整版 v2.4：成就系统集成） ==========
+// ========== 主入口（完整版 v2.5：成就系统集成） ==========
 import { CONFIG, getRoleDisplay, SPECIAL_TITLES } from './config.js';
 import {
     showNotification, openModal, closeModal,
@@ -40,10 +40,8 @@ window.currentUser = currentUser;
 window.userStats = userStats;
 window.userProfile = userProfile;
 
-// ★ 会话令牌
 let sessionToken = 0;
 
-// ★ bfcache 恢复时强制刷新
 window.addEventListener('pageshow', (e) => {
     if (e.persisted) {
         window.location.reload();
@@ -65,7 +63,6 @@ function updateAppState() {
     }
 }
 
-// ★ 统一清理所有用户相关状态
 function clearUserState() {
     currentUser = null;
     userProfile = null;
@@ -289,7 +286,7 @@ async function unequipTitle() {
     showNotification('已卸下称号', 'success');
 }
 
-// ========== 签到（RPC 版） ==========
+// ========== 签到 ==========
 async function executeCheckin(autoTriggered = false) {
     const sb = getSupabase();
     const { data, error } = await sb.rpc('do_checkin');
@@ -328,7 +325,6 @@ async function executeCheckin(autoTriggered = false) {
         : `签到 +${data.reward_candy.toLocaleString()}🍬`;
     showNotification(msg, 'success');
 
-    // ★ 检查成就
     refreshAchievements().catch(() => {});
 
     return true;
@@ -365,7 +361,6 @@ async function doLowExchange(direction) {
         if (!data) return showNotification('余额不足，无法兑换！', 'error');
         showNotification('✅ 双向兑换成功！', 'success');
         await refreshUserStats();
-        // ★ 检查成就
         refreshAchievements().catch(() => {});
     } finally {
         window.isProcessing = false;
@@ -501,7 +496,6 @@ async function submitRedeemCode() {
         await refreshUserStats();
         showNotification('🎉 兑换成功！', 'success');
 
-        // ★ 检查成就
         refreshAchievements().catch(() => {});
 
         setTimeout(() => closeModal('redeemModal'), 1500);
@@ -700,7 +694,7 @@ async function performLogout() {
 }
 
 // =====================================================
-// ★★★ 核心：加载用户资料（集成每日宝箱 + 成就检查） ★★★
+// 核心：加载用户资料
 // =====================================================
 async function loadUserProfile() {
     const sb = initSupabase();
@@ -738,12 +732,10 @@ async function loadUserProfile() {
     userStats = { ...fullData };
     updateAppState();
 
-    // 1. 先渲染基础 UI
     await renderProfile();
     await initFrameForUser(myUserId);
     if (sessionToken !== myToken) return;
 
-    // 2. 并行执行互不依赖的操作
     const [ , hasCard, , granted ] = await Promise.all([
         updateUserStats(myUserId, { last_login: new Date().toISOString() })
             .then(() => { safeSetText('lastLogin', new Date().toLocaleString()); })
@@ -760,7 +752,6 @@ async function loadUserProfile() {
     ]);
     if (sessionToken !== myToken) return;
 
-    // 3. 处理结果
     hasAutoSignCard = hasCard;
     updateAppState();
 
@@ -778,7 +769,6 @@ async function loadUserProfile() {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('profileContent').style.display = 'block';
 
-    // ★ 登录后首检成就
     refreshAchievements().catch(() => {});
 }
 
@@ -799,7 +789,6 @@ function bindEvents() {
         openModal('shopModal');
     });
     document.getElementById('openBackpackBtn')?.addEventListener('click', renderBackpack);
-    // ★ 成就按钮
     document.getElementById('openAchievementsBtn')?.addEventListener('click', () => {
         renderAchievementsModal();
     });
