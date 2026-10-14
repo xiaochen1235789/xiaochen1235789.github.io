@@ -1,4 +1,4 @@
-// ========== 主入口（完整版 v2.8：成就积分 + 等价交换计数） ==========
+// ========== 主入口（完整版 v2.9：修复 record_exchange 调用） ==========
 import { CONFIG, getRoleDisplay, SPECIAL_TITLES } from './config.js';
 import {
     showNotification, openModal, closeModal,
@@ -366,7 +366,7 @@ async function tryAutoSign() {
     }
 }
 
-// ========== 兑换（★ 已加 record_exchange） ==========
+// ========== 兑换（★ record_exchange 用 try/catch 包裹） ==========
 async function doLowExchange(direction) {
     const amount = parseInt(document.getElementById('lowExchangeAmount').value);
     if (!amount || amount < 1) return showNotification('请输入正确数量', 'error');
@@ -374,12 +374,18 @@ async function doLowExchange(direction) {
     window.isProcessing = true;
     try {
         const sb = getSupabase();
-        const { data, error } = await sb.rpc('exchange_low_level', { p_user_id: currentUser.id, p_direction: direction, p_amount: amount });
+        const { data, error } = await sb.rpc('exchange_low_level', {
+            p_user_id: currentUser.id,
+            p_direction: direction,
+            p_amount: amount
+        });
         if (error) return showNotification('兑换失败: ' + error.message, 'error');
         if (!data) return showNotification('余额不足，无法兑换！', 'error');
         showNotification('✅ 双向兑换成功！', 'success');
-        // ★ 记录一次等价交换
-        await sb.rpc('record_exchange').catch(() => {});
+
+        // ★ 记录一次等价交换（用 try/catch，避免中断后续流程）
+        try { await sb.rpc('record_exchange'); } catch (e) { /* 忽略计数失败 */ }
+
         await refreshUserStats();
         refreshAchievements().catch(() => {});
     } finally {
@@ -395,12 +401,18 @@ async function doSyrupExchange(direction) {
     window.isProcessing = true;
     try {
         const sb = getSupabase();
-        const { data, error } = await sb.rpc('exchange_syrup_down', { p_user_id: currentUser.id, p_target: direction, p_amount: amount });
+        const { data, error } = await sb.rpc('exchange_syrup_down', {
+            p_user_id: currentUser.id,
+            p_target: direction,
+            p_amount: amount
+        });
         if (error) return showNotification('兑换失败: ' + error.message, 'error');
         if (!data) return showNotification('🌌 梦幻星河糖浆不足！', 'error');
         showNotification('✨ 高阶货币向下兑换成功！', 'success');
-        // ★ 记录一次等价交换
-        await sb.rpc('record_exchange').catch(() => {});
+
+        // ★ 记录一次等价交换（用 try/catch，避免中断后续流程）
+        try { await sb.rpc('record_exchange'); } catch (e) { /* 忽略计数失败 */ }
+
         await refreshUserStats();
         refreshAchievements().catch(() => {});
     } finally {
