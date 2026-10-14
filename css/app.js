@@ -1,4 +1,4 @@
-// ========== 主入口（完整版 v2.5：成就系统集成） ==========
+// ========== 主入口（完整版 v2.6：成就 + 通知） ==========
 import { CONFIG, getRoleDisplay, SPECIAL_TITLES } from './config.js';
 import {
     showNotification, openModal, closeModal,
@@ -24,7 +24,8 @@ import {
     updateShopBalanceDisplay, renderShop, renderBackpack,
     renderTitlesModal, openBackpackItemDetail, openRewardInfoModal,
     invalidateFramesCache,
-    renderAchievementsModal, showAchievementUnlockModal
+    renderAchievementsModal, showAchievementUnlockModal,
+    renderNotificationsModal, updateNotificationBadge
 } from './ui-renderer.js';
 
 // ========== 全局状态 ==========
@@ -41,6 +42,7 @@ window.userStats = userStats;
 window.userProfile = userProfile;
 
 let sessionToken = 0;
+let notifPollingTimer = null;
 
 window.addEventListener('pageshow', (e) => {
     if (e.persisted) {
@@ -74,6 +76,11 @@ function clearUserState() {
     window.userStats = null;
     window.isProcessing = false;
     sessionToken++;
+
+    if (notifPollingTimer) {
+        clearInterval(notifPollingTimer);
+        notifPollingTimer = null;
+    }
 
     clearProfileCache();
     try {
@@ -113,7 +120,7 @@ async function refreshUserStats() {
     }
 }
 
-// ========== ★ 成就检查 ==========
+// ========== 成就检查 ==========
 async function refreshAchievements() {
     if (!currentUser?.id) return;
     try {
@@ -131,6 +138,8 @@ async function refreshAchievements() {
 
         await refreshUserStats();
         if (window.updateChestDisplay) window.updateChestDisplay();
+        // 成就解锁会产生通知，刷新红点
+        updateNotificationBadge().catch(() => {});
     } catch (e) {
         console.warn('成就检查失败:', e);
     }
@@ -169,13 +178,22 @@ function updateNavbar() {
         <div style="display:flex; align-items:center; gap:8px;">
             ${avatarHtml}
             <span style="color: #ffffff; font-weight:500;">${escapeHtml(username)}</span>
+            <button id="notifBellBtn" style="position:relative; background:transparent; border:none; color:#facc15; cursor:pointer; font-size:1.15rem; padding:4px 6px;">
+                <i class="fas fa-bell"></i>
+                <span id="notifBadge" style="display:none; position:absolute; top:-2px; right:-2px; min-width:16px; height:16px; padding:0 4px; border-radius:8px; background:#ef4444; color:white; font-size:0.65rem; font-weight:bold; align-items:center; justify-content:center; line-height:16px;">0</span>
+            </button>
             <button id="logoutBtn" style="background:transparent; color:#f87171; border:1px solid rgba(248,113,113,0.3); padding:4px 12px; border-radius:20px; cursor:pointer;">
                 <i class="fas fa-sign-out-alt"></i> 退出
             </button>
         </div>
     `;
 
+    document.getElementById('notifBellBtn')?.addEventListener('click', () => {
+        renderNotificationsModal();
+    });
     document.getElementById('logoutBtn')?.addEventListener('click', () => openModal('logoutConfirmModal'));
+
+    updateNotificationBadge().catch(() => {});
 
     const adminLink = document.getElementById('adminLink');
     if (adminLink && currentUser && (userProfile?.role === 'owner' || userProfile?.role === 'admin')) {
@@ -326,6 +344,7 @@ async function executeCheckin(autoTriggered = false) {
     showNotification(msg, 'success');
 
     refreshAchievements().catch(() => {});
+    updateNotificationBadge().catch(() => {});
 
     return true;
 }
@@ -438,6 +457,7 @@ window.openBackpack = renderBackpack;
 window.openBackpackItemDetail = openBackpackItemDetail;
 window.openTitlesModal = renderTitlesModal;
 window.openRewardInfoModal = openRewardInfoModal;
+window.openNotificationsModal = renderNotificationsModal;
 
 // ========== 兑换码 ==========
 window.openRedeemModal = function () {
@@ -489,7 +509,7 @@ async function submitRedeemCode() {
         if (r.title)       parts.push(`🏅 称号`);
 
         if (msg) {
-            msg.textContent = `✅ 兑换成功：${parts.join('  ') || '奖励已发放'}`;
+            msg.textContent = `✅ ${data.message || '兑换成功'}`;
             msg.style.color = '#3ecf8e';
         }
 
@@ -497,6 +517,7 @@ async function submitRedeemCode() {
         showNotification('🎉 兑换成功！', 'success');
 
         refreshAchievements().catch(() => {});
+        updateNotificationBadge().catch(() => {});
 
         setTimeout(() => closeModal('redeemModal'), 1500);
     } catch (err) {
@@ -770,6 +791,15 @@ async function loadUserProfile() {
     document.getElementById('profileContent').style.display = 'block';
 
     refreshAchievements().catch(() => {});
+    updateNotificationBadge().catch(() => {});
+
+    // ★ 每 60 秒刷新一次红点（轮询）
+    if (notifPollingTimer) clearInterval(notifPollingTimer);
+    notifPollingTimer = setInterval(() => {
+        if (currentUser?.id) {
+            updateNotificationBadge().catch(() => {});
+        }
+    }, 60000);
 }
 
 // ========== 事件绑定 ==========
@@ -837,6 +867,11 @@ function bindEvents() {
 
     document.getElementById('confirmLogoutBtn')?.addEventListener('click', performLogout);
     document.getElementById('cancelLogoutBtn')?.addEventListener('click', () => closeModal('logoutConfirmModal'));
+
+    // ★ 窗口 focus 时刷新红点
+    window.addEventListener('focus', () => {
+        if (currentUser?.id) updateNotificationBadge().catch(() => {});
+    });
 }
 
 // ========== 启动 ==========
