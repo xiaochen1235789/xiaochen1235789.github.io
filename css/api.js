@@ -448,3 +448,44 @@ export async function checkAndUnlockAchievements() {
     if (error) throw error;
     return data || { success: false, newly_unlocked: [] };
 }
+
+// =====================================================
+// ★ 通知系统
+// =====================================================
+export async function getMyNotifications(limit = 50) {
+    const sb = getSupabase();
+    const { data, error } = await sb.rpc('get_my_notifications', { p_limit: limit });
+    if (error) throw error;
+    return data || { success: false, notifications: [], unread_count: 0 };
+}
+
+export async function getUnreadNotificationCount() {
+    const sb = getSupabase();
+    const { data, error } = await sb.rpc('get_unread_notification_count');
+    if (error) return 0;
+    return data || 0;
+}
+
+export async function markNotificationRead(id) {
+    const sb = getSupabase();
+    const { error } = await sb.rpc('mark_notification_read', { p_id: id });
+    if (error) throw error;
+}
+
+export async function markAllNotificationsRead() {
+    const sb = getSupabase();
+    const { error } = await sb.rpc('mark_all_notifications_read');
+    if (error) throw error;
+}
+
+export async function deleteNotification(id) {
+    const sb = getSupabase();
+    const { error } = await sb.rpc('delete_notification', { p_id: id });
+    if (error) throw error;
+}
+
+export async function clearAllNotifications() {
+    const sb = getSupabase();
+    const { error } = await sb.rpc('clear_all_notifications');
+    if (error) throw error;
+}
