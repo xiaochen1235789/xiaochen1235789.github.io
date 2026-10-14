@@ -1,4 +1,4 @@
-// ========== 主入口（完整版 v2.6：成就 + 通知） ==========
+// ========== 主入口（完整版 v2.8：成就积分 + 等价交换计数） ==========
 import { CONFIG, getRoleDisplay, SPECIAL_TITLES } from './config.js';
 import {
     showNotification, openModal, closeModal,
@@ -138,7 +138,6 @@ async function refreshAchievements() {
 
         await refreshUserStats();
         if (window.updateChestDisplay) window.updateChestDisplay();
-        // 成就解锁会产生通知，刷新红点
         updateNotificationBadge().catch(() => {});
     } catch (e) {
         console.warn('成就检查失败:', e);
@@ -367,7 +366,7 @@ async function tryAutoSign() {
     }
 }
 
-// ========== 兑换 ==========
+// ========== 兑换（★ 已加 record_exchange） ==========
 async function doLowExchange(direction) {
     const amount = parseInt(document.getElementById('lowExchangeAmount').value);
     if (!amount || amount < 1) return showNotification('请输入正确数量', 'error');
@@ -379,6 +378,8 @@ async function doLowExchange(direction) {
         if (error) return showNotification('兑换失败: ' + error.message, 'error');
         if (!data) return showNotification('余额不足，无法兑换！', 'error');
         showNotification('✅ 双向兑换成功！', 'success');
+        // ★ 记录一次等价交换
+        await sb.rpc('record_exchange').catch(() => {});
         await refreshUserStats();
         refreshAchievements().catch(() => {});
     } finally {
@@ -398,7 +399,10 @@ async function doSyrupExchange(direction) {
         if (error) return showNotification('兑换失败: ' + error.message, 'error');
         if (!data) return showNotification('🌌 梦幻星河糖浆不足！', 'error');
         showNotification('✨ 高阶货币向下兑换成功！', 'success');
+        // ★ 记录一次等价交换
+        await sb.rpc('record_exchange').catch(() => {});
         await refreshUserStats();
+        refreshAchievements().catch(() => {});
     } finally {
         window.isProcessing = false;
     }
@@ -497,16 +501,6 @@ async function submitRedeemCode() {
             if (msg) { msg.textContent = data?.message || '兑换失败'; msg.style.color = '#f87171'; }
             return;
         }
-
-        const r = data.rewards || {};
-        const parts = [];
-        if (r.candy > 0)   parts.push(`🍬 +${r.candy.toLocaleString()}`);
-        if (r.rainbow > 0) parts.push(`🌈 +${r.rainbow.toLocaleString()}`);
-        if (r.syrup > 0)   parts.push(`🌌 +${r.syrup.toLocaleString()}`);
-        if (r.active > 0)  parts.push(`⚡ +${r.active.toLocaleString()}`);
-        if (r.chest > 0)   parts.push(`🎁 +${r.chest}`);
-        if (r.frame)       parts.push(`🖼️ 头像框`);
-        if (r.title)       parts.push(`🏅 称号`);
 
         if (msg) {
             msg.textContent = `✅ ${data.message || '兑换成功'}`;
