@@ -1,4 +1,4 @@
-// ========== UI 渲染器（完整版 v2.6 - 成就系统 + 通知系统） ==========
+// ========== UI 渲染器（完整版 v2.7 - 成就 + 通知 + 隐藏模式） ==========
 import { CONFIG, CHEST_CONFIG, getRoleDisplay } from './config.js';
 import {
     safeSetText, showNotification, openModal, closeModal,
@@ -1015,7 +1015,7 @@ export async function openRewardInfoModal() {
 }
 
 // ============================================================
-// ★★★ 成就系统 UI（含稀有度） ★★★
+// ★★★ 成就系统 UI（含稀有度 + 隐藏模式） ★★★
 // ============================================================
 const ACH_CATEGORY_NAME = {
     checkin:    '📅 签到成就',
@@ -1048,12 +1048,18 @@ export async function renderAchievementsModal() {
         let visibleTotal = 0, unlockedTotal = 0;
 
         for (const a of list) {
+            // ★ 完全隐身的隐藏成就：未解锁时直接跳过，连分组都不进
+            if (a.is_hidden && !a.unlocked_at && a.hidden_style === 'invisible') {
+                continue;
+            }
+            // ★ 占位型隐藏成就：显示 ❓ 神秘成就
             if (a.is_hidden && !a.unlocked_at) {
                 const g = groups[a.category] || (groups[a.category] = []);
                 g.push({ ...a, _hiddenPlaceholder: true });
                 visibleTotal++;
                 continue;
             }
+            // 正常成就
             const g = groups[a.category] || (groups[a.category] = []);
             g.push(a);
             visibleTotal++;
@@ -1263,7 +1269,6 @@ export async function renderNotificationsModal() {
         html += '</div>';
         container.innerHTML = html;
 
-        // 点击某条 → 标记已读 + 可选跳转
         container.querySelectorAll('.notif-item').forEach(item => {
             item.addEventListener('click', async (e) => {
                 if (e.target.closest('.notif-del-btn')) return;
@@ -1292,7 +1297,6 @@ export async function renderNotificationsModal() {
             });
         });
 
-        // 删除单条
         container.querySelectorAll('.notif-del-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
@@ -1305,7 +1309,6 @@ export async function renderNotificationsModal() {
             });
         });
 
-        // 全部已读
         document.getElementById('notifMarkAllReadBtn')?.addEventListener('click', async () => {
             try {
                 await markAllNotificationsRead();
@@ -1315,7 +1318,6 @@ export async function renderNotificationsModal() {
             } catch (err) { showNotification('操作失败', 'error'); }
         });
 
-        // 清空
         document.getElementById('notifClearAllBtn')?.addEventListener('click', async () => {
             if (!confirm('确定清空所有通知吗？此操作不可恢复。')) return;
             try {
@@ -1332,7 +1334,6 @@ export async function renderNotificationsModal() {
     }
 }
 
-// 更新铃铛红点
 export async function updateNotificationBadge() {
     const badge = document.getElementById('notifBadge');
     if (!badge) return;
