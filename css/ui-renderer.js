@@ -1,4 +1,4 @@
-// ========== UI 渲染器（完整版 v2.5 - 成就稀有度） ==========
+// ========== UI 渲染器（完整版 v2.6 - 成就系统 + 通知系统） ==========
 import { CONFIG, CHEST_CONFIG, getRoleDisplay } from './config.js';
 import {
     safeSetText, showNotification, openModal, closeModal,
@@ -12,7 +12,9 @@ import {
     getShopFrames, getFrameById,
     getPityCounter, getChestProbabilities, batchOpenChests, getPityLimit,
     getChestPrice,
-    getAchievementsStatus
+    getAchievementsStatus,
+    getMyNotifications, markNotificationRead,
+    markAllNotificationsRead, deleteNotification, clearAllNotifications
 } from './api.js';
 import { getSupabase } from './api.js';
 import {
@@ -1180,6 +1182,173 @@ export function showAchievementUnlockModal(achievements, rewards) {
     document.body.appendChild(overlay);
     document.getElementById('closeAchUnlockBtn').addEventListener('click', () => overlay.remove());
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+
+// ============================================================
+// ★★★ 通知系统 UI ★★★
+// ============================================================
+const NOTIF_TYPE_META = {
+    achievement: { color: '#facc15', label: '成就' },
+    chest:       { color: '#f59e0b', label: '宝箱' },
+    redeem:      { color: '#ec4899', label: '兑换码' },
+    checkin:     { color: '#3ecf8e', label: '签到' },
+    system:      { color: '#60a5fa', label: '系统' }
+};
+
+function formatRelativeTime(iso) {
+    if (!iso) return '';
+    const now = Date.now();
+    const t = new Date(iso).getTime();
+    const diff = Math.floor((now - t) / 1000);
+    if (diff < 60) return '刚刚';
+    if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`;
+    if (diff < 86400 * 7) return `${Math.floor(diff / 86400)} 天前`;
+    const d = new Date(iso);
+    return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
+export async function renderNotificationsModal() {
+    const container = document.getElementById('notificationsContent');
+    if (!container) return;
+
+    container.innerHTML = '<div style="text-align:center;padding:30px;opacity:0.6;">⏳ 加载中...</div>';
+    openModal('notificationsModal');
+
+    try {
+        const { notifications, unread_count } = await getMyNotifications();
+
+        let html = '';
+        html += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 4px 12px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:8px;">
+                <div style="font-size:0.85rem; color:var(--text-secondary);">
+                    ${unread_count > 0 ? `你还有 <strong style="color:#f87171;">${unread_count}</strong> 条未读` : '全部已读'}
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button id="notifMarkAllReadBtn" style="background:none; border:1px solid rgba(96,165,250,0.4); color:#60a5fa; padding:3px 10px; border-radius:12px; font-size:0.75rem; cursor:pointer; ${unread_count === 0 ? 'opacity:0.4;cursor:not-allowed;' : ''}" ${unread_count === 0 ? 'disabled' : ''}>全部已读</button>
+                    <button id="notifClearAllBtn" style="background:none; border:1px solid rgba(248,113,113,0.4); color:#f87171; padding:3px 10px; border-radius:12px; font-size:0.75rem; cursor:pointer;">清空</button>
+                </div>
+            </div>
+        `;
+
+        if (!notifications || notifications.length === 0) {
+            html += '<div style="text-align:center;padding:50px 20px;color:var(--text-secondary);">📭 暂无通知</div>';
+            container.innerHTML = html;
+            return;
+        }
+
+        html += '<div style="display:flex; flex-direction:column; gap:6px;">';
+
+        for (const n of notifications) {
+            const meta = NOTIF_TYPE_META[n.type] || NOTIF_TYPE_META.system;
+            const unread = !n.is_read;
+            html += `
+                <div class="notif-item" data-id="${n.id}" style="display:flex; gap:10px; padding:10px 12px; border-radius:10px; background:${unread ? 'rgba(96,165,250,0.06)' : 'rgba(255,255,255,0.02)'}; border:1px solid ${unread ? 'rgba(96,165,250,0.2)' : 'rgba(255,255,255,0.05)'}; cursor:pointer; transition:all 0.2s; position:relative;">
+                    <div style="font-size:1.6rem; flex-shrink:0; width:36px; text-align:center;">${n.icon || '🔔'}</div>
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
+                            <span style="font-weight:${unread ? 'bold' : '500'}; font-size:0.92rem; color:${unread ? '#fff' : 'rgba(255,255,255,0.8)'};">${escapeHtml(n.title)}</span>
+                            ${unread ? '<span style="width:7px; height:7px; border-radius:50%; background:#60a5fa; flex-shrink:0;"></span>' : ''}
+                        </div>
+                        ${n.body ? `<div style="font-size:0.78rem; color:rgba(255,255,255,0.6); line-height:1.35; margin-bottom:4px;">${escapeHtml(n.body)}</div>` : ''}
+                        <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:rgba(255,255,255,0.4);">
+                            <span style="color:${meta.color}; opacity:0.8;">${meta.label}</span>
+                            <span>${formatRelativeTime(n.created_at)}</span>
+                        </div>
+                    </div>
+                    <button class="notif-del-btn" data-id="${n.id}" style="position:absolute; top:6px; right:6px; background:none; border:none; color:rgba(255,255,255,0.25); cursor:pointer; font-size:1rem; padding:2px 6px;">&times;</button>
+                </div>
+            `;
+        }
+        html += '</div>';
+        container.innerHTML = html;
+
+        // 点击某条 → 标记已读 + 可选跳转
+        container.querySelectorAll('.notif-item').forEach(item => {
+            item.addEventListener('click', async (e) => {
+                if (e.target.closest('.notif-del-btn')) return;
+                const id = parseInt(item.dataset.id);
+                const n = notifications.find(x => x.id === id);
+                if (!n) return;
+
+                if (!n.is_read) {
+                    try {
+                        await markNotificationRead(id);
+                        await updateNotificationBadge();
+                        item.style.background = 'rgba(255,255,255,0.02)';
+                        item.style.borderColor = 'rgba(255,255,255,0.05)';
+                    } catch (err) { console.warn('标记已读失败', err); }
+                }
+
+                if (n.link === 'achievements') {
+                    closeModal('notificationsModal');
+                    setTimeout(() => renderAchievementsModal(), 200);
+                } else if (n.link === 'backpack') {
+                    closeModal('notificationsModal');
+                    setTimeout(() => renderBackpack(), 200);
+                } else if (n.link === 'checkin' || n.link === 'redeem') {
+                    closeModal('notificationsModal');
+                }
+            });
+        });
+
+        // 删除单条
+        container.querySelectorAll('.notif-del-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.dataset.id);
+                try {
+                    await deleteNotification(id);
+                    btn.closest('.notif-item')?.remove();
+                    await updateNotificationBadge();
+                } catch (err) { console.warn('删除失败', err); }
+            });
+        });
+
+        // 全部已读
+        document.getElementById('notifMarkAllReadBtn')?.addEventListener('click', async () => {
+            try {
+                await markAllNotificationsRead();
+                await renderNotificationsModal();
+                await updateNotificationBadge();
+                showNotification('✅ 已全部标为已读', 'success');
+            } catch (err) { showNotification('操作失败', 'error'); }
+        });
+
+        // 清空
+        document.getElementById('notifClearAllBtn')?.addEventListener('click', async () => {
+            if (!confirm('确定清空所有通知吗？此操作不可恢复。')) return;
+            try {
+                await clearAllNotifications();
+                await renderNotificationsModal();
+                await updateNotificationBadge();
+                showNotification('🗑️ 已清空通知', 'success');
+            } catch (err) { showNotification('操作失败', 'error'); }
+        });
+
+    } catch (e) {
+        console.error('加载通知失败', e);
+        container.innerHTML = `<div style="text-align:center;padding:30px;color:#f87171;">加载失败：${escapeHtml(e.message || '未知错误')}</div>`;
+    }
+}
+
+// 更新铃铛红点
+export async function updateNotificationBadge() {
+    const badge = document.getElementById('notifBadge');
+    if (!badge) return;
+    try {
+        const sb = getSupabase();
+        const { data, error } = await sb.rpc('get_unread_notification_count');
+        const count = (!error && typeof data === 'number') ? data : 0;
+        if (count > 0) {
+            badge.style.display = 'flex';
+            badge.textContent = count > 99 ? '99+' : String(count);
+        } else {
+            badge.style.display = 'none';
+        }
+    } catch (e) {
+        badge.style.display = 'none';
+    }
 }
 
 // 导出全局更新显示函数
