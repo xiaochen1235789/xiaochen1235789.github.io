@@ -1,4 +1,4 @@
-// ========== UI 渲染器（完整版 v2.7 - 成就 + 通知 + 隐藏模式） ==========
+// ========== UI 渲染器（完整版 v2.10 - 成就积分显示） ==========
 import { CONFIG, CHEST_CONFIG, getRoleDisplay } from './config.js';
 import {
     safeSetText, showNotification, openModal, closeModal,
@@ -42,6 +42,9 @@ export function setAppState(appState) {
 export function updateActivePointsDisplay() {
     const span = document.getElementById('activePointsValue');
     if (span) span.innerText = (state.userStats?.active_points || 0).toLocaleString();
+    // ★ 成就积分同步更新
+    const apSpan = document.getElementById('achievementPointsValue');
+    if (apSpan) apSpan.innerText = (state.userStats?.achievement_points || 0).toLocaleString();
 }
 
 export function updateShopBalanceDisplay() {
@@ -153,6 +156,10 @@ export async function renderProfile() {
             const streakEl = document.getElementById('streakDays');
             if (streakEl) streakEl.innerText = (state.userStats.checkin_streak || 0).toLocaleString();
             updateCheckinButtonState();
+
+            // ★ 成就积分显示
+            const apEl = document.getElementById('achievementPointsValue');
+            if (apEl) apEl.innerText = (state.userStats.achievement_points || 0).toLocaleString();
         }
 
         const userInfo = document.querySelector('.user-info');
@@ -1015,7 +1022,7 @@ export async function openRewardInfoModal() {
 }
 
 // ============================================================
-// ★★★ 成就系统 UI（含稀有度 + 隐藏模式） ★★★
+// ★★★ 成就系统 UI（含稀有度 + 隐藏模式 + 成就积分） ★★★
 // ============================================================
 const ACH_CATEGORY_NAME = {
     checkin:    '📅 签到成就',
@@ -1048,7 +1055,7 @@ export async function renderAchievementsModal() {
         let visibleTotal = 0, unlockedTotal = 0;
 
         for (const a of list) {
-            // ★ 完全隐身的隐藏成就：未解锁时直接跳过，连分组都不进
+            // ★ 完全隐身的隐藏成就：未解锁时直接跳过
             if (a.is_hidden && !a.unlocked_at && a.hidden_style === 'invisible') {
                 continue;
             }
@@ -1059,12 +1066,13 @@ export async function renderAchievementsModal() {
                 visibleTotal++;
                 continue;
             }
-            // 正常成就
             const g = groups[a.category] || (groups[a.category] = []);
             g.push(a);
             visibleTotal++;
             if (a.unlocked_at) unlockedTotal++;
         }
+
+        const ap = state.userStats?.achievement_points || 0;
 
         let html = `
             <div class="ach-summary">
@@ -1073,6 +1081,9 @@ export async function renderAchievementsModal() {
                     <span style="opacity:0.6;"> / ${visibleTotal}</span>
                 </div>
                 <div class="ach-summary-label">已解锁成就</div>
+                <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(250,204,21,0.15); font-size:0.95rem;">
+                    🏅 成就积分：<strong style="color:#facc15;">${ap.toLocaleString()}</strong>
+                </div>
             </div>
         `;
 
