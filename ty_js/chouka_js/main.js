@@ -1,6 +1,6 @@
 // ================================================================
-//  js/main.js  -  应用入口（整合所有模块）
-//  负责：初始化、事件绑定、定时器、弹窗控制、多池子切换
+//  js/main.js  -  应用入口（单卡池模式）
+//  负责：初始化、事件绑定、定时器、弹窗控制
 // ================================================================
 
 import { getSupabase, loadUserData, resetAllGachaData } from './db.js';
@@ -17,9 +17,7 @@ import {
     updateButtonsState,
     initUI,
     closeResultDialog,
-    resetHistoryPage,
-    renderBannerTabs,
-    switchBanner
+    resetHistoryPage
 } from './ui.js';
 import { ITEM_TYPES } from './constants.js';
 
@@ -30,7 +28,6 @@ window.singlePull = singlePull;
 window.tenPull = tenPull;
 window.showNotification = showNotification;
 window.closeResultDialog = closeResultDialog;
-window.switchBanner = switchBanner;
 window.openStatsModal = openStatsModal;
 window.openExchangeModal = openExchangeModal;
 window.openRecordModal = openRecordModal;
@@ -259,7 +256,6 @@ document.getElementById('resetAllBtn')?.addEventListener('click', async function
     renderConstellations();
     renderStats();
     renderHistory();
-    renderBannerTabs();
     showNotification('✅ 所有数据已重置', 'success');
 });
 
@@ -300,8 +296,9 @@ document.getElementById('singlePullBtn')?.addEventListener('click', async functi
     if (state.isDrawing) return;
 
     const now = new Date();
-    if (state.bannerStart && state.bannerEnd &&
-        (now < state.bannerStart || now > state.bannerEnd)) {
+    const started = !state.bannerStart || now >= state.bannerStart;
+    const ended   = !state.bannerEnd   || now <= state.bannerEnd;
+    if (!started || !ended) {
         showNotification('卡池未开放，无法跃迁', 'warning');
         return;
     }
@@ -324,8 +321,9 @@ document.getElementById('tenPullBtn')?.addEventListener('click', async function(
     if (state.isDrawing) return;
 
     const now = new Date();
-    if (state.bannerStart && state.bannerEnd &&
-        (now < state.bannerStart || now > state.bannerEnd)) {
+    const started = !state.bannerStart || now >= state.bannerStart;
+    const ended   = !state.bannerEnd   || now <= state.bannerEnd;
+    if (!started || !ended) {
         showNotification('卡池未开放，无法跃迁', 'warning');
         return;
     }
@@ -393,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ================================================================
-//  10. 横屏提示（修复版：设备检测 + 会话级忽略 + 类控制）
+//  10. 横屏提示（设备检测 + 会话级忽略）
 // ================================================================
 (function setupOrientationTip() {
     const tip = document.getElementById('orientationTip');
@@ -403,11 +401,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const isIgnored = () => sessionStorage.getItem('orientation_ignored') === '1';
 
     function update() {
-        // 清除历史内联样式，让 CSS 类完全接管显隐
         tip.style.display = '';
-
         const isPortrait = window.innerHeight > window.innerWidth;
-
         if (isTouchDevice && isPortrait && !isIgnored()) {
             tip.classList.add('show');
         } else {
@@ -451,17 +446,13 @@ export async function init() {
         await loadUserData(state.user.id);
         console.log('✅ 用户数据加载完成');
 
-        // 初始化星空（可放在加载前）
         initStars();
 
-        // ★★★ 更新所有UI ★★★
         updateMainUI();
         renderConstellations();
         renderStats();
         renderHistory();
-        renderBannerTabs();   // ★ 渲染池子切换 Tab
 
-        // 启动倒计时定时器
         setInterval(() => {
             updateCountdown();
             updateButtonsState();
@@ -473,7 +464,7 @@ export async function init() {
         console.log('✅ 应用初始化完成！');
         console.log(`📊 总抽数: ${state.totalPulls}, 五星: ${state.fiveStarCount}`);
         console.log(`📦 库存大小: ${state.inventory.size}`);
-        console.log(`📋 开放池子数: ${state.bannerList.length}`);
+        console.log(`📋 当前卡池:`, state.currentBanner?.name || '(无)');
 
         const loading = document.getElementById('loading');
         if (loading) loading.style.display = 'none';
