@@ -966,19 +966,15 @@ body {
     max-height: 50%;
 }
 
-/* ===== 五星卡片高亮（不带自发光，只保留放大和星标旋转） ===== */
+/* ===== 五星卡片高亮 ===== */
 .card-five-star {
     transform: scale(1.05);
     z-index: 10;
     animation: legendary-pulse 1.2s ease-in-out infinite alternate;
 }
 @keyframes legendary-pulse {
-    0% {
-        transform: scale(1.05);
-    }
-    100% {
-        transform: scale(1.12);
-    }
+    0%   { transform: scale(1.05); }
+    100% { transform: scale(1.12); }
 }
 .card-five-star .card-front::before {
     content: "★";
@@ -991,7 +987,7 @@ body {
     animation: spin-star 4s linear infinite;
 }
 @keyframes spin-star {
-    0% { transform: rotate(0deg); }
+    0%   { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
 
@@ -1106,7 +1102,7 @@ body {
     border-radius: 50%;
 }
 
-/* ===== 横屏提示 ===== */
+/* ===== 横屏提示（JS 通过 .show 类控制显隐） ===== */
 .orientation-tip {
     position: fixed;
     top: 0;
@@ -1122,13 +1118,7 @@ body {
     flex-direction: column;
     color: #ffdfaa;
     font-size: 1.4rem;
-    pointer-events: none;
     transition: opacity 0.3s;
-}
-@media (orientation: landscape) {
-    .orientation-tip {
-        display: none !important;
-    }
 }
 
 /* ===== 滚动条美化 ===== */
@@ -1289,7 +1279,37 @@ body {
     .switch input:checked + .slider::before {
         transform: translateX(18px);
     }
-/* 池子切换 Tabs */
+}
+
+/* ================================================================
+   移动端适配修复补丁 v1
+   —— 修复项：
+   ① banner-tabs 样式被误包入 @media (max-width: 600px)，宽屏无样式
+   ② orientation-tip 的 pointer-events 导致按钮不可点击
+   ③ 竖屏 min-height: 40vh × 2 面板总高溢出被裁
+   ④ iOS Safari 的 85vh 高度不随地址栏变化，弹窗底部被裁
+   ⑤ 刘海屏 / Home 条遮挡内容
+   ⑥ 十连卡片 flex 换行参差不齐
+   ⑦ 触屏设备点击区域 < 44px
+   ⑧ 手机横屏垂直空间不足
+   ================================================================ */
+
+/* ---------- 0. 全局：dvh 兜底 + 安全区 ---------- */
+html { height: 100%; }
+body { height: 100%; height: 100dvh; }
+
+.landscape-wrapper {
+    padding-top:    max(16px, env(safe-area-inset-top));
+    padding-right:  max(20px, env(safe-area-inset-right));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    padding-left:   max(20px, env(safe-area-inset-left));
+}
+.toast-notice {
+    top:   max(20px, env(safe-area-inset-top));
+    right: max(20px, env(safe-area-inset-right));
+}
+
+/* ---------- 1. 池子切换 Tabs：全尺寸生效 ---------- */
 .banner-tabs-container {
     margin: 8px 0;
     display: flex;
@@ -1315,16 +1335,92 @@ body {
     transition: all 0.2s;
     white-space: nowrap;
 }
-.banner-tab:hover {
-    background: rgba(255, 255, 255, 0.18);
-    color: #ffffff;
-}
+.banner-tab:hover { background: rgba(255,255,255,0.18); color: #fff; }
 .banner-tab.active {
     background: #ffbc6e;
     color: #1a132e;
     border-color: #ffbc6e;
     font-weight: bold;
-    box-shadow: 0 0 12px rgba(255, 188, 110, 0.3);
+    box-shadow: 0 0 12px rgba(255,188,110,0.3);
 }
 
+/* ---------- 2. 横屏提示：由 .show 类控制显隐，且可点击 ---------- */
+.orientation-tip        { display: none !important; pointer-events: auto; }
+.orientation-tip.show   { display: flex !important; }
+.orientation-tip button { pointer-events: auto; }
+
+/* ---------- 3. 竖屏布局：整体可滚动，消除溢出 ---------- */
+@media (max-aspect-ratio: 1/1) {
+    .landscape-wrapper {
+        flex-direction: column;
+        padding-top:    max(12px, env(safe-area-inset-top));
+        padding-right:  max(12px, env(safe-area-inset-right));
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+        padding-left:   max(12px, env(safe-area-inset-left));
+        gap: 12px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        backdrop-filter: none;
+    }
+    .left-panel,
+    .right-panel {
+        width: 100%;
+        height: auto;
+        min-height: 0;
+        flex: 0 0 auto;
+    }
+    .left-panel-scroll { overflow-y: visible; }
+    .character-splash  { padding: 12px; min-height: 60vh; }
+    .splash-img        { max-height: 40vh; }
+}
+
+/* ---------- 4. 弹窗高度 dvh 兜底 ---------- */
+.modal-content    { max-height: 85vh; max-height: 85dvh; }
+.record-modal     { max-height: 75vh; max-height: 75dvh; }
+.dialog-container { max-height: 85vh; max-height: 85dvh; }
+
+/* ---------- 5. 十连卡片：固定列数网格 ---------- */
+.card-grid-ten {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    justify-items: center;
+    align-items: center;
+}
+.card-grid-ten .card-wrapper {
+    width: 100%;
+    max-width: 110px;
+    min-width: 0;
+    aspect-ratio: 3 / 4;
+}
+@media (max-width: 480px) {
+    .card-grid-ten { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .card-grid-ten .card-wrapper { max-width: 100px; }
+}
+
+/* ---------- 6. 触屏设备点击区域 ≥ 44px ---------- */
+@media (hover: none) and (pointer: coarse) {
+    .info-btn, .settings-btn { width: 44px; height: 44px; font-size: 1.3rem; }
+    .action-btn { min-height: 40px; padding: 8px 14px; }
+    .banner-tab { min-height: 36px; padding: 8px 16px; }
+    .gacha-btn  { min-height: 48px; }
+}
+
+/* ---------- 7. 手机横屏（高度紧张）压缩间距 ---------- */
+@media (max-height: 500px) and (orientation: landscape) {
+    .pool-name         { font-size: 1.1rem; }
+    .up-char           { padding: 8px; margin: 8px 0; }
+    .countdown-box     { padding: 6px; margin: 6px 0; }
+    .pity-card         { padding: 8px; margin: 6px 0; }
+    .left-panel-scroll { padding: 12px; }
+    .splash-img        { max-height: 45vh; }
+    .gacha-btn         { padding: 8px 0; font-size: 0.85rem; }
+}
+
+/* ---------- 8. 小屏字号微调 ---------- */
+@media (max-width: 400px) {
+    .pool-name { font-size: 1.15rem; }
+    .stat-card .stat-number { font-size: 1.2rem; }
+    .card-grid-ten .card-front .card-name       { font-size: 0.55rem; }
+    .card-grid-ten .card-front .card-star-label { font-size: 0.55rem; }
 }
