@@ -1,13 +1,27 @@
-// ==================== 公告系统 ====================
+// ==================== 公告系统（修复版） ====================
 // 功能：
 //   1. 主页加载时自动弹出「最新未读公告」
 //   2. 侧边栏菜单打开「全部公告」列表
 //   3. 已读记录存 localStorage，每条只弹一次
 //   4. 菜单项显示未读数红点
+//
+// 修复要点：
+//   ✅ ESC 监听器统一追踪 & 清理，不再泄漏
+//   ✅ 关闭详情后只更新列表行，不重开列表 modal
+//   ✅ body overflow 分层管理
+//   ✅ XSS 简单防护（过滤 <script> 和 on*=）
+//   ✅ 关闭逻辑幂等，防重复触发
+// =========================================================
 
 const ANNOUNCEMENT_READ_KEY = 'readAnnouncementIds';
 const ANNOUNCEMENT_CACHE_KEY = 'announcementsCache';
 const ANNOUNCEMENT_CACHE_TTL = 5 * 60 * 1000; // 5 分钟缓存
+
+// ==================== 全局 modal 状态（单例） ====================
+let currentDetailModal = null;
+let currentDetailEscHandler = null;
+let currentListModal = null;
+let currentListEscHandler = null;
 
 // ==================== 已读记录 ====================
 function getReadAnnouncementIds() {
@@ -93,8 +107,24 @@ function getAnnouncementStyle(type) {
     return styles[type] || styles.update;
 }
 
+// ==================== ★ 简单 XSS 防护 ====================
+// 只过滤 <script> 和 on*= 事件属性，保留正常的富文本标签
+function sanitizeContent(html) {
+    if (!html) return '';
+    return String(html)
+        // 移除 <script>...</script>
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        // 移除 on* 事件属性（覆盖 "..." 和 '...' 和裸值三种情况）
+        .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
+        .replace(/\son\w+\s*=\s*'[^']*'/gi, '')
+        .replace(/\son\w+\s*=\s*[^\s>]+/gi, '');
+}
+
+// ==================== 时间格式化 ====================
 function formatAnnouncementDate(iso) {
+    if (!iso) return '';
     const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
     const now = new Date();
     const diff = now - d;
     if (diff < 60 * 1000) return '刚刚';
@@ -106,8 +136,17 @@ function formatAnnouncementDate(iso) {
 
 // ==================== 详情弹窗 ====================
 function showAnnouncementDetail(announcement, onClose) {
-    const existing = document.getElementById('announcementDetailModal');
-    if (existing) existing.remove();
+    if (!announcement) return;
+
+    // 单例：如果已有详情弹窗，先清掉（不触发 onClose，避免回调错乱）
+    if (currentDetailModal) {
+        if (currentDetailEscHandler) {
+            document.removeEventListener('keydown', currentDetailEscHandler);
+            currentDetailEscHandler = null;
+        }
+        currentDetailModal.remove();
+        currentDetailModal = null;
+    }
 
     const style = getAnnouncementStyle(announcement.type);
 
@@ -143,7 +182,7 @@ function showAnnouncementDetail(announcement, onClose) {
             </div>
             <div style="max-height: 55vh; overflow-y: auto; line-height: 1.9;
                         color: var(--text-main); font-size: 0.95rem; padding-right: 4px;">
-                ${announcement.content}
+                ${sanitizeContent(announcement.content)}
             </div>
             <div style="text-align: center; margin-top: 20px; padding-top: 16px;
                         border-top: 1px solid var(--border-color);">
@@ -157,14 +196,35 @@ function showAnnouncementDetail(announcement, onClose) {
         </div>
     `;
     document.body.appendChild(modal);
+    currentDetailModal = modal;
 
+    // ★ 打开详情时锁背景滚动
+    document.body.style.overflow = 'hidden';
+
+    // ★ close 幂等：只对当前 modal 生效，且只清理一次
     const close = () => {
-        markAnnouncementRead(announcement.id);
+        if (currentDetailModal !== modal) return; // 已经被关过了
+
+        markAnnouncementRead(announcement.id); // 内部会刷新 badge
+
+        // 移除 ESC 监听
+        if (currentDetailEscHandler) {
+            document.removeEventListener('keydown', currentDetailEscHandler);
+            currentDetailEscHandler = null;
+        }
+
         modal.classList.remove('active');
+        currentDetailModal = null;
+
+        // ★ 只有列表没开的时候才恢复 body 滚动
+        if (!currentListModal) {
+            document.body.style.overflow = '';
+        }
+
         setTimeout(() => {
             modal.remove();
             if (onClose) onClose();
-        }, 250);
+        }, 200);
     };
 
     document.getElementById('announcementDetailCloseBtn').onclick = close;
@@ -172,19 +232,25 @@ function showAnnouncementDetail(announcement, onClose) {
     modal.addEventListener('click', (e) => {
         if (e.target === modal) close();
     });
-    const escHandler = (e) => {
-        if (e.key === 'Escape') {
-            close();
-            document.removeEventListener('keydown', escHandler);
-        }
+
+    // ★ ESC 监听器追踪，close 里统一移除
+    currentDetailEscHandler = (e) => {
+        if (e.key === 'Escape') close();
     };
-    document.addEventListener('keydown', escHandler);
+    document.addEventListener('keydown', currentDetailEscHandler);
 }
 
 // ==================== 列表弹窗（侧边栏入口） ====================
 async function openAnnouncementList() {
-    const existing = document.getElementById('announcementListModal');
-    if (existing) existing.remove();
+    // 单例：如果已有列表，先清掉
+    if (currentListModal) {
+        if (currentListEscHandler) {
+            document.removeEventListener('keydown', currentListEscHandler);
+            currentListEscHandler = null;
+        }
+        currentListModal.remove();
+        currentListModal = null;
+    }
 
     const modal = document.createElement('div');
     modal.id = 'announcementListModal';
@@ -216,29 +282,42 @@ async function openAnnouncementList() {
         </div>
     `;
     document.body.appendChild(modal);
+    currentListModal = modal;
     document.body.style.overflow = 'hidden';
 
+    // ★ close 幂等
     const close = () => {
+        if (currentListModal !== modal) return;
+
+        if (currentListEscHandler) {
+            document.removeEventListener('keydown', currentListEscHandler);
+            currentListEscHandler = null;
+        }
         modal.classList.remove('active');
-        document.body.style.overflow = '';
-        setTimeout(() => modal.remove(), 250);
+        currentListModal = null;
+
+        // ★ 详情没开才恢复滚动
+        if (!currentDetailModal) {
+            document.body.style.overflow = '';
+        }
+
+        setTimeout(() => modal.remove(), 200);
     };
 
     document.getElementById('announcementListCloseBtn').onclick = close;
     modal.addEventListener('click', (e) => {
         if (e.target === modal) close();
     });
-    const escHandler = (e) => {
-        if (e.key === 'Escape') {
-            close();
-            document.removeEventListener('keydown', escHandler);
-        }
-    };
-    document.addEventListener('keydown', escHandler);
 
-    // 拉取并渲染
+    currentListEscHandler = (e) => {
+        if (e.key === 'Escape') close();
+    };
+    document.addEventListener('keydown', currentListEscHandler);
+
+    // ==================== 拉取并渲染 ====================
     const list = await fetchAnnouncements(true);
     const container = document.getElementById('announcementListContent');
+    if (!container) return; // 可能已被用户关闭
 
     if (!list.length) {
         container.innerHTML = `
@@ -257,7 +336,7 @@ async function openAnnouncementList() {
         const style = getAnnouncementStyle(a.type);
         const isUnread = !readIds.includes(a.id);
         html += `
-            <div class="announcement-list-item" data-id="${a.id}"
+            <div class="announcement-list-item" data-id="${a.id}" data-unread="${isUnread ? '1' : '0'}"
                  style="padding: 14px 16px; border-radius: 12px; margin-bottom: 8px;
                         cursor: pointer; transition: all 0.2s;
                         background: ${isUnread ? 'rgba(96,165,250,0.06)' : 'rgba(255,255,255,0.02)'};
@@ -274,8 +353,8 @@ async function openAnnouncementList() {
                                          font-weight: 600; letter-spacing: 0.5px;">
                                 ${style.label}${a.version ? ' · ' + escapeHtml(a.version) : ''}
                             </span>
-                            ${isUnread ? `<span style="width: 6px; height: 6px; border-radius: 50%;
-                                          background: #ef4444; display: inline-block;"></span>` : ''}
+                            <span class="unread-dot" style="width: 6px; height: 6px; border-radius: 50%;
+                                  background: #ef4444; display: ${isUnread ? 'inline-block' : 'none'};"></span>
                         </div>
                         <div style="font-size: 0.95rem; font-weight: 600;
                                     color: var(--text-highlight); line-height: 1.35;
@@ -296,26 +375,41 @@ async function openAnnouncementList() {
     }
     container.innerHTML = html;
 
+    // ★ 局部更新某一行为已读状态（不重建列表，保留滚动位置）
+    function markListRowRead(rowEl) {
+        if (!rowEl) return;
+        if (rowEl.dataset.unread === '0') return; // 已读无需处理
+
+        rowEl.dataset.unread = '0';
+        rowEl.style.background = 'rgba(255,255,255,0.02)';
+        rowEl.style.border = '1px solid transparent';
+        const dot = rowEl.querySelector('.unread-dot');
+        if (dot) dot.style.display = 'none';
+    }
+
     // 绑定点击
     container.querySelectorAll('.announcement-list-item').forEach(el => {
         el.addEventListener('click', () => {
             const id = el.dataset.id;
             const a = list.find(x => x.id === id);
             if (!a) return;
+
+            // ★ 关闭详情后只更新这一行，不再重开列表
             showAnnouncementDetail(a, () => {
-                // 关闭详情后刷新列表（红点消失）
-                openAnnouncementList();
+                markListRowRead(el);
             });
         });
         el.addEventListener('mouseenter', () => {
             el.style.transform = 'translateX(2px)';
-            el.style.borderColor = 'rgba(96,165,250,0.4)';
+            if (el.dataset.unread === '1') {
+                el.style.borderColor = 'rgba(96,165,250,0.4)';
+            }
         });
         el.addEventListener('mouseleave', () => {
             el.style.transform = '';
-            const readNow = getReadAnnouncementIds();
-            const isUnread = !readNow.includes(el.dataset.id);
-            el.style.borderColor = isUnread ? 'rgba(96,165,250,0.25)' : 'transparent';
+            if (el.dataset.unread === '1') {
+                el.style.borderColor = 'rgba(96,165,250,0.25)';
+            }
         });
     });
 }
@@ -335,7 +429,8 @@ async function autoShowLatestAnnouncement() {
     // 延迟一点，避免和页面其他加载抢注意力
     setTimeout(() => {
         showAnnouncementDetail(latest, () => {
-            updateAnnouncementBadge();
+            // markAnnouncementRead 已在 close 内调用，这里只需刷新红点
+            // （close 里已经调过 updateAnnouncementBadge，这里不用再调）
         });
     }, 1200);
 }
