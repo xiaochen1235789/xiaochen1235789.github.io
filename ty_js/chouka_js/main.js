@@ -393,11 +393,39 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ================================================================
-//  10. 横屏提示
+//  10. 横屏提示（修复版：设备检测 + 会话级忽略 + 类控制）
 // ================================================================
-document.getElementById('ignoreOrientationBtn')?.addEventListener('click', function() {
-    document.getElementById('orientationTip').style.display = 'none';
-});
+(function setupOrientationTip() {
+    const tip = document.getElementById('orientationTip');
+    if (!tip) return;
+
+    const isTouchDevice = matchMedia('(pointer: coarse)').matches;
+    const isIgnored = () => sessionStorage.getItem('orientation_ignored') === '1';
+
+    function update() {
+        // 清除历史内联样式，让 CSS 类完全接管显隐
+        tip.style.display = '';
+
+        const isPortrait = window.innerHeight > window.innerWidth;
+
+        if (isTouchDevice && isPortrait && !isIgnored()) {
+            tip.classList.add('show');
+        } else {
+            tip.classList.remove('show');
+        }
+    }
+
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+
+    document.getElementById('ignoreOrientationBtn')
+        ?.addEventListener('click', function () {
+            sessionStorage.setItem('orientation_ignored', '1');
+            tip.classList.remove('show');
+        });
+
+    update();
+})();
 
 // ================================================================
 //  11. ★★★ 主初始化函数 ★★★
