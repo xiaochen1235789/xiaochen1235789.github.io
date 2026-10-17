@@ -1,8 +1,8 @@
 // ================================================================
-//  js/ui.js  -  UI渲染层（含多池子切换）
+//  js/ui.js  -  UI渲染层（单卡池模式）
 // ================================================================
 
-import { state, getItemsByType, selectBanner } from './state.js';
+import { state, getItemsByType } from './state.js';
 import { getCurrentFiveStarRate } from './gacha.js';
 import { ITEM_TYPES, FALLBACK_SPLASH } from './constants.js';
 import { getBannerSplashUrl } from './db.js';
@@ -43,8 +43,7 @@ const dom = {
     resultSummary: document.getElementById('resultSummary'),
     historyPageInfo: document.getElementById('historyPageInfo'),
     historyPrevBtn: document.getElementById('historyPrevBtn'),
-    historyNextBtn: document.getElementById('historyNextBtn'),
-    bannerTabs: document.getElementById('bannerTabs')  // ★ 新增
+    historyNextBtn: document.getElementById('historyNextBtn')
 };
 
 // ================================================================
@@ -66,62 +65,7 @@ export function showNotification(msg, type = 'info') {
 }
 
 // ================================================================
-//  3. ★★★ 渲染池子切换 Tabs ★★★
-// ================================================================
-export function renderBannerTabs() {
-    const container = dom.bannerTabs;
-    if (!container) return;
-
-    const banners = state.bannerList || [];
-    if (banners.length <= 1) {
-        container.innerHTML = '';
-        return;
-    }
-
-    let html = '<div class="banner-tabs">';
-    banners.forEach((b, index) => {
-        const active = index === state.selectedBannerIndex ? 'active' : '';
-        const isActive = state.currentBanner && state.currentBanner.banner_key === b.banner_key;
-        const cls = isActive ? 'active' : '';
-        html += `<button class="banner-tab ${cls}" data-index="${index}">
-            ${b.name}
-        </button>`;
-    });
-    html += '</div>';
-    container.innerHTML = html;
-
-    // 绑定点击事件
-    container.querySelectorAll('.banner-tab').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const index = parseInt(this.dataset.index);
-            switchBanner(index);
-        });
-    });
-}
-
-// ================================================================
-//  4. ★★★ 切换池子 ★★★
-// ================================================================
-export function switchBanner(index) {
-    const banners = state.bannerList || [];
-    if (index < 0 || index >= banners.length) return;
-    if (index === state.selectedBannerIndex) return;
-
-    // 调用 state.js 中的 selectBanner 更新状态
-    const success = selectBanner(index);
-    if (!success) return;
-
-    // 更新 UI
-    updateMainUI();
-    renderBannerTabs();
-    showNotification(`切换到「${state.currentBanner.name}」`, 'info');
-}
-
-// 挂载到 window 以便在 HTML 中直接调用（可选）
-window.switchBanner = switchBanner;
-
-// ================================================================
-//  5. 更新主界面
+//  3. 更新主界面
 // ================================================================
 export function updateMainUI() {
     // ---- 资源 ----
@@ -175,12 +119,13 @@ export function updateMainUI() {
 }
 
 // ================================================================
-//  6. 更新按钮状态（卡池是否开放）
+//  4. 更新按钮状态（卡池是否开放，兼容时间可空）
 // ================================================================
 export function updateButtonsState() {
     const now = new Date();
-    const isActive = state.bannerStart && state.bannerEnd &&
-        now >= state.bannerStart && now <= state.bannerEnd;
+    const started = !state.bannerStart || now >= state.bannerStart;
+    const ended   = !state.bannerEnd   || now <= state.bannerEnd;
+    const isActive = started && ended;
 
     if (!isActive) {
         dom.singleBtn.classList.add('disabled');
@@ -189,7 +134,7 @@ export function updateButtonsState() {
         dom.tenBtn.disabled = true;
         if (dom.disabledNotice) {
             dom.disabledNotice.style.display = 'block';
-            if (now < state.bannerStart) {
+            if (state.bannerStart && now < state.bannerStart) {
                 dom.disabledNotice.innerText = '⏳ 卡池尚未开启，敬请期待！';
             } else {
                 dom.disabledNotice.innerText = '⚠️ 卡池已结束，无法跃迁';
@@ -207,28 +152,33 @@ export function updateButtonsState() {
 }
 
 // ================================================================
-//  7. 更新倒计时
+//  5. 更新倒计时
 // ================================================================
 export function updateCountdown() {
-    if (!state.bannerStart || !state.bannerEnd) {
-        dom.countdownTimer.innerText = '卡池未加载';
+    if (!state.bannerStart && !state.bannerEnd) {
+        dom.countdownTimer.innerText = '永久开放';
         return;
     }
 
     const now = new Date();
 
-    if (now >= state.bannerEnd) {
+    if (state.bannerEnd && now >= state.bannerEnd) {
         dom.countdownTimer.innerText = '卡池已结束';
         return;
     }
 
-    if (now < state.bannerStart) {
+    if (state.bannerStart && now < state.bannerStart) {
         const diff = state.bannerStart - now;
         const days = Math.floor(diff / 86400000);
         const hours = Math.floor((diff % 86400000) / 3600000);
         const mins = Math.floor((diff % 3600000) / 60000);
         const secs = Math.floor((diff % 60000) / 1000);
         dom.countdownTimer.innerText = `距离开启 ${days}天 ${hours}时 ${mins}分 ${secs}秒`;
+        return;
+    }
+
+    if (!state.bannerEnd) {
+        dom.countdownTimer.innerText = '永久开放';
         return;
     }
 
@@ -241,7 +191,7 @@ export function updateCountdown() {
 }
 
 // ================================================================
-//  8. 渲染命座列表
+//  6. 渲染命座列表
 // ================================================================
 export function renderConstellations() {
     const container = dom.constellationList;
@@ -274,7 +224,7 @@ export function renderConstellations() {
 }
 
 // ================================================================
-//  9. 渲染统计面板
+//  7. 渲染统计面板
 // ================================================================
 export function renderStats() {
     const container = dom.statsGrid;
@@ -336,7 +286,7 @@ export function renderStats() {
 }
 
 // ================================================================
-//  10. 获取抽卡评价
+//  8. 获取抽卡评价
 // ================================================================
 function getRating() {
     if (state.totalPulls === 0) return '尚未抽卡';
@@ -352,7 +302,7 @@ function getRating() {
 }
 
 // ================================================================
-//  11. 渲染历史记录（分页）
+//  9. 渲染历史记录（分页）
 // ================================================================
 let historyPage = 1;
 const PAGE_SIZE = 5;
@@ -421,7 +371,7 @@ export function resetHistoryPage() {
 }
 
 // ================================================================
-//  12. 抽卡结果展示（卡片翻转动画）
+//  10. 抽卡结果展示（卡片翻转动画）
 // ================================================================
 export function showResultDialog(results) {
     if (!results || results.length === 0) return;
@@ -530,7 +480,7 @@ export function showResultDialog(results) {
 }
 
 // ================================================================
-//  13. 关闭结果弹窗（全局）
+//  11. 关闭结果弹窗（全局）
 // ================================================================
 export function closeResultDialog() {
     dom.resultDialog.classList.remove('active');
@@ -539,7 +489,7 @@ export function closeResultDialog() {
 }
 
 // ================================================================
-//  14. 工具：HTML转义
+//  12. 工具：HTML转义
 // ================================================================
 function escapeHtml(str) {
     if (!str) return '';
@@ -550,12 +500,12 @@ function escapeHtml(str) {
 }
 
 // ================================================================
-//  15. 挂载全局关闭函数
+//  13. 挂载全局关闭函数
 // ================================================================
 window.closeResultDialogGlobal = closeResultDialog;
 
 // ================================================================
-//  16. 初始化UI（绑定事件）
+//  14. 初始化UI（绑定事件）
 // ================================================================
 export function initUI() {
     dom.historyPrevBtn.addEventListener('click', historyPrevPage);
@@ -566,7 +516,6 @@ export function initUI() {
     window.renderStats = renderStats;
     window.renderHistory = renderHistory;
     window.showResultDialog = showResultDialog;
-    window.renderBannerTabs = renderBannerTabs;
 
     console.log('✅ UI 初始化完成');
 }
