@@ -1,441 +1,587 @@
-// ==================== 公告系统（修复版） ====================
-// 功能：
-//   1. 主页加载时自动弹出「最新未读公告」
-//   2. 侧边栏菜单打开「全部公告」列表
-//   3. 已读记录存 localStorage，每条只弹一次
-//   4. 菜单项显示未读数红点
-//
-// 修复要点：
-//   ✅ ESC 监听器统一追踪 & 清理，不再泄漏
-//   ✅ 关闭详情后只更新列表行，不重开列表 modal
-//   ✅ body overflow 分层管理
-//   ✅ XSS 简单防护（过滤 <script> 和 on*=）
-//   ✅ 关闭逻辑幂等，防重复触发
-// =========================================================
+// ========== 公告管理（含傻瓜编辑器 + 图片插入） ==========
+import { getSupabase } from './auth.js';
+import { showNotification, logAction, openModal, closeModal, escapeHtml } from './utils.js';
 
-const ANNOUNCEMENT_READ_KEY = 'readAnnouncementIds';
-const ANNOUNCEMENT_CACHE_KEY = 'announcementsCache';
-const ANNOUNCEMENT_CACHE_TTL = 5 * 60 * 1000; // 5 分钟缓存
+let announcementsCache = [];
+let currentEditorMode = 'simple';
 
-// ==================== 全局 modal 状态（单例） ====================
-let currentDetailModal = null;
-let currentDetailEscHandler = null;
-let currentListModal = null;
-let currentListEscHandler = null;
+const ANNOUNCEMENT_TYPES = [
+    { value: 'update', label: '更新公告', color: '#60a5fa' },
+    { value: 'event',  label: '活动公告', color: '#f472b6' },
+    { value: 'notice', label: '重要通知', color: '#facc15' },
+    { value: 'fix',    label: '问题修复', color: '#3ecf8e' }
+];
 
-// ==================== 已读记录 ====================
-function getReadAnnouncementIds() {
-    try {
-        return JSON.parse(localStorage.getItem(ANNOUNCEMENT_READ_KEY) || '[]');
-    } catch (e) {
-        return [];
-    }
-}
+// ============================================================
+// 简易语法 → HTML 转换引擎
+// ============================================================
+function simpleTextToHtml(text) {
+    if (!text || !text.trim()) return '';
 
-function markAnnouncementRead(id) {
-    const ids = getReadAnnouncementIds();
-    if (!ids.includes(id)) {
-        ids.push(id);
-        if (ids.length > 100) ids.splice(0, ids.length - 100);
-        localStorage.setItem(ANNOUNCEMENT_READ_KEY, JSON.stringify(ids));
-    }
-    updateAnnouncementBadge();
-}
+    // 1. 全字段转义（防 XSS）
+    const escaped = escapeHtml(text);
 
-// ==================== 拉取公告列表 ====================
-async function fetchAnnouncements(forceRefresh = false) {
-    if (!supabaseClient) return [];
+    // 2. 按行解析
+    const lines = escaped.split('\n');
+    const blocks = [];
+    let paragraph = [];
+    let inList = false;
 
-    // 缓存命中
-    if (!forceRefresh) {
-        try {
-            const cached = JSON.parse(localStorage.getItem(ANNOUNCEMENT_CACHE_KEY) || 'null');
-            if (cached && Date.now() - cached.ts < ANNOUNCEMENT_CACHE_TTL) {
-                return cached.list;
+    const flushParagraph = () => {
+        if (paragraph.length) {
+            blocks.push({ type: 'p', lines: paragraph.slice() });
+            paragraph = [];
+        }
+    };
+    const closeList = () => {
+        if (inList) { blocks.push({ type: 'ul-end' }); inList = false; }
+    };
+
+    for (const raw of lines) {
+        const line = raw.replace(/\s+$/, '');
+        const trimmed = line.trim();
+
+        // 空行 → 段落分隔
+        if (trimmed === '') {
+            closeList();
+            flushParagraph();
+            continue;
+        }
+
+        // ★ 图片（整行）：![描述](URL) 或 [图片:URL]
+        // 注意：转义过后的 & 会变成 &amp;，需要还原回来再解析
+        const unescapedLine = trimmed
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>');
+
+        const imgMatch = unescapedLine.match(/^!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)$/)
+                       || unescapedLine.match(/^\[图片:(https?:\/\/[^\]]+)\]$/);
+        if (imgMatch) {
+            closeList(); flushParagraph();
+            let alt, url;
+            if (imgMatch.length === 3 && imgMatch[1] !== undefined && unescapedLine.startsWith('![')) {
+                // ![描述](URL) 格式
+                alt = imgMatch[1] || '公告图片';
+                url = imgMatch[2];
+            } else {
+                // [图片:URL] 格式
+                alt = '公告图片';
+                url = imgMatch[1];
             }
-        } catch (e) { /* ignore */ }
-    }
-
-    try {
-        const { data, error } = await supabaseClient
-            .from('site_announcements')
-            .select('*')
-            .eq('is_active', true)
-            .order('priority', { ascending: false })
-            .order('created_at', { ascending: false })
-            .limit(50);
-
-        if (error) {
-            console.warn('[公告] 拉取失败:', error);
-            return [];
+            blocks.push({ type: 'img', url, alt });
+            continue;
         }
 
-        const list = data || [];
-        localStorage.setItem(ANNOUNCEMENT_CACHE_KEY, JSON.stringify({
-            list, ts: Date.now()
-        }));
-        return list;
-    } catch (e) {
-        console.warn('[公告] 拉取异常:', e);
-        return [];
+        // 分隔线 ---
+        if (/^-{3,}$/.test(trimmed)) {
+            closeList(); flushParagraph();
+            blocks.push({ type: 'hr' });
+            continue;
+        }
+
+        // 标题 ## / ###
+        const hMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
+        if (hMatch) {
+            closeList(); flushParagraph();
+            const level = Math.min(hMatch[1].length + 2, 5);
+            blocks.push({ type: 'h', level, content: hMatch[2] });
+            continue;
+        }
+
+        // 列表 - 或 *
+        if (/^[-*]\s+/.test(trimmed)) {
+            flushParagraph();
+            if (!inList) { blocks.push({ type: 'ul-start' }); inList = true; }
+            blocks.push({ type: 'li', content: trimmed.replace(/^[-*]\s+/, '') });
+            continue;
+        }
+
+        // 引用 >
+        if (/^>\s?/.test(trimmed)) {
+            closeList(); flushParagraph();
+            blocks.push({ type: 'quote', content: trimmed.replace(/^>\s?/, '') });
+            continue;
+        }
+
+        // 普通行
+        closeList();
+        paragraph.push(line);
     }
+
+    closeList();
+    flushParagraph();
+
+    // 3. 渲染
+    let html = '';
+    for (const b of blocks) {
+        switch (b.type) {
+            // ★ 图片
+            case 'img':
+                html += `<img src="${b.url}" alt="${b.alt}" style="max-width:100%;border-radius:10px;display:block;margin:12px auto;box-shadow:0 4px 12px rgba(0,0,0,0.3);">`;
+                break;
+            case 'hr':
+                html += '<hr style="border:none;border-top:1px dashed rgba(255,255,255,0.15);margin:16px 0;">';
+                break;
+            case 'h':
+                html += `<h${b.level} style="color:#facc15;margin:16px 0 8px;font-size:1.05rem;">${inlineMarkup(b.content)}</h${b.level}>`;
+                break;
+            case 'ul-start':
+                html += '<ul style="padding-left:22px;margin:8px 0;">';
+                break;
+            case 'ul-end':
+                html += '</ul>';
+                break;
+            case 'li':
+                html += `<li style="margin:5px 0;">${inlineMarkup(b.content)}</li>`;
+                break;
+            case 'quote':
+                html += `<blockquote style="border-left:3px solid #60a5fa;padding:8px 14px;margin:10px 0;background:rgba(96,165,250,0.08);color:#cbd5e1;border-radius:0 6px 6px 0;">${inlineMarkup(b.content)}</blockquote>`;
+                break;
+            case 'p':
+                html += `<p style="margin:8px 0;line-height:1.85;">${inlineMarkup(b.lines.join('<br>'))}</p>`;
+                break;
+        }
+    }
+    return html;
 }
 
-// ==================== 菜单红点 ====================
-async function updateAnnouncementBadge() {
-    const badge = document.getElementById('announcementBadge');
-    if (!badge) return;
-    const list = await fetchAnnouncements();
-    const readIds = getReadAnnouncementIds();
-    const unreadCount = list.filter(a => !readIds.includes(a.id)).length;
-    if (unreadCount > 0) {
-        badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-        badge.style.display = 'flex';
-    } else {
-        badge.style.display = 'none';
-    }
-}
+// 行内标记（输入已经是转义过的）
+function inlineMarkup(text) {
+    let r = text;
+    r = r.replace(/【([^】]+)】/g, '<span style="color:#facc15;font-weight:bold;">$1</span>');
+    r = r.replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#fff;">$1</strong>');
+    r = r.replace(/(^|[^*])\*([^*\n]+)\*([^*]|$)/g, '$1<em>$2</em>$3');
+    r = r.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:0.9em;">$1</code>');
 
-// ==================== 类型样式 ====================
-function getAnnouncementStyle(type) {
-    const styles = {
-        update: { color: '#60a5fa', icon: 'fa-bullhorn',     label: '更新公告', bg: 'rgba(96,165,250,0.12)' },
-        event:  { color: '#f472b6', icon: 'fa-gift',         label: '活动公告', bg: 'rgba(244,114,182,0.12)' },
-        notice: { color: '#facc15', icon: 'fa-info-circle',  label: '重要通知', bg: 'rgba(250,204,21,0.12)' },
-        fix:    { color: '#3ecf8e', icon: 'fa-wrench',       label: '问题修复', bg: 'rgba(62,207,142,0.12)' }
+    const colorMap = {
+        red: '#f87171', blue: '#60a5fa', green: '#4ade80',
+        yellow: '#facc15', pink: '#f472b6', purple: '#a78bfa', orange: '#fb923c'
     };
-    return styles[type] || styles.update;
+    r = r.replace(/\{(red|blue|green|yellow|pink|purple|orange):([^}]+)\}/g,
+        (m, c, content) => `<span style="color:${colorMap[c]};">${content}</span>`);
+
+    return r;
 }
 
-// ==================== ★ 简单 XSS 防护 ====================
-// 只过滤 <script> 和 on*= 事件属性，保留正常的富文本标签
-function sanitizeContent(html) {
+// ============================================================
+// HTML 模式安全过滤
+// ============================================================
+function sanitizeHtml(html) {
     if (!html) return '';
-    return String(html)
-        // 移除 <script>...</script>
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-        // 移除 on* 事件属性（覆盖 "..." 和 '...' 和裸值三种情况）
-        .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
-        .replace(/\son\w+\s*=\s*'[^']*'/gi, '')
-        .replace(/\son\w+\s*=\s*[^\s>]+/gi, '');
+    let r = html;
+    r = r.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    r = r.replace(/<iframe\b[^>]*>.*?<\/iframe>/gis, '');
+    r = r.replace(/<object\b[^>]*>.*?<\/object>/gis, '');
+    r = r.replace(/<embed\b[^>]*>/gi, '');
+    r = r.replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+    r = r.replace(/javascript\s*:/gi, '');
+    return r;
 }
 
-// ==================== 时间格式化 ====================
-function formatAnnouncementDate(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return '';
-    const now = new Date();
-    const diff = now - d;
-    if (diff < 60 * 1000) return '刚刚';
-    if (diff < 60 * 60 * 1000) return Math.floor(diff / 60000) + ' 分钟前';
-    if (diff < 24 * 60 * 60 * 1000) return Math.floor(diff / 3600000) + ' 小时前';
-    if (diff < 7 * 24 * 60 * 60 * 1000) return Math.floor(diff / 86400000) + ' 天前';
-    return d.toLocaleDateString('zh-CN');
-}
+// ============================================================
+// 实时预览
+// ============================================================
+function updateAnnPreview() {
+    const preview = document.getElementById('annPreviewBox');
+    const textarea = document.getElementById('annContentInput');
+    if (!preview || !textarea) return;
 
-// ==================== 详情弹窗 ====================
-function showAnnouncementDetail(announcement, onClose) {
-    if (!announcement) return;
+    const raw = textarea.value;
+    let html;
 
-    // 单例：如果已有详情弹窗，先清掉（不触发 onClose，避免回调错乱）
-    if (currentDetailModal) {
-        if (currentDetailEscHandler) {
-            document.removeEventListener('keydown', currentDetailEscHandler);
-            currentDetailEscHandler = null;
-        }
-        currentDetailModal.remove();
-        currentDetailModal = null;
+    if (currentEditorMode === 'simple') {
+        html = simpleTextToHtml(raw);
+    } else {
+        html = sanitizeHtml(raw);
     }
 
-    const style = getAnnouncementStyle(announcement.type);
-
-    const modal = document.createElement('div');
-    modal.id = 'announcementDetailModal';
-    modal.className = 'modal-mask active';
-    modal.style.zIndex = '10001';
-    modal.innerHTML = `
-        <div class="modal-container" style="max-width: 560px; text-align: left; padding: 24px;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
-                        padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
-                <div style="width: 42px; height: 42px; border-radius: 12px;
-                            background: ${style.bg}; display: flex; align-items: center;
-                            justify-content: center; flex-shrink: 0;">
-                    <i class="fas ${style.icon}" style="color: ${style.color}; font-size: 1.2rem;"></i>
-                </div>
-                <div style="flex: 1; min-width: 0;">
-                    <div style="font-size: 0.72rem; color: ${style.color}; letter-spacing: 1px;
-                                font-weight: 600; margin-bottom: 3px;">
-                        ${style.label}${announcement.version ? ' · ' + escapeHtml(announcement.version) : ''}
-                    </div>
-                    <div style="font-size: 1.05rem; font-weight: bold; color: var(--text-highlight);
-                                line-height: 1.35;">
-                        ${escapeHtml(announcement.title)}
-                    </div>
-                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
-                        ${formatAnnouncementDate(announcement.created_at)}
-                    </div>
-                </div>
-                <button id="announcementDetailCloseBtn" style="background: none; border: none;
-                        color: var(--text-secondary); font-size: 1.6rem; cursor: pointer;
-                        line-height: 1; padding: 0 6px; align-self: flex-start;" aria-label="关闭">&times;</button>
-            </div>
-            <div style="max-height: 55vh; overflow-y: auto; line-height: 1.9;
-                        color: var(--text-main); font-size: 0.95rem; padding-right: 4px;">
-                ${sanitizeContent(announcement.content)}
-            </div>
-            <div style="text-align: center; margin-top: 20px; padding-top: 16px;
-                        border-top: 1px solid var(--border-color);">
-                <button id="announcementDetailConfirmBtn"
-                        style="background: ${style.color}; color: #121212; border: none;
-                               padding: 10px 42px; border-radius: 30px; font-weight: bold;
-                               font-size: 0.95rem; cursor: pointer; transition: all 0.2s;">
-                    我知道了
-                </button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    currentDetailModal = modal;
-
-    // ★ 打开详情时锁背景滚动
-    document.body.style.overflow = 'hidden';
-
-    // ★ close 幂等：只对当前 modal 生效，且只清理一次
-    const close = () => {
-        if (currentDetailModal !== modal) return; // 已经被关过了
-
-        markAnnouncementRead(announcement.id); // 内部会刷新 badge
-
-        // 移除 ESC 监听
-        if (currentDetailEscHandler) {
-            document.removeEventListener('keydown', currentDetailEscHandler);
-            currentDetailEscHandler = null;
-        }
-
-        modal.classList.remove('active');
-        currentDetailModal = null;
-
-        // ★ 只有列表没开的时候才恢复 body 滚动
-        if (!currentListModal) {
-            document.body.style.overflow = '';
-        }
-
-        setTimeout(() => {
-            modal.remove();
-            if (onClose) onClose();
-        }, 200);
-    };
-
-    document.getElementById('announcementDetailCloseBtn').onclick = close;
-    document.getElementById('announcementDetailConfirmBtn').onclick = close;
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) close();
-    });
-
-    // ★ ESC 监听器追踪，close 里统一移除
-    currentDetailEscHandler = (e) => {
-        if (e.key === 'Escape') close();
-    };
-    document.addEventListener('keydown', currentDetailEscHandler);
+    if (!html.trim()) {
+        preview.innerHTML = '<div style="color:#6b7280;text-align:center;padding:20px;font-size:0.85rem;">← 左侧输入内容，这里会实时显示效果</div>';
+    } else {
+        preview.innerHTML = html;
+    }
 }
 
-// ==================== 列表弹窗（侧边栏入口） ====================
-async function openAnnouncementList() {
-    // 单例：如果已有列表，先清掉
-    if (currentListModal) {
-        if (currentListEscHandler) {
-            document.removeEventListener('keydown', currentListEscHandler);
-            currentListEscHandler = null;
-        }
-        currentListModal.remove();
-        currentListModal = null;
-    }
+// ============================================================
+// 光标处插入标记（工具栏按钮）
+// ============================================================
+window._annInsert = function(before, after = '', placeholder = '') {
+    const ta = document.getElementById('annContentInput');
+    if (!ta) return;
 
-    const modal = document.createElement('div');
-    modal.id = 'announcementListModal';
-    modal.className = 'modal-mask active';
-    modal.innerHTML = `
-        <div class="modal-container" style="max-width: 580px; text-align: left; padding: 0;
-                    display: flex; flex-direction: column; max-height: 85vh;">
-            <div style="padding: 20px 24px 16px; border-bottom: 1px solid var(--border-color);
-                        display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-bullhorn" style="color: #60a5fa; font-size: 1.3rem;"></i>
-                <div style="flex: 1;">
-                    <div style="font-size: 1.1rem; font-weight: bold; color: var(--text-highlight);">
-                        公告中心
-                    </div>
-                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">
-                        查看所有历史公告
-                    </div>
-                </div>
-                <button id="announcementListCloseBtn" style="background: none; border: none;
-                        color: var(--text-secondary); font-size: 1.6rem; cursor: pointer;
-                        line-height: 1; padding: 0 6px;" aria-label="关闭">&times;</button>
-            </div>
-            <div id="announcementListContent" style="flex: 1; overflow-y: auto; padding: 12px 16px;">
-                <div style="text-align: center; padding: 40px 0; color: var(--text-secondary);">
-                    <i class="fas fa-spinner fa-spin" style="font-size: 1.5rem;"></i>
-                    <p style="margin-top: 12px;">加载中...</p>
-                </div>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    currentListModal = modal;
-    document.body.style.overflow = 'hidden';
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = ta.value.substring(start, end) || placeholder;
 
-    // ★ close 幂等
-    const close = () => {
-        if (currentListModal !== modal) return;
+    const insertText = before + selected + after;
+    ta.value = ta.value.substring(0, start) + insertText + ta.value.substring(end);
 
-        if (currentListEscHandler) {
-            document.removeEventListener('keydown', currentListEscHandler);
-            currentListEscHandler = null;
-        }
-        modal.classList.remove('active');
-        currentListModal = null;
+    ta.focus();
+    const selStart = start + before.length;
+    ta.selectionStart = selStart;
+    ta.selectionEnd = selStart + selected.length;
 
-        // ★ 详情没开才恢复滚动
-        if (!currentDetailModal) {
-            document.body.style.overflow = '';
-        }
+    updateAnnPreview();
+};
 
-        setTimeout(() => modal.remove(), 200);
-    };
+// ★ 图片插入：弹出输入框让用户粘 URL
+window._annInsertImage = function() {
+    const url = prompt('请输入图片链接（必须以 http:// 或 https:// 开头）：\n\n建议先用 Supabase Storage 上传图片后复制公开链接。');
+    if (!url) return;
 
-    document.getElementById('announcementListCloseBtn').onclick = close;
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) close();
-    });
-
-    currentListEscHandler = (e) => {
-        if (e.key === 'Escape') close();
-    };
-    document.addEventListener('keydown', currentListEscHandler);
-
-    // ==================== 拉取并渲染 ====================
-    const list = await fetchAnnouncements(true);
-    const container = document.getElementById('announcementListContent');
-    if (!container) return; // 可能已被用户关闭
-
-    if (!list.length) {
-        container.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px; color: var(--text-secondary);">
-                <div style="font-size: 3rem; margin-bottom: 12px;">📭</div>
-                <div style="font-size: 1rem;">暂无公告</div>
-                <div style="font-size: 0.8rem; margin-top: 6px;">有新公告会第一时间通知你~</div>
-            </div>
-        `;
+    const trimmed = url.trim();
+    if (!/^https?:\/\//i.test(trimmed)) {
+        alert('图片链接必须以 http:// 或 https:// 开头');
         return;
     }
 
-    const readIds = getReadAnnouncementIds();
-    let html = '';
-    for (const a of list) {
-        const style = getAnnouncementStyle(a.type);
-        const isUnread = !readIds.includes(a.id);
+    // 整行插入图片语法（前后各加空行，保证独占一行）
+    const ta = document.getElementById('annContentInput');
+    if (!ta) return;
+
+    const start = ta.selectionStart;
+    const before = ta.value.substring(0, start);
+    const after = ta.value.substring(start);
+    const prefix = before && !before.endsWith('\n\n') ? (before.endsWith('\n') ? '\n' : '\n\n') : '';
+    const suffix = after && !after.startsWith('\n\n') ? (after.startsWith('\n') ? '\n' : '\n\n') : '';
+
+    const snippet = `${prefix}![公告图片](${trimmed})${suffix}`;
+    ta.value = before + snippet + after;
+
+    const newCursor = (before + snippet).length;
+    ta.focus();
+    ta.selectionStart = ta.selectionEnd = newCursor;
+
+    updateAnnPreview();
+};
+
+// ============================================================
+// 切换编辑器模式
+// ============================================================
+window._annSwitchMode = function(mode) {
+    currentEditorMode = mode;
+
+    const btnSimple = document.getElementById('annModeSimple');
+    const btnHtml = document.getElementById('annModeHtml');
+    const toolbar = document.getElementById('annSimpleToolbar');
+    const hint = document.getElementById('annModeHint');
+    const ta = document.getElementById('annContentInput');
+
+    const activeStyle = 'background:#3b82f6;color:white;';
+    const inactiveStyle = 'background:transparent;color:#9ca3af;';
+
+    if (mode === 'simple') {
+        btnSimple.style.cssText = `padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:0.85rem;${activeStyle}`;
+        btnHtml.style.cssText = `padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:0.85rem;${inactiveStyle}`;
+        toolbar.style.display = 'flex';
+        hint.innerHTML = '💡 直接写文字即可，空行分段落。<strong>**加粗**</strong> · <strong>【高亮】</strong> · <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">- 列表</code> · <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">&gt; 引用</code> · <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">---</code> 分隔线 · <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:3px;">![图](URL)</code> 图片';
+        ta.placeholder = '六哥荣耀WIKI 更新公告\n\n好久不见，星启者们\n\n【本次更新内容】\n\n- 修复了签到按钮不刷新的问题\n- 优化了买宝箱的速度\n\n![公告配图](https://example.com/img.png)\n\n---\n\n接下来，周年庆准备正式开始！🎂';
+        ta.style.fontFamily = 'inherit';
+        ta.style.fontSize = '0.95rem';
+    } else {
+        btnSimple.style.cssText = `padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:0.85rem;${inactiveStyle}`;
+        btnHtml.style.cssText = `padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:0.85rem;${activeStyle}`;
+        toolbar.style.display = 'none';
+        hint.innerHTML = '⚠️ 高级模式：直接写 HTML。系统会过滤 <code>&lt;script&gt;</code> 和 <code>on*</code> 事件，但请谨慎使用。';
+        ta.placeholder = '<p>本次更新内容...</p>\n<img src="https://example.com/img.png" style="max-width:100%;">';
+        ta.style.fontFamily = 'monospace';
+        ta.style.fontSize = '0.85rem';
+    }
+
+    updateAnnPreview();
+};
+
+// ============================================================
+// 加载公告列表
+// ============================================================
+export async function loadAnnouncements() {
+    try {
+        const sb = getSupabase();
+        const { data, error } = await sb
+            .from('site_announcements')
+            .select('*')
+            .order('priority', { ascending: false })
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        announcementsCache = data || [];
+        renderAnnouncementsTable();
+    } catch (err) {
+        showNotification('加载公告失败: ' + err.message, 'error');
+    }
+}
+
+// ============================================================
+// 渲染公告表格
+// ============================================================
+function renderAnnouncementsTable() {
+    const container = document.getElementById('announcementsListArea');
+    if (!container) return;
+
+    if (!announcementsCache.length) {
+        container.innerHTML = '<div class="empty-data">暂无公告，点击「发布公告」创建</div>';
+        return;
+    }
+
+    let html = `
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>类型</th>
+                    <th>版本</th>
+                    <th>标题</th>
+                    <th>优先级</th>
+                    <th>状态</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    for (const a of announcementsCache) {
+        const typeInfo = ANNOUNCEMENT_TYPES.find(t => t.value === a.type) || ANNOUNCEMENT_TYPES[0];
+        const activeBadge = a.is_active
+            ? `<span style="color:#4ade80;">✅ 已发布</span>`
+            : `<span style="color:#9ca3af;">⏸️ 已下线</span>`;
+
         html += `
-            <div class="announcement-list-item" data-id="${a.id}" data-unread="${isUnread ? '1' : '0'}"
-                 style="padding: 14px 16px; border-radius: 12px; margin-bottom: 8px;
-                        cursor: pointer; transition: all 0.2s;
-                        background: ${isUnread ? 'rgba(96,165,250,0.06)' : 'rgba(255,255,255,0.02)'};
-                        border: 1px solid ${isUnread ? 'rgba(96,165,250,0.25)' : 'transparent'};">
-                <div style="display: flex; gap: 12px; align-items: flex-start;">
-                    <div style="width: 36px; height: 36px; border-radius: 10px;
-                                background: ${style.bg}; display: flex; align-items: center;
-                                justify-content: center; flex-shrink: 0;">
-                        <i class="fas ${style.icon}" style="color: ${style.color}; font-size: 1rem;"></i>
-                    </div>
-                    <div style="flex: 1; min-width: 0;">
-                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
-                            <span style="font-size: 0.7rem; color: ${style.color};
-                                         font-weight: 600; letter-spacing: 0.5px;">
-                                ${style.label}${a.version ? ' · ' + escapeHtml(a.version) : ''}
-                            </span>
-                            <span class="unread-dot" style="width: 6px; height: 6px; border-radius: 50%;
-                                  background: #ef4444; display: ${isUnread ? 'inline-block' : 'none'};"></span>
-                        </div>
-                        <div style="font-size: 0.95rem; font-weight: 600;
-                                    color: var(--text-highlight); line-height: 1.35;
-                                    overflow: hidden; text-overflow: ellipsis;
-                                    display: -webkit-box; -webkit-line-clamp: 1;
-                                    -webkit-box-orient: vertical;">
-                            ${escapeHtml(a.title)}
-                        </div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
-                            ${formatAnnouncementDate(a.created_at)}
-                        </div>
-                    </div>
-                    <i class="fas fa-chevron-right" style="color: var(--text-secondary);
-                       font-size: 0.75rem; align-self: center;"></i>
-                </div>
-            </div>
+            <tr>
+                <td><span style="color:${typeInfo.color};font-size:0.85rem;">● ${typeInfo.label}</span></td>
+                <td>${escapeHtml(a.version || '-')}</td>
+                <td title="${escapeHtml(a.title)}"><strong>${escapeHtml(a.title)}</strong></td>
+                <td>${a.priority}</td>
+                <td>${activeBadge}</td>
+                <td>${new Date(a.created_at).toLocaleString('zh-CN')}</td>
+                <td class="action-buttons">
+                    <button class="edit-btn" onclick="window.editAnnouncement('${a.id}')">
+                        <i class="fas fa-edit"></i> 编辑
+                    </button>
+                    <button class="edit-btn" style="background:${a.is_active ? '#6b7280' : '#10b981'};" onclick="window.toggleAnnouncement('${a.id}')">
+                        <i class="fas ${a.is_active ? 'fa-eye-slash' : 'fa-eye'}"></i> ${a.is_active ? '下线' : '上线'}
+                    </button>
+                    <button class="delete-btn" onclick="window.deleteAnnouncement('${a.id}')">
+                        <i class="fas fa-trash"></i> 删除
+                    </button>
+                </td>
+            </tr>
         `;
     }
+
+    html += '</tbody></table>';
     container.innerHTML = html;
+}
 
-    // ★ 局部更新某一行为已读状态（不重建列表，保留滚动位置）
-    function markListRowRead(rowEl) {
-        if (!rowEl) return;
-        if (rowEl.dataset.unread === '0') return; // 已读无需处理
+// ============================================================
+// 公告表单（含编辑器）
+// ============================================================
+function showAnnouncementForm(existingData = null) {
+    const isEdit = !!existingData;
 
-        rowEl.dataset.unread = '0';
-        rowEl.style.background = 'rgba(255,255,255,0.02)';
-        rowEl.style.border = '1px solid transparent';
-        const dot = rowEl.querySelector('.unread-dot');
-        if (dot) dot.style.display = 'none';
+    const typeOptions = ANNOUNCEMENT_TYPES.map(t =>
+        `<option value="${t.value}" ${existingData?.type === t.value ? 'selected' : ''}>${t.label}</option>`
+    ).join('');
+
+    const formatDateForInput = (iso) => {
+        if (!iso) return '';
+        const d = new Date(iso);
+        const pad = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
+    const initialContent = existingData?.content || '';
+    const hasHtml = /<\w+/.test(initialContent);
+    currentEditorMode = (isEdit && hasHtml) ? 'html' : 'simple';
+
+    const html = `
+        <div class="form-field">
+            <label>公告类型</label>
+            <select name="type" class="form-select">${typeOptions}</select>
+        </div>
+        <div class="form-field">
+            <label>版本号（可选）</label>
+            <input type="text" name="version" value="${escapeHtml(existingData?.version || '')}" placeholder="例如：V2.0.0" maxlength="20">
+        </div>
+        <div class="form-field">
+            <label>标题 <span style="color:#f87171;">*</span></label>
+            <input type="text" name="title" value="${escapeHtml(existingData?.title || '')}" placeholder="例如：🎉 六哥荣耀WIKI 更新公告" required maxlength="100">
+        </div>
+
+        <div class="form-field">
+            <label>公告内容 <span style="color:#f87171;">*</span></label>
+
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <button type="button" id="annModeSimple" onclick="window._annSwitchMode('simple')"
+                    style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:0.85rem;">
+                    ✏️ 简易模式
+                </button>
+                <button type="button" id="annModeHtml" onclick="window._annSwitchMode('html')"
+                    style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:0.85rem;">
+                    💻 HTML模式
+                </button>
+            </div>
+
+            <!-- 工具栏 -->
+            <div id="annSimpleToolbar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;padding:8px 10px;background:rgba(0,0,0,0.2);border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
+                <button type="button" onclick="window._annInsert('**', '**', '加粗文字')" title="加粗" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#e0e0e0;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:0.85rem;">B</button>
+                <button type="button" onclick="window._annInsert('*', '*', '斜体文字')" title="斜体" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#e0e0e0;padding:4px 12px;border-radius:6px;cursor:pointer;font-style:italic;font-size:0.85rem;">I</button>
+                <button type="button" onclick="window._annInsert('【', '】', '高亮')" title="高亮" style="background:rgba(250,204,21,0.15);border:1px solid rgba(250,204,21,0.3);color:#facc15;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;">【高亮】</button>
+                <button type="button" onclick="window._annInsert('## ', '', '标题')" title="标题" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#e0e0e0;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;">## 标题</button>
+                <button type="button" onclick="window._annInsert('- ', '', '列表项')" title="列表" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#e0e0e0;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;">- 列表</button>
+                <button type="button" onclick="window._annInsert('> ', '', '引用内容')" title="引用" style="background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.3);color:#60a5fa;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;">&gt; 引用</button>
+                <button type="button" onclick="window._annInsert('\\n---\\n', '')" title="分隔线" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#e0e0e0;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;">--- 分隔</button>
+                <button type="button" onclick="window._annInsert('{yellow:', '}', '醒目文字')" title="黄色" style="background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.2);color:#facc15;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;">🎨 黄</button>
+                <button type="button" onclick="window._annInsert('{pink:', '}', '粉色文字')" title="粉色" style="background:rgba(244,114,182,0.1);border:1px solid rgba(244,114,182,0.2);color:#f472b6;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;">🎨 粉</button>
+                <button type="button" onclick="window._annInsert('{green:', '}', '绿色文字')" title="绿色" style="background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);color:#4ade80;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;">🎨 绿</button>
+                <button type="button" onclick="window._annInsert('{blue:', '}', '蓝色文字')" title="蓝色" style="background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2);color:#60a5fa;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;">🎨 蓝</button>
+                <!-- ★ 新增：图片按钮 -->
+                <button type="button" onclick="window._annInsertImage()" title="插入图片" style="background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.3);color:#60a5fa;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;">🖼️ 图片</button>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                    <div style="font-size:0.75rem;color:#9ca3af;margin-bottom:4px;">输入区</div>
+                    <textarea id="annContentInput" rows="14" style="width:100%;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.1);color:#e0e0e0;padding:10px 12px;border-radius:8px;resize:vertical;line-height:1.7;" oninput="window._annUpdatePreview && window._annUpdatePreview()">${escapeHtml(initialContent)}</textarea>
+                </div>
+                <div>
+                    <div style="font-size:0.75rem;color:#9ca3af;margin-bottom:4px;">👁️ 预览区</div>
+                    <div id="annPreviewBox" style="width:100%;height:calc(100% - 22px);min-height:280px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);color:#e0e0e0;padding:10px 14px;border-radius:8px;overflow-y:auto;font-size:0.9rem;line-height:1.7;"></div>
+                </div>
+            </div>
+
+            <div id="annModeHint" style="font-size:0.75rem;color:#9ca3af;background:rgba(0,0,0,0.2);padding:8px 12px;border-radius:6px;margin-top:8px;line-height:1.7;"></div>
+        </div>
+
+        <div class="form-field">
+            <label>优先级（数字越大越靠前，重要公告建议 100）</label>
+            <input type="number" name="priority" value="${existingData?.priority ?? 0}" min="0">
+        </div>
+        <div class="form-field">
+            <label>开始展示时间（留空 = 立即生效）</label>
+            <input type="datetime-local" name="start_at" value="${formatDateForInput(existingData?.start_at)}">
+        </div>
+        <div class="form-field">
+            <label>结束展示时间（留空 = 永久有效）</label>
+            <input type="datetime-local" name="end_at" value="${formatDateForInput(existingData?.end_at)}">
+        </div>
+        <div class="form-field">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input type="checkbox" name="is_active" ${existingData?.is_active !== false ? 'checked' : ''}>
+                立即发布（勾选后用户可见）
+            </label>
+        </div>
+    `;
+
+    openModal('genericModal');
+    document.getElementById('modalTitle').innerText = isEdit ? '编辑公告' : '发布公告';
+    document.getElementById('modalFields').innerHTML = html;
+
+    window._annUpdatePreview = updateAnnPreview;
+    window._annSwitchMode(currentEditorMode);
+
+    document.getElementById('modalForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+
+        const title = fd.get('title')?.trim();
+        const rawContent = document.getElementById('annContentInput').value;
+
+        if (!title || !rawContent.trim()) {
+            showNotification('标题和内容不能为空', 'error');
+            return;
+        }
+
+        let finalContent;
+        if (currentEditorMode === 'simple') {
+            finalContent = simpleTextToHtml(rawContent);
+        } else {
+            finalContent = sanitizeHtml(rawContent);
+        }
+
+        const parseTimeOrNull = (val) => val ? new Date(val).toISOString() : null;
+
+        const data = {
+            type: fd.get('type') || 'update',
+            version: fd.get('version')?.trim() || null,
+            title,
+            content: finalContent,
+            priority: parseInt(fd.get('priority')) || 0,
+            start_at: parseTimeOrNull(fd.get('start_at')) || new Date().toISOString(),
+            end_at: parseTimeOrNull(fd.get('end_at')),
+            is_active: fd.get('is_active') === 'on'
+        };
+
+        try {
+            const sb = getSupabase();
+            const result = isEdit
+                ? await sb.from('site_announcements').update(data).eq('id', existingData.id)
+                : await sb.from('site_announcements').insert([data]);
+
+            if (result.error) throw result.error;
+
+            await logAction(
+                isEdit ? '编辑公告' : '发布公告',
+                'site_announcements',
+                isEdit ? existingData.id : '',
+                title,
+                `${data.type} | 版本:${data.version || '-'} | 优先级:${data.priority}`
+            );
+
+            showNotification(isEdit ? '公告已更新' : '公告已发布', 'success');
+            closeModal('genericModal');
+            await loadAnnouncements();
+        } catch (err) {
+            showNotification('操作失败: ' + err.message, 'error');
+        }
+    };
+}
+
+export function showAddAnnouncementForm() {
+    showAnnouncementForm(null);
+}
+
+// ============================================================
+// window 挂载
+// ============================================================
+window.editAnnouncement = function(id) {
+    const data = announcementsCache.find(a => a.id === id);
+    if (!data) { showNotification('公告不存在', 'error'); return; }
+    showAnnouncementForm(data);
+};
+
+window.deleteAnnouncement = async function(id) {
+    const data = announcementsCache.find(a => a.id === id);
+    if (!data) return;
+    if (!confirm(`确定删除公告「${data.title}」吗？此操作不可恢复。`)) return;
+
+    try {
+        const sb = getSupabase();
+        const { error } = await sb.from('site_announcements').delete().eq('id', id);
+        if (error) throw error;
+        await logAction('删除公告', 'site_announcements', id, data.title, '');
+        showNotification('公告已删除', 'success');
+        await loadAnnouncements();
+    } catch (err) {
+        showNotification('删除失败: ' + err.message, 'error');
     }
+};
 
-    // 绑定点击
-    container.querySelectorAll('.announcement-list-item').forEach(el => {
-        el.addEventListener('click', () => {
-            const id = el.dataset.id;
-            const a = list.find(x => x.id === id);
-            if (!a) return;
-
-            // ★ 关闭详情后只更新这一行，不再重开列表
-            showAnnouncementDetail(a, () => {
-                markListRowRead(el);
-            });
-        });
-        el.addEventListener('mouseenter', () => {
-            el.style.transform = 'translateX(2px)';
-            if (el.dataset.unread === '1') {
-                el.style.borderColor = 'rgba(96,165,250,0.4)';
-            }
-        });
-        el.addEventListener('mouseleave', () => {
-            el.style.transform = '';
-            if (el.dataset.unread === '1') {
-                el.style.borderColor = 'rgba(96,165,250,0.25)';
-            }
-        });
-    });
-}
-
-// ==================== 自动弹最新未读 ====================
-async function autoShowLatestAnnouncement() {
-    const list = await fetchAnnouncements();
-    if (!list.length) return;
-
-    const readIds = getReadAnnouncementIds();
-    const unread = list.filter(a => !readIds.includes(a.id));
-    if (unread.length === 0) return;
-
-    // 只弹最新一条（列表本身按优先级+时间排序）
-    const latest = unread[0];
-
-    // 延迟一点，避免和页面其他加载抢注意力
-    setTimeout(() => {
-        showAnnouncementDetail(latest, () => {
-            // markAnnouncementRead 已在 close 内调用，这里只需刷新红点
-            // （close 里已经调过 updateAnnouncementBadge，这里不用再调）
-        });
-    }, 1200);
-}
-
-// ==================== 对外暴露 ====================
-window.openAnnouncementList = openAnnouncementList;
-window.openAnnouncements = openAnnouncementList; // 兼容旧名
-window.updateAnnouncementBadge = updateAnnouncementBadge;
+window.toggleAnnouncement = async function(id) {
+    const data = announcementsCache.find(a => a.id === id);
+    if (!data) return;
+    try {
+        const sb = getSupabase();
+        const newState = !data.is_active;
+        const { error } = await sb
+            .from('site_announcements')
+            .update({ is_active: newState })
+            .eq('id', id);
+        if (error) throw error;
+        await logAction(newState ? '上线公告' : '下线公告', 'site_announcements', id, data.title, '');
+        showNotification(newState ? '公告已上线' : '公告已下线', 'success');
+        await loadAnnouncements();
+    } catch (err) {
+        showNotification('操作失败: ' + err.message, 'error');
+    }
+};
