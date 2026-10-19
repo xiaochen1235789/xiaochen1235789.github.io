@@ -140,7 +140,15 @@ export async function renderProfile() {
         safeSetText('userBio', state.userProfile?.bio || '');
         const createdTime = state.userProfile?.created_at || state.currentUser?.created_at;
         safeSetText('createdAt', createdTime ? new Date(createdTime).toLocaleString() : '--');
-        let days = createdTime ? Math.floor((new Date() - new Date(createdTime)) / 86400000) : 0;
+        // ★ 按自然日计算（抹去时分秒，直接比日期）
+let days = 0;
+if (createdTime) {
+    const start = new Date(createdTime);
+    start.setHours(0, 0, 0, 0); // 注册当天 00:00:00
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);   // 今天 00:00:00
+    days = Math.floor((now - start) / 86400000) + 1; // +1 是因为注册当天算第 1 天
+}
         const daysEl = document.getElementById('userDaysText');
         if (daysEl) daysEl.innerText = `已来到 ${days.toLocaleString()} 天`;
 
