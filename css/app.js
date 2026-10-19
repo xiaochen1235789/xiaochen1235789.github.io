@@ -1,4 +1,4 @@
-// ========== 主入口（完整版 v2.9：修复 record_exchange 调用） ==========
+// ========== 主入口（完整版 v2.1.1：等级系统接入） ==========
 import { CONFIG, getRoleDisplay, SPECIAL_TITLES } from './config.js';
 import {
     showNotification, openModal, closeModal,
@@ -25,7 +25,8 @@ import {
     renderTitlesModal, openBackpackItemDetail, openRewardInfoModal,
     invalidateFramesCache,
     renderAchievementsModal, showAchievementUnlockModal,
-    renderNotificationsModal, updateNotificationBadge
+    renderNotificationsModal, updateNotificationBadge,
+    updateLevelDisplay, computeLevelInfo   // ★ 新增
 } from './ui-renderer.js';
 
 // ========== 全局状态 ==========
@@ -115,7 +116,7 @@ async function refreshUserStats() {
         userStats = { ...(userStats || {}), ...statsRes.data };
         updateAppState();
         updateShopBalanceDisplay();
-        updateActivePointsDisplay();
+        updateActivePointsDisplay();   // 内部已调用 updateLevelDisplay
         if (window.updateChestDisplay) window.updateChestDisplay();
     }
 }
@@ -133,7 +134,8 @@ async function refreshAchievements() {
             candy:   result.reward_candy   || 0,
             rainbow: result.reward_rainbow || 0,
             syrup:   result.reward_syrup   || 0,
-            active:  result.reward_active  || 0
+            active:  result.reward_active  || 0,
+            exp:     result.reward_exp     || 0     // ★ 成就给的经验
         });
 
         await refreshUserStats();
@@ -327,10 +329,14 @@ async function executeCheckin(autoTriggered = false) {
         userStats.active_points     = data.new_active;
         userStats.checkin_streak    = data.new_streak;
         userStats.last_checkin_date = data.today;
+        // ★ 同步经验
+        if (data.new_exp   != null) userStats.exp   = data.new_exp;
+        if (data.new_level != null) userStats.level = data.new_level;
     }
     updateAppState();
     updateActivePointsDisplay();
     updateShopBalanceDisplay();
+    updateLevelDisplay();   // ★ 刷新等级胶囊
 
     const streakEl = document.getElementById('streakDays');
     if (streakEl) streakEl.innerText = (data.new_streak || 0).toLocaleString();
@@ -370,7 +376,6 @@ async function tryAutoSign() {
 
         if (!data?.success || !data.days) return;
 
-        // 同步本地状态
         if (userStats) {
             userStats.candy_crumbles    = (userStats.candy_crumbles    || 0) + data.total_candy;
             userStats.rainbow_lollipops = (userStats.rainbow_lollipops || 0) + data.total_rainbow;
@@ -378,10 +383,14 @@ async function tryAutoSign() {
             userStats.checkin_streak    = data.new_streak;
             userStats.last_checkin_date = new Date().toISOString().slice(0, 10);
             userStats.total_auto_checkins = (userStats.total_auto_checkins || 0) + data.days;
+            // ★ 若后端 process_auto_checkin 返回了经验，也同步
+            if (data.new_exp   != null) userStats.exp   = data.new_exp;
+            if (data.new_level != null) userStats.level = data.new_level;
         }
         updateAppState();
         updateActivePointsDisplay();
         updateShopBalanceDisplay();
+        updateLevelDisplay();   // ★
         updateCheckinButtonState();
 
         const streakEl = document.getElementById('streakDays');
@@ -392,14 +401,13 @@ async function tryAutoSign() {
             'success', 8000
         );
 
-        // 触发成就检查（可能解锁签到相关成就）
         refreshAchievements().catch(() => {});
     } catch (e) {
         console.warn('自动签到处理失败', e);
     }
 }
 
-// ========== 兑换（★ record_exchange 用 try/catch 包裹） ==========
+// ========== 兑换 ==========
 async function doLowExchange(direction) {
     const amount = parseInt(document.getElementById('lowExchangeAmount').value);
     if (!amount || amount < 1) return showNotification('请输入正确数量', 'error');
@@ -416,7 +424,6 @@ async function doLowExchange(direction) {
         if (!data) return showNotification('余额不足，无法兑换！', 'error');
         showNotification('✅ 双向兑换成功！', 'success');
 
-        // ★ 记录一次等价交换（用 try/catch，避免中断后续流程）
         try { await sb.rpc('record_exchange'); } catch (e) { /* 忽略计数失败 */ }
 
         await refreshUserStats();
@@ -443,7 +450,6 @@ async function doSyrupExchange(direction) {
         if (!data) return showNotification('🌌 梦幻星河糖浆不足！', 'error');
         showNotification('✨ 高阶货币向下兑换成功！', 'success');
 
-        // ★ 记录一次等价交换（用 try/catch，避免中断后续流程）
         try { await sb.rpc('record_exchange'); } catch (e) { /* 忽略计数失败 */ }
 
         await refreshUserStats();
@@ -507,6 +513,61 @@ window.openBackpackItemDetail = openBackpackItemDetail;
 window.openTitlesModal = renderTitlesModal;
 window.openRewardInfoModal = openRewardInfoModal;
 window.openNotificationsModal = renderNotificationsModal;
+
+// ============================================================
+// ★ 等级详情弹窗
+// ============================================================
+function showLevelDetailsModal() {
+    const info = computeLevelInfo(userStats?.exp);
+
+    // 移除旧弹窗（防重复）
+    document.getElementById('levelDetailsModal')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay show';
+    overlay.id = 'levelDetailsModal';
+    overlay.innerHTML = `
+        <div class="modal" style="max-width: 360px; text-align: center;">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-star" style="color:#facc15;"></i> 等级详情</div>
+                <button class="modal-close" id="closeLevelDetailsBtn">&times;</button>
+            </div>
+            <div style="padding: 16px 0;">
+                <div style="font-size: 2.5rem; color: #facc15; font-weight: bold; text-shadow: 0 0 20px rgba(250,204,21,0.6); margin-bottom: 6px;">
+                    Lv.${info.level}
+                </div>
+                <div style="font-size: 0.9rem; opacity: 0.75; margin-bottom: 12px;">
+                    ${info.isMaxLevel ? '已达最高等级 ✨' : `距离 Lv.${info.level + 1} 还需 ${info.remaining.toLocaleString()} 经验`}
+                </div>
+                <div style="width: 100%; height: 12px; background: rgba(0,0,0,0.4); border-radius: 6px; overflow: hidden; margin-bottom: 10px;">
+                    <div style="height: 100%; width: ${info.percent}%; background: linear-gradient(90deg, #facc15, #f59e0b); transition: width 0.4s;"></div>
+                </div>
+                <div style="font-size: 1.05rem; font-weight: bold; margin-bottom: 14px;">
+                    <span style="color: #facc15;">${info.exp.toLocaleString()}</span>
+                    <span style="opacity: 0.5;"> / </span>
+                    <span style="opacity: 0.7;">${info.nextLevelExp.toLocaleString()}</span>
+                </div>
+                <div style="padding: 10px 14px; background: rgba(255,255,255,0.04); border-radius: 10px; font-size: 0.82rem; text-align: left; line-height: 1.7;">
+                    <div style="opacity:0.6;margin-bottom:4px;font-size:0.75rem;">经验产出：</div>
+                    <div>· 签到：<span style="color: #facc15;">+50 exp</span></div>
+                    <div>· 每日宝箱：<span style="color: #facc15;">+20 exp</span></div>
+                    <div>· 开箱：<span style="color: #facc15;">+5 exp / 个</span></div>
+                    <div>· 成就解锁：<span style="color: #facc15;">+50 ~ +1000 exp</span></div>
+                </div>
+                <div style="margin-top: 12px; font-size: 0.72rem; opacity: 0.5;">
+                    经验公式：level = ⌊√(exp / 100)⌋ + 1
+                </div>
+            </div>
+            <button class="btn-primary" id="closeLevelDetailsConfirm" style="width: 100%;">知道了</button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const close = () => overlay.remove();
+    document.getElementById('closeLevelDetailsBtn').addEventListener('click', close);
+    document.getElementById('closeLevelDetailsConfirm').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+}
 
 // ========== 兑换码 ==========
 window.openRedeemModal = function () {
@@ -832,7 +893,6 @@ async function loadUserProfile() {
     refreshAchievements().catch(() => {});
     updateNotificationBadge().catch(() => {});
 
-    // ★ 每 60 秒刷新一次红点（轮询）
     if (notifPollingTimer) clearInterval(notifPollingTimer);
     notifPollingTimer = setInterval(() => {
         if (currentUser?.id) {
@@ -889,6 +949,9 @@ function bindEvents() {
 
     document.getElementById('checkinBtn')?.addEventListener('click', performCheckin);
 
+    // ★ 等级胶囊点击
+    document.getElementById('userLevelBox')?.addEventListener('click', showLevelDetailsModal);
+
     window.addEventListener('scroll', () => {
         const btn = document.querySelector('.back-to-top');
         if (btn) btn.style.display = window.scrollY > 300 ? 'flex' : 'none';
@@ -907,7 +970,6 @@ function bindEvents() {
     document.getElementById('confirmLogoutBtn')?.addEventListener('click', performLogout);
     document.getElementById('cancelLogoutBtn')?.addEventListener('click', () => closeModal('logoutConfirmModal'));
 
-    // ★ 窗口 focus 时刷新红点
     window.addEventListener('focus', () => {
         if (currentUser?.id) updateNotificationBadge().catch(() => {});
     });
