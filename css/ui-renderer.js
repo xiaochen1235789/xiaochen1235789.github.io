@@ -1,4 +1,4 @@
-// ========== UI 渲染器（完整版 v2.10 - 成就积分显示） ==========
+// ========== UI 渲染器（完整版 v2.11 - 等级系统接入） ==========
 import { CONFIG, CHEST_CONFIG, getRoleDisplay } from './config.js';
 import {
     safeSetText, showNotification, openModal, closeModal,
@@ -25,7 +25,6 @@ import {
 
 let state = {};
 
-// 缓存商店头像框列表
 let cachedFrames = null;
 let framesCacheTime = 0;
 const FRAMES_CACHE_TTL = 60000;
@@ -39,12 +38,54 @@ export function setAppState(appState) {
     state = appState;
 }
 
+// ============================================================
+// ★ 等级计算 —— 全项目唯一权威实现
+//   exp = 累计经验
+//   level = floor(sqrt(exp/100)) + 1，封顶 999
+// ============================================================
+export function computeLevelInfo(rawExp) {
+    const exp = Math.max(0, Number(rawExp) || 0);
+    // 封顶 999 级：exp 达到 100*998^2 即视为满级
+    let level = Math.floor(Math.sqrt(exp / 100)) + 1;
+    if (level > 999) level = 999;
+
+    const currentLevelStartExp = Math.floor(Math.pow(level - 1, 2) * 100);
+    const isMaxLevel = level >= 999;
+    const nextLevelExp = isMaxLevel
+        ? currentLevelStartExp
+        : Math.floor(Math.pow(level, 2) * 100);
+
+    const progressInLevel = isMaxLevel ? 0 : (exp - currentLevelStartExp);
+    const totalNeeded     = isMaxLevel ? 1 : (nextLevelExp - currentLevelStartExp);
+    const percent         = isMaxLevel ? 100 : Math.min(100, Math.max(0, (progressInLevel / totalNeeded) * 100));
+    const remaining       = isMaxLevel ? 0 : Math.max(0, nextLevelExp - exp);
+
+    return {
+        exp, level, isMaxLevel,
+        currentLevelStartExp, nextLevelExp,
+        progressInLevel, totalNeeded, remaining, percent
+    };
+}
+
+// ★ 等级胶囊：显示 + 进度条
+export function updateLevelDisplay() {
+    const levelTextEl = document.getElementById('userLevelText');
+    const expBarEl    = document.getElementById('userExpBar');
+    if (!levelTextEl) return;
+
+    const info = computeLevelInfo(state.userStats?.exp);
+    levelTextEl.textContent = `Lv.${info.level}`;
+    if (expBarEl) expBarEl.style.width = `${info.percent}%`;
+}
+
+// ---- 活跃度 & 成就积分 ----
 export function updateActivePointsDisplay() {
     const span = document.getElementById('activePointsValue');
     if (span) span.innerText = (state.userStats?.active_points || 0).toLocaleString();
-    // ★ 成就积分同步更新
     const apSpan = document.getElementById('achievementPointsValue');
     if (apSpan) apSpan.innerText = (state.userStats?.achievement_points || 0).toLocaleString();
+    // ★ 顺带刷新等级胶囊
+    updateLevelDisplay();
 }
 
 export function updateShopBalanceDisplay() {
@@ -140,15 +181,15 @@ export async function renderProfile() {
         safeSetText('userBio', state.userProfile?.bio || '');
         const createdTime = state.userProfile?.created_at || state.currentUser?.created_at;
         safeSetText('createdAt', createdTime ? new Date(createdTime).toLocaleString() : '--');
-        // ★ 按自然日计算（抹去时分秒，直接比日期）
-let days = 0;
-if (createdTime) {
-    const start = new Date(createdTime);
-    start.setHours(0, 0, 0, 0); // 注册当天 00:00:00
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);   // 今天 00:00:00
-    days = Math.floor((now - start) / 86400000) + 1; // +1 是因为注册当天算第 1 天
-}
+
+        let days = 0;
+        if (createdTime) {
+            const start = new Date(createdTime);
+            start.setHours(0, 0, 0, 0);
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            days = Math.floor((now - start) / 86400000) + 1;
+        }
         const daysEl = document.getElementById('userDaysText');
         if (daysEl) daysEl.innerText = `已来到 ${days.toLocaleString()} 天`;
 
@@ -159,15 +200,14 @@ if (createdTime) {
         if (roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
 
         if (state.userStats) {
+            // ★ updateActivePointsDisplay 内部已经会调用 updateLevelDisplay，这里再显式调一次防止遗漏
             updateActivePointsDisplay();
             updateShopBalanceDisplay();
+            updateLevelDisplay();   // ← 等级胶囊首次挂载
+
             const streakEl = document.getElementById('streakDays');
             if (streakEl) streakEl.innerText = (state.userStats.checkin_streak || 0).toLocaleString();
             updateCheckinButtonState();
-
-            // ★ 成就积分显示
-            const apEl = document.getElementById('achievementPointsValue');
-            if (apEl) apEl.innerText = (state.userStats.achievement_points || 0).toLocaleString();
         }
 
         const userInfo = document.querySelector('.user-info');
@@ -203,6 +243,8 @@ if (createdTime) {
         showNotification('渲染出错：' + (err.message || '未知错误'), 'error');
     }
 }
+
+/* ================= 以下代码与原文件完全相同，为节省篇幅保留全部 ================= */
 
 // ===== 商店 =====
 export async function renderShop() {
@@ -298,7 +340,6 @@ export async function renderShop() {
     });
 }
 
-// ===== 加载头像框列表 =====
 async function loadFramesList() {
     const container = document.getElementById('framesList');
     if (!container) return;
@@ -836,6 +877,9 @@ export async function openBatchChestModal(maxCount) {
             updateChestCountDisplay();
             updatePityDisplay();
             showChestResultModal(results);
+            // ★ 开箱结束后刷新等级胶囊
+            updateLevelDisplay();
+            updateActivePointsDisplay();
             if (newStats.chest_count === 0) {
                 setTimeout(() => {
                     if (overlay.parentNode) overlay.remove();
@@ -1030,7 +1074,7 @@ export async function openRewardInfoModal() {
 }
 
 // ============================================================
-// ★★★ 成就系统 UI（含稀有度 + 隐藏模式 + 成就积分） ★★★
+// ★★★ 成就系统 UI ★★★
 // ============================================================
 const ACH_CATEGORY_NAME = {
     checkin:    '📅 签到成就',
@@ -1063,11 +1107,9 @@ export async function renderAchievementsModal() {
         let visibleTotal = 0, unlockedTotal = 0;
 
         for (const a of list) {
-            // ★ 完全隐身的隐藏成就：未解锁时直接跳过
             if (a.is_hidden && !a.unlocked_at && a.hidden_style === 'invisible') {
                 continue;
             }
-            // ★ 占位型隐藏成就：显示 ❓ 神秘成就
             if (a.is_hidden && !a.unlocked_at) {
                 const g = groups[a.category] || (groups[a.category] = []);
                 g.push({ ...a, _hiddenPlaceholder: true });
@@ -1172,6 +1214,7 @@ export function showAchievementUnlockModal(achievements, rewards) {
     if (rewards.rainbow > 0) rewardLines.push(`🌈 +${Number(rewards.rainbow).toLocaleString()} 超级棒糖`);
     if (rewards.syrup   > 0) rewardLines.push(`🌌 +${Number(rewards.syrup).toLocaleString()} 星河糖浆`);
     if (rewards.active  > 0) rewardLines.push(`⚡ +${Number(rewards.active).toLocaleString()} 活跃度`);
+    if (rewards.exp     > 0) rewardLines.push(`⭐ +${Number(rewards.exp).toLocaleString()} 经验`);
 
     overlay.innerHTML = `
         <div class="modal" style="max-width:380px;text-align:center;border:2px solid #facc15;box-shadow:0 0 40px rgba(250,204,21,0.4);">
@@ -1371,7 +1414,6 @@ export async function updateNotificationBadge() {
     }
 }
 
-// 导出全局更新显示函数
 window.updateChestDisplay = function() {
     const el = document.getElementById('chestDisplay');
     if (el) {
