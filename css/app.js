@@ -361,8 +361,41 @@ async function performCheckin() {
 async function tryAutoSign() {
     if (autoSignAttempted) return;
     autoSignAttempted = true;
-    if (hasAutoSignCard) {
-        await executeCheckin(true);
+    if (!hasAutoSignCard) return;
+
+    try {
+        const sb = getSupabase();
+        const { data, error } = await sb.rpc('process_auto_checkin');
+        if (error) throw error;
+
+        if (!data?.success || !data.days) return;
+
+        // 同步本地状态
+        if (userStats) {
+            userStats.candy_crumbles    = (userStats.candy_crumbles    || 0) + data.total_candy;
+            userStats.rainbow_lollipops = (userStats.rainbow_lollipops || 0) + data.total_rainbow;
+            userStats.active_points     = (userStats.active_points     || 0) + data.total_active;
+            userStats.checkin_streak    = data.new_streak;
+            userStats.last_checkin_date = new Date().toISOString().slice(0, 10);
+            userStats.total_auto_checkins = (userStats.total_auto_checkins || 0) + data.days;
+        }
+        updateAppState();
+        updateActivePointsDisplay();
+        updateShopBalanceDisplay();
+        updateCheckinButtonState();
+
+        const streakEl = document.getElementById('streakDays');
+        if (streakEl) streakEl.innerText = (data.new_streak || 0).toLocaleString();
+
+        showNotification(
+            `🤖 自动签到 ${data.days} 天 +${data.total_candy.toLocaleString()}🍬`,
+            'success', 8000
+        );
+
+        // 触发成就检查（可能解锁签到相关成就）
+        refreshAchievements().catch(() => {});
+    } catch (e) {
+        console.warn('自动签到处理失败', e);
     }
 }
 
