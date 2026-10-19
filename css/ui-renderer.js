@@ -1,4 +1,4 @@
-// ========== UI 渲染器（完整版 v2.12 - 等级系统接入） ==========
+// ========== UI 渲染器（完整版 v2.13 - 等级系统接入） ==========
 import { CONFIG, CHEST_CONFIG, getRoleDisplay } from './config.js';
 import {
     safeSetText, showNotification, openModal, closeModal,
@@ -25,7 +25,6 @@ import {
 
 let state = {};
 
-// 缓存商店头像框列表
 let cachedFrames = null;
 let framesCacheTime = 0;
 const FRAMES_CACHE_TTL = 60000;
@@ -41,8 +40,6 @@ export function setAppState(appState) {
 
 // ============================================================
 // ★ 等级计算 —— 全项目唯一权威实现
-//   exp = 累计经验（user_stats.exp）
-//   level = floor(sqrt(exp/100)) + 1，封顶 999
 // ============================================================
 export function computeLevelInfo(rawExp) {
     const exp = Math.max(0, Number(rawExp) || 0);
@@ -67,26 +64,24 @@ export function computeLevelInfo(rawExp) {
     };
 }
 
-// ★ 等级胶囊 UI 渲染
 export function updateLevelDisplay() {
     const levelTextEl = document.getElementById('userLevelText');
     const expBarEl    = document.getElementById('userExpBar');
     if (!levelTextEl) return;
 
     const info = computeLevelInfo(state.userStats?.exp);
-    levelTextEl.textContent = `Lv.${info.level}`;
+    // ★ 优先显示数据库存的 level
+    const displayLevel = state.userStats?.level || info.level;
+
+    levelTextEl.textContent = `Lv.${displayLevel}`;
     if (expBarEl) expBarEl.style.width = `${info.percent}%`;
 }
 
-// ============================================================
-// 活跃度 & 成就积分（内部会自动刷新等级胶囊）
-// ============================================================
 export function updateActivePointsDisplay() {
     const span = document.getElementById('activePointsValue');
     if (span) span.innerText = (state.userStats?.active_points || 0).toLocaleString();
     const apSpan = document.getElementById('achievementPointsValue');
     if (apSpan) apSpan.innerText = (state.userStats?.achievement_points || 0).toLocaleString();
-    // ★ 每次更新活跃度/积分时顺带刷新等级胶囊
     updateLevelDisplay();
 }
 
@@ -203,10 +198,9 @@ export async function renderProfile() {
         if (roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
 
         if (state.userStats) {
-            // updateActivePointsDisplay 内部会自动调用 updateLevelDisplay
             updateActivePointsDisplay();
             updateShopBalanceDisplay();
-            updateLevelDisplay();   // ★ 首次挂载时也显式调一次
+            updateLevelDisplay();
 
             const streakEl = document.getElementById('streakDays');
             if (streakEl) streakEl.innerText = (state.userStats.checkin_streak || 0).toLocaleString();
@@ -247,7 +241,6 @@ export async function renderProfile() {
     }
 }
 
-// ===== 商店 =====
 export async function renderShop() {
     const container = document.getElementById('shopContentContainer');
     if (!container) return;
@@ -341,7 +334,6 @@ export async function renderShop() {
     });
 }
 
-// ===== 加载头像框列表 =====
 async function loadFramesList() {
     const container = document.getElementById('framesList');
     if (!container) return;
@@ -546,7 +538,6 @@ async function loadChestShopUI() {
     });
 }
 
-// ===== 背包 =====
 export async function renderBackpack() {
     const container = document.getElementById('backpackContent');
     if (!container) return;
@@ -634,7 +625,6 @@ export async function renderBackpack() {
     openModal('backpackModal');
 }
 
-// ===== 物品详情 =====
 export async function openBackpackItemDetail(itemId) {
     let frame = getFrameByIdSync(itemId);
     if (!frame) {
@@ -721,9 +711,6 @@ export async function openBackpackItemDetail(itemId) {
     showNotification('未知物品', 'error');
 }
 
-// ============================================================
-// 宝箱开启界面
-// ============================================================
 let batchModalOpen = false;
 let isOpeningChest = false;
 
@@ -878,7 +865,6 @@ export async function openBatchChestModal(maxCount) {
             );
             updateChestCountDisplay();
             updatePityDisplay();
-            // ★ 开箱后 exp 变化 → 刷新等级胶囊 + 活跃度/积分
             updateLevelDisplay();
             updateActivePointsDisplay();
             showChestResultModal(results);
@@ -1011,7 +997,6 @@ export async function openBatchChestModal(maxCount) {
     updateChestCountDisplay();
 }
 
-// ===== 称号 =====
 export async function renderTitlesModal() {
     const container = document.getElementById('titlesListContainer');
     if (!container) return;
@@ -1050,7 +1035,6 @@ export async function renderTitlesModal() {
     openModal('titlesModal');
 }
 
-// ===== 奖励预览 =====
 export async function openRewardInfoModal() {
     const sb = getSupabase();
     const { data: configData, error } = await sb.from('checkin_config').select('*').order('day_num', { ascending: true });
@@ -1075,43 +1059,33 @@ export async function openRewardInfoModal() {
     if (container) { container.innerHTML = html + footerHtml; openModal('rewardInfoModal'); }
 }
 
-// ============================================================
-// ★★★ 成就系统 UI ★★★
-// ============================================================
 const ACH_CATEGORY_NAME = {
-    checkin:    '📅 签到成就',
-    chest:      '📦 宝箱成就',
-    wealth:     '💰 财富成就',
+    checkin: '📅 签到成就',
+    chest: '📦 宝箱成就',
+    wealth: '💰 财富成就',
     collection: '🎨 收藏成就',
-    special:    '✨ 特殊成就',
-    general:    '🏆 综合成就'
+    special: '✨ 特殊成就',
+    general: '🏆 综合成就'
 };
-
 const ACH_RARITY = {
-    bronze:  { name: '铜',   color: '#cd7f32', bg: 'rgba(205,127,50,0.15)' },
-    silver:  { name: '银',   color: '#c0c0c0', bg: 'rgba(192,192,192,0.15)' },
-    gold:    { name: '金',   color: '#ffd700', bg: 'rgba(255,215,0,0.15)' },
-    diamond: { name: '钻',   color: '#67e8f9', bg: 'rgba(103,232,249,0.15)' },
-    legend:  { name: '传说', color: '#f472b6', bg: 'rgba(244,114,182,0.15)' }
+    bronze: { name: '铜', color: '#cd7f32', bg: 'rgba(205,127,50,0.15)' },
+    silver: { name: '银', color: '#c0c0c0', bg: 'rgba(192,192,192,0.15)' },
+    gold: { name: '金', color: '#ffd700', bg: 'rgba(255,215,0,0.15)' },
+    diamond: { name: '钻', color: '#67e8f9', bg: 'rgba(103,232,249,0.15)' },
+    legend: { name: '传说', color: '#f472b6', bg: 'rgba(244,114,182,0.15)' }
 };
 
 export async function renderAchievementsModal() {
     const container = document.getElementById('achievementsContent');
     if (!container) return;
-
     container.innerHTML = '<div style="text-align:center;padding:30px;opacity:0.6;">⏳ 加载成就中...</div>';
     openModal('achievementsModal');
-
     try {
         const list = await getAchievementsStatus();
-
         const groups = {};
         let visibleTotal = 0, unlockedTotal = 0;
-
         for (const a of list) {
-            if (a.is_hidden && !a.unlocked_at && a.hidden_style === 'invisible') {
-                continue;
-            }
+            if (a.is_hidden && !a.unlocked_at && a.hidden_style === 'invisible') continue;
             if (a.is_hidden && !a.unlocked_at) {
                 const g = groups[a.category] || (groups[a.category] = []);
                 g.push({ ...a, _hiddenPlaceholder: true });
@@ -1123,9 +1097,7 @@ export async function renderAchievementsModal() {
             visibleTotal++;
             if (a.unlocked_at) unlockedTotal++;
         }
-
         const ap = state.userStats?.achievement_points || 0;
-
         let html = `
             <div class="ach-summary">
                 <div class="ach-summary-num">
@@ -1138,13 +1110,11 @@ export async function renderAchievementsModal() {
                 </div>
             </div>
         `;
-
         if (visibleTotal === 0) {
             html += '<div style="text-align:center;padding:30px;opacity:0.5;">暂无成就</div>';
             container.innerHTML = html;
             return;
         }
-
         const order = ['checkin', 'chest', 'wealth', 'collection', 'special', 'general'];
         for (const key of order) {
             const arr = groups[key];
@@ -1159,19 +1129,19 @@ export async function renderAchievementsModal() {
                                 <div class="ach-name">神秘成就</div>
                                 <div class="ach-desc">继续探索以解锁</div>
                             </div>
-                        </div>`;
+                        </div>
+                    `;
                     continue;
                 }
                 const unlocked = !!a.unlocked_at;
                 const progress = Math.min(Number(a.progress) || 0, Number(a.condition_value) || 0);
                 const pct = a.condition_value > 0 ? Math.floor((progress / a.condition_value) * 100) : 0;
                 const rarityInfo = ACH_RARITY[a.rarity] || ACH_RARITY.bronze;
-
                 const rewards = [];
-                if (a.reward_candy   > 0) rewards.push(`🍬${Number(a.reward_candy).toLocaleString()}`);
+                if (a.reward_candy > 0) rewards.push(`🍬${Number(a.reward_candy).toLocaleString()}`);
                 if (a.reward_rainbow > 0) rewards.push(`🌈${Number(a.reward_rainbow).toLocaleString()}`);
-                if (a.reward_syrup   > 0) rewards.push(`🌌${Number(a.reward_syrup).toLocaleString()}`);
-                if (a.reward_active  > 0) rewards.push(`⚡${Number(a.reward_active).toLocaleString()}`);
+                if (a.reward_syrup > 0) rewards.push(`🌌${Number(a.reward_syrup).toLocaleString()}`);
+                if (a.reward_active > 0) rewards.push(`⚡${Number(a.reward_active).toLocaleString()}`);
 
                 html += `
                     <div class="ach-item ${unlocked ? 'unlocked' : 'locked'}" style="border-color: ${unlocked ? rarityInfo.color + '66' : ''};">
@@ -1196,7 +1166,6 @@ export async function renderAchievementsModal() {
             }
             html += `</div></div>`;
         }
-
         container.innerHTML = html;
     } catch (e) {
         console.error('加载成就失败', e);
@@ -1206,17 +1175,15 @@ export async function renderAchievementsModal() {
 
 export function showAchievementUnlockModal(achievements, rewards) {
     if (!achievements || !achievements.length) return;
-
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay show';
     overlay.style.zIndex = '10000';
-
     const rewardLines = [];
-    if (rewards.candy   > 0) rewardLines.push(`🍬 +${Number(rewards.candy).toLocaleString()} 糖果碎`);
+    if (rewards.candy > 0) rewardLines.push(`🍬 +${Number(rewards.candy).toLocaleString()} 糖果碎`);
     if (rewards.rainbow > 0) rewardLines.push(`🌈 +${Number(rewards.rainbow).toLocaleString()} 超级棒糖`);
-    if (rewards.syrup   > 0) rewardLines.push(`🌌 +${Number(rewards.syrup).toLocaleString()} 星河糖浆`);
-    if (rewards.active  > 0) rewardLines.push(`⚡ +${Number(rewards.active).toLocaleString()} 活跃度`);
-    if (rewards.exp     > 0) rewardLines.push(`⭐ +${Number(rewards.exp).toLocaleString()} 经验`);
+    if (rewards.syrup > 0) rewardLines.push(`🌌 +${Number(rewards.syrup).toLocaleString()} 星河糖浆`);
+    if (rewards.active > 0) rewardLines.push(`⚡ +${Number(rewards.active).toLocaleString()} 活跃度`);
+    if (rewards.exp > 0) rewardLines.push(`⭐ +${Number(rewards.exp).toLocaleString()} 经验`);
 
     overlay.innerHTML = `
         <div class="modal" style="max-width:380px;text-align:center;border:2px solid #facc15;box-shadow:0 0 40px rgba(250,204,21,0.4);">
@@ -1227,16 +1194,17 @@ export function showAchievementUnlockModal(achievements, rewards) {
                     ${achievements.map(a => {
                         const rarityInfo = ACH_RARITY[a.rarity] || ACH_RARITY.bronze;
                         return `
-                        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-                            <div style="font-size:1.8rem;">${a.icon || '🏆'}</div>
-                            <div>
-                                <div style="font-weight:bold;">
-                                    ${escapeHtml(a.name)}
-                                    <span style="font-size:0.65rem; padding:1px 5px; border-radius:7px; margin-left:4px; background:${rarityInfo.bg}; color:${rarityInfo.color}; border:1px solid ${rarityInfo.color}44;">${rarityInfo.name}</span>
+                            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+                                <div style="font-size:1.8rem;">${a.icon || '🏆'}</div>
+                                <div>
+                                    <div style="font-weight:bold;">
+                                        ${escapeHtml(a.name)}
+                                        <span style="font-size:0.65rem; padding:1px 5px; border-radius:7px; margin-left:4px; background:${rarityInfo.bg}; color:${rarityInfo.color}; border:1px solid ${rarityInfo.color}44;">${rarityInfo.name}</span>
+                                    </div>
+                                    <div style="font-size:0.8rem;opacity:0.7;">${escapeHtml(a.description || '')}</div>
                                 </div>
-                                <div style="font-size:0.8rem;opacity:0.7;">${escapeHtml(a.description || '')}</div>
                             </div>
-                        </div>`;
+                        `;
                     }).join('')}
                 </div>
                 ${rewardLines.length ? `
@@ -1254,15 +1222,12 @@ export function showAchievementUnlockModal(achievements, rewards) {
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
 }
 
-// ============================================================
-// ★★★ 通知系统 UI ★★★
-// ============================================================
 const NOTIF_TYPE_META = {
     achievement: { color: '#facc15', label: '成就' },
-    chest:       { color: '#f59e0b', label: '宝箱' },
-    redeem:      { color: '#ec4899', label: '兑换码' },
-    checkin:     { color: '#3ecf8e', label: '签到' },
-    system:      { color: '#60a5fa', label: '系统' }
+    chest: { color: '#f59e0b', label: '宝箱' },
+    redeem: { color: '#ec4899', label: '兑换码' },
+    checkin: { color: '#3ecf8e', label: '签到' },
+    system: { color: '#60a5fa', label: '系统' }
 };
 
 function formatRelativeTime(iso) {
@@ -1281,15 +1246,11 @@ function formatRelativeTime(iso) {
 export async function renderNotificationsModal() {
     const container = document.getElementById('notificationsContent');
     if (!container) return;
-
     container.innerHTML = '<div style="text-align:center;padding:30px;opacity:0.6;">⏳ 加载中...</div>';
     openModal('notificationsModal');
-
     try {
         const { notifications, unread_count } = await getMyNotifications();
-
-        let html = '';
-        html += `
+        let html = `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 4px 12px; border-bottom:1px solid rgba(255,255,255,0.08); margin-bottom:8px;">
                 <div style="font-size:0.85rem; color:var(--text-secondary);">
                     ${unread_count > 0 ? `你还有 <strong style="color:#f87171;">${unread_count}</strong> 条未读` : '全部已读'}
@@ -1300,15 +1261,12 @@ export async function renderNotificationsModal() {
                 </div>
             </div>
         `;
-
         if (!notifications || notifications.length === 0) {
             html += '<div style="text-align:center;padding:50px 20px;color:var(--text-secondary);">📭 暂无通知</div>';
             container.innerHTML = html;
             return;
         }
-
         html += '<div style="display:flex; flex-direction:column; gap:6px;">';
-
         for (const n of notifications) {
             const meta = NOTIF_TYPE_META[n.type] || NOTIF_TYPE_META.system;
             const unread = !n.is_read;
@@ -1339,7 +1297,6 @@ export async function renderNotificationsModal() {
                 const id = parseInt(item.dataset.id);
                 const n = notifications.find(x => x.id === id);
                 if (!n) return;
-
                 if (!n.is_read) {
                     try {
                         await markNotificationRead(id);
@@ -1348,7 +1305,6 @@ export async function renderNotificationsModal() {
                         item.style.borderColor = 'rgba(255,255,255,0.05)';
                     } catch (err) { console.warn('标记已读失败', err); }
                 }
-
                 if (n.link === 'achievements') {
                     closeModal('notificationsModal');
                     setTimeout(() => renderAchievementsModal(), 200);
@@ -1391,7 +1347,6 @@ export async function renderNotificationsModal() {
                 showNotification('🗑️ 已清空通知', 'success');
             } catch (err) { showNotification('操作失败', 'error'); }
         });
-
     } catch (e) {
         console.error('加载通知失败', e);
         container.innerHTML = `<div style="text-align:center;padding:30px;color:#f87171;">加载失败：${escapeHtml(e.message || '未知错误')}</div>`;
@@ -1416,7 +1371,6 @@ export async function updateNotificationBadge() {
     }
 }
 
-// 导出全局更新显示函数
 window.updateChestDisplay = function() {
     const el = document.getElementById('chestDisplay');
     if (el) {
