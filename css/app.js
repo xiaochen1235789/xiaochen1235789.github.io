@@ -1,4 +1,4 @@
-// ========== 主入口（完整版 v2.1.1：等级系统接入） ==========
+// ========== 主入口（完整版 v2.12：等级系统数据库实时刷新） ==========
 import { CONFIG, getRoleDisplay, SPECIAL_TITLES } from './config.js';
 import {
     showNotification, openModal, closeModal,
@@ -26,7 +26,7 @@ import {
     invalidateFramesCache,
     renderAchievementsModal, showAchievementUnlockModal,
     renderNotificationsModal, updateNotificationBadge,
-    updateLevelDisplay, computeLevelInfo   // ★ 新增
+    updateLevelDisplay, computeLevelInfo   // ★ 从 ui-renderer 引入
 } from './ui-renderer.js';
 
 // ========== 全局状态 ==========
@@ -37,7 +37,6 @@ let hasAutoSignCard = false;
 let autoSignAttempted = false;
 
 window.isProcessing = false;
-
 window.currentUser = currentUser;
 window.userStats = userStats;
 window.userProfile = userProfile;
@@ -116,7 +115,7 @@ async function refreshUserStats() {
         userStats = { ...(userStats || {}), ...statsRes.data };
         updateAppState();
         updateShopBalanceDisplay();
-        updateActivePointsDisplay();   // 内部已调用 updateLevelDisplay
+        updateActivePointsDisplay();
         if (window.updateChestDisplay) window.updateChestDisplay();
     }
 }
@@ -135,7 +134,7 @@ async function refreshAchievements() {
             rainbow: result.reward_rainbow || 0,
             syrup:   result.reward_syrup   || 0,
             active:  result.reward_active  || 0,
-            exp:     result.reward_exp     || 0     // ★ 成就给的经验
+            exp:     result.reward_exp     || 0
         });
 
         await refreshUserStats();
@@ -329,14 +328,13 @@ async function executeCheckin(autoTriggered = false) {
         userStats.active_points     = data.new_active;
         userStats.checkin_streak    = data.new_streak;
         userStats.last_checkin_date = data.today;
-        // ★ 同步经验
         if (data.new_exp   != null) userStats.exp   = data.new_exp;
         if (data.new_level != null) userStats.level = data.new_level;
     }
     updateAppState();
     updateActivePointsDisplay();
     updateShopBalanceDisplay();
-    updateLevelDisplay();   // ★ 刷新等级胶囊
+    updateLevelDisplay();
 
     const streakEl = document.getElementById('streakDays');
     if (streakEl) streakEl.innerText = (data.new_streak || 0).toLocaleString();
@@ -383,14 +381,13 @@ async function tryAutoSign() {
             userStats.checkin_streak    = data.new_streak;
             userStats.last_checkin_date = new Date().toISOString().slice(0, 10);
             userStats.total_auto_checkins = (userStats.total_auto_checkins || 0) + data.days;
-            // ★ 若后端 process_auto_checkin 返回了经验，也同步
             if (data.new_exp   != null) userStats.exp   = data.new_exp;
             if (data.new_level != null) userStats.level = data.new_level;
         }
         updateAppState();
         updateActivePointsDisplay();
         updateShopBalanceDisplay();
-        updateLevelDisplay();   // ★
+        updateLevelDisplay();
         updateCheckinButtonState();
 
         const streakEl = document.getElementById('streakDays');
@@ -497,17 +494,21 @@ window.openUsernameModal = function() {
     updateUsernameModalAvatar();
     openModal('usernameModal');
 };
+
 window.openBioModal = function() {
     document.getElementById('newBio').value = userProfile?.bio || '';
     openModal('bioModal');
 };
+
 window.openPasswordModal = function() {
     openModal('passwordModal');
 };
+
 window.openDeleteAccountModal = function() {
     document.getElementById('confirmEmail').value = currentUser?.email || '';
     openModal('deleteAccountModal');
 };
+
 window.openBackpack = renderBackpack;
 window.openBackpackItemDetail = openBackpackItemDetail;
 window.openTitlesModal = renderTitlesModal;
@@ -515,17 +516,58 @@ window.openRewardInfoModal = openRewardInfoModal;
 window.openNotificationsModal = renderNotificationsModal;
 
 // ============================================================
-// ★ 等级详情弹窗
+// ★ 等级详情弹窗（带数据库实时刷新）
 // ============================================================
 function showLevelDetailsModal() {
-    const info = computeLevelInfo(userStats?.exp);
-
-    // 移除旧弹窗（防重复）
     document.getElementById('levelDetailsModal')?.remove();
-
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay show';
     overlay.id = 'levelDetailsModal';
+    document.body.appendChild(overlay);
+
+    // 1. 首次渲染（使用当前内存中的数据，保证秒开）
+    renderLevelModalContent(overlay);
+
+    // 2. 后台异步拉取最新经验并重绘
+    refreshExpAndUpdateModal(overlay);
+}
+
+async function refreshExpAndUpdateModal(overlay) {
+    if (!currentUser?.id) return;
+    try {
+        const sb = getSupabase();
+        // 只拉取 exp 和 level 字段，最轻量
+        const { data, error } = await sb.from('user_stats')
+            .select('exp, level')
+            .eq('user_id', currentUser.id)
+            .maybeSingle();
+
+        if (!error && data) {
+            // 更新本地缓存
+            if (userStats) {
+                userStats.exp = data.exp || 0;
+                userStats.level = data.level || 1;
+                window.userStats = userStats;
+            }
+            
+            // 如果弹窗还开着，重新渲染弹窗内容
+            if (document.getElementById('levelDetailsModal') === overlay) {
+                renderLevelModalContent(overlay);
+            }
+        }
+    } catch (e) {
+        console.warn('实时获取经验失败', e);
+    }
+}
+
+function renderLevelModalContent(overlay) {
+    const dbLevel = userStats?.level;
+    const info = computeLevelInfo(userStats?.exp);
+    const displayLevel = dbLevel || info.level;
+
+    const currentInLevel = info.isMaxLevel ? 0 : info.exp - info.currentLevelStartExp;
+    const neededForLevel = info.isMaxLevel ? 1 : info.nextLevelExp - info.currentLevelStartExp;
+
     overlay.innerHTML = `
         <div class="modal" style="max-width: 360px; text-align: center;">
             <div class="modal-header">
@@ -533,20 +575,35 @@ function showLevelDetailsModal() {
                 <button class="modal-close" id="closeLevelDetailsBtn">&times;</button>
             </div>
             <div style="padding: 16px 0;">
+                <!-- 大标题等级 -->
                 <div style="font-size: 2.5rem; color: #facc15; font-weight: bold; text-shadow: 0 0 20px rgba(250,204,21,0.6); margin-bottom: 6px;">
-                    Lv.${info.level}
+                    Lv.${displayLevel}
                 </div>
                 <div style="font-size: 0.9rem; opacity: 0.75; margin-bottom: 12px;">
-                    ${info.isMaxLevel ? '已达最高等级 ✨' : `距离 Lv.${info.level + 1} 还需 ${info.remaining.toLocaleString()} 经验`}
+                    ${info.isMaxLevel ? '已达最高等级 ✨' : `距离 Lv.${displayLevel + 1} 还需 ${info.remaining.toLocaleString()} 经验`}
                 </div>
+
+                <!-- 进度条 -->
                 <div style="width: 100%; height: 12px; background: rgba(0,0,0,0.4); border-radius: 6px; overflow: hidden; margin-bottom: 10px;">
                     <div style="height: 100%; width: ${info.percent}%; background: linear-gradient(90deg, #facc15, #f59e0b); transition: width 0.4s;"></div>
                 </div>
-                <div style="font-size: 1.05rem; font-weight: bold; margin-bottom: 14px;">
-                    <span style="color: #facc15;">${info.exp.toLocaleString()}</span>
-                    <span style="opacity: 0.5;"> / </span>
-                    <span style="opacity: 0.7;">${info.nextLevelExp.toLocaleString()}</span>
+
+                <!-- 新增字段：当前等级 + 每一级格式 0/2500 -->
+                <div style="font-size: 1.05rem; font-weight: bold; margin-bottom: 14px; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                    <div style="color: #facc15; font-size: 0.95rem; background: rgba(250,204,21,0.15); padding: 2px 10px; border-radius: 12px;">
+                        当前等级：Lv.${displayLevel}
+                    </div>
+                    <div>
+                        <span style="color: #facc15;">${currentInLevel.toLocaleString()}</span>
+                        <span style="opacity: 0.5;"> / </span>
+                        <span style="opacity: 0.7;">${neededForLevel.toLocaleString()}</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: #a1a1aa; font-weight: normal;">
+                        (历史累计总经验：${info.exp.toLocaleString()})
+                    </div>
                 </div>
+
+                <!-- 经验来源说明 -->
                 <div style="padding: 10px 14px; background: rgba(255,255,255,0.04); border-radius: 10px; font-size: 0.82rem; text-align: left; line-height: 1.7;">
                     <div style="opacity:0.6;margin-bottom:4px;font-size:0.75rem;">经验产出：</div>
                     <div>· 签到：<span style="color: #facc15;">+50 exp</span></div>
@@ -561,7 +618,6 @@ function showLevelDetailsModal() {
             <button class="btn-primary" id="closeLevelDetailsConfirm" style="width: 100%;">知道了</button>
         </div>
     `;
-    document.body.appendChild(overlay);
 
     const close = () => overlay.remove();
     document.getElementById('closeLevelDetailsBtn').addEventListener('click', close);
@@ -948,8 +1004,8 @@ function bindEvents() {
     });
 
     document.getElementById('checkinBtn')?.addEventListener('click', performCheckin);
-
-    // ★ 等级胶囊点击
+    
+    // ★ 等级胶囊点击 → 打开等级详情
     document.getElementById('userLevelBox')?.addEventListener('click', showLevelDetailsModal);
 
     window.addEventListener('scroll', () => {
