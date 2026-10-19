@@ -1,4 +1,4 @@
-// ========== UI 渲染器（完整版 v2.11 - 等级系统接入） ==========
+// ========== UI 渲染器（完整版 v2.12 - 等级系统接入） ==========
 import { CONFIG, CHEST_CONFIG, getRoleDisplay } from './config.js';
 import {
     safeSetText, showNotification, openModal, closeModal,
@@ -25,6 +25,7 @@ import {
 
 let state = {};
 
+// 缓存商店头像框列表
 let cachedFrames = null;
 let framesCacheTime = 0;
 const FRAMES_CACHE_TTL = 60000;
@@ -40,12 +41,11 @@ export function setAppState(appState) {
 
 // ============================================================
 // ★ 等级计算 —— 全项目唯一权威实现
-//   exp = 累计经验
+//   exp = 累计经验（user_stats.exp）
 //   level = floor(sqrt(exp/100)) + 1，封顶 999
 // ============================================================
 export function computeLevelInfo(rawExp) {
     const exp = Math.max(0, Number(rawExp) || 0);
-    // 封顶 999 级：exp 达到 100*998^2 即视为满级
     let level = Math.floor(Math.sqrt(exp / 100)) + 1;
     if (level > 999) level = 999;
 
@@ -67,7 +67,7 @@ export function computeLevelInfo(rawExp) {
     };
 }
 
-// ★ 等级胶囊：显示 + 进度条
+// ★ 等级胶囊 UI 渲染
 export function updateLevelDisplay() {
     const levelTextEl = document.getElementById('userLevelText');
     const expBarEl    = document.getElementById('userExpBar');
@@ -78,13 +78,15 @@ export function updateLevelDisplay() {
     if (expBarEl) expBarEl.style.width = `${info.percent}%`;
 }
 
-// ---- 活跃度 & 成就积分 ----
+// ============================================================
+// 活跃度 & 成就积分（内部会自动刷新等级胶囊）
+// ============================================================
 export function updateActivePointsDisplay() {
     const span = document.getElementById('activePointsValue');
     if (span) span.innerText = (state.userStats?.active_points || 0).toLocaleString();
     const apSpan = document.getElementById('achievementPointsValue');
     if (apSpan) apSpan.innerText = (state.userStats?.achievement_points || 0).toLocaleString();
-    // ★ 顺带刷新等级胶囊
+    // ★ 每次更新活跃度/积分时顺带刷新等级胶囊
     updateLevelDisplay();
 }
 
@@ -182,6 +184,7 @@ export async function renderProfile() {
         const createdTime = state.userProfile?.created_at || state.currentUser?.created_at;
         safeSetText('createdAt', createdTime ? new Date(createdTime).toLocaleString() : '--');
 
+        // 按自然日计算来到天数
         let days = 0;
         if (createdTime) {
             const start = new Date(createdTime);
@@ -200,10 +203,10 @@ export async function renderProfile() {
         if (roleRow) roleRow.innerHTML = `<span style="color:${roleInfo.color};">身份：${roleInfo.name}</span>`;
 
         if (state.userStats) {
-            // ★ updateActivePointsDisplay 内部已经会调用 updateLevelDisplay，这里再显式调一次防止遗漏
+            // updateActivePointsDisplay 内部会自动调用 updateLevelDisplay
             updateActivePointsDisplay();
             updateShopBalanceDisplay();
-            updateLevelDisplay();   // ← 等级胶囊首次挂载
+            updateLevelDisplay();   // ★ 首次挂载时也显式调一次
 
             const streakEl = document.getElementById('streakDays');
             if (streakEl) streakEl.innerText = (state.userStats.checkin_streak || 0).toLocaleString();
@@ -243,8 +246,6 @@ export async function renderProfile() {
         showNotification('渲染出错：' + (err.message || '未知错误'), 'error');
     }
 }
-
-/* ================= 以下代码与原文件完全相同，为节省篇幅保留全部 ================= */
 
 // ===== 商店 =====
 export async function renderShop() {
@@ -340,6 +341,7 @@ export async function renderShop() {
     });
 }
 
+// ===== 加载头像框列表 =====
 async function loadFramesList() {
     const container = document.getElementById('framesList');
     if (!container) return;
@@ -876,10 +878,10 @@ export async function openBatchChestModal(maxCount) {
             );
             updateChestCountDisplay();
             updatePityDisplay();
-            showChestResultModal(results);
-            // ★ 开箱结束后刷新等级胶囊
+            // ★ 开箱后 exp 变化 → 刷新等级胶囊 + 活跃度/积分
             updateLevelDisplay();
             updateActivePointsDisplay();
+            showChestResultModal(results);
             if (newStats.chest_count === 0) {
                 setTimeout(() => {
                     if (overlay.parentNode) overlay.remove();
@@ -1414,6 +1416,7 @@ export async function updateNotificationBadge() {
     }
 }
 
+// 导出全局更新显示函数
 window.updateChestDisplay = function() {
     const el = document.getElementById('chestDisplay');
     if (el) {
