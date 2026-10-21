@@ -39,17 +39,31 @@ export async function checkAuthAndRole() {
     window.__currentAdmin = { id: user.id, email: user.email, role: null };
 
     // 2. 确定角色
-    if (user.id === OWNER_ID) {
-        await sb.from('user_profiles').update({ role: 'owner' }).eq('id', OWNER_ID);
-        currentUserRole = 'owner';
-        currentUsername = '站长';
-    } else {
-        const { data: profile } = await sb.from('user_profiles')
+    // ★ 移除原来的 `update({ role: 'owner' })`：
+    //   a) 每次进后台都往库里写一次，纯属浪费；
+    //   b) role 列现在不允许前端写，这句必然失败（虽然不致命）；
+    //   c) 2e617135 的 role 本来就是 owner，不需要"自动修复"。
+    //   现在统一从数据库读，并额外取一个服务端判定的 tier，便于排查。
+    {
+        const { data: profile, error: profileErr } = await sb.from('user_profiles')
             .select('role, username')
             .eq('id', user.id)
             .single();
+
+        if (profileErr) {
+            console.warn('读取资料失败:', profileErr.message);
+        }
+
         currentUserRole = profile?.role || 'user';
         currentUsername = profile?.username || user.email?.split('@')[0] || '用户';
+
+        // 让后端告诉我们"你实际能干什么"，避免前后端判断不一致
+        try {
+            const { data: tier } = await sb.rpc('actor_tier');
+            window.__currentAdmin.tier = tier || null;
+        } catch (e) {
+            window.__currentAdmin.tier = null;
+        }
     }
     window.__currentAdmin.role = currentUserRole;
 
