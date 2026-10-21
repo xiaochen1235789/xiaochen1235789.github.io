@@ -169,8 +169,19 @@ window.openUserRoleModal = async function (userId, username, currentRole) {
 
         try {
             const sb = getSupabase();
-            await sb.from('user_profiles').update({ role: newRole }).eq('id', userId);
-            showNotification('角色已更新', 'success');
+
+            // ★ 改为走 RPC：
+            //   role 列没有授予客户端（否则谁都能把自己改成 owner），
+            //   直连表 update 必然被拒，而且旧代码不看返回值 → 假成功。
+            const { data, error } = await sb.rpc('staff_update_profile', {
+                p_user_id: userId,
+                p_patch: { role: newRole }
+            });
+
+            if (error) throw new Error(error.message);
+            if (!data?.success) throw new Error('角色未更新（可能没有足够权限）');
+
+            showNotification(`角色已更新为 ${newRole}`, 'success');
             await refreshUserList();
             await logAction('修改用户角色', 'user', userId, username, `角色由 ${currentRole} 改为 ${newRole}`);
             closeModal('genericModal');
@@ -201,26 +212,11 @@ window.deleteUserById = async function (userId, username) {
     try {
         const sb = getSupabase();
 
-        // 1. 先并行清理所有子表
-        const deleteTasks = [
-            sb.from('user_stats').delete().eq('user_id', userId),
-            sb.from('user_titles').delete().eq('user_id', userId),
-            sb.from('user_auto_sign_card').delete().eq('user_id', userId),
-            sb.from('user_redeemed_codes').delete().eq('user_id', userId),
-            sb.from('user_settings').delete().eq('user_id', userId)
-        ];
-
-        const results = await Promise.all(deleteTasks);
-        // 忽略"表不存在"的错误（未来如果删了某表也不会炸）
-        for (const r of results) {
-            if (r.error && !String(r.error.message || '').includes('does not exist')) {
-                console.warn('[删除用户] 子表清理警告:', r.error);
-            }
-        }
-
-        // 2. 最后删主表
-        const { error } = await sb.from('user_profiles').delete().eq('id', userId);
-        if (error) throw error;
+        // ★ 改为走 RPC：客户端已经没有子表的 delete 权限，
+        //   级联删除必须在服务端一个函数里完成。
+        const { data, error } = await sb.rpc('staff_delete_user', { p_user_id: userId });
+        if (error) throw new Error(error.message);
+        if (!data?.success) throw new Error('删除未生效（没有足够权限）');
 
         showNotification('已删除用户', 'success');
         await refreshUserList();
