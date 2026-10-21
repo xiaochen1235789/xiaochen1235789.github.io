@@ -1,5 +1,6 @@
 // ========== 工具函数（管理后台专用版） ==========
 import { getSupabase } from './auth.js';
+import { errText } from './messages.js';
 
 // ----- 通用工具 -----
 export function escapeHtml(str) {
@@ -26,7 +27,13 @@ export function showNotification(msg, type = 'info') {
         n.id = 'notification';
         document.body.appendChild(n);
     }
-    n.textContent = msg;
+
+    // ★ 错误提示统一过一遍翻译：
+    //   数据库抛的是 '人话 #CODE#'，这里有码就换成 ERROR_TEXT 里的文案。
+    //   所有现成的 showNotification('xx: ' + err.message, 'error') 自动生效。
+    const text = (type === 'error') ? errText(msg) : msg;
+
+    n.textContent = text;
     n.className = 'notification ' + type;
     n.classList.remove('show');
     void n.offsetWidth;
