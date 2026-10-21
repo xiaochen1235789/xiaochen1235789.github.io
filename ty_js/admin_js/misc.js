@@ -29,21 +29,25 @@ async function loadUserFrames(userId) {
 }
 
 // ----- 更新用户资产（含宝箱） -----
+// ★ 改为走服务端 RPC：
+//   直接 update/upsert user_stats 会被 RLS + 列权限拒绝
+//   （这正是我们关掉的经济漏洞），所有改动必须由 staff_update_user_stats 完成。
 async function updateUserAssets(userId, candy, rainbow, syrup, chest) {
     const sb = getSupabase();
-    const updates = {
+    const patch = {
         candy_crumbles: candy,
         rainbow_lollipops: rainbow,
         dreamy_syrup: syrup
     };
-    if (chest !== undefined) updates.chest_count = chest;
-    const { error } = await sb
-        .from('user_stats')
-        .upsert({
-            user_id: userId,
-            ...updates
-        }, { onConflict: 'user_id' });
+    if (chest !== undefined) patch.chest_count = chest;
+
+    const { data, error } = await sb.rpc('staff_update_user_stats', {
+        p_user_id: userId,
+        p_patch: patch
+    });
+
     if (error) throw new Error('资产更新失败: ' + error.message);
+    if (!data) throw new Error('资产更新未生效（没有站长权限？）');
 }
 
 // ----- 更新用户头像框 -----
