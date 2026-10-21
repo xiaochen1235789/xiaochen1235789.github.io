@@ -210,13 +210,25 @@ export function showContentForm(table, existingData = null) {
             const sb = getSupabase();
             let result;
 
+            // ★★ 关键修复：加 .select()
+            // 不加 .select() 时，被 RLS / 权限挡掉（影响 0 行）不会报错，
+            // 界面照样弹"更新成功"，但数据根本没变 —— 这就是之前的假象。
             if (isEdit) {
-                result = await sb.from(table).update(data).eq('id', existingData.id);
+                result = await sb.from(table).update(data).eq('id', existingData.id).select();
             } else {
-                result = await sb.from(table).insert([data]);
+                result = await sb.from(table).insert([data]).select();
             }
 
             if (result.error) throw result.error;
+
+            // ★★ 影响 0 行 = 被静默拒绝，必须显式报错
+            if (!result.data || result.data.length === 0) {
+                const who = window.__currentAdmin?.role || '未知';
+                throw new Error(
+                    `数据库没有执行这次修改（影响 0 行）。当前后台身份：${who}。` +
+                    `admin 只能读；owner 可写内容；只有 founder 能改身份。`
+                );
+            }
 
             const actionType = isEdit ? '编辑' + getTableChinese(table) : '添加' + getTableChinese(table);
             const targetName = data.name || existingData?.name || '未命名';
@@ -272,8 +284,14 @@ window.deleteContentItem = async function (table, id) {
 
         const targetName = item?.name || '未知';
 
-        const { error } = await sb.from(table).delete().eq('id', id);
+        const { data: deleted, error } = await sb.from(table).delete().eq('id', id).select();
         if (error) throw error;
+
+        // ★★ 影响 0 行说明删除被拦了
+        if (!deleted || deleted.length === 0) {
+            const who = window.__currentAdmin?.role || '未知';
+            throw new Error(`删除没有生效（影响 0 行）。当前后台身份：${who}`);
+        }
 
         showNotification('删除成功', 'success');
         await logAction(
