@@ -27,11 +27,13 @@
             background-size: cover; background-position: center; background-repeat: no-repeat;
             background-color: #4a3b2c;
         }
-        .title h2 { font-size: 17px; font-weight: 600; color: #ffffff; letter-spacing: .3px; display: flex; align-items: center; }
+        .title { min-width: 0; overflow: hidden; }
+        .title h2 { font-size: 17px; font-weight: 600; color: #ffffff; letter-spacing: .3px; display: flex; align-items: center; min-width: 0; }
         .badge {
-            display: inline-block; font-size: 10px; font-weight: 500; letter-spacing: .3px;
+            display: inline-block; font-size: 10px; font-weight: 500; letter-spacing: .2px;
             padding: 1px 7px; border-radius: 9px; margin-left: 7px; vertical-align: middle;
             background: #2c2c2e; color: #8e8e93; border: 0.5px solid #3a3a3c;
+            max-width: 54vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .badge.logged { background: rgba(48,209,88,.12); color: #30d158; border-color: rgba(48,209,88,.3); }
         .title p { font-size: 12px; color: #8e8e93; margin-top: 3px; display: flex; align-items: center; gap: 5px; }
@@ -172,7 +174,11 @@
     // ================== 配置 ==================
     const SUPABASE_URL = 'https://ysmijycsyzpjoieaknmb.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzbWlqeWNzeXpwam9pZWFrbm1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcyNDgzNjMsImV4cCI6MjA4MjgyNDM2M30.H7dx2k_0099LVXprMrghHOFh16OoSSgtCUOib2otHPA';
-    const CHAT_ENDPOINT = SUPABASE_URL + '/functions/v1/chat';
+    // 函数名不写死：挨个试，哪个活着用哪个。
+    // 这样你在控制台新建一个（chat2 / chat-v2），页面不用改就能接上。
+    const FN_NAMES = ['chat2', 'chat-v2', 'chat'];
+    const ENDPOINTS = FN_NAMES.map((n) => SUPABASE_URL + '/functions/v1/' + n);
+    let activeEndpoint = null;   // 本次页面生命周期里第一个成功的，后面就直接用它
     const SESSION_KEY = 'xz_chat_session_id';
     const MAX_INPUT = 2000;
 
@@ -218,16 +224,52 @@
         return name || '已登录';
     }
 
-    function applyUser(user) {
-        userLabel = labelOf(user);
+    // 徽章文案：已登录时报出访问用户，未登录时标成游客
+    function badgeText(user, resolvedName) {
+        if (!user) return '未连接';
+        if (isAnonymousUser(user)) return '未登录 · 游客';
+        return resolvedName ? '已登录，访问用户：' + resolvedName : '已登录';
+    }
+
+    // 主站的用户名在 user_profiles.username 里，不在 auth metadata 里。
+    // 顺序：资料表 → 主站缓存的 cachedUsername → 邮箱/昵称兜底
+    async function resolveDisplayName(user) {
+        if (!user || !sb) return '';
+        try {
+            const { data, error } = await sb
+                .from('user_profiles')
+                .select('username')
+                .eq('id', user.id)
+                .maybeSingle();
+            if (!error && data && data.username) return data.username;
+        } catch (e) { /* 读不到就往下走 */ }
+
+        const cached = localStorage.getItem('cachedUsername');
+        if (cached) return cached;
+
+        const fallback = labelOf(user);
+        return fallback === '已登录' ? '' : fallback;
+    }
+
+    async function applyUser(user) {
         const anonymous = isAnonymousUser(user);
+        let displayName = '';
+
+        if (user && !anonymous) {
+            displayName = await resolveDisplayName(user);
+            userLabel = displayName || labelOf(user);
+        } else {
+            userLabel = labelOf(user);
+        }
+
         const badge = document.getElementById('userBadge');
         if (badge) {
-            badge.textContent = userLabel;
-            badge.classList.toggle('logged', !anonymous);
-            badge.title = anonymous
+            const text = badgeText(user, displayName);
+            badge.textContent = text;
+            badge.title = text + '\n' + (anonymous
                 ? '游客身份：记忆只保存在这台设备上，清浏览器数据会变成新的游客'
-                : '已登录：对话记忆跟着账号走';
+                : '已登录：对话记忆跟着账号走');
+            badge.classList.toggle('logged', !anonymous);
         }
         setStatus(streaming ? 'busy' : 'ok', streaming ? '小兹正在说…' : userLabel + ' · 在线');
     }
@@ -455,6 +497,37 @@
         else setStatus('ok', userLabel + ' · 在线');
     }
 
+    // 依次尝试各函数端点。函数不存在时 CORS 会直接抛错，所以「抛错」也换下一个。
+    async function postChat(payload) {
+        const order = activeEndpoint
+            ? [activeEndpoint, ...ENDPOINTS.filter((e) => e !== activeEndpoint)]
+            : ENDPOINTS;
+        let lastErr = null;
+
+        for (const ep of order) {
+            try {
+                const res = await fetch(ep, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + authSession.access_token,
+                        'apikey': SUPABASE_ANON_KEY,
+                    },
+                    body: JSON.stringify(payload),
+                });
+                if (res.status === 404) {          // 这个函数不存在，换下一个
+                    lastErr = new Error('函数不存在');
+                    continue;
+                }
+                activeEndpoint = ep;               // 记住了，后面直接用
+                return res;
+            } catch (e) {
+                lastErr = e;                       // 网络错误或跨域失败也换个试试
+            }
+        }
+        throw lastErr || new Error('没有可用的函数');
+    }
+
     // silent = 重试：不发用户气泡，只重新请求
     async function sendText(text, silent) {
         if (streaming) return;
@@ -485,19 +558,11 @@
         const typing = appendTyping();
         let res;
         try {
-            res = await fetch(CHAT_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + authSession.access_token,
-                    'apikey': SUPABASE_ANON_KEY,
-                },
-                body: JSON.stringify({ message: clean, session_id: sessionId }),
-            });
+            res = await postChat({ message: clean, session_id: sessionId });
         } catch (e) {
             typing.stop();
             setBusy(false);
-            appendError('连不上小兹的服务器…… 可能是网络，也可能是站长还在部署。', clean);
+            appendError('连不上小兹的服务器…… 可能是函数还没部署好，也可能是网络抽风。', clean);
             return;
         }
 
