@@ -27,7 +27,13 @@
             background-size: cover; background-position: center; background-repeat: no-repeat;
             background-color: #4a3b2c;
         }
-        .title h2 { font-size: 17px; font-weight: 600; color: #ffffff; letter-spacing: .3px; }
+        .title h2 { font-size: 17px; font-weight: 600; color: #ffffff; letter-spacing: .3px; display: flex; align-items: center; }
+        .badge {
+            display: inline-block; font-size: 10px; font-weight: 500; letter-spacing: .3px;
+            padding: 1px 7px; border-radius: 9px; margin-left: 7px; vertical-align: middle;
+            background: #2c2c2e; color: #8e8e93; border: 0.5px solid #3a3a3c;
+        }
+        .badge.logged { background: rgba(48,209,88,.12); color: #30d158; border-color: rgba(48,209,88,.3); }
         .title p { font-size: 12px; color: #8e8e93; margin-top: 3px; display: flex; align-items: center; gap: 5px; }
         .dot { width: 6px; height: 6px; border-radius: 50%; background: #30d158; flex-shrink: 0; }
         .dot.busy { background: #ff9f0a; animation: pulse 1.1s ease-in-out infinite; }
@@ -144,7 +150,7 @@
     <a class="icon-btn back" href="/" aria-label="返回WIKI"><i class="fas fa-chevron-left"></i></a>
     <div class="avatar"></div>
     <div class="title">
-        <h2>小兹</h2>
+        <h2>小兹<span class="badge" id="userBadge">连接中</span></h2>
         <p><span class="dot busy" id="statusDot"></span><span id="statusText">正在连接…</span></p>
     </div>
     <button class="icon-btn" id="clearBtn" aria-label="清空聊天"><i class="fas fa-trash-alt"></i></button>
@@ -190,8 +196,41 @@
     let lastSentText = '';
     let lastTimeAnchor = 0;
     let booted = false;
+    let userLabel = '查WIKI助手';
 
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    // ================== 身份标识 ==================
+    // 匿名用户 = 有 uid、但没邮箱没密码，记忆只跟着这台浏览器
+    function isAnonymousUser(user) {
+        if (!user) return true;
+        if (typeof user.is_anonymous === 'boolean') return user.is_anonymous;
+        return !user.email && !user.phone;   // 老版本 SDK 没这个字段时的兜底
+    }
+
+    function labelOf(user) {
+        if (!user) return '未连接';
+        if (isAnonymousUser(user)) return '游客';
+        const meta = user.user_metadata || {};
+        const name = meta.username || meta.name || meta.full_name
+            || (user.email ? String(user.email).split('@')[0] : '')
+            || (user.phone ? String(user.phone).slice(-4) : '');
+        return name || '已登录';
+    }
+
+    function applyUser(user) {
+        userLabel = labelOf(user);
+        const anonymous = isAnonymousUser(user);
+        const badge = document.getElementById('userBadge');
+        if (badge) {
+            badge.textContent = userLabel;
+            badge.classList.toggle('logged', !anonymous);
+            badge.title = anonymous
+                ? '游客身份：记忆只保存在这台设备上，清浏览器数据会变成新的游客'
+                : '已登录：对话记忆跟着账号走';
+        }
+        setStatus(streaming ? 'busy' : 'ok', streaming ? '小兹正在说…' : userLabel + ' · 在线');
+    }
 
     // ================== 小工具 ==================
     function escapeHtml(str) {
@@ -413,7 +452,7 @@
         streaming = busy;
         sendBtn.disabled = busy;
         if (busy) setStatus('busy', '小兹正在说…');
-        else setStatus('ok', '查WIKI助手 · 在线');
+        else setStatus('ok', userLabel + ' · 在线');
     }
 
     // silent = 重试：不发用户气泡，只重新请求
@@ -641,13 +680,16 @@
 
         if (sb.auth.onAuthStateChange) {
             sb.auth.onAuthStateChange((_event, s) => {
-                if (s) authSession = s;
+                if (s) {
+                    authSession = s;
+                    applyUser(s.user);
+                }
             });
         }
 
         input.disabled = false;
         sendBtn.disabled = false;
-        setStatus('ok', '查WIKI助手 · 在线');
+        applyUser(authSession.user);
         input.focus();
 
         await loadHistory();
