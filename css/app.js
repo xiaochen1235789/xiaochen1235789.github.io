@@ -316,7 +316,8 @@ async function executeCheckin(autoTriggered = false) {
 
     if (!data?.success) {
         if (!autoTriggered) {
-            showNotification(data?.error || '签到失败', 'warning');
+            // ★ 与主页保持一致：服务器没给具体原因时，用主页那句提示
+            showNotification(data?.error || '您今天已经签到过了亲，请明天再来吧ღ( ´･ᴗ･ )比心。', 'warning');
         }
         updateCheckinButtonState();
         return false;
@@ -341,9 +342,14 @@ async function executeCheckin(autoTriggered = false) {
 
     updateCheckinButtonState();
 
+    // ★ 提示格式对齐主页：+X🍬 +Y🌈 +Z⚡
+    const rewardMsg =
+        `+${(data.reward_candy ?? 0).toLocaleString()}🍬 ` +
+        `${(data.reward_rainbow ?? 0) > 0 ? `+${data.reward_rainbow}🌈 ` : ''}` +
+        `+${data.reward_active ?? 0}⚡`;
     const msg = autoTriggered
-        ? `✨ 自动签到卡已为您签到 +${data.reward_candy.toLocaleString()}🍬`
-        : `签到 +${data.reward_candy.toLocaleString()}🍬`;
+        ? `✨ 自动签到卡已为您签到！获得 ${rewardMsg}`
+        : `签到成功！获得 ${rewardMsg} 明天记得再来！`;
     showNotification(msg, 'success');
 
     refreshAchievements().catch(() => {});
@@ -379,7 +385,7 @@ async function tryAutoSign() {
             userStats.rainbow_lollipops = (userStats.rainbow_lollipops || 0) + data.total_rainbow;
             userStats.active_points     = (userStats.active_points     || 0) + data.total_active;
             userStats.checkin_streak    = data.new_streak;
-            userStats.last_checkin_date = new Date().toISOString().slice(0, 10);
+            userStats.last_checkin_date = getLocalDateString();   // ★ 与主页一致：本地日期，不用 UTC
             userStats.total_auto_checkins = (userStats.total_auto_checkins || 0) + data.days;
             if (data.new_exp   != null) userStats.exp   = data.new_exp;
             if (data.new_level != null) userStats.level = data.new_level;
@@ -393,8 +399,13 @@ async function tryAutoSign() {
         const streakEl = document.getElementById('streakDays');
         if (streakEl) streakEl.innerText = (data.new_streak || 0).toLocaleString();
 
+        // ★ 提示格式对齐主页：+X🍬 +Y🌈 +Z⚡
+        const autoRewardMsg =
+            `+${(data.total_candy ?? 0).toLocaleString()}🍬 ` +
+            `${(data.total_rainbow ?? 0) > 0 ? `+${data.total_rainbow}🌈 ` : ''}` +
+            `+${data.total_active ?? 0}⚡`;
         showNotification(
-            `🤖 自动签到 ${data.days} 天 +${data.total_candy.toLocaleString()}🍬`,
+            `✨ 自动签到卡已为您签到 ${data.days} 天！获得 ${autoRewardMsg}`,
             'success', 8000
         );
 
