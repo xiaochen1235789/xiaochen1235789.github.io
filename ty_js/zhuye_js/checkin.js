@@ -34,46 +34,46 @@ async function executeCheckin(autoTriggered = false) {
         return false;
     }
 
-    let newStreak = 1;
-    const last = userStats.last_checkin_date;
-    if (last) {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = getLocalDateString(yesterday);
-        if (last === yesterdayStr) newStreak = (userStats.checkin_streak || 0) + 1;
-    }
-
-    const rewards = await fetchCheckinReward(newStreak);
-    if (!rewards) {
-        showNotification('签到奖励配置错误', 'error');
+    // ★ 改为调用服务端 RPC：
+    //   以前是「前端算奖励 + 直写 user_stats」，
+    //   但 user_stats 现在只允许写 last_login（防刷钱），
+    //   所以签到必须由 do_checkin() 在数据库里完成。
+    //   保底/连签/发奖也一并交给它，前端只负责显示。
+    let data;
+    try {
+        const res = await supabaseClient.rpc('do_checkin');
+        if (res.error) {
+            showNotification('签到失败: ' + res.error.message, 'error');
+            return false;
+        }
+        data = res.data;
+    } catch (e) {
+        showNotification('签到失败: ' + (e.message || '网络错误'), 'error');
         return false;
     }
 
-    const newCandy = (userStats.candy_crumbles || 0) + rewards.candy;
-    const newRainbow = (userStats.rainbow_lollipops || 0) + rewards.rainbow;
-    const newActive = (userStats.active_points || 0) + rewards.active;
-
-    const { error: updateErr } = await supabaseClient
-        .from('user_stats')
-        .update({
-            candy_crumbles: newCandy,
-            rainbow_lollipops: newRainbow,
-            active_points: newActive,
-            last_checkin_date: today,
-            checkin_streak: newStreak
-        })
-        .eq('user_id', currentUser.id);
-
-    if (updateErr) {
-        showNotification('签到失败', 'error');
+    if (!data || !data.success) {
+        if (!autoTriggered) {
+            showNotification(data?.error || '今天已经签到过啦', 'warning');
+        }
         return false;
     }
 
-    userStats.candy_crumbles = newCandy;
-    userStats.rainbow_lollipops = newRainbow;
-    userStats.active_points = newActive;
-    userStats.last_checkin_date = today;
-    userStats.checkin_streak = newStreak;
+    // 以服务端返回的数值为准
+    const rewards = {
+        candy:   data.reward_candy   ?? 0,
+        rainbow: data.reward_rainbow ?? 0,
+        active:  data.reward_active  ?? 0
+    };
+
+    userStats.candy_crumbles    = data.new_candy;
+    userStats.rainbow_lollipops = data.new_rainbow;
+    userStats.active_points     = data.new_active;
+    userStats.checkin_streak    = data.new_streak;
+    userStats.last_checkin_date = data.today;
+    // 与个人主页保持一致：经验/等级也以服务端返回为准（主页不显示，但缓存要保持新鲜）
+    if (data.new_exp   != null) userStats.exp   = data.new_exp;
+    if (data.new_level != null) userStats.level = data.new_level;
     localStorage.setItem('cachedUserStats', JSON.stringify(userStats));
 
     const rewardMsg =
